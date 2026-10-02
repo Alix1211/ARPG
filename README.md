@@ -19,6 +19,7 @@
 | `assets/dungeon/tiles/` | 던전 바닥 3종, 벽 앞면·윗면, 모서리 8종, 문·계단·구덩이·용암·물 |
 | `assets/dungeon/props/` | 횃불, 기둥, 보물상자, 나무통, 항아리, 해골, 거미줄, 가시 함정, 스위치, 철창 |
 | `assets/monsters_3dir/` | 왼쪽·정면·오른쪽 3방향 몬스터 11종: 오크·하피·서큐버스·악마·토끼·드래곤·늑대·곰·도적·어둠 마법사·리치 |
+| `assets/weapons/` | 무기 5종 × 10등급: sword(검)·bow(활)·staff(지팡이)·spear(창)·gauntlet(건틀릿), 01이 가장 낮고 10이 가장 높음 |
 | `assets/illustrations/` | 캐릭터 전신 일러스트 (hero, knight, dragon) |
 | `source_sheets/` | 잘라 쓰기 전 원본 시트 |
 | `guides/` | 그림 요청용 기준 시트 (필드 에셋, 걷기 시트) |
