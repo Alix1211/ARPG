@@ -13,7 +13,6 @@
 | `game/dungeon.html` | 던전 시험장. 어둠·횃불 조명, 가시 함정, 스위치·철창, 항아리·보물상자, 리치 보스 |
 | `assets/tiles/테마/` | 바닥 타일 6종 × 7테마 (봄·여름·가을·겨울·화산·얼음·늪). 상하좌우 이음새 보정 완료 |
 | `assets/edges/세트/` | 경계 타일 8종 × 6세트 (풀↔흙, 물↔모래 등) |
-| `assets/objects/테마/` | 나무·바위·울타리·표지판 등 필드 오브젝트 11종 × 7테마 |
 | `assets/props/` | 정원 소품(garden, garden2), 실내 가구(interior), 가게(shop) |
 | `assets/characters/` | 걷기 프레임: elf, hero, knight, dragon (정면·뒷모습·옆모습 × 5칸), 안경 소년 포즈 모음 |
 | `assets/monsters/` | 새 몬스터 75장: 고블린·오크·슬라임·가고일·미믹·해골·버섯·벌레·거미·정령(불·물·나무·바람·얼음) |
