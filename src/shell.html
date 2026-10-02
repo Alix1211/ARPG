@@ -1,0 +1,111 @@
+<title>ARPG 테스트판</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+/* 한 화면짜리 게임. 캔버스가 화면 전체, 조작 UI와 창은 위에 얹음. 게임 세계 하나의 분위기로 고정(단일 테마). */
+:root{
+  --ground:#120f0d;
+  --ui:rgba(24,20,18,.72);
+  --ui-line:rgba(255,236,210,.28);
+  --ui-text:#fbefdc;
+  --accent:#ffbf5a;
+  --paper:#f3e3c0;
+  --paper-edge:#b88a4e;
+  --ink:#3b2814;
+  --ink-soft:#7a5a36;
+  --good:#3f8f3a;
+  --bad:#b0412e;
+  --font-ui:"Jua","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--ground);touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:var(--font-ui);color:var(--ui-text)}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block}
+button{font-family:inherit}
+.hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 0;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+.orbs{display:flex;align-items:center;gap:2px;min-width:0}
+.orb{position:relative;width:74px;height:65px;flex:none}
+.orb img{position:absolute;inset:0;width:100%;height:100%}
+.orb .fill{transition:clip-path .25s}
+.orb span{position:absolute;left:0;right:12%;top:29%;text-align:center;font-size:15px;color:#fff;
+  text-shadow:0 1px 2px #000,0 0 4px #000;font-variant-numeric:tabular-nums}
+.meta{margin-left:4px;font-size:14px;line-height:1.35;text-shadow:0 1px 3px #000;min-width:0}
+.meta .coin{display:flex;align-items:center;gap:3px;font-size:14px;font-variant-numeric:tabular-nums}
+.meta .coin img{width:18px;height:18px}
+.view{pointer-events:auto;background:var(--ui);border:1px solid var(--ui-line);color:var(--ui-text);border-radius:12px;
+  font-size:14px;padding:8px 10px;cursor:pointer;flex:none}
+.view:focus-visible,.btn:focus-visible,.card:focus-visible,.pbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pads{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:flex;align-items:flex-end;gap:10px}
+.pads .col{display:flex;flex-direction:column;gap:20px;align-items:center}
+.btn{position:relative;width:60px;height:60px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;touch-action:none}
+.btn img{width:100%;height:100%;display:block;pointer-events:none}
+.btn.big{width:92px;height:92px}
+.btn.on{transform:scale(.92)}
+.btn .cd{position:absolute;inset:9%;border-radius:50%;pointer-events:none;background:conic-gradient(rgba(10,6,10,.72) calc(var(--cd,0)*1turn),transparent 0)}
+.btn.nomp img{filter:grayscale(.85) brightness(.7)}
+.btn small{position:absolute;left:-10px;right:-10px;bottom:-16px;text-align:center;font-size:12px;color:var(--ui-text);text-shadow:0 1px 2px #000;white-space:nowrap}
+.wbtn{width:60px;height:60px;border-radius:50%;border:3px solid #8a6a3a;background:radial-gradient(circle at 40% 35%,#4a3a2c,#1e1712);
+  box-shadow:inset 0 0 0 2px #2a1d12,0 2px 6px rgba(0,0,0,.5)}
+.wbtn img{width:70%;height:70%;margin:15%;object-fit:contain}
+.wbtn b{position:absolute;right:-4px;top:-6px;background:#2a1d12;border:1px solid #c9a35f;color:#ffd98a;border-radius:9px;font-size:11px;font-weight:400;padding:1px 5px}
+#act{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 150px);
+  background:var(--paper);color:var(--ink);border:2px solid var(--paper-edge);border-radius:14px;padding:10px 18px;font-size:17px;cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,.45)}
+#hint{position:fixed;left:16px;top:calc(env(safe-area-inset-top,0px) + 84px);max-width:min(calc(100% - 32px),330px);
+  background:var(--ui);border-radius:12px;padding:8px 12px;font-size:13px;line-height:1.5;transition:opacity .6s;pointer-events:none}
+#toast{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;width:max-content;max-width:calc(100% - 32px);
+  background:var(--ui);border:1px solid var(--ui-line);border-radius:14px;padding:14px 22px;font-size:20px;line-height:1.35;pointer-events:none}
+#toast small{display:block;font-size:14px;opacity:.85;margin-top:4px}
+#toast img{width:44px;height:44px;object-fit:contain;display:block;margin:0 auto 4px}
+/* 창 (양피지) */
+#veil{position:fixed;inset:0;background:rgba(8,5,4,.62);display:grid;place-items:center;padding:16px;z-index:5}
+.panel{width:min(100%,420px);max-height:calc(100% - 32px);overflow:auto;background:var(--paper);color:var(--ink);
+  border:3px solid var(--paper-edge);border-radius:16px;box-shadow:inset 0 0 0 3px #e6cf9f,0 10px 30px rgba(0,0,0,.6);padding:16px 16px 18px}
+.panel h2{margin:0 0 4px;font-size:24px;font-weight:400;text-align:center;text-wrap:balance}
+.panel p{margin:0 0 12px;text-align:center;color:var(--ink-soft);font-size:14px;line-height:1.45}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fbf1da;border:2px solid #d8b980;border-radius:12px;padding:8px 6px 10px;cursor:pointer;color:var(--ink);min-width:0}
+.card img{width:84px;height:92px;object-fit:contain}
+.card b{font-size:18px;font-weight:400}
+.card span{font-size:12px;color:var(--ink-soft);line-height:1.35;text-align:center}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;background:#fbf1da;border:2px solid #d8b980;border-radius:12px;padding:6px 10px}
+.row img{width:48px;height:48px;object-fit:contain}
+.row b{display:block;font-size:16px;font-weight:400}
+.row span{display:block;font-size:12px;color:var(--ink-soft)}
+.pbtn{border:2px solid #7a5a36;background:#e7c98d;color:var(--ink);border-radius:10px;padding:8px 12px;font-size:15px;cursor:pointer;white-space:nowrap}
+.pbtn.go{background:#9fd07a;border-color:var(--good)}
+.pbtn:disabled{opacity:.45;cursor:default}
+.pfoot{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.coinline{display:flex;justify-content:center;align-items:center;gap:4px;margin:-2px 0 10px;font-size:15px;font-variant-numeric:tabular-nums}
+.coinline img{width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){#hint,.orb .fill{transition:none}}
+</style>
+
+<canvas id="game" aria-label="게임 화면"></canvas>
+<div class="hud">
+  <div class="orbs">
+    <div class="orb" role="img" aria-label="체력"><img id="hpBase" alt=""><img id="hpFill" class="fill" alt=""><span id="hpTxt">10</span></div>
+    <div class="orb" role="img" aria-label="마나"><img id="mpBase" alt=""><img id="mpFill" class="fill" alt=""><span id="mpTxt">10</span></div>
+    <div class="meta"><span id="place">마을</span><div class="coin"><img id="coinIco" alt=""><span id="coins">0</span></div></div>
+  </div>
+  <button class="view" id="zoom" type="button">시야: 보통</button>
+</div>
+<div id="hint" hidden></div>
+<div id="toast" hidden></div>
+<button id="act" type="button" hidden></button>
+<div class="pads" id="pads">
+  <div class="col">
+    <button class="btn wbtn" id="bWpn" type="button" aria-label="무기 바꾸기"><img id="iWpn" alt=""><b id="wLv">1</b><small id="wName">검</small></button>
+    <button class="btn" id="bSkill" type="button" aria-label="불덩이 (마나 3)"><img id="iSkill" alt=""><i class="cd" id="cdSkill"></i><small>불덩이</small></button>
+    <button class="btn" id="bDash" type="button" aria-label="대시"><img id="iDash" alt=""><i class="cd" id="cdDash"></i><small>대시</small></button>
+  </div>
+  <button class="btn big" id="bAtk" type="button" aria-label="공격"><img id="iAtk" alt=""><i class="cd" id="cdAtk"></i></button>
+</div>
+<div id="veil" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
+
+<script>
+/*__A__*/
+/*__GAME__*/
+</script>
