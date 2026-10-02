@@ -16,6 +16,8 @@
 | `game/dungeon.html` | 던전 시험장. 어둠·횃불 조명, 가시 함정, 스위치·철창, 항아리·보물상자, 리치 보스 |
 | `assets/tiles/테마/` | 바닥 타일 6종 × 7테마 (봄·여름·가을·겨울·화산·얼음·늪). 상하좌우 이음새 보정 완료 |
 | `assets/edges/세트/` | 경계 타일 8종 × 6세트 (풀↔흙, 물↔모래 등) |
+| `assets/worldmap/tiles/테마/` | 월드맵 지형 타일 6테마(grass 초원·dry 마른 초원·forest 숲·desert 사막·volcano 화산·snow 설원) × 10종: 평지 2, 길(직선·곡선·T·십자), 강/용암/얼음물(직선·곡선·십자), 호수. 칸마다 크기가 조금씩 다르고 이음새 보정은 안 함 |
+| `assets/worldmap/mountains/테마/` | 산·절벽 5테마(grass·desert·volcano·snow·forest) × 12종: `top_01~06`(산봉우리·언덕·고원), `cliff_01~06`(절벽 땅덩이) |
 | `assets/props/` | 정원 소품(garden, garden2), 실내 가구(interior), 가게(shop) |
 | `assets/characters/` | 걷기 프레임: elf, hero, knight, dragon (정면·뒷모습·옆모습 × 5칸), 안경 소년 포즈 모음 |
 | `assets/monsters/` | 새 몬스터 75장: 고블린·오크·슬라임·가고일·미믹·해골·버섯·벌레·거미·정령(불·물·나무·바람·얼음) |
@@ -35,9 +37,9 @@
 | `assets/ui/` | 화면 UI 36종: 버튼(확인·취소·뒤로·메뉴·홈·설정·방향·도움말), 방향 패드, 바·패널·현수막, 두루마리·편지·지도·책, 가방·상자·금화 주머니 아이콘 |
 | `assets/ui/hud/` | 하단 HUD: 빈 틀(frame_empty), 채워진 틀(frame_full), 체력·마나 구슬(orb_hp, orb_mp). 구슬 중심은 빈 틀 기준 (233,297)·(1213,292), 반지름 118 |
 | `assets/illustrations/` | 캐릭터 전신 일러스트 (hero, knight, dragon) |
-| `source_sheets/` | 잘라 쓰기 전 원본 시트 |
+| `source_sheets/` | 잘라 쓰기 전 원본 시트 (월드맵 `worldmap_tiles`, `worldmap_mountains` 포함) |
 | `guides/` | 그림 요청용 기준 시트 (필드 에셋, 걷기 시트) |
-| `tools/` | 시트 자르기·타일 이음새 보정 스크립트 |
+| `tools/` | 시트 자르기·타일 이음새 보정 스크립트 (`slice_worldmap.py`: 월드맵 시트 2장 자르기) |
 
 ## 규격
 
