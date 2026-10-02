@@ -662,6 +662,27 @@ $('act').addEventListener('click', () => doAct());
 $('tools').addEventListener('click', () => openTools());
 const ZOOMS = [['멀리', 0.8], ['보통', 1], ['가까이', 1.3]]; let zi = 1;
 $('zoom').addEventListener('click', () => { zi = (zi + 1) % ZOOMS.length; $('zoom').textContent = '시야: ' + ZOOMS[zi][0]; });
+// 전체화면 버튼
+(function () {
+  const b = $('fs'), el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  const on = () => document.fullscreenElement || document.webkitFullscreenElement;
+  if (!req) { b.hidden = true; return; }
+  const sync = () => { b.textContent = on() ? '전체화면 끄기' : '전체화면'; };
+  b.addEventListener('click', () => {
+    try {
+      if (on()) { exit.call(document); return; }
+      const p = req.call(el);
+      const ok = () => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} };
+      const fail = () => { b.textContent = '이 화면에선 안 됨'; setTimeout(sync, 2000); };
+      if (p && p.then) p.then(ok).catch(fail); else ok();
+    } catch (e) { b.textContent = '이 화면에선 안 됨'; setTimeout(sync, 2000); }
+  });
+  document.addEventListener('fullscreenchange', sync);
+  document.addEventListener('webkitfullscreenchange', sync);
+})();
+
 let hintShown = false;
 function showHint(html){ const h = $('hint'); h.innerHTML = html; h.hidden = false; h.style.opacity = 1; hintShown = true; }
 function hideHint(){ if (!hintShown) return; hintShown = false; setTimeout(() => { $('hint').style.opacity = 0; setTimeout(() => $('hint').hidden = true, 700); }, 3500); }
