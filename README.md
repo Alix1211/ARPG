@@ -21,6 +21,7 @@
 | `assets/monsters_3dir/` | 왼쪽·정면·오른쪽 3방향 몬스터 11종: 오크·하피·서큐버스·악마·토끼·드래곤·늑대·곰·도적·어둠 마법사·리치 |
 | `assets/weapons/` | 무기 5종 × 10등급: sword(검)·bow(활)·staff(지팡이)·spear(창)·gauntlet(건틀릿), 01이 가장 낮고 10이 가장 높음 |
 | `assets/ui/` | 화면 UI 36종: 버튼(확인·취소·뒤로·메뉴·홈·설정·방향·도움말), 방향 패드, 바·패널·현수막, 두루마리·편지·지도·책, 가방·상자·금화 주머니 아이콘 |
+| `assets/ui/hud/` | 하단 HUD: 빈 틀(frame_empty), 채워진 틀(frame_full), 체력·마나 구슬(orb_hp, orb_mp). 구슬 중심은 빈 틀 기준 (233,297)·(1213,292), 반지름 118 |
 | `assets/illustrations/` | 캐릭터 전신 일러스트 (hero, knight, dragon) |
 | `source_sheets/` | 잘라 쓰기 전 원본 시트 |
 | `guides/` | 그림 요청용 기준 시트 (필드 에셋, 걷기 시트) |
