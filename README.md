@@ -16,6 +16,9 @@
 | `assets/props/` | 정원 소품(garden, garden2), 실내 가구(interior), 가게(shop) |
 | `assets/characters/` | 걷기 프레임: elf, hero, knight, dragon (정면·뒷모습·옆모습 × 5칸), 안경 소년 포즈 모음 |
 | `assets/monsters/` | 새 몬스터 75장: 고블린·오크·슬라임·가고일·미믹·해골·버섯·벌레·거미·정령(불·물·나무·바람·얼음) |
+| `assets/armor/` | 방어구 아이콘: 기사·마법사 5단계형(`tier_*`, 줄 0~3 = 투구·갑옷·장갑·신발) + 10종형(`knight_/mage_` 부위·번호) |
+| `assets/accessories/` | 반지 5단계(acc_0), 목걸이 5단계(acc_1) |
+| `assets/ui/kit_c/` | 붉은 장식 UI 키트: 인벤토리(01), 장비창(02), 정보창(02b), 대화창, 슬롯 테두리, 버튼, 탭, 바 등 |
 | `assets/monsters_v1/` | 처음 받은 몬스터 (시험장에서 쓰는 중) |
 | `assets/dungeon/tiles/` | 던전 바닥 3종, 벽 앞면·윗면, 모서리 8종, 문·계단·구덩이·용암·물 |
 | `assets/dungeon/props/` | 횃불, 기둥, 보물상자, 나무통, 항아리, 해골, 거미줄, 가시 함정, 스위치, 철창 |
