@@ -413,7 +413,7 @@ function loadGame(){
   if (d.pot){ POT.hp = d.pot.hp | 0; POT.mp = d.pot.mp | 0; }
   if (d.qs) for (let i = 0; i < 5; i++) QS[i] = d.qs[i] && A.skicon[d.qs[i]] ? d.qs[i] : null;
   let mx = 0; for (const it of [...bag, ...Object.values(eq)]) if (it && it.id > mx) mx = it.id; seq = mx + 1;
-  const P = G.P; P.name = d.name || P.name || '루크레아'; P.lv = d.lv || 1; P.exp = d.exp || 0; P.statPts = d.statPts | 0; P.skillPts = d.skillPts | 0; P.lifeSkills = Object.assign({}, P.lifeSkills || {}, d.lifeSkills || {}); P.passives = Object.assign({ magicGuide: 1 }, P.passives || {}, d.passives || {}); if (G.syncLifeUnlocks) G.syncLifeUnlocks(true); G.setGold(d.gold | 0);
+  const P = G.P; P.name = d.name || P.name || '루크레아'; P.lv = d.lv || 1; P.exp = d.exp || 0; P.statPts = d.statPts | 0; P.skillPts = d.skillPts | 0; P.lifeSkills = Object.assign({}, P.lifeSkills || {}, d.lifeSkills || {}); P.passives = Object.assign({ magicGuide: 0 }, P.passives || {}, d.passives || {}); if (G.syncLifeUnlocks) G.syncLifeUnlocks(true); G.setGold(d.gold | 0);
   if (window.TRADE) TRADE.loadData(d.trade);
   return d;
 }
