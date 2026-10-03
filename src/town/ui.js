@@ -194,10 +194,10 @@ const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', '
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 아무 무기나 100%, 지팡이면 +25%
 const IMPLEMENTED = new Set(['fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
-const SKN = { fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'얼음 화살', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
+const SKN = { fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'얼음 알갱이', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
   holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
-const SKD = { fire1:'불덩이를 쏴 폭발·화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음 화살, 둔화·빙결', ice2:'전방 부채꼴 냉기, 둔화',
-  bolt1:'적에게 휘어 날아가는 번개 구체', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'짧게 관통하는 어둠 칼날, 마나 조금 회복', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
+const SKD = { fire1:'느리게 날아가 펑 터지는 불덩이, 화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음 알갱이 5발이 후두두둑, 맞을수록 느려지다 얼어붙음', ice2:'전방 부채꼴 냉기, 둔화',
+  bolt1:'전방 60도로 느리게 나가는 전기 구체 3개, 닿는 동안 감전', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'발밑에서 퍼지는 좁은 전방위 어둠, 낮은 확률로 혼돈', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
   holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기', bow2:'부채꼴로 화살 여러 발', fist2:'앞으로 뻗는 투기, 4랭크부터 관통' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
@@ -520,7 +520,11 @@ function loadGame(){
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
-const saved=loadGame();syncHud();syncPot();
+const saved=loadGame();
+// 테스트용: 구현된 액티브 스킬을 전부 배운 상태(1랭크)로 만들고 스킬 포인트를 넉넉히 준다. 정식 시작 전에 false로 바꿀 것.
+const TEST_UNLOCK_ALL_SKILLS=true;
+if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}if((G.P.skillPts|0)<10)G.P.skillPts=10;}
+syncHud();syncPot();
 if(saved){
   G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);
   Promise.resolve(G.resumeLocation?G.resumeLocation(saved.location):false).then(()=>{

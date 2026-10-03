@@ -369,6 +369,7 @@ function applyMonsterStatus(m,kind,dur){
   if(!m||m.dead||!kind)return;
   if(kind==='burn'){m.burnT=Math.max(m.burnT||0,dur||3);m.burnTick=Math.min(m.burnTick||.55,.55);}
   else if(kind==='slow'){m.slowT=Math.max(m.slowT||0,dur||2.5);}
+  else if(kind==='confuse'){if(m.boss||m.elite)dur=(dur||2.5)*.4;m.confuseT=Math.max(m.confuseT||0,dur||2.5);}
   else if(kind==='freeze'){if(m.boss||m.elite)dur=(dur||.75)*.4;m.freezeT=Math.max(m.freezeT||0,dur||.75);m.stun=Math.max(m.stun||0,dur||.75);}
 }
 function updEncounters(dt){
@@ -407,6 +408,11 @@ function updEncounters(dt){
       if(m.burnTick<=0){m.burnTick=.55;const bv=Math.max(1,Math.round(m.maxHp*.022));m.hp-=bv;pops.push({x:m.x,y:m.y-m.h*.8,t:0,txt:'화상 '+bv,crit:true});if(m.hp<=0){killMonster(m);continue;}}
     }
     if(m.stun>0)continue;
+    if(m.confuseT>0){   // 혼돈: 공격 못 하고 제멋대로 헤맨다
+      m.confuseT=Math.max(0,m.confuseT-dt);m.cfT=(m.cfT||0)-dt;
+      if(m.cfT<=0){m.cfT=.35+Math.random()*.4;const ca=Math.random()*6.283;m.cfx=Math.cos(ca);m.cfy=Math.sin(ca);}
+      m.chargeWind=0;m.chargeT=0;faceMonster(m,m.cfx,m.cfy);moveMonster(m,m.cfx*m.sp*.7*dt,m.cfy*m.sp*.7*dt);continue;
+    }
     const dx=P.x-m.x,dy=P.y-m.y,d=Math.hypot(dx,dy),moveMul=m.slowT>0?.58:1;
     const groupDistance=m.packId?Math.hypot(P.x-m.packX,P.y-m.packY):0;
     if(d<280&&(!m.packId||groupDistance<m.packRadius)){
@@ -536,6 +542,7 @@ function drawMonster(m,sdt){
     ctx.strokeText(label,m.x,m.y-m.h-20);ctx.fillText(label,m.x,m.y-m.h-20);
     const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   if(!m.dead)vfxMonsterIcons(m,m.y-m.h-10);
+  if(m.confuseT>0&&!m.dead){ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#2a1038';ctx.fillStyle='#d9a8ff';const qx=m.x+m.w*.42+Math.sin(T*9)*3,qy=m.y-m.h-2;ctx.strokeText('?',qx,qy);ctx.fillText('?',qx,qy);}
   ctx.restore();
 }
 function dropImage(icon){

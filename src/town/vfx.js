@@ -106,8 +106,8 @@ function vfxShot(s, a){
   if (s.kind === 'bolt') return vfxBoltOrb(s);
   const nm = VFX_PSHOT[s.kind] || '';
   if (!nm || !vfxReady(nm)) return false;
-  vfxAura(s.x, s.y, VFX_AURA[nm], nm === 'shot_blade' ? (s.hw || 60) * .8 : 36);
-  const w = nm === 'shot_blade' ? (s.hw || 60) * 2.6 : nm === 'shot_ice' ? 78 : nm === 'shot_holy' ? 84 : nm === 'shot_dark' ? 76 : 70;
+  vfxAura(s.x, s.y, VFX_AURA[nm], nm === 'shot_blade' ? (s.hw || 60) * .8 : s.pellet ? 16 : 36);
+  const w = s.pellet ? 30 : nm === 'shot_blade' ? (s.hw || 60) * 2.6 : nm === 'shot_ice' ? 78 : nm === 'shot_holy' ? 84 : nm === 'shot_dark' ? 76 : 70;
   return vfxDraw(nm, s.x, s.y, w, { rot: a - (VFX_HEAD[nm] || 0) * Math.PI / 180, alpha: 1 });
 }
 // 번개 구체: 그림 없이 빛 덩어리와 튀는 전기줄기로 그린다
@@ -187,8 +187,8 @@ function vfxZonesGround(){
           vfxDraw('burst_fire_' + (i % 3), z.x + Math.cos(an) * rr, z.y + Math.sin(an) * rr * .55 + 4, 38 + 18 * ph, { base: true, alpha: a * Math.sin(ph * 3.14) * .85 });
         }
       }
-    } else if (z.type === 'voidring'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / .35) : 1;
+    } else if (z.type === 'voidring' || z.type === 'darkpulse'){
+      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (z.type === 'darkpulse' ? .3 : .35)) : 1;
       ctx.save(); ctx.translate(z.x, z.y + 4); ctx.scale(1, .55);
       const g = ctx.createRadialGradient(0, 0, cr * .6, 0, 0, cr + 18); g.addColorStop(0, 'rgba(120,40,200,0)'); g.addColorStop(.8, 'rgba(120,40,200,.34)'); g.addColorStop(1, 'rgba(120,40,200,0)');
       ctx.globalAlpha = a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, cr + 18, 0, 7); ctx.fill();
@@ -210,11 +210,12 @@ function vfxZonesTop(){
         const g = ctx.createRadialGradient(mx, my, 0, mx, my, 40); g.addColorStop(0, '#fff'); g.addColorStop(.4, '#ffb347'); g.addColorStop(1, 'rgba(255,90,20,0)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 40, 0, 7); ctx.fill();
       }
-    } else if (z.type === 'voidring'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / .35) : 1;
-      for (let i = 0; i < 12; i++){
-        const an = i * .5236 + z.t * 2;
-        vfxDraw('burst_dark_' + (i % 5), z.x + Math.cos(an) * cr, z.y + 6 + Math.sin(an) * cr * .55, 54, { base: true, alpha: a * .85 });
+    } else if (z.type === 'voidring' || z.type === 'darkpulse'){
+      const sm = z.type === 'darkpulse', e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (sm ? .3 : .35)) : 1;
+      const n = sm ? 8 : 12;
+      for (let i = 0; i < n; i++){
+        const an = i * (6.2832 / n) + z.t * 2;
+        vfxDraw('burst_dark_' + (i % 5), z.x + Math.cos(an) * cr, z.y + 6 + Math.sin(an) * cr * .55, sm ? 40 : 54, { base: true, alpha: a * .85 });
       }
     }
   }

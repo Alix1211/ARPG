@@ -6,9 +6,9 @@ const SK2 = {
   fire2:{mp:14,cd:4.5},                 // 화염 폭풍: 자기 중심 방사
   fire3:{mp:40,cd:15,root:.7},          // 운석 낙하: 지정 지점 유성 + 화염 장판
   ice2:{mp:9,cd:5},                     // 서리 돌풍: 전방 부채꼴 + 둔화(5랭크 빙결 확률)
-  bolt1:{mp:5,cd:1.0},                  // 번개 구체: 휘어 날아가는 유도 구체
+  bolt1:{mp:5,cd:1.0},                  // 번개 구체: 전방 60도 3발, 아주 느리게 관통하며 계속 감전
   bolt2:{mp:17,cd:6},                   // 연쇄 벼락: 명중 후 주변으로 튕김(2→3→4)
-  dark1:{mp:4,cd:.9},                   // 심연의 파편: 짧은 관통 칼날 + 미세 마나 회복
+  dark1:{mp:4,cd:.9},                   // 심연의 파편: 발밑에서 퍼지는 좁은 전방위 충격 + 낮은 확률 혼돈
   dark3:{mp:45,cd:18,root:.6},          // 파멸의 링: 퍼지는 원형 충격파(5랭크 흡혈)
   sword3:{mp:13,cd:12,root:.35},        // 초승달 검기: 멀리 나가는 관통 검기
   bow2:{mp:8,cd:4.5},                   // 산탄 사격: 부채꼴 5~7발
@@ -68,9 +68,14 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'bolt1': {
-      const hm = 1 + home, rng = 360 + home * 80, aim = magicAim(420, rng), ux = aim.vx / 420, uy = aim.vy / 420;
-      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:420, t:0, life:1.5, kind:'bolt', blast:26, fx:'voltburst',
-        dmg:Math.round(mag * (1.85 + rank * .06)), stagger:true, home:hm, homeRange:rng, target:aim.target });
+      // 전기 구체 3개가 전방 60도로 아주 느리게 퍼져 나가며, 닿아 있는 동안 계속 감전시킨다
+      const rng = 360 + home * 80, aim = home > 0 ? magicAim(170, rng) : { vx:d[0] * 170, vy:d[1] * 170 };
+      const a0 = Math.atan2(aim.vy, aim.vx), tick = Math.round(mag * (.42 + rank * .02));
+      for (const off of [-1, 0, 1]){
+        const a = a0 + off * Math.PI / 6;
+        shots.push({ x:P.x + Math.cos(a0) * 28, y:P.y - 44 + Math.sin(a0) * 28, vx:Math.cos(a) * 170, vy:Math.sin(a) * 170, speed:170, t:0, life:2.7, kind:'bolt',
+          pierce:true, rehit:.24, hit:new Map(), hw:30, blast:0, fx:'voltburst', dmg:tick, stagger:false });
+      }
       sfx.push({ type:'castbolt', t:0, x:P.x, y:P.y - 34, r:34 });
       return true;
     }
@@ -98,9 +103,9 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'dark1': {
-      const rng = 260 + home * 90, aim = home > 0 ? magicAim(700, rng) : { vx:d[0] * 700, vy:d[1] * 700 }, ux = aim.vx / 700, uy = aim.vy / 700;
-      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:700, t:0, life:.42, kind:'dark', pierce:true, hit:new Set(), hw:26, blast:0, fx:'darkburst',
-        dmg:Math.round(mag * (2.3 + rank * .07)), mpGain:1, mpCap:2 });
+      // 발밑에서 원이 360도로 퍼지며 사방을 벤다(화염구의 25% 정도, 범위는 좁게). 낮은 확률로 혼돈.
+      zones.push({ type:'darkpulse', map:(typeof MAP !== 'undefined' ? MAP : ''), x:P.x, y:P.y, t:0, dur:.28, R:118 + rank * 6, hit:new Set(),
+        dmg:Math.round(mag * (2.45 + rank * .08) * .25), chaos:.12 + rank * .02 });
       sfx.push({ type:'castdark', t:0, x:P.x, y:P.y - 34, r:30 });
       return true;
     }
@@ -164,6 +169,15 @@ function updZones(dt){
         if (z.tick <= 0){ z.tick += .5; for (const t of combatTargets()) if (skGround(t, z) < z.r * .85){ hitTarget(t, [0, 0], false, z.tickDmg); applyMonsterStatus(t, 'burn', 2.5); } }
       }
       if (z.t > z.delay + z.life) zones.splice(i, 1);
+    } else if (z.type === 'darkpulse'){
+      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
+      for (const t of combatTargets()){
+        if (z.hit.has(t) || skGround(t, z) > cr + 14) continue;
+        z.hit.add(t);
+        hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], false, z.dmg);
+        if (Math.random() < z.chaos){ applyMonsterStatus(t, 'confuse', 2.5); pops.push({ x:t.x, y:t.y - (t.h || 60) - 6, t:0, txt:'혼돈!', crit:true }); }
+      }
+      if (z.t > z.dur + .3) zones.splice(i, 1);
     } else if (z.type === 'voidring'){
       const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
       for (const t of combatTargets()){

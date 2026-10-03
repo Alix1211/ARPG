@@ -1090,6 +1090,7 @@ function guideShot(s, dt){
 function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
+    if (s.wait > 0){ s.wait -= dt; continue; }   // 알갱이는 조금씩 시간차로 나간다
     if (!s.done) guideShot(s, dt);
     s.t += dt;
     const nx=s.x+s.vx*dt, ny=s.y+s.vy*dt;
@@ -1098,7 +1099,10 @@ function drawShots(dt){
     if (!s.done){
       if (s.pierce){   // 관통: 대상마다 한 번씩 맞히고 계속 날아간다(검기·파편·파동권)
         const hw = s.hw || 22;
-        for (const t of combatTargets()){ if (!s.hit.has(t) && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ s.hit.add(t); pierceHit(s, t); } }
+        for (const t of combatTargets()){
+          const again = s.rehit ? (!s.hit.has(t) || s.t - s.hit.get(t) > s.rehit) : !s.hit.has(t);   // rehit: 닿아 있는 동안 계속 감전
+          if (again && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ if (s.rehit) s.hit.set(t, s.t); else s.hit.add(t); pierceHit(s, t); }
+        }
       } else {
         for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
       }
@@ -1122,6 +1126,7 @@ function drawShots(dt){
     } else if (s.kind === 'ice'){
       ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(a);
       ctx.fillStyle = '#d9f3ff'; ctx.strokeStyle = '#5ab4ff'; ctx.lineWidth = 2;
+      if (s.pellet) ctx.scale(.45, .45);
       ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-6, -6); ctx.lineTo(-14, 0); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     } else {
       const fire = s.kind === 'fire', R0 = fire ? 17 : 14;
@@ -1138,12 +1143,13 @@ function boom(s,t){
   const hit=(u)=>{
     hitTarget(u,[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0],!!s.stagger,s.dmg);
     if(s.status&&typeof applyMonsterStatus==='function')applyMonsterStatus(u,s.status,s.statusDur||2.5);
+    if(s.chill){const now=performance.now()/1000;if(now-(u.chillAt||-9)>1.6)u.chillN=0;u.chillAt=now;u.chillN=(u.chillN||0)+1;if(s.chillFreeze&&u.chillN>=3){u.chillN=0;applyMonsterStatus(u,'freeze',s.chillFreeze);}}
   };
   if(s.blast){
     for(const u of combatTargets())if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);
     sfx.push({type:s.fx||(s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact'),t:0,x:s.x,y:s.y,r:s.blast});
   }else if(t){
-    hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:34});
+    hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:s.pellet?22:34});
   }
 }
 
@@ -1168,14 +1174,20 @@ function cast(id,mod){
   const skillMul=(1+(rank-1)*.18)*(1+(cm.skill||0)/100);
   if(id==='fire1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.fire||0)/100);
-    const range=home?330+home*90:0,aim=home>0?magicAim(340,range):{vx:d[0]*340,vy:d[1]*340,target:null},ux=aim.vx/340,uy=aim.vy/340;
-    const blast=78+(rank>=3?14:0)+(rank>=5?18:0);
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:340,t:0,life:1.7,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
+    const range=home?330+home*90:0,aim=home>0?magicAim(280,range):{vx:d[0]*280,vy:d[1]*280,target:null},ux=aim.vx/280,uy=aim.vy/280;
+    const blast=100+(rank>=3?14:0)+(rank>=5?18:0);
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:280,t:0,life:2.1,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
     sfx.push({type:'castfire',t:0,x:P.x,y:P.y-36,r:40});
   }else if(id==='ice1'){
+    // 얼음 알갱이 5발이 좁게 퍼지며 후두두둑 날아간다. 가까울수록 많이 맞고, 쌓이면 더 느려지다 3랭크부터 얼어붙는다.
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(480,range):{vx:d[0]*480,vy:d[1]*480,target:null},ux=aim.vx/480,uy=aim.vy/480;
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:480,t:0,life:1.5,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
+    const range=home?360+home*95:0,aim=home>0?magicAim(620,range):{vx:d[0]*620,vy:d[1]*620,target:null};
+    const a0=Math.atan2(aim.vy,aim.vx),N=5,pd=Math.round(base*(1.75+rank*.06)*.3);
+    for(let i=0;i<N;i++){
+      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=600+Math.random()*60;
+      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:.62,wait:i*.035+Math.random()*.03,kind:'ice',pellet:true,blast:0,dmg:pd,
+        status:'slow',statusDur:2.4+rank*.2,stagger:rank>=5,chill:true,chillFreeze:rank>=3?.85+rank*.08:0,home:0,target:null});
+    }
     sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();

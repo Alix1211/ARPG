@@ -16,7 +16,7 @@ async def main():
         await pg.goto(URL);await pg.wait_for_timeout(1500)
         # 스킬 포인트로 배울 수 있어야 한다
         for sid in SKILLS:
-            ok=await ev("(id) => { GAME.P.skillPts=3; const r=GAME.investSkill(id); return [r, UI.skillRank(id)]; }",sid)
+            ok=await ev("(id) => { GAME.P.skillLv[id]=0; GAME.P.skillPts=3; const r=GAME.investSkill(id); return [r, UI.skillRank(id)]; }",sid)
             assert ok==[True,1],(sid,ok)
         for sid in SKILLS:
             await ev("(id) => { GAME.P.skillLv[id]=1; }",sid)
@@ -33,13 +33,13 @@ async def main():
               __P.dir='side'; __P.flip=false; __P.x+=500; __FD.debugTarget(110,0,true); }""",sid)
             before=await ev("() => __FD.debugMonster()")
             assert before,sid
-            kind={'bolt1':'bolt','dark1':'dark','sword3':'blade','fist2':'wave','bow2':'bow'}.get(sid,'')
+            kind={'bolt1':'bolt','sword3':'blade','fist2':'wave','bow2':'bow'}.get(sid,'')
             res=await ev("([id,k]) => { const ok=GAME.cast(id,{dmg:1,mp:1}); return [ok, __CTRL.shots().filter(x=>x.kind===k&&!x.done).length]; }",[sid,kind])
             assert res[0],sid
             if sid=='fire3':
                 assert await ev("() => GAME.P.castRoot>0"),'cast root'
             if kind:
-                assert res[1]==(5 if sid=='bow2' else 1),(sid,res)
+                assert res[1]==(5 if sid=='bow2' else 3 if sid=='bolt1' else 1),(sid,res)
             await pg.wait_for_timeout(500)
             if SHOT:
                 os.makedirs(SHOT,exist_ok=True);await pg.screenshot(path=os.path.join(SHOT,sid+'.png'))

@@ -37,11 +37,12 @@ async def main():
           GAME.cast('fire1');
         }""")
         fire=await ev("() => __CTRL.shots().filter(x=>x.kind==='fire').at(-1)")
-        assert fire and fire['blast']>=78 and fire['status']=='burn' and fire['dmg']>=20,fire
+        assert fire and fire['blast']>=100 and fire['status']=='burn' and fire['dmg']>=20,fire
 
         await ev("() => { GAME.clearCd(); GAME.cast('ice1'); }")
         ice=await ev("() => __CTRL.shots().filter(x=>x.kind==='ice').at(-1)")
-        assert ice and ice['blast']>=34 and ice['status']=='slow' and ice['dmg']>=14,ice
+        npel=await ev("() => __CTRL.shots().filter(x=>x.kind==='ice'&&!x.done).length")
+        assert ice and npel>=3 and ice['status']=='slow' and ice['dmg']>=1,(ice,npel)
 
         assert not errs,errs
         print('combat overhaul ok',{'lv1':m1,'lv4':m4,'fire':fire,'ice':ice})

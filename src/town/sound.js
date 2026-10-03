@@ -45,17 +45,17 @@ const SFX = (() => {
       noise(t,.32,220,1450,.6,.48,1,'lowpass');noise(t+.04,.22,900,3200,1.1,.3,1);
       tone(t,.24,105,48,.34,1,'sine');tone(t+.05,.18,260,95,.18,1,'triangle');
     },
-    ice(t){
-      tone(t,.16,vary(2100),vary(3300),.13,1,'triangle');tone(t+.035,.2,vary(1450),vary(2400),.09,1,'sine');
-      noise(t,.18,5200,8500,4.5,.2,1);noise(t+.08,.16,3400,6200,3,.15,1);
+    ice(t){   // 후두두둑: 얼음 알갱이 다섯 알
+      for(let i=0;i<5;i++){const u=t+i*.04+Math.random()*.012;tone(u,.07,vary(2300),vary(1500),.07,1,'triangle');noise(u,.08,5200,8500,3.5,.12,1);}
+      tone(t+.18,.2,vary(3300),vary(2600),.05,1,'sine');
     },
     heal(t){ [523,659,784,1046].forEach((f,i)=>tone(t+i*.055,.55,f,0,.085,1,'sine',.025)); },
     slash(t){ noise(t,.25,550,4300,1,.48,1);tone(t,.14,190,58,.34,1);noise(t+.08,.11,2800,5200,2.5,.18,1); },
     spin(t){ noise(t,.48,480,3000,.8,.42,1);noise(t+.1,.38,3200,700,.9,.3,1);tone(t,.24,135,62,.28,1); },
     rock(t){ noise(t,.16,420,120,.9,.38,0);tone(t,.12,105,55,.24,0,'triangle'); },
     charge(t){ noise(t,.28,180,980,.7,.32,1,'lowpass');tone(t,.22,90,52,.22,0); },
-    dark(t){ tone(t,.36,vary(150),vary(70),.3,1,'sawtooth');noise(t,.3,700,160,.8,.25,1,'lowpass');tone(t+.05,.3,vary(420),vary(210),.1,1,'triangle'); },
-    lightning(t){ noise(t,.12,6000,1800,4,.23,1);tone(t,.16,980,210,.16,1,'sawtooth'); },
+    dark(t){ noise(t,.2,500,4600,1,.36,1);tone(t,.2,vary(130),vary(70),.2,1,'sawtooth');tone(t+.16,.4,vary(1750),vary(1650),.1,1,'triangle');tone(t+.16,.3,vary(2650),vary(2500),.05,1,'sine'); },   // 쉬익, 챙
+    lightning(t){ noise(t,.12,6000,1800,4,.2,1);for(let i=0;i<6;i++)tone(t+i*.06,.09,vary(i%2?430:310),vary(i%2?310:430),.1,1,'sawtooth');tone(t,.4,980,210,.08,1,'sawtooth'); },   // 지잉징잉
     slime(t){ noise(t,.22,520,170,.7,.3,0,'lowpass');tone(t,.16,180,95,.13,0,'sine'); },
     coin(t){ tone(t, 0.18, 1568, 0, 0.12, 1, 'sine', 0.002); tone(t + 0.07, 0.3, 2093, 0, 0.11, 1, 'sine', 0.002); },
     buy(t){ S.coin(t); tone(t + 0.12, 0.3, 1046, 0, 0.06, 1); },
