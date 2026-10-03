@@ -8,7 +8,7 @@ const NUM = G.NUM || 100;         // 수치 규모(town.js). 체력·마나·공
 const RARN = ['일반', '마법', '희귀', '전설'];
 const RARC = ['#e8dcc0', '#6fb4ff', '#ffd34d', '#ff8a2a'];
 const RART = ['#5b4630', '#2f6fb8', '#a8780a', '#c4580a'];
-const SLOTN = { w1: '무기1', w2: '무기2', head: '투구', body: '갑옷', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
+const SLOTN = { w1: '무기1', w2: '무기2', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
 // 무기별 한 번 피해 배율(검=100% 기준). docs/weapons.md
 const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 2.0 };
@@ -16,7 +16,6 @@ const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '�
 
 // ---- 아이템 파밍 ----
 let seq = 1;
-const GRADE_NAME = ['나무','낡은','철','강철','기사의','서리','왕실','암흑','번개','태양의'];
 const GRADE_MUL = [1.00,1.35,1.75,2.25,2.90,3.70,4.70,6.00,7.60,9.60];
 const ALL_GEAR = ['weapon','head','body','hands','feet','ring','neck'];
 // 일부러 무기/직업별로 과하게 제한하지 않는다.
@@ -40,18 +39,17 @@ const AFFIX = [
 ];
 const AFFIX_BY=Object.fromEntries(AFFIX.map(a=>[a.id,a]));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function rarityForTier(tier){
+function rarityForTier(tier, rank='normal'){
   tier=clamp(tier||1,1,7);
   const table=[[62,31,7,0],[56,32,12,0],[50,33,17,0],[45,34,20,1],[40,34,23,3],[35,34,26,5],[30,34,28,8]];
   const w=table[tier-1].slice();
+  const shift=rank==='elite'?10:(rank==='boss'?20:0);
+  const legend=tier<4?0:(rank==='boss'?5:rank==='elite'?2:0);
+  w[0]-=shift;w[2]+=shift-legend;w[3]+=legend;
   const scent=(G.P.lifeSkills&&G.P.lifeSkills.moneyScent)||0, greed=(G.P.passives&&G.P.passives.greed)||0;
   const bonus=scent*1.2+greed*.6;
   if(bonus>0){const shift=Math.min(w[0]-20,bonus);w[0]-=shift;w[2]+=shift*.75;w[3]+=shift*.25;}
   let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i;}return 0;
-}
-function gradeForTier(tier){
-  const ranges=[[1,2],[2,3],[4,5],[5,6],[7,8],[8,9],[9,10]],r=ranges[clamp(tier,1,7)-1];
-  return r[0]+(Math.random()<.5?0:r[1]-r[0]);
 }
 function rollAffix(it, used){
   const pool=AFFIX.filter(a=>a.slots.includes(it.kind)&&!used.has(a.id)); if(!pool.length)return;
@@ -63,39 +61,32 @@ function rollAffix(it, used){
   it.st[a.st]=(it.st[a.st]||0)+v;
 }
 function finalizeName(it){
-  const accName=['구리','은','금','보석','별빛','룬','고대'];
-  const base = it.kind==='weapon' ? GRADE_NAME[it.g-1]+' '+WN[it.wt]
-    : it.kind==='ring' ? accName[it.tier-1]+' 반지'
-    : it.kind==='neck' ? accName[it.tier-1]+' 목걸이'
-    : GRADE_NAME[it.g-1]+' '+({head:'투구',body:'갑옷',hands:'장갑',feet:'신발'}[it.kind]);
-  const pf=(it.aff||[]).find(a=>a.k==='P'), sf=(it.aff||[]).find(a=>a.k==='S');
-  it.name=(sf?sf.nm+' ':'')+(pf?pf.nm+' ':'')+base;
+  const base=GEAR_BASE[it.baseId];if(!base)throw Error('장비 기초 이름 누락');
+  it.name=gearFullName(base,it.aff);
 }
 function make(spec){
-  const roll=!!spec.roll, tier=clamp(spec.tier||Math.ceil((spec.g||1)/2),1,7);
-  const g=clamp(spec.g || gradeForTier(tier),1,10);
-  const it={id:seq++,kind:spec.kind,rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier):0),tier,g,st:{},aff:[]};
+  const base=gearBase(spec),tier=base.tier,g=base.powerGrade,roll=!!spec.roll;
+  const it={id:seq++,baseId:base.id,kind:base.kind,icon:base.icon,requiredLevel:base.requiredLevel,
+    rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier,spec.rank):0),tier,g,st:{},aff:[]};
   const mul=GRADE_MUL[g-1];
-  if(spec.kind==='weapon'){
-    it.wt=spec.wt; it.icon=`${spec.wt}_${String(g).padStart(2,'0')}`;
-    const k=spec.wt==='staff'?'matk':'atk'; it.st[k]=Math.max(1,Math.round(10*WMULT[spec.wt]*mul*NUM));
-  } else if(spec.kind==='ring'||spec.kind==='neck'){
-    const at=Math.min(5,tier); it.icon=spec.kind+'_'+at;
-    if(spec.kind==='ring') it.st.luck=Math.max(1,tier); else {it.st.hp=3*tier*NUM;it.st.mp=2*tier*NUM;}
-  } else {
-    const style=spec.style|| (Math.random()<.5?'knight':'mage'); it.style=style;
-    it.icon=`${style}_${spec.kind}_${String(g).padStart(2,'0')}`;
-    const base={head:[2,1,1],body:[4,4,0],hands:[1,1,0],feet:[1,2,0]}[spec.kind];
-    it.st.def=Math.max(1,Math.round(base[0]*mul*NUM)); if(base[1])it.st.hp=Math.max(1,Math.round(base[1]*mul*NUM)); if(base[2])it.st.mp=Math.max(1,Math.round(base[2]*mul*NUM));
+  if(base.kind==='weapon'){
+    it.wt=base.wt;const key=base.wt==='staff'?'matk':'atk';
+    it.st[key]=Math.max(1,Math.round(10*WMULT[base.wt]*mul*NUM));
+  }else if(base.kind==='ring'||base.kind==='neck'){
+    if(base.kind==='ring')it.st.luck=tier;else {it.st.hp=3*tier*NUM;it.st.mp=2*tier*NUM;}
+  }else {
+    it.style=base.style;const stats={head:[2,1,1],body:[4,4,0],hands:[1,1,0],feet:[1,2,0]}[base.kind];
+    it.st.def=Math.max(1,Math.round(stats[0]*mul*NUM));
+    if(stats[1])it.st.hp=Math.max(1,Math.round(stats[1]*mul*NUM));
+    if(stats[2])it.st.mp=Math.max(1,Math.round(stats[2]*mul*NUM));
   }
-  if(roll && it.rar>0){
-    const used=new Set(), n=it.rar===1?1:it.rar===2?(2+Math.floor(Math.random()*3)):4;
-    while(it.aff.length<n) rollAffix(it,used);
+  if(roll&&it.rar>0){
+    const used=new Set(),n=it.rar===1?1:it.rar===2?2+Math.floor(Math.random()*3):4;
+    while(it.aff.length<n)rollAffix(it,used);
   }
-  finalizeName(it);
-  it.price=spec.price||Math.max(10,Math.round(16*mul*[1,2.2,5,12][it.rar]));
-  return it;
+  finalizeName(it);it.price=spec.price||Math.max(10,Math.round(16*mul*[1,2.2,5,12][it.rar]));return it;
 }
+function canEquip(it){return G.P.lv>=(it.requiredLevel||1);}
 const STN = { atk:'공격력',matk:'마법 공격력',atkPct:'물리 공격',matkPct:'마법 공격',as:'공격 속도',crit:'치명타 확률',critDmg:'치명타 피해',fire:'화염마법',ice:'냉기마법',skill:'스킬 피해',def:'방어력',hp:'최대 체력',mp:'최대 마나',ms:'이동 속도',coin:'금화 획득',find:'아이템 발견',luck:'운' };
 const PCTSTAT=new Set(['atkPct','matkPct','as','crit','critDmg','fire','ice','skill','ms','coin','find']);
 const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
@@ -451,6 +442,7 @@ function showInfo(it, from){
   const I = $('iinfo'); I.innerHTML = '';
   const nm = el('div', 'iname', it.name); nm.style.color = RART[it.rar]; I.append(nm);
   I.append(el('div', 'isub', `${RARN[it.rar]} · ${it.kind === 'weapon' ? WN[it.wt] : SLOTN[targetSlot(it)]}`));
+  I.append(el('div','isub',`T${it.tier} · 착용 Lv${it.requiredLevel||1}`));
   if (it.kind === 'weapon') I.append(el('div', 'isub', WINFO[it.wt]));
   const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
   const ul = el('ul', 'ist');
@@ -459,10 +451,10 @@ function showInfo(it, from){
   const row = el('div', 'ibtns');
   if (from === 'bag'){
     if (it.kind === 'weapon'){
-      for (const s of ['w1', 'w2']){ const b = el('button', 'btn', `${SLOTN[s]}에 장착`); b.type = 'button'; b.onclick = () => equip(it, s); row.append(b); }
+      for (const s of ['w1', 'w2']){ const b = el('button', 'btn', `${SLOTN[s]}에 장착`); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
     } else if (it.kind === 'ring'){
-      for (const s of ['ring1', 'ring2']){ const b = el('button', 'btn', s === 'ring1' ? '왼손 반지' : '오른손 반지'); b.type = 'button'; b.onclick = () => equip(it, s); row.append(b); }
-    } else { const b = el('button', 'btn', '장착'); b.type = 'button'; b.onclick = () => equip(it, it.kind); row.append(b); }
+      for (const s of ['ring1', 'ring2']){ const b = el('button', 'btn', s === 'ring1' ? '왼손 반지' : '오른손 반지'); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
+    } else { const b = el('button', 'btn', '장착'); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, it.kind); row.append(b); }
     const d = el('button', 'btn ghost', '버리기'); d.type = 'button';
     d.onclick = () => { if (d.dataset.ok){ bag[pickSel.i] = null; pickSel = null; I.classList.remove('on'); render(); } else { d.dataset.ok = 1; d.textContent = '정말 버리기'; } };
     row.append(d);
@@ -473,6 +465,7 @@ function showInfo(it, from){
   I.classList.add('on');
 }
 function equip(it, s){
+  if(!slotOk(it,s)||!canEquip(it)){G.say('착용 레벨이 부족합니다. Lv'+it.requiredLevel+'부터 착용할 수 있습니다.');return false;}
   const i = bag.indexOf(it); if (i < 0) return;
   bag[i] = eq[s]; eq[s] = it;
   if ((s === 'w1' || s === 'w2') && !eq[cur]) cur = s;
@@ -486,7 +479,7 @@ function unequip(s){
 }
 window.UI = {
   addPotion(k,n){POT[k]+=n;syncPot();},
-  make,add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
+  make,canEquip,equip,add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
   dragDebug:()=>drag?{id:drag.id,from:drag.from,moved:drag.moved}:null,quickDropIndex,
@@ -508,7 +501,7 @@ try{localStorage.removeItem('arpg_save_v1');localStorage.removeItem('arpg_save_v
 function saveGame(){
   try{
     const P=G.P;
-    localStorage.setItem(SKEY,JSON.stringify({v:3,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
+    localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,eq,cur,pot:POT,qs:QS,
       location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}

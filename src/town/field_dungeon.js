@@ -154,39 +154,79 @@ async function selectRegion(theme, btn){
 }
 function returnFromField(){ travel('out',[2.2*TS,11.4*TS],'side'); }
 
-const MOBDEF = {
-  wolf:{hp:38,sp:92,dmg:5,skill:'pounce'}, rabbit:{hp:18,sp:108,dmg:3,skill:'dart'}, bear:{hp:76,sp:58,dmg:9,skill:'charge'}, orc:{hp:58,sp:64,dmg:7,skill:'cleave'},
-  harpy:{hp:44,sp:78,dmg:6,ranged:1,range:185,skill:'radial'}, rogue:{hp:42,sp:82,dmg:6,ranged:1,range:170,skill:'blink',shotStatus:'bleed'},
-  darkmage:{hp:48,sp:54,dmg:8,ranged:1,range:230,skill:'lightning'},
-  gargoyle:{hp:68,sp:48,dmg:8,ranged:1,range:195,skill:'petrify'},
-  demon:{hp:80,sp:62,dmg:10,skill:'berserk'}, slime:{hp:24,sp:45,dmg:4,touchStatus:'slow',skill:'splash'}, goblin:{hp:32,sp:70,dmg:5,ranged:1,range:185,skill:'rock'}, skeleton:{hp:36,sp:62,dmg:5,skill:'revive'},
-  spider:{hp:26,sp:90,dmg:4,skill:'web'}, mushroom:{hp:30,sp:40,dmg:5}, elem_fire:{hp:46,sp:58,dmg:7,ranged:1,range:175,shotStatus:'burn'},
-  elem_ice:{hp:46,sp:58,dmg:7,ranged:1,range:175,shotStatus:'slow'}
-};
-const THEME_MOBS = {
-  spring:['wolf','rabbit','goblin','slime'], summer:['wolf','bear','spider','goblin'], autumn:['rogue','orc','mushroom','goblin'],
-  winter:['wolf','bear','skeleton','elem_ice'], ice:['elem_ice','darkmage','gargoyle','skeleton'], volcano:['demon','orc','elem_fire'], swamp:['harpy','spider','slime','mushroom']
-};
-function mobImageSet(n){ return mon3[n] || (mon1[n] ? {front:mon1[n],left:mon1[n],right:mon1[n]} : null); }
+const MOBDEF=TIER_MATCH.monsters;
+const THEME_MOBS=Object.fromEntries(FIELD_THEMES.map((x,i)=>[x[0],TIER_MATCH.fieldPools[i]]));
+function mobImageSet(id){
+  const imgs=mon3[id];if(!imgs||!imgs.front)throw Error('몬스터 이미지 누락: '+id);
+  return imgs;
+}
+let packSerial=0;
+function createMonster(id,x,y,opts={}){
+  const d=MOBDEF[id],st=matchedMonsterStats(id,P.lv,opts.floor||0,opts.bossRole||'');
+  st.hp*=NUM;st.dmg*=NUM;st.exp*=NUM;
+  const baseW=82*d.bodySize,w=baseW*(d.rank==='boss'?1.2:1);
+  return {...st,monster:1,type:id,family:d.family,name:d.name,elite:d.rank==='elite',boss:d.rank==='boss',baseW,w,h:w,x,y,maxHp:st.hp,
+    sp:d.sp*(1+(d.tier-1)*.025),ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',
+    shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:.7+Math.random()*1.5,
+    imgs:mobImageSet(id),face:'front',flip:false,state:'wander',tx:x,ty:y,wait:Math.random()*2,cd:Math.random(),
+    hurt:0,stun:0,dead:false,death:0,homeX:x,homeY:y,...opts};
+}
+function spawnClear(m,placed=monsters,field=false){
+  if(field){
+    const x=m.x/TS,y=m.y/TS;
+    if(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||Math.hypot(x-20,y-31)<5)return false;
+  }
+  if(pointInSolid(m.x,m.y,m.w*.5))return false;
+  if(!field&&typeof gridBlocked==='function'&&gridBlocked(m.x,m.y,m.w*.5))return false;
+  return placed.every(other=>other.removed||Math.hypot(m.x-other.x,m.y-other.y)>=Math.max(m.w,other.w)*1.1);
+}
+function spawnPack(config,cx,cy,opts={}){
+  const packId=++packSerial,leader=createMonster(config.leader,cx,cy,{...opts,packId,packLeader:true});
+  const members=[];
+  for(const member of config.members){
+    const n=member.min+Math.floor(Math.random()*(member.max-member.min+1));
+    for(let i=0;i<n;i++)members.push(member.id);
+  }
+  const radius=Math.max(leader.w,...members.map(id=>82*MOBDEF[id].bodySize))*1.5,local=[leader];
+  const phase=Math.random()*Math.PI*2;
+  const magicFormation=config.leader==='skeleton_mage'||config.leader==='lich';
+  const frontline=members.filter(id=>!MOBDEF[id].ranged),rear=members.filter(id=>MOBDEF[id].ranged);
+  for(let i=0;i<members.length;i++){
+    const id=members[i],ranged=!!MOBDEF[id].ranged,formation=ranged?rear:frontline,j=formation.indexOf(id)+members.slice(0,i).filter(x=>x===id).length;
+    let x=cx+Math.cos(phase+i*Math.PI*2/members.length)*radius,y=cy+Math.sin(phase+i*Math.PI*2/members.length)*radius;
+    if(magicFormation){
+      // 마법 리더는 후열, 해골은 왼쪽 진입 방향 전열, 궁병은 측면 후열.
+      const row=Math.floor(j/3),column=j%3,count=Math.min(3,formation.length-row*3),gap=82*MOBDEF[id].bodySize*1.15;
+      x=cx+(ranged?1:-1)*(radius+row*gap);y=cy+(column-(count-1)/2)*gap;
+    }
+    local.push(createMonster(id,x,y,{floor:opts.floor||0,packId,packLeader:false,packX:cx,packY:cy,packRadius:radius+240,skillCd:1.4+i*.36}));
+  }
+  const field=opts.field||false;
+  for(let i=0;i<local.length;i++)if(!spawnClear(local[i],monsters.concat(local.slice(0,i)),field))return false;
+  leader.packX=cx;leader.packY=cy;leader.packRadius=radius+240;
+  monsters.push(...local);return true;
+}
 function pointInSolid(px, py, pad=0){
   for (const s of solids) if (px > s.x0 - pad && px < s.x1 + pad && py > s.y0 - pad && py < s.y1 + pad) return true;
   return false;
 }
 function spawnFieldMonsters(theme){
-  monsters.length=0; dropsLoot.length=0; enemyShots.length=0; enemyHazards.length=0;
-  const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16, tier=FIELD_TIER[theme]||1;
-  const tmin=(tier-1)*10+1,within=Math.max(0,Math.min(9,(P.lv||tmin)-tmin));
-  const hpMul=(1+(tier-1)*.55)*(1+within*.055),dmgMul=(1+(tier-1)*.34)*(1+within*.035),spMul=(1+(tier-1)*.035)*(1+within*.004);
-  for(let i=0;i<count;i++){
-    let x=0,y=0,t=0;
-    do{ x=7+Math.random()*48; y=3+Math.random()*34; t++; }
-    while(t<140&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||Math.hypot(x-20,y-31)<5||pointInSolid(x*TS,y*TS,24)));
-    const type=pool[i%pool.length], d=MOBDEF[type], imgs=mobImageSet(type); if(!imgs) continue;
-    const sc=type==='bear'||type==='demon'||type==='gargoyle'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
-    const hp=Math.round(d.hp*hpMul*NUM), dmg=Math.max(1,Math.round(d.dmg*dmgMul*NUM));
-    monsters.push({monster:1,type,tier,x:x*TS,y:y*TS,w,h,hp,maxHp:hp,sp:d.sp*spMul,dmg,ranged:d.ranged||0,range:d.range||42,
-      skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:.7+Math.random()*1.5,mobLv:tmin+within,
-      imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
+  monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;
+  const tier=FIELD_TIER[theme]||1,pool=THEME_MOBS[theme],elites=TIER_MATCH.fieldElites[tier-1];
+  // 16마리 예산 안에서 군집을 교체 배치(부하를 일반 스폰에 중복 추가하지 않는다).
+  const first=createMonster(pool[0],0,0);
+  for(let tries=0;tries<400;tries++){
+    first.x=(7+Math.random()*48)*TS;first.y=(3+Math.random()*34)*TS;
+    if(spawnClear(first,monsters,true)){first.tx=first.homeX=first.x;first.ty=first.homeY=first.y;monsters.push(first);break;}
+  }
+  const pack=TIER_MATCH.groups.find(g=>g.tier===tier&&!g.dungeonOnly);
+  if(pack)for(let tries=0;tries<700;tries++)if(spawnPack(pack,(10+Math.random()*41)*TS,(7+Math.random()*26)*TS,{field:true}))break;
+  for(let i=monsters.length;i<16;i++){
+    const id=elites.length&&i===14?elites[fieldSerial%elites.length]:pool[i%pool.length];
+    for(let tries=0;tries<400;tries++){
+      const m=createMonster(id,(7+Math.random()*48)*TS,(3+Math.random()*34)*TS);
+      if(spawnClear(m,monsters,true)){monsters.push(m);break;}
+    }
   }
 }
 function restAtCamp(){
@@ -226,7 +266,7 @@ function restoreDynamicWorld(s){
 }
 function afterDynamicBuild(id){
   if(window.__PORTAL_RUNTIME_RESTORE)return;
-  if(id==='field')spawnFieldMonsters(fieldTheme);
+  if(id==='field'){dunGrid=null;spawnFieldMonsters(fieldTheme);}
   else if(id==='dungeon')spawnDungeonMonsters();
   else {dunGrid=null;monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;}
 }
@@ -368,7 +408,8 @@ function updEncounters(dt){
     }
     if(m.stun>0)continue;
     const dx=P.x-m.x,dy=P.y-m.y,d=Math.hypot(dx,dy),moveMul=m.slowT>0?.58:1;
-    if(d<280){
+    const groupDistance=m.packId?Math.hypot(P.x-m.packX,P.y-m.packY):0;
+    if(d<280&&(!m.packId||groupDistance<m.packRadius)){
       m.state='chase'; faceMonster(m,dx,dy);
       if(specialMonsterAI(m,dx,dy,d,dt)) continue;
       if(m.ranged&&d<m.range){
@@ -381,7 +422,7 @@ function updEncounters(dt){
     } else {
       m.state='wander'; m.wait-=dt;
       const wx=m.tx-m.x,wy=m.ty-m.y,wd=Math.hypot(wx,wy);
-      if(m.wait<=0||wd<8){m.tx=m.x+(Math.random()*2-1)*180;m.ty=m.y+(Math.random()*2-1)*140;m.tx=Math.max(40,Math.min(MWp-40,m.tx));m.ty=Math.max(55,Math.min(MHp-20,m.ty));m.wait=1.5+Math.random()*3;}
+      if(m.wait<=0||wd<8){m.tx=m.homeX+(Math.random()*2-1)*90;m.ty=m.homeY+(Math.random()*2-1)*70;m.tx=Math.max(40,Math.min(MWp-40,m.tx));m.ty=Math.max(55,Math.min(MHp-20,m.ty));m.wait=1.5+Math.random()*3;}
       else{faceMonster(m,wx,wy);moveMonster(m,wx/wd*m.sp*moveMul*.28*dt,wy/wd*m.sp*moveMul*.28*dt);}
     }
   }
@@ -418,37 +459,32 @@ function randomDropItem(m){
   const tier=monsterTier(m),r=Math.random();
   if(r<.58){
     const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)];
-    return UI.make({kind:'weapon',wt,tier,roll:true});
+    return UI.make({kind:'weapon',wt,tier,rank:m&&m.rank,roll:true});
   }
   if(r<.90){
     const kinds=['head','body','hands','feet'];
-    return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,roll:true});
+    return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,rank:m&&m.rank,roll:true});
   }
-  return UI.make({kind:Math.random()<.55?'ring':'neck',tier,roll:true});
+  return UI.make({kind:Math.random()<.55?'ring':'neck',tier,rank:m&&m.rank,roll:true});
 }
 function monsterExp(m){
-  const tier=monsterTier(m), min=(tier-1)*10+1, cap=tier*10;
-  const lv=P.lv||1, need=window.GAME&&GAME.expNeed?GAME.expNeed(lv):100;
-  const targetKills=window.GAME&&GAME.targetKillsForLevel?GAME.targetKillsForLevel(lv):100;
-  let mult=1;
-  if(lv>cap) mult=Math.max(.035,1-(lv-cap)*.13);   // 저티어 학살은 빠르게 의미가 사라짐
-  else if(lv<min) mult=Math.min(1.12,1+(min-lv)*.01); // 위험한 상위티어 도전 보너스는 작게
-  const special=m&&m.boss?8:(m&&m.type==='mimic'?2:1);
-  return Math.max(1,Math.round(need/targetKills*mult*special*(.92+Math.random()*.16)));
+  const tier=monsterTier(m),cap=tier*10,lv=P.lv||1;
+  const decay=lv>cap?Math.max(.035,1-(lv-cap)*.13):1;
+  return Math.max(1,Math.round((m.exp||2)*decay*(.92+Math.random()*.16)));
 }
 function killMonster(m){
-  if(m.type==='skeleton'&&!m.revived&&Math.random()<.48){
+  if(m.family==='skeleton'&&!m.revived&&Math.random()<.48){
     m.revived=true;m.dead=true;m.death=0;m.hp=0;m.reviveT=1.5;return;
   }
   m.dead=true;m.death=0;m.hp=0;
   sfx.push({type:'kill',t:0,x:m.x,y:m.y,r:44});
-  const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.boss?6:(m.type==='mimic'?2:1);
-  const coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55)*(1+coinBonus/100)*rewardMul);
+  const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.coinMul||TIER_MATCH.scales.coin[tier-1];
+  const coin=Math.round((2+Math.floor(Math.random()*8))*(1+coinBonus/100)*rewardMul);
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
-  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,dropChance=m.boss?1:Math.min(.68,.30+find/250+(m.type==='mimic'?.18:0));
+  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,dropChance=m.boss?1:Math.min(.68,(m.dropChance||.30)+find/250);
   if(Math.random()<dropChance){
     const it=randomDropItem(m);if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
-    if(m.boss&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
+    if(m.bossRole==='floor'&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
   }
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
   if(window.GUILD)GUILD.onKill(m);
@@ -481,8 +517,14 @@ function drawMonster(m){
     if(m.slowT>0||m.freezeT>0){ctx.strokeStyle='rgba(90,190,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.38,8,0,0,7);ctx.stroke();}
   }
   ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
-  const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
-  if(!m.dead&&(m.hurt>0||m.state==='chase')){const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
+  const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);const mirror=m.face==='left'&&(!MOBDEF[m.type].images.left||m.type==='swamp_mage');
+  if(mirror){ctx.save();ctx.translate(m.x,0);ctx.scale(-1,1);ctx.drawImage(img,-m.w/2,m.y-m.h,m.w,m.h);ctx.restore();}
+  else ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
+  if(!m.dead){
+    ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#21160e';ctx.fillStyle=m.boss?'#ffda6b':m.rank==='elite'?'#bfa6ff':'#f7f1df';
+    const label=`${m.boss&&m.type!=='slime_king'?'♛ ':''}${m.name} Lv${m.mobLv} T${m.tier}${m.boss?' 우두머리':m.rank==='elite'?' 정예':''}`;
+    ctx.strokeText(label,m.x,m.y-m.h-20);ctx.fillText(label,m.x,m.y-m.h-20);
+    const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   if(!m.dead)vfxMonsterIcons(m,m.y-m.h-10);
   ctx.restore();
 }
@@ -540,8 +582,8 @@ window.__FD={
     for(const x of monsters)if(x!==m)x.removed=true;
     m.x=P.x+dx;m.y=P.y+dy;m.vx=m.vy=0;if(freeze)m.stun=99;return {x:m.x,y:m.y};
   },
-  debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
   flinchTest(){const m={monster:1,boss:1,hp:9999,maxHp:9999,x:P.x+500,y:P.y+500,h:60,w:60,hurt:0,stun:0,type:'test'};hitMonster(m,[1,0],true,1);const a=m.stun;m.stun=0;hitMonster(m,[1,0],true,1);return [a,m.stun];},
-  debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
-  rest:restAtCamp,prepareField,openRegionSelect
+  debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
+  debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
+  respawn:()=>spawnFieldMonsters(fieldTheme),rest:restAtCamp,prepareField,openRegionSelect
 };

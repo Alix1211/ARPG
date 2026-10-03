@@ -12,6 +12,7 @@ async def main():
         ev=pg.evaluate
         await pg.goto(URL);await pg.wait_for_timeout(1200)
         await ev("""() => {
+          GAME.P.lv=70;
           UI.add(UI.make({kind:'weapon',wt:'sword',tier:1,roll:true,rar:1}));
           UI.add(UI.make({kind:'weapon',wt:'bow',tier:2,roll:true,rar:2}));
           UI.add(UI.make({kind:'weapon',wt:'sword',tier:3,roll:true,rar:2}));
@@ -45,7 +46,7 @@ async def main():
                 s=(await pg.query_selector_all('#bagPane .slot.has'))[i]
                 await s.click();await pg.wait_for_timeout(60)
                 t=await ev("iinfo.querySelector('.isub').textContent")
-                if (kind=='body' and '갑옷' in t) or (kind=='ring' and '반지' in t):
+                if (kind=='body' and '몸' in t) or (kind=='ring' and '반지' in t):
                     n[kind]=await ev("document.querySelectorAll('#iinfo .ccard').length");break
             assert n.get(kind)==ex,(kind,n)
         # 낀 장비를 고르면 비교 카드는 없다

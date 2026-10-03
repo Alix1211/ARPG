@@ -31,6 +31,7 @@ jobs:
       - run: pip install pillow numpy scipy playwright
       - run: python -m playwright install --with-deps chromium
       - run: python src/town/build.py
+      - run: python src/town/check_tier_match.py
       - run: python src/town/check.py
       - run: python src/town/check2.py
       - run: python src/town/check_walk.py

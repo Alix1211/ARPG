@@ -434,15 +434,14 @@ $('dlgTrade').addEventListener('click', () => {
 
 // 가게 물건 (가안 가격)
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
+function shopGear(baseId,price){
+  const b=GEAR_BASE[baseId];return {ic:b.icon,name:b.name,slot:`T${b.tier} · 착용 Lv${b.requiredLevel}`,price,spec:{baseId:b.id,kind:b.kind}};
+}
 const GOODS = {
-  arms: [].concat(
-    ...['sword', 'spear', 'gauntlet', 'bow', 'staff'].map(t => [
-      { ic: t + '_01', name: '나무 ' + WN[t], slot: '무기', price: 30, spec: { kind: 'weapon', wt: t, g: 1 } },
-      { ic: t + '_02', name: '낡은 ' + WN[t], slot: '무기', price: 75, spec: { kind: 'weapon', wt: t, g: 2 } }]),
-    [{ ic: 'armor_0', name: '낡은 투구', slot: '투구', price: 40, spec: { kind: 'head', g: 2 } }, { ic: 'armor_1', name: '낡은 갑옷', slot: '갑옷', price: 70, spec: { kind: 'body', g: 2 } },
-     { ic: 'armor_2', name: '낡은 장갑', slot: '장갑', price: 30, spec: { kind: 'hands', g: 2 } }, { ic: 'armor_3', name: '낡은 신발', slot: '신발', price: 30, spec: { kind: 'feet', g: 2 } }]),
-  general: [{ ic: 'php', name: '체력 물약', slot: '물약', price: 20, potion: 'hp' }, { ic: 'pmp', name: '마나 물약', slot: '물약', price: 20, potion: 'mp' }],
-  pawn: [{ ic: 'ring', name: '구리 반지', slot: '반지', price: 120, spec: { kind: 'ring' } }, { ic: 'neck', name: '구리 목걸이', slot: '목걸이', price: 150, spec: { kind: 'neck' } }],
+  arms:[...['sword','spear','gauntlet','bow','staff'].flatMap(t=>[shopGear(t+'_01',30),shopGear(t+'_02',75)]),
+    ...['head','body','hands','feet'].map((k,i)=>shopGear('knight_'+k+'_02',[40,70,30,30][i]))],
+  general:[{ic:'php',name:'체력 물약',slot:'물약',price:20,potion:'hp'},{ic:'pmp',name:'마나 물약',slot:'물약',price:20,potion:'mp'}],
+  pawn:[shopGear('acc_0_01',120),shopGear('acc_1_01',150)]
 };
 let sel = null, shopNpc = null, shopMode = 'buy';
 const SELL_BASE = {

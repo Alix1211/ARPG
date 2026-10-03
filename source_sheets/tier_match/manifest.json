@@ -1,0 +1,50 @@
+{
+  "E1": [
+    "assets/accessories/ring_green_bead.png",
+    "assets/accessories/neck_green_bead.png",
+    "assets/accessories/ring_ice.png",
+    "assets/accessories/neck_ice.png"
+  ],
+  "M1": [
+    "assets/monsters_3dir/skeleton_mage_front.png",
+    "assets/monsters_3dir/skeleton_mage_left.png",
+    "assets/monsters_3dir/skeleton_mage_right.png",
+    "assets/monsters_3dir/skeleton_frost_front.png",
+    "assets/monsters_3dir/skeleton_frost_left.png",
+    "assets/monsters_3dir/skeleton_frost_right.png",
+    "assets/monsters_3dir/ice_guard_front.png",
+    "assets/monsters_3dir/ice_guard_left.png",
+    "assets/monsters_3dir/ice_guard_right.png",
+    "assets/monsters_3dir/slime_toxic_front.png",
+    "assets/monsters_3dir/slime_toxic_left.png",
+    "assets/monsters_3dir/slime_toxic_right.png",
+    "assets/monsters_3dir/spider_toxic_front.png",
+    "assets/monsters_3dir/spider_toxic_left.png",
+    "assets/monsters_3dir/spider_toxic_right.png",
+    "assets/monsters_3dir/mushroom_toxic_front.png",
+    "assets/monsters_3dir/mushroom_toxic_left.png",
+    "assets/monsters_3dir/mushroom_toxic_right.png",
+    "assets/monsters_3dir/skeleton_swamp_front.png",
+    "assets/monsters_3dir/skeleton_swamp_left.png",
+    "assets/monsters_3dir/skeleton_swamp_right.png",
+    "assets/monsters_3dir/swamp_mage_front.png",
+    "assets/monsters_3dir/swamp_mage_left.png",
+    "assets/monsters_3dir/swamp_mage_right.png"
+  ],
+  "M2": [
+    "assets/monsters/mimic_iron_closed.png",
+    "assets/monsters/mimic_iron_open.png",
+    "assets/monsters/mimic_frost_closed.png",
+    "assets/monsters/mimic_frost_open.png",
+    "assets/monsters/mimic_crystal_closed.png",
+    "assets/monsters/mimic_crystal_open.png",
+    "assets/monsters/mimic_lava_closed.png",
+    "assets/monsters/mimic_lava_open.png",
+    "assets/monsters/mimic_swamp_closed.png",
+    "assets/monsters/mimic_swamp_open.png"
+  ],
+  "ogre_reserve": [
+    "assets/monsters/ogre_club_pose_1.png",
+    "assets/monsters/ogre_club_pose_2.png"
+  ]
+}

@@ -283,22 +283,18 @@ for no, name, title, where, side, line, shop in NPC:
         b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
 
-# 장비/가게 아이콘 — 파밍 등급 1~10, 장신구 T1~T5
+# 승인표의 모든 장비를 명시적으로 로딩(없는 이미지 대체 금지)
+CATALOG = json.load(open(os.path.join(HERE, 'data/tier_match.json')))
 ICON = {}
 def icon(path):
-    im = Image.open(path).convert('RGBA'); im.thumbnail((96, 96), Image.LANCZOS); return enc(im, 88)
-for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
-    for g in range(1, 11): ICON[f'{t}_{g:02d}'] = icon(R + f'weapons/{t}_{g:02d}.png')
-for style in ['knight', 'mage']:
-    for kind in ['head', 'body', 'hands', 'feet']:
-        for g in range(1, 11):
-            ICON[f'{style}_{kind}_{g:02d}'] = icon(R + f'armor/{style}_{kind}_{g:02d}.png')
-for tier in range(1, 6):
-    ICON[f'ring_{tier}'] = icon(R + f'accessories/acc_0_{tier:02d}.png')
-    ICON[f'neck_{tier}'] = icon(R + f'accessories/acc_1_{tier:02d}.png')
-# 기존 상점 키 호환
-for r, kind in enumerate(['head', 'body', 'hands', 'feet']): ICON[f'armor_{r}'] = ICON[f'knight_{kind}_02']
-ICON['ring'] = ICON['ring_1']; ICON['neck'] = ICON['neck_1']
+    im = Image.open(path).convert('RGBA'); im.thumbnail((96,96), Image.LANCZOS); return enc(im,88)
+for item in CATALOG['gear']:
+    ICON[item['icon']] = icon(os.path.join(ROOT,item['file']))
+# 이전 상점/검사 아이콘 별칭. 신규 생성은 baseId를 사용한다.
+for i,kind in enumerate(['head','body','hands','feet']): ICON[f'armor_{i}']=ICON[f'knight_{kind}_02']
+for kind,row in [('ring',0),('neck',1)]:
+    for i in range(1,6): ICON[f'{kind}_{i}']=ICON[f'acc_{row}_{i:02d}']
+    ICON[kind]=ICON[f'acc_{row}_01']
 
 
 SH = [dict(path=R + f"buildings/{b['k']}.png", x=b['x'], y=b['y'], w=b['w'], h=b['h'], sq=0.5 if b['k'] in ('watchtower','gate_twin_tower') else 0.42) for b in blds]
@@ -354,21 +350,20 @@ for th in FIELD_THEMES:
         FIELD_PROPS[th].append(dict(key=key, name=stem))
 
 MON3 = {}
-for name in ['bear','darkmage','demon','dragon','harpy','lich','orc','rabbit','rogue','succubus','wolf']:
-    d = {}
-    for dr in ['front','left','right']:
-        p = R + f'monsters_3dir/{name}_{dr}.png'
-        if os.path.exists(p):
-            im = Image.open(p).convert('RGBA'); im.thumbnail((240,240), Image.LANCZOS); d[dr] = enc(im, 86)
-    # 그림 파일의 left/right 이름이 실제 보는 방향과 반대인 몬스터는 여기서 바꿔 담는다(늑대가 엉덩이로 덤비던 문제)
-    if name in ('wolf','bear','darkmage','demon','dragon','lich','rogue') and 'left' in d and 'right' in d:
-        d['left'], d['right'] = d['right'], d['left']
-    if d: MON3[name] = d
+for name,d in CATALOG['monsters'].items():
+    images={}
+    for direction,path in d['images'].items():
+        im=Image.open(os.path.join(ROOT,path)).convert('RGBA')
+        box=im.getchannel('A').getbbox()
+        if not box: raise ValueError('빈 몬스터 이미지: '+path)
+        im=im.crop(box); im.thumbnail((240,240),Image.LANCZOS)
+        images[direction]=enc(im,86)
+    # main의 실물 좌우 방향 보정은 무리장 별칭에도 적용한다.
+    source=os.path.basename(d['images']['front'])
+    if source in [x+'_front.png' for x in ('wolf','bear','darkmage','demon','dragon','lich','rogue')] and 'left' in images and 'right' in images:
+        images['left'],images['right']=images['right'],images['left']
+    MON3[name]=images
 MON1 = {}
-for name in ['goblin_01','slime_01','skeleton_01','spider_01','mushroom_01','gargoyle_01','elem_fire_01','elem_ice_01','mimic_01']:
-    p = R + f'monsters/{name}.png'
-    if os.path.exists(p):
-        im = Image.open(p).convert('RGBA'); im.thumbnail((200,200), Image.LANCZOS); MON1[name.rsplit('_',1)[0]] = enc(im, 86)
 
 # ---- 성 밖 갈림길 들판 ----
 import outmap
@@ -428,9 +423,9 @@ for f in sorted(_g.glob(R + 'vfx/*.png')):
 CAMPART = {}
 for nm in ('day','night'):
     im = Image.open(R + f'illustrations/camp_{nm}.png').convert('RGB'); im.thumbnail((1100,1100), Image.LANCZOS); CAMPART[nm] = enc(im, 84)
-A = dict(camp=CAMPART, vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(tierCatalog=CATALOG, camp=CAMPART, vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF)
-js = open(os.path.join(HERE, 'town.js')).read()
+js = open(os.path.join(HERE, 'tier_match.js')).read() + '\n' + open(os.path.join(HERE, 'town.js')).read()
 js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'vfx.js')).read() + '\n' + open(os.path.join(HERE, 'skills2.js')).read() + '\n' + open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()

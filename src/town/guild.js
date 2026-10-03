@@ -1,9 +1,5 @@
 // ======================= 모험가 길드 의뢰판 =======================
-const GUILD_MOB_NAME={
-  wolf:'늑대',rabbit:'토끼',bear:'곰',orc:'오크',harpy:'하피',rogue:'로그',darkmage:'다크메이지',
-  gargoyle:'가고일',demon:'데몬',slime:'슬라임',goblin:'고블린',skeleton:'스켈레톤',
-  spider:'거미',mushroom:'버섯괴물',elem_fire:'화염 정령',elem_ice:'얼음 정령',mimic:'미믹',lich:'리치'
-};
+const GUILD_MOB_NAME=Object.fromEntries(Object.values(MOBDEF).map(d=>[d.id,d.name]));
 const GUILD_TIER_THEME=['','spring','summer','autumn','winter','ice','volcano','swamp'];
 let guildState={seq:1,board:[],active:[],completed:0};
 
@@ -97,7 +93,7 @@ function guildOnKill(m){
   let changed=false;
   for(const q of guildState.active){
     if(q.type==='kill_any'){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
-    else if(q.type==='kill_type'&&m.type===q.target){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
+    else if(q.type==='kill_type'&&(m.type===q.target||m.family===q.target)){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
   }
   if(changed&&$('guild').classList.contains('on'))guildRender();if(changed)guildTrack();if(changed)guildTrack();
 }

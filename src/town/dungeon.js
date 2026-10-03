@@ -6,27 +6,14 @@ const combatMap = () => MAP === 'field' || MAP === 'dungeon';
 const DT = {}, DP = {}; let dunTheme = 'ruins';
 for (const th in A.dtiles){ DT[th] = {}; for (const k in A.dtiles[th]) DT[th][k] = load(A.dtiles[th][k]); }
 for (const th in A.dprops){ DP[th] = {}; for (const k in A.dprops[th]) DP[th][k] = load(A.dprops[th][k].src); }
-Object.assign(MOBDEF, {
-  gargoyle: { hp:68, sp:48, dmg:8, ranged:1, range:195, skill:'petrify' },
-  mimic: { hp:82, sp:76, dmg:11, skill:'charge' },
-  lich: { hp:320, sp:50, dmg:14, ranged:1, range:250, skill:'lightning' },
-});
-const DUN_MOBS = [
-  ['slime','spider','skeleton','goblin'],
-  ['wolf','spider','skeleton','rogue'],
-  ['skeleton','gargoyle','darkmage','orc'],
-  ['bear','gargoyle','elem_ice','darkmage'],
-  ['gargoyle','elem_ice','darkmage','harpy'],
-  ['demon','elem_fire','orc','darkmage'],
-  ['demon','harpy','gargoyle','darkmage']
-];
+const DUN_MOBS=TIER_MATCH.dungeonPools;
 const dungeonTier = floor => Math.max(1,Math.min(7,Math.ceil(Math.max(1,floor)/3)));
 let dunFloor=0,dunGrid=null,dunW=44,dunH=32,dunMaxFloor=0,dunBusy=false;
 
 // ---- 지도 만들기: 방 + 복도 ----
 function genDungeon(){
   const W = dunW, H = dunH, g = Array.from({ length: H }, () => new Uint8Array(W)); // 0 벽, 1 바닥
-  const rooms = []; let tries = 0;
+  const rooms = [{x:26,y:19,w:13,h:9,cx:32,cy:23,arena:true}]; let tries = 0;
   while (rooms.length < 9 && tries++ < 400){
     const w = 6 + Math.floor(Math.random() * 6), h = 5 + Math.floor(Math.random() * 4);
     const x = 2 + Math.floor(Math.random() * (W - w - 4)), y = 3 + Math.floor(Math.random() * (H - h - 5));
@@ -42,8 +29,8 @@ function genDungeon(){
     else { carve(a.cx - 1, a.cy, a.cx + 1, b.cy); carve(a.cx, b.cy - 1, b.cx, b.cy + 1); }
   }
   // 가장 먼 방을 출구로
-  const start = rooms[0]; let far = rooms[1], fd = 0;
-  for (const r of rooms){ const d = Math.hypot(r.cx - start.cx, r.cy - start.cy); if (d > fd){ fd = d; far = r; } }
+  const start = rooms[0]; let far = rooms.find(r=>r.arena), fd = 0;
+  // 군집이 들어가는 넓은 출구 방은 항상 보장한다.
   return { g, rooms, start, far };
 }
 const isFloor = (x, y) => dunGrid && y >= 0 && y < dunH && x >= 0 && x < dunW && dunGrid[y][x] === 1;
@@ -89,7 +76,7 @@ async function prepareDungeon(floor){
   const props = [], dspots = [], torches = [];
   // 위층 계단(시작 방)과 아래층 계단(가장 먼 방)
   props.push(dprop('stairs_up', D.start.cx, D.start.cy - 1, { name: floor === 1 ? '위로 (성 밖으로)' : '위로 (' + (floor - 1) + '층)', kind: 'stairs_up', flat: 1 }));
-  props.push(dprop('stairs_down', D.far.cx, D.far.cy, { name: '아래로 (' + (floor + 1) + '층)', kind: 'stairs_down', flat: 1 }));
+  props.push(dprop('stairs_down', D.far.x+D.far.w-2, D.far.y+D.far.h-2, { name: '아래로 (' + (floor + 1) + '층)', kind: 'stairs_down', flat: 1 }));
   // 횃불: 벽 앞면에 띄엄띄엄
   for (let y = 1; y < dunH - 1; y++) for (let x = 1; x < dunW - 1; x++){
     if (!D.g[y][x] && D.g[y + 1][x] && (x * 7 + y * 13) % 9 === 0 && Math.random() < 0.6){
@@ -99,7 +86,7 @@ async function prepareDungeon(floor){
   // 방 꾸미기: 동굴 기둥(석순)·통·항아리·해골·거미줄·버섯·수정·바위·광산 수레, 상자
   const deco = dunTheme === 'cave' ? ['barrel', 'jar', 'bones', 'cobweb', 'mushroom', 'crystal', 'rocks', 'rocks', 'stalagmites', 'minecart', 'bones'] : ['barrel', 'jar', 'bones', 'cobweb', 'bones', 'jar'];
   D.rooms.forEach((r, i) => {
-    if (r === D.start) return;
+    if (r === D.start || r === D.far) return;
     for (let k = 0; k < 2 + Math.floor(Math.random() * 3); k++){
       const x = r.x + 0.8 + Math.random() * (r.w - 1.6), y = r.y + 1 + Math.random() * (r.h - 1.6);
       if (Math.hypot(x - D.far.cx, y - D.far.cy) < 2) continue;
@@ -118,25 +105,37 @@ async function prepareDungeon(floor){
 }
 function spawnDungeonMonsters(){
   monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;
-  const M=MAPS.dungeon,tier=dungeonTier(dunFloor),pool=DUN_MOBS[tier-1];
-  const tmin=(tier-1)*10+1,within=Math.max(0,Math.min(9,(P.lv||tmin)-tmin));
-  const hpK=(1+(tier-1)*.58+((dunFloor-1)%3)*.12)*(1+within*.05);
-  const dmK=(1+(tier-1)*.36+((dunFloor-1)%3)*.08)*(1+within*.035);
-  const add=(type,x,y,boss)=>{
-    const d=MOBDEF[type],imgs=mobImageSet(type);if(!d||!imgs)return;
-    const sc=boss?1.7:type==='gargoyle'||type==='orc'?1.1:type==='slime'||type==='spider'?.8:1,w=82*sc;
-    const hp=Math.round(d.hp*hpK*(boss?2.3:1)*NUM),dmg=Math.round(d.dmg*dmK*(boss?1.25:1)*NUM);
-    monsters.push({monster:1,type,boss:!!boss,tier,mobLv:tmin+within,x,y,w,h:w,hp,maxHp:hp,sp:d.sp*(1+(tier-1)*.025)*(1+within*.003),dmg,
-      ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',
-      skillCd:1+Math.random()*2,imgs,face:'front',flip:false,state:'wander',tx:x,ty:y,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
-  };
-  for(const r of M.rooms){
-    if(r===M.startRoom)continue;
-    const n=2+Math.floor(Math.random()*3)+Math.min(3,tier-1);
-    for(let i=0;i<n;i++) add(pool[Math.floor(Math.random()*pool.length)],(r.x+1+Math.random()*(r.w-2))*TS,(r.y+1.5+Math.random()*(r.h-2))*TS,false);
+  const M=MAPS.dungeon,tier=dungeonTier(dunFloor),pool=DUN_MOBS[tier-1],elites=TIER_MATCH.dungeonElites[tier-1];
+  const arena=M.farRoom,cx=(arena.x+arena.w/2)*TS,cy=(arena.y+arena.h/2)*TS;
+  const floorBoss=dunFloor%3===0?TIER_MATCH.floorBosses[tier-1]:null;
+  const group=TIER_MATCH.groups.find(g=>g.tier===tier&&g.leader===floorBoss)||TIER_MATCH.groups.find(g=>g.tier===tier);
+  if(floorBoss){
+    if(group&&group.leader===floorBoss){
+      if(!spawnPack(group,cx,cy,{floor:dunFloor,bossRole:'floor'}))throw Error('층 우두머리 군집 배치 실패');
+    }else monsters.push(createMonster(floorBoss,cx,cy,{floor:dunFloor,bossRole:'floor'}));
+  }else if(group){
+    if(!spawnPack(group,cx,cy,{floor:dunFloor}))throw Error('던전 군집 배치 실패');
   }
-  if(dunFloor%3===0) add('lich',M.farRoom.cx*TS,(M.farRoom.cy-1)*TS,true);
-  if(Math.random()<.35){const c=M.props.find(p=>p.kind==='chest');if(c)c.mimic=1;}
+  for(const room of M.rooms){
+    if(room===M.startRoom||room===arena)continue;
+    const n=2+Math.floor(Math.random()*3)+Math.min(3,tier-1);
+    for(let i=0;i<n;i++){
+      const id=elites.length&&i===n-1?elites[Math.floor(Math.random()*elites.length)]:pool[Math.floor(Math.random()*pool.length)];
+      for(let tries=0;tries<150;tries++){
+        const m=createMonster(id,(room.x+1+Math.random()*(room.w-2))*TS,(room.y+1.5+Math.random()*(room.h-2))*TS,{floor:dunFloor});
+        if(spawnClear(m)){monsters.push(m);break;}
+      }
+    }
+  }
+  const mimicId=TIER_MATCH.mimics[tier-1];
+  if(mimicId&&Math.random()<.35){
+    const chest=M.props.find(p=>p.kind==='chest');
+    if(chest){
+      chest.mimic=1;chest.mimicId=mimicId;
+      const spot=spots.find(s=>s.data===chest);
+      if(spot){spot.prop.img=mobImageSet(mimicId).closed;spot.prop.mimic=1;}
+    }
+  }
 }
 
 // ---- 들어가기·층 이동 ----
@@ -147,7 +146,7 @@ async function goDungeon(floor,fromAbove){
     say(floor===1?'어둡고 축축하다… 돈 냄새가 난다.':'지하 '+floor+'층');
     const m=await prepareDungeon(floor);
     // 계단 바로 위/타일 경계 대신 방 중심의 안전 바닥에서 시작.
-    const pos=fromAbove===false?[(m.farRoom.cx+.5)*TS,(m.farRoom.cy+.5)*TS]:m.spawn;
+    const pos=fromAbove===false?[(m.farRoom.x+m.farRoom.w-2)*TS,(m.farRoom.y+m.farRoom.h-2)*TS]:m.spawn;
     if(!travel('dungeon',pos,'front'))return false;
     await new Promise(r=>setTimeout(r,560));
     const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
@@ -167,8 +166,16 @@ function openDungeonChest(spot){
   const p = spot.prop, src = spot.data || {}; if (!p || p.opened) return;
   if (src.mimic){ // 미믹!
     p.opened = 1; p.hide = 1; spots.splice(spots.indexOf(spot), 1);
-    const d = MOBDEF.mimic, imgs = mobImageSet('mimic');
-    if (imgs){ const tier=dungeonTier(dunFloor),hp=Math.round(d.hp*(1+(tier-1)*.58)*NUM); monsters.push({monster:1,type:'mimic',tier,x:p.x,y:p.y,w:80,h:80,hp,maxHp:hp,sp:d.sp,dmg:Math.round(d.dmg*(1+(tier-1)*.36)*NUM),ranged:0,range:42,skill:d.skill||'charge',skillCd:1,imgs,face:'front',flip:false,state:'chase',tx:p.x,ty:p.y,wait:0,cd:.6,hurt:0,stun:0,dead:false,death:0}); }
+    const id=src.mimicId||TIER_MATCH.mimics[dungeonTier(dunFloor)-1];
+    if(!id)throw Error('미믹 티어 누락');
+    const m=createMonster(id,p.x,p.y+TS*1.6,{floor:dunFloor});
+    let placed=false;
+    for(let ring=1;ring<=5&&!placed;ring++)for(let step=0;step<16;step++){
+      const a=step*Math.PI/8;m.x=p.x+Math.cos(a)*TS*ring;m.y=p.y+Math.sin(a)*TS*ring;
+      if(spawnClear(m)){placed=true;break;}
+    }
+    if(!placed){p.opened=0;p.hide=0;spots.push(spot);say('상자가 몸을 숨기고 있습니다. 주변을 비워 주세요.');return;}
+    m.tx=m.homeX=m.x;m.ty=m.homeY=m.y;m.state='chase';monsters.push(m);
     say('상자가… 이빨이 있다?!'); return;
   }
   p.opened = 1; p.img = BI.d_chest_open || p.img; spots.splice(spots.indexOf(spot), 1);
@@ -205,6 +212,16 @@ function drawDungeonShade(camX, camY){
 
 window.__DUN={
   setTheme:t=>{dunTheme=t;},theme:()=>dunTheme,rooms:()=>(MAPS.dungeon.rooms||[]).map(r=>[r.cx,r.cy]),
+  respawn:()=>spawnDungeonMonsters(),
+  debugMimic(){
+    const id=TIER_MATCH.mimics[dungeonTier(dunFloor)-1],spot=spots.find(s=>s.kind==='chest');
+    if(!id||!spot)return null;
+    spot.data.mimic=1;spot.data.mimicId=id;spot.prop.img=mobImageSet(id).closed;
+    const closed=spot.prop.img===mobImageSet(id).closed;
+    openDungeonChest(spot);
+    const m=monsters.find(m=>m.type===id);
+    return {id,closed,opened:!!m&&m.imgs.front===mobImageSet(id).front,blocked:!!m&&(pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5)),mobLv:m&&m.mobLv};
+  },
   go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
   snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor,theme:dunTheme}),
   preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunTheme=s.theme||'ruins';dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},

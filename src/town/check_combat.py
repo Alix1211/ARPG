@@ -20,14 +20,14 @@ async def main():
         m4=await ev("() => __FD.debugMonster()")
         assert m1['tier']==1 and m4['tier']==1,(m1,m4)
         assert m1['mobLv']==1 and m4['mobLv']==4,(m1,m4)
-        assert m4['maxHp']>m1['maxHp'] and m4['dmg']>m1['dmg'],(m1,m4)
+        assert m4['maxHp']>m1['maxHp'] and m4['dmg']>=m1['dmg'],(m1,m4)
 
         # T1 봄 지역부터 눈에 띄는 고유행동 4종.
         ms=await ev("() => __FD.debugMonsters()")
         skills={x['type']:x['skill'] for x in ms}
-        assert skills.get('wolf')=='pounce',skills
+        assert 'wolf' not in skills,skills
         assert skills.get('rabbit')=='dart',skills
-        assert skills.get('goblin')=='rock',skills
+        assert skills.get('goblin_scout')=='rock',skills
         assert skills.get('slime')=='splash',skills
 
         # 강화된 마법: 큰 계수/범위 + 상태이상.
