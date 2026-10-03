@@ -176,7 +176,7 @@ function spawnFieldMonsters(theme){
   monsters.length=0; dropsLoot.length=0; enemyShots.length=0; enemyHazards.length=0;
   const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16, tier=FIELD_TIER[theme]||1;
   const tmin=(tier-1)*10+1,within=Math.max(0,Math.min(9,(P.lv||tmin)-tmin));
-  const hpMul=(1+(tier-1)*.55)*(1+within*.055),dmgMul=(1+(tier-1)*.34)*(1+within*.027),spMul=(1+(tier-1)*.035)*(1+within*.004);
+  const hpMul=(1+(tier-1)*.55)*(1+within*.055),dmgMul=(1+(tier-1)*.34)*(1+within*.035),spMul=(1+(tier-1)*.035)*(1+within*.004);
   for(let i=0;i<count;i++){
     let x=0,y=0,t=0;
     do{ x=7+Math.random()*48; y=3+Math.random()*34; t++; }
