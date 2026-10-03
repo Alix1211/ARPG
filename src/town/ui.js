@@ -45,10 +45,10 @@ function rarityForTier(tier, rank='normal'){
   const w=table[tier-1].slice();
   const shift=rank==='elite'?10:(rank==='boss'?20:0);
   const legend=tier<4?0:(rank==='boss'?5:rank==='elite'?2:0);
-  w[0]-=shift;w[2]+=shift-legend;w[3]+=legend;
   const scent=(G.P.lifeSkills&&G.P.lifeSkills.moneyScent)||0, greed=(G.P.passives&&G.P.passives.greed)||0;
   const bonus=scent*1.2+greed*.6;
   if(bonus>0){const shift=Math.min(w[0]-20,bonus);w[0]-=shift;w[2]+=shift*.75;w[3]+=shift*.25;}
+  w[0]-=shift;w[2]+=shift-legend;w[3]+=legend;
   let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i;}return 0;
 }
 function rollAffix(it, used){

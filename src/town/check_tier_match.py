@@ -135,6 +135,16 @@ async def runtime_checks():
               if(it.tier!==tier||it.name!==api.fullName(api.base({baseId:it.baseId}),it.aff))failures.push(['random',it]);
             }
           }
+          const random=Math.random,life=GAME.P.lifeSkills,passive=GAME.P.passives;
+          try{
+            for(const sample of [.08,.15,.49,.8,.95]){
+              Math.random=()=>sample;GAME.P.lifeSkills={};GAME.P.passives={};
+              const before=UI.make({baseId:'bow_10',rank:'boss',roll:true}).rar;
+              GAME.P.lifeSkills={moneyScent:3};GAME.P.passives={greed:5};
+              const after=UI.make({baseId:'bow_10',rank:'boss',roll:true}).rar;
+              if(after<before)failures.push(['boss luck worsened rarity',sample,before,after]);
+            }
+          }finally{Math.random=random;GAME.P.lifeSkills=life;GAME.P.passives=passive;}
           GAME.P.lv=1;
           const high=UI.make({baseId:'sword_09'});UI.add(high);
           if(UI.canEquip(high)||UI.equip(high,'w1')!==false)failures.push(['equip level guard']);
