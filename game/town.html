@@ -235,7 +235,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-2241</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-2302</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1381,6 +1381,7 @@ function guideShot(s, dt){
 function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
+    if (s.wait > 0){ s.wait -= dt; continue; }   // 알갱이는 조금씩 시간차로 나간다
     if (!s.done) guideShot(s, dt);
     s.t += dt;
     const nx=s.x+s.vx*dt, ny=s.y+s.vy*dt;
@@ -1389,7 +1390,10 @@ function drawShots(dt){
     if (!s.done){
       if (s.pierce){   // 관통: 대상마다 한 번씩 맞히고 계속 날아간다(검기·파편·파동권)
         const hw = s.hw || 22;
-        for (const t of combatTargets()){ if (!s.hit.has(t) && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ s.hit.add(t); pierceHit(s, t); } }
+        for (const t of combatTargets()){
+          const again = s.rehit ? (!s.hit.has(t) || s.t - s.hit.get(t) > s.rehit) : !s.hit.has(t);   // rehit: 닿아 있는 동안 계속 감전
+          if (again && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ if (s.rehit) s.hit.set(t, s.t); else s.hit.add(t); pierceHit(s, t); }
+        }
       } else {
         for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
       }
@@ -1413,6 +1417,7 @@ function drawShots(dt){
     } else if (s.kind === 'ice'){
       ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(a);
       ctx.fillStyle = '#d9f3ff'; ctx.strokeStyle = '#5ab4ff'; ctx.lineWidth = 2;
+      if (s.pellet) ctx.scale(.45, .45);
       ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-6, -6); ctx.lineTo(-14, 0); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     } else {
       const fire = s.kind === 'fire', R0 = fire ? 17 : 14;
@@ -1429,12 +1434,13 @@ function boom(s,t){
   const hit=(u)=>{
     hitTarget(u,[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0],!!s.stagger,s.dmg);
     if(s.status&&typeof applyMonsterStatus==='function')applyMonsterStatus(u,s.status,s.statusDur||2.5);
+    if(s.chill){const now=performance.now()/1000;if(now-(u.chillAt||-9)>1.6)u.chillN=0;u.chillAt=now;u.chillN=(u.chillN||0)+1;if(s.chillFreeze&&u.chillN>=3){u.chillN=0;applyMonsterStatus(u,'freeze',s.chillFreeze);}}
   };
   if(s.blast){
     for(const u of combatTargets())if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);
     sfx.push({type:s.fx||(s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact'),t:0,x:s.x,y:s.y,r:s.blast});
   }else if(t){
-    hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:34});
+    hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:s.pellet?22:34});
   }
 }
 
@@ -1459,14 +1465,20 @@ function cast(id,mod){
   const skillMul=(1+(rank-1)*.18)*(1+(cm.skill||0)/100);
   if(id==='fire1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.fire||0)/100);
-    const range=home?330+home*90:0,aim=home>0?magicAim(340,range):{vx:d[0]*340,vy:d[1]*340,target:null},ux=aim.vx/340,uy=aim.vy/340;
-    const blast=78+(rank>=3?14:0)+(rank>=5?18:0);
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:340,t:0,life:1.7,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
+    const range=home?330+home*90:0,aim=home>0?magicAim(280,range):{vx:d[0]*280,vy:d[1]*280,target:null},ux=aim.vx/280,uy=aim.vy/280;
+    const blast=100+(rank>=3?14:0)+(rank>=5?18:0);
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:280,t:0,life:2.1,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
     sfx.push({type:'castfire',t:0,x:P.x,y:P.y-36,r:40});
   }else if(id==='ice1'){
+    // 얼음 알갱이 5발이 좁게 퍼지며 후두두둑 날아간다. 가까울수록 많이 맞고, 쌓이면 더 느려지다 3랭크부터 얼어붙는다.
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(480,range):{vx:d[0]*480,vy:d[1]*480,target:null},ux=aim.vx/480,uy=aim.vy/480;
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:480,t:0,life:1.5,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
+    const range=home?360+home*95:0,aim=home>0?magicAim(620,range):{vx:d[0]*620,vy:d[1]*620,target:null};
+    const a0=Math.atan2(aim.vy,aim.vx),N=5,pd=Math.round(base*(1.75+rank*.06)*.3);
+    for(let i=0;i<N;i++){
+      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=600+Math.random()*60;
+      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:.62,wait:i*.035+Math.random()*.03,kind:'ice',pellet:true,blast:0,dmg:pd,
+        status:'slow',statusDur:2.4+rank*.2,stagger:rank>=5,chill:true,chillFreeze:rank>=3?.85+rank*.08:0,home:0,target:null});
+    }
     sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
@@ -1716,8 +1728,8 @@ function vfxShot(s, a){
   if (s.kind === 'bolt') return vfxBoltOrb(s);
   const nm = VFX_PSHOT[s.kind] || '';
   if (!nm || !vfxReady(nm)) return false;
-  vfxAura(s.x, s.y, VFX_AURA[nm], nm === 'shot_blade' ? (s.hw || 60) * .8 : 36);
-  const w = nm === 'shot_blade' ? (s.hw || 60) * 2.6 : nm === 'shot_ice' ? 78 : nm === 'shot_holy' ? 84 : nm === 'shot_dark' ? 76 : 70;
+  vfxAura(s.x, s.y, VFX_AURA[nm], nm === 'shot_blade' ? (s.hw || 60) * .8 : s.pellet ? 16 : 36);
+  const w = s.pellet ? 30 : nm === 'shot_blade' ? (s.hw || 60) * 2.6 : nm === 'shot_ice' ? 78 : nm === 'shot_holy' ? 84 : nm === 'shot_dark' ? 76 : 70;
   return vfxDraw(nm, s.x, s.y, w, { rot: a - (VFX_HEAD[nm] || 0) * Math.PI / 180, alpha: 1 });
 }
 // 번개 구체: 그림 없이 빛 덩어리와 튀는 전기줄기로 그린다
@@ -1797,8 +1809,8 @@ function vfxZonesGround(){
           vfxDraw('burst_fire_' + (i % 3), z.x + Math.cos(an) * rr, z.y + Math.sin(an) * rr * .55 + 4, 38 + 18 * ph, { base: true, alpha: a * Math.sin(ph * 3.14) * .85 });
         }
       }
-    } else if (z.type === 'voidring'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / .35) : 1;
+    } else if (z.type === 'voidring' || z.type === 'darkpulse'){
+      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (z.type === 'darkpulse' ? .3 : .35)) : 1;
       ctx.save(); ctx.translate(z.x, z.y + 4); ctx.scale(1, .55);
       const g = ctx.createRadialGradient(0, 0, cr * .6, 0, 0, cr + 18); g.addColorStop(0, 'rgba(120,40,200,0)'); g.addColorStop(.8, 'rgba(120,40,200,.34)'); g.addColorStop(1, 'rgba(120,40,200,0)');
       ctx.globalAlpha = a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, cr + 18, 0, 7); ctx.fill();
@@ -1820,11 +1832,12 @@ function vfxZonesTop(){
         const g = ctx.createRadialGradient(mx, my, 0, mx, my, 40); g.addColorStop(0, '#fff'); g.addColorStop(.4, '#ffb347'); g.addColorStop(1, 'rgba(255,90,20,0)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 40, 0, 7); ctx.fill();
       }
-    } else if (z.type === 'voidring'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / .35) : 1;
-      for (let i = 0; i < 12; i++){
-        const an = i * .5236 + z.t * 2;
-        vfxDraw('burst_dark_' + (i % 5), z.x + Math.cos(an) * cr, z.y + 6 + Math.sin(an) * cr * .55, 54, { base: true, alpha: a * .85 });
+    } else if (z.type === 'voidring' || z.type === 'darkpulse'){
+      const sm = z.type === 'darkpulse', e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (sm ? .3 : .35)) : 1;
+      const n = sm ? 8 : 12;
+      for (let i = 0; i < n; i++){
+        const an = i * (6.2832 / n) + z.t * 2;
+        vfxDraw('burst_dark_' + (i % 5), z.x + Math.cos(an) * cr, z.y + 6 + Math.sin(an) * cr * .55, sm ? 40 : 54, { base: true, alpha: a * .85 });
       }
     }
   }
@@ -1962,9 +1975,9 @@ const SK2 = {
   fire2:{mp:14,cd:4.5},                 // 화염 폭풍: 자기 중심 방사
   fire3:{mp:40,cd:15,root:.7},          // 운석 낙하: 지정 지점 유성 + 화염 장판
   ice2:{mp:9,cd:5},                     // 서리 돌풍: 전방 부채꼴 + 둔화(5랭크 빙결 확률)
-  bolt1:{mp:5,cd:1.0},                  // 번개 구체: 휘어 날아가는 유도 구체
+  bolt1:{mp:5,cd:1.0},                  // 번개 구체: 전방 60도 3발, 아주 느리게 관통하며 계속 감전
   bolt2:{mp:17,cd:6},                   // 연쇄 벼락: 명중 후 주변으로 튕김(2→3→4)
-  dark1:{mp:4,cd:.9},                   // 심연의 파편: 짧은 관통 칼날 + 미세 마나 회복
+  dark1:{mp:4,cd:.9},                   // 심연의 파편: 발밑에서 퍼지는 좁은 전방위 충격 + 낮은 확률 혼돈
   dark3:{mp:45,cd:18,root:.6},          // 파멸의 링: 퍼지는 원형 충격파(5랭크 흡혈)
   sword3:{mp:13,cd:12,root:.35},        // 초승달 검기: 멀리 나가는 관통 검기
   bow2:{mp:8,cd:4.5},                   // 산탄 사격: 부채꼴 5~7발
@@ -2024,9 +2037,14 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'bolt1': {
-      const hm = 1 + home, rng = 360 + home * 80, aim = magicAim(420, rng), ux = aim.vx / 420, uy = aim.vy / 420;
-      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:420, t:0, life:1.5, kind:'bolt', blast:26, fx:'voltburst',
-        dmg:Math.round(mag * (1.85 + rank * .06)), stagger:true, home:hm, homeRange:rng, target:aim.target });
+      // 전기 구체 3개가 전방 60도로 아주 느리게 퍼져 나가며, 닿아 있는 동안 계속 감전시킨다
+      const rng = 360 + home * 80, aim = home > 0 ? magicAim(170, rng) : { vx:d[0] * 170, vy:d[1] * 170 };
+      const a0 = Math.atan2(aim.vy, aim.vx), tick = Math.round(mag * (.42 + rank * .02));
+      for (const off of [-1, 0, 1]){
+        const a = a0 + off * Math.PI / 6;
+        shots.push({ x:P.x + Math.cos(a0) * 28, y:P.y - 44 + Math.sin(a0) * 28, vx:Math.cos(a) * 170, vy:Math.sin(a) * 170, speed:170, t:0, life:2.7, kind:'bolt',
+          pierce:true, rehit:.24, hit:new Map(), hw:30, blast:0, fx:'voltburst', dmg:tick, stagger:false });
+      }
       sfx.push({ type:'castbolt', t:0, x:P.x, y:P.y - 34, r:34 });
       return true;
     }
@@ -2054,9 +2072,9 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'dark1': {
-      const rng = 260 + home * 90, aim = home > 0 ? magicAim(700, rng) : { vx:d[0] * 700, vy:d[1] * 700 }, ux = aim.vx / 700, uy = aim.vy / 700;
-      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:700, t:0, life:.42, kind:'dark', pierce:true, hit:new Set(), hw:26, blast:0, fx:'darkburst',
-        dmg:Math.round(mag * (2.3 + rank * .07)), mpGain:1, mpCap:2 });
+      // 발밑에서 원이 360도로 퍼지며 사방을 벤다(화염구의 25% 정도, 범위는 좁게). 낮은 확률로 혼돈.
+      zones.push({ type:'darkpulse', map:(typeof MAP !== 'undefined' ? MAP : ''), x:P.x, y:P.y, t:0, dur:.28, R:118 + rank * 6, hit:new Set(),
+        dmg:Math.round(mag * (2.45 + rank * .08) * .25), chaos:.12 + rank * .02 });
       sfx.push({ type:'castdark', t:0, x:P.x, y:P.y - 34, r:30 });
       return true;
     }
@@ -2120,6 +2138,15 @@ function updZones(dt){
         if (z.tick <= 0){ z.tick += .5; for (const t of combatTargets()) if (skGround(t, z) < z.r * .85){ hitTarget(t, [0, 0], false, z.tickDmg); applyMonsterStatus(t, 'burn', 2.5); } }
       }
       if (z.t > z.delay + z.life) zones.splice(i, 1);
+    } else if (z.type === 'darkpulse'){
+      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
+      for (const t of combatTargets()){
+        if (z.hit.has(t) || skGround(t, z) > cr + 14) continue;
+        z.hit.add(t);
+        hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], false, z.dmg);
+        if (Math.random() < z.chaos){ applyMonsterStatus(t, 'confuse', 2.5); pops.push({ x:t.x, y:t.y - (t.h || 60) - 6, t:0, txt:'혼돈!', crit:true }); }
+      }
+      if (z.t > z.dur + .3) zones.splice(i, 1);
     } else if (z.type === 'voidring'){
       const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
       for (const t of combatTargets()){
@@ -2505,6 +2532,7 @@ function applyMonsterStatus(m,kind,dur){
   if(!m||m.dead||!kind)return;
   if(kind==='burn'){m.burnT=Math.max(m.burnT||0,dur||3);m.burnTick=Math.min(m.burnTick||.55,.55);}
   else if(kind==='slow'){m.slowT=Math.max(m.slowT||0,dur||2.5);}
+  else if(kind==='confuse'){if(m.boss||m.elite)dur=(dur||2.5)*.4;m.confuseT=Math.max(m.confuseT||0,dur||2.5);}
   else if(kind==='freeze'){if(m.boss||m.elite)dur=(dur||.75)*.4;m.freezeT=Math.max(m.freezeT||0,dur||.75);m.stun=Math.max(m.stun||0,dur||.75);}
 }
 function updEncounters(dt){
@@ -2543,6 +2571,11 @@ function updEncounters(dt){
       if(m.burnTick<=0){m.burnTick=.55;const bv=Math.max(1,Math.round(m.maxHp*.022));m.hp-=bv;pops.push({x:m.x,y:m.y-m.h*.8,t:0,txt:'화상 '+bv,crit:true});if(m.hp<=0){killMonster(m);continue;}}
     }
     if(m.stun>0)continue;
+    if(m.confuseT>0){   // 혼돈: 공격 못 하고 제멋대로 헤맨다
+      m.confuseT=Math.max(0,m.confuseT-dt);m.cfT=(m.cfT||0)-dt;
+      if(m.cfT<=0){m.cfT=.35+Math.random()*.4;const ca=Math.random()*6.283;m.cfx=Math.cos(ca);m.cfy=Math.sin(ca);}
+      m.chargeWind=0;m.chargeT=0;faceMonster(m,m.cfx,m.cfy);moveMonster(m,m.cfx*m.sp*.7*dt,m.cfy*m.sp*.7*dt);continue;
+    }
     const dx=P.x-m.x,dy=P.y-m.y,d=Math.hypot(dx,dy),moveMul=m.slowT>0?.58:1;
     const groupDistance=m.packId?Math.hypot(P.x-m.packX,P.y-m.packY):0;
     if(d<280&&(!m.packId||groupDistance<m.packRadius)){
@@ -2672,6 +2705,7 @@ function drawMonster(m,sdt){
     ctx.strokeText(label,m.x,m.y-m.h-20);ctx.fillText(label,m.x,m.y-m.h-20);
     const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   if(!m.dead)vfxMonsterIcons(m,m.y-m.h-10);
+  if(m.confuseT>0&&!m.dead){ctx.font='bold 18px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#2a1038';ctx.fillStyle='#d9a8ff';const qx=m.x+m.w*.42+Math.sin(T*9)*3,qy=m.y-m.h-2;ctx.strokeText('?',qx,qy);ctx.fillText('?',qx,qy);}
   ctx.restore();
 }
 function dropImage(icon){
@@ -3019,17 +3053,17 @@ const SFX = (() => {
       noise(t,.32,220,1450,.6,.48,1,'lowpass');noise(t+.04,.22,900,3200,1.1,.3,1);
       tone(t,.24,105,48,.34,1,'sine');tone(t+.05,.18,260,95,.18,1,'triangle');
     },
-    ice(t){
-      tone(t,.16,vary(2100),vary(3300),.13,1,'triangle');tone(t+.035,.2,vary(1450),vary(2400),.09,1,'sine');
-      noise(t,.18,5200,8500,4.5,.2,1);noise(t+.08,.16,3400,6200,3,.15,1);
+    ice(t){   // 후두두둑: 얼음 알갱이 다섯 알
+      for(let i=0;i<5;i++){const u=t+i*.04+Math.random()*.012;tone(u,.07,vary(2300),vary(1500),.07,1,'triangle');noise(u,.08,5200,8500,3.5,.12,1);}
+      tone(t+.18,.2,vary(3300),vary(2600),.05,1,'sine');
     },
     heal(t){ [523,659,784,1046].forEach((f,i)=>tone(t+i*.055,.55,f,0,.085,1,'sine',.025)); },
     slash(t){ noise(t,.25,550,4300,1,.48,1);tone(t,.14,190,58,.34,1);noise(t+.08,.11,2800,5200,2.5,.18,1); },
     spin(t){ noise(t,.48,480,3000,.8,.42,1);noise(t+.1,.38,3200,700,.9,.3,1);tone(t,.24,135,62,.28,1); },
     rock(t){ noise(t,.16,420,120,.9,.38,0);tone(t,.12,105,55,.24,0,'triangle'); },
     charge(t){ noise(t,.28,180,980,.7,.32,1,'lowpass');tone(t,.22,90,52,.22,0); },
-    dark(t){ tone(t,.36,vary(150),vary(70),.3,1,'sawtooth');noise(t,.3,700,160,.8,.25,1,'lowpass');tone(t+.05,.3,vary(420),vary(210),.1,1,'triangle'); },
-    lightning(t){ noise(t,.12,6000,1800,4,.23,1);tone(t,.16,980,210,.16,1,'sawtooth'); },
+    dark(t){ noise(t,.2,500,4600,1,.36,1);tone(t,.2,vary(130),vary(70),.2,1,'sawtooth');tone(t+.16,.4,vary(1750),vary(1650),.1,1,'triangle');tone(t+.16,.3,vary(2650),vary(2500),.05,1,'sine'); },   // 쉬익, 챙
+    lightning(t){ noise(t,.12,6000,1800,4,.2,1);for(let i=0;i<6;i++)tone(t+i*.06,.09,vary(i%2?430:310),vary(i%2?310:430),.1,1,'sawtooth');tone(t,.4,980,210,.08,1,'sawtooth'); },   // 지잉징잉
     slime(t){ noise(t,.22,520,170,.7,.3,0,'lowpass');tone(t,.16,180,95,.13,0,'sine'); },
     coin(t){ tone(t, 0.18, 1568, 0, 0.12, 1, 'sine', 0.002); tone(t + 0.07, 0.3, 2093, 0, 0.11, 1, 'sine', 0.002); },
     buy(t){ S.coin(t); tone(t + 0.12, 0.3, 1046, 0, 0.06, 1); },
@@ -3601,10 +3635,10 @@ const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', '
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 아무 무기나 100%, 지팡이면 +25%
 const IMPLEMENTED = new Set(['fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
-const SKN = { fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'얼음 화살', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
+const SKN = { fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'얼음 알갱이', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
   holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
-const SKD = { fire1:'불덩이를 쏴 폭발·화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음 화살, 둔화·빙결', ice2:'전방 부채꼴 냉기, 둔화',
-  bolt1:'적에게 휘어 날아가는 번개 구체', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'짧게 관통하는 어둠 칼날, 마나 조금 회복', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
+const SKD = { fire1:'느리게 날아가 펑 터지는 불덩이, 화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음 알갱이 5발이 후두두둑, 맞을수록 느려지다 얼어붙음', ice2:'전방 부채꼴 냉기, 둔화',
+  bolt1:'전방 60도로 느리게 나가는 전기 구체 3개, 닿는 동안 감전', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'발밑에서 퍼지는 좁은 전방위 어둠, 낮은 확률로 혼돈', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
   holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기', bow2:'부채꼴로 화살 여러 발', fist2:'앞으로 뻗는 투기, 4랭크부터 관통' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
@@ -3927,7 +3961,11 @@ function loadGame(){
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
-const saved=loadGame();syncHud();syncPot();
+const saved=loadGame();
+// 테스트용: 구현된 액티브 스킬을 전부 배운 상태(1랭크)로 만든다(포인트는 건드리지 않음 — 저장 검사와 충돌). 정식 시작 전에 false로 바꿀 것.
+const TEST_UNLOCK_ALL_SKILLS=true;
+if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}}
+syncHud();syncPot();
 if(saved){
   G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);
   Promise.resolve(G.resumeLocation?G.resumeLocation(saved.location):false).then(()=>{
