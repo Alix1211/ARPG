@@ -291,7 +291,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
+window.GAME = { P, setHold: v => { P.hold = v; }, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -468,12 +468,13 @@ function frame(now){
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
-  P.moving = !panel && mag > 0.15 && !atkBusy();
+  P.moving = !panel && mag > 0.15;
+  if (P.hold && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
   if (P.moving){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
     P.run = kb ? !keys.shift : mag > 0.82;
-    const sp = P.run ? 320 : 165 * Math.min(1, mag / 0.82);
+    const sp = (P.run ? 320 : 165 * Math.min(1, mag / 0.82)) * (atkBusy() ? 0.7 : 1);   // 공격하면서 움직이면 조금 느려짐
     move(dx / mag * sp * dt, dy / mag * sp * dt);
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += dt;
@@ -677,7 +678,7 @@ function weaponLayers(){
 function drawMe(){
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x, P.y, 17, 6, 0, 0, 7); ctx.fill();
   const busy = atkBusy(), dir = busy ? P.atk.dir : P.dir, flip = busy ? P.atk.flip : P.flip;
-  const fr = EL[dir][!busy && P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
+  const fr = EL[dir][P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
   const h = 98, w = h * 170 / 172, by = P.y + h * (11 / 344);
   const L = weaponLayers();
   ctx.save();

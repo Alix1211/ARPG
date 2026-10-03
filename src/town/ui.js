@@ -77,8 +77,11 @@ atk.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (G.isOpen()) return;
   if (G.near()) { G.act(); return; }
-  G.swing(eq[cur] ? eq[cur].wt : null);
+  try { atk.setPointerCapture(e.pointerId); } catch (er) {}
+  G.swing(eq[cur] ? eq[cur].wt : null); G.setHold(true);   // 누르고 있는 동안 계속 공격
 });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) atk.addEventListener(ev, () => G.setHold(false));
+addEventListener('blur', () => G.setHold(false));
 $('swap').addEventListener('pointerdown', e => {
   e.preventDefault(); if (G.isOpen()) return;
   const o = cur === 'w1' ? 'w2' : 'w1';
@@ -86,11 +89,12 @@ $('swap').addEventListener('pointerdown', e => {
   cur = o; syncHud(); G.say(`${eq[cur].name}(으)로 바꿔 들었습니다`);
 });
 $('bagBtn').addEventListener('click', () => openChar('equip'));
+addEventListener('keyup', e => { if (e.key.toLowerCase() === 'j') G.setHold(false); });
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (k === 'i' || k === 'b'){ if ($('char').classList.contains('on')) closeChar(); else if (!G.isOpen()) openChar('equip'); }
   if (k === 'q' && !G.isOpen()) $('swap').dispatchEvent(new PointerEvent('pointerdown'));
-  if (k === 'j' && !G.isOpen()) atk.dispatchEvent(new PointerEvent('pointerdown'));
+  if (k === 'j' && !e.repeat && !G.isOpen()){ if (G.near()) G.act(); else { G.swing(eq[cur] ? eq[cur].wt : null); G.setHold(true); } }
 });
 function frame(){
   const n = G.near();
