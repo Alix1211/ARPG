@@ -72,12 +72,18 @@ async def main():
         await pg.click('#tabSk');await pg.wait_for_timeout(120)
         portal=pg.locator('.lifegrid .skc.drag')
         assert await portal.count()==1
-        pbox=await portal.bounding_box(); qbox=await pg.locator('.sk[data-i="0"]').bounding_box()
+        await portal.scroll_into_view_if_needed();await pg.wait_for_timeout(80)
+        qslot=pg.locator('.sk[data-i="0"]')
+        pbox=await portal.bounding_box(); qbox=await qslot.bounding_box()
         assert pbox and qbox
-        await pg.mouse.move(pbox['x']+pbox['width']/2,pbox['y']+pbox['height']/2)
-        await pg.mouse.down()
-        await pg.mouse.move(qbox['x']+qbox['width']/2,qbox['y']+qbox['height']/2,steps=8)
-        await pg.mouse.up();await pg.wait_for_timeout(120)
+        px=pbox['x']+pbox['width']/2;py=pbox['y']+pbox['height']/2
+        qx=qbox['x']+qbox['width']/2;qy=qbox['y']+qbox['height']/2
+        await pg.mouse.move(px,py);await pg.mouse.down();await pg.wait_for_timeout(50)
+        dbg=await ev("() => UI.dragDebug()")
+        assert dbg and dbg['id']=='townPortal',dbg
+        assert await ev("([x,y])=>UI.quickDropIndex(x,y)",[qx,qy])==0
+        await pg.mouse.move(qx,qy,steps=12);await pg.wait_for_timeout(50)
+        await pg.mouse.up();await pg.wait_for_timeout(160)
         assert await ev("() => UI.quickSlots()[0]==='townPortal'")
         await pg.click('#charClose');await pg.wait_for_timeout(80)
 
