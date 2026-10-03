@@ -192,16 +192,21 @@ function spawnFieldMonsters(theme){
 function restAtCamp(){
   if(MAP!=='field'||traveling)return false;
   traveling=true;closeAll();
-  const f=$('fade');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
+  const f=$('fade'),art=$('campArt');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
   setTimeout(()=>{
     P.hp=P.maxHp;P.mp=P.maxMp;P.mpAcc=0;
     for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
     spawnFieldMonsters(fieldTheme);syncBars();
     if(typeof SFX!=='undefined')SFX.play('heal');
+    const pic=A.camp&&A.camp[dayLook(DAY.t).lamp>.5?'night':'day'];
+    if(art&&pic){art.style.backgroundImage='url('+pic+')';requestAnimationFrame(()=>art.classList.add('on'));}
     setTimeout(()=>{
-      f.classList.remove('on');
-      setTimeout(()=>{f.classList.remove('slow');traveling=false;say('푹 쉬었습니다. 주변의 기척이 다시 느껴집니다.');},560);
-    },220);
+      if(art)art.classList.remove('on');
+      setTimeout(()=>{
+        f.classList.remove('on');
+        setTimeout(()=>{f.classList.remove('slow');traveling=false;say('푹 쉬었습니다. 주변의 기척이 다시 느껴집니다.');},560);
+      },pic?720:0);
+    },pic?2600:220);
   },560);
   return true;
 }

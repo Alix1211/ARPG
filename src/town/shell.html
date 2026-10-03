@@ -113,6 +113,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .3s;z-index:20}
 #fade.slow{transition-duration:.55s}
 #fade.on{opacity:1}
+#campArt{position:fixed;inset:0;background:#000 center/contain no-repeat;opacity:0;pointer-events:none;transition:opacity .7s;z-index:21}
+#campArt.on{opacity:1}
+#campArt span{position:absolute;left:0;right:0;bottom:6%;text-align:center;font:700 clamp(14px,2.6vw,22px) sans-serif;color:#fff;text-shadow:0 2px 6px #000}
 
 /* ---- HUD (케인 시안: 좌상단 초상·체력·마나·작은 고리 / 우상단 둥근 미니맵 / 좌하단 조이스틱 / 우하단 큰 공격 버튼 + 스킬 5칸 + 교체) ---- */
 #me{left:max(8px,env(safe-area-inset-left));top:6px;display:flex;align-items:flex-start;gap:4px}
@@ -230,6 +233,7 @@ html.app #fs{display:none}
 <div id="iinfo"></div>
 <img id="ghost" alt="">
 <div id="fade"></div>
+<div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
 <div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 /*VER*/</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
