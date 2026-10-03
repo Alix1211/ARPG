@@ -3,7 +3,10 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage as nd
 
-R = '/home/claude/arpg/assets/'
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+HERE = os.path.dirname(os.path.abspath(__file__))
+R = os.path.join(ROOT, 'assets') + '/'
 TS = 48          # 게임 단위 칸 크기
 PX = 64          # 바닥 그림의 칸당 픽셀
 MW, MH = 46, 32  # 마을 크기(칸)
@@ -45,7 +48,7 @@ def mask_from(sdf, soft=0.12, n=None):
     d = sdf + (N1 if n is None else n)
     return np.clip(0.5 - d / soft, 0, 1)[..., None]
 
-CACHE='/home/claude/town/ground.png'
+CACHE=os.path.join(HERE, '.ground_cache.png')
 import os
 def make_ground():
     img = grass.copy()
@@ -273,8 +276,8 @@ ground = bake_shadows(ground, SH)
 mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT)
-js = open('/home/claude/arpg/src/town/town.js').read()
-html = open('/home/claude/arpg/src/town/shell.html').read()
+js = open(os.path.join(HERE, 'town.js')).read()
+html = open(os.path.join(HERE, 'shell.html')).read()
 html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)
-open('/home/claude/arpg/game/town.html', 'w').write(html)
+open(os.path.join(ROOT, 'game', 'town.html'), 'w').write(html)
 print('ok', len(html) // 1024, 'KB')
