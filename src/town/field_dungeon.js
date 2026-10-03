@@ -1,7 +1,7 @@
 // ======================= 필드 · 몬스터 =======================
 const FIELD_THEMES = [
-  ['spring','봄 초원','견습 · T1'], ['summer','여름 숲','견습 · T1'], ['autumn','가을 들판','동 · T2'],
-  ['winter','겨울 설원','동 · T2'], ['ice','얼음 지대','은 · T3'], ['volcano','화산 지대','금 · T4'], ['swamp','늪지대','백금 · T5']
+  ['spring','봄 초원','T1 · 권장 Lv1~10'], ['summer','여름 숲','T2 · 권장 Lv11~20'], ['autumn','가을 들판','T3 · 권장 Lv21~30'],
+  ['winter','겨울 설원','T4 · 권장 Lv31~40'], ['ice','얼음 지대','T5 · 권장 Lv41~50'], ['volcano','화산 지대','T6 · 권장 Lv51~60'], ['swamp','늪지대','T7 · 권장 Lv61~70']
 ];
 const FIELD_INFO = Object.fromEntries(FIELD_THEMES.map(x => [x[0], x]));
 const fieldTiles = {};
@@ -14,7 +14,7 @@ for (const n in A.monsters3){ mon3[n] = {}; for (const d in A.monsters3[n]) mon3
 for (const n in A.monsters1) mon1[n] = load(A.monsters1[n]);
 const monsters = [], dropsLoot = [], enemyShots = [], enemyHazards = [];
 const dropImgs = {};
-const FIELD_TIER={spring:1,summer:1,autumn:2,winter:2,ice:3,volcano:4,swamp:5};
+const FIELD_TIER={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
 const PLAYER_STATUS={slow:0,stone:0,bleed:0,burn:0,bleedTick:0,burnTick:0};
 let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0;
 
@@ -352,14 +352,12 @@ function randomDropItem(m){
   return UI.make({kind:Math.random()<.55?'ring':'neck',tier,roll:true});
 }
 function monsterExp(m){
-  const tier=monsterTier(m), min=[0,1,8,18,30,45][tier]||1, cap=[0,8,18,30,45,99][tier]||8;
+  const tier=monsterTier(m), min=(tier-1)*10+1, cap=tier*10;
   const lv=P.lv||1, need=window.GAME&&GAME.expNeed?GAME.expNeed(lv):100;
-  // 레벨당 적정 티어 몬스터 처치 목표: 초반 약 40마리 -> 중후반 50~80마리.
-  // 전투 시간이 길어지는 고티어에서는 실제 시간 기준 레벨업이 더 느려진다.
-  const targetKills=Math.min(85,38+Math.floor(lv*.9));
+  const targetKills=window.GAME&&GAME.targetKillsForLevel?GAME.targetKillsForLevel(lv):100;
   let mult=1;
-  if(lv>cap) mult=Math.max(.08,1-(lv-cap)*.11);   // 저티어 학살 경험치 급감
-  else if(lv<min) mult=1.05;                      // 상위 티어 도전 보너스는 아주 작게
+  if(lv>cap) mult=Math.max(.035,1-(lv-cap)*.13);   // 저티어 학살은 빠르게 의미가 사라짐
+  else if(lv<min) mult=Math.min(1.12,1+(min-lv)*.01); // 위험한 상위티어 도전 보너스는 작게
   return Math.max(1,Math.round(need/targetKills*mult*(.92+Math.random()*.16)));
 }
 function killMonster(m){
