@@ -235,7 +235,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1804</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-2241</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1459,14 +1459,14 @@ function cast(id,mod){
   const skillMul=(1+(rank-1)*.18)*(1+(cm.skill||0)/100);
   if(id==='fire1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.fire||0)/100);
-    const range=home?330+home*90:0,aim=home>0?magicAim(500,range):{vx:d[0]*500,vy:d[1]*500,target:null},ux=aim.vx/500,uy=aim.vy/500;
+    const range=home?330+home*90:0,aim=home>0?magicAim(340,range):{vx:d[0]*340,vy:d[1]*340,target:null},ux=aim.vx/340,uy=aim.vy/340;
     const blast=78+(rank>=3?14:0)+(rank>=5?18:0);
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:500,t:0,life:1.15,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:340,t:0,life:1.7,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
     sfx.push({type:'castfire',t:0,x:P.x,y:P.y-36,r:40});
   }else if(id==='ice1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(760,range):{vx:d[0]*760,vy:d[1]*760,target:null},ux=aim.vx/760,uy=aim.vy/760;
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:760,t:0,life:.95,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
+    const range=home?360+home*95:0,aim=home>0?magicAim(480,range):{vx:d[0]*480,vy:d[1]*480,target:null},ux=aim.vx/480,uy=aim.vy/480;
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:480,t:0,life:1.5,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
     sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
@@ -2024,8 +2024,8 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'bolt1': {
-      const hm = 1 + home, rng = 360 + home * 80, aim = magicAim(640, rng), ux = aim.vx / 640, uy = aim.vy / 640;
-      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:640, t:0, life:1.0, kind:'bolt', blast:26, fx:'voltburst',
+      const hm = 1 + home, rng = 360 + home * 80, aim = magicAim(420, rng), ux = aim.vx / 420, uy = aim.vy / 420;
+      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:420, t:0, life:1.5, kind:'bolt', blast:26, fx:'voltburst',
         dmg:Math.round(mag * (1.85 + rank * .06)), stagger:true, home:hm, homeRange:rng, target:aim.target });
       sfx.push({ type:'castbolt', t:0, x:P.x, y:P.y - 34, r:34 });
       return true;
@@ -2643,7 +2643,7 @@ function drawEnemySkillFx(){
   }
   ctx.restore();
 }
-function drawMonster(m){
+function drawMonster(m,sdt){
   const baseA=m.dead?Math.max(0,1-m.death):1, a=m.vanishT>0?.10:baseA, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
   ctx.save();ctx.globalAlpha=a;
   if(m.chargeWind>0){ctx.strokeStyle='#ff6b42';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,34+Math.sin(T*18)*4,12,0,0,7);ctx.stroke();}
@@ -2654,11 +2654,21 @@ function drawMonster(m){
   }
   ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
   const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);const mirror=m.face==='left'&&(!MOBDEF[m.type].images.left||m.type==='swamp_mage');
-  if(mirror){ctx.save();ctx.translate(m.x,0);ctx.scale(-1,1);ctx.drawImage(img,-m.w/2,m.y-m.h,m.w,m.h);ctx.restore();}
-  else ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
+  // 그림 비율 유지(좌우로 늘어나지 않게), 너무 넓은 그림만 상자 폭 1.45배까지로 제한
+  const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1,ar=iw/ih;
+  let dh=m.h,dw=dh*ar;if(dw>m.w*1.45){dw=m.w*1.45;dh=dw/ar;}
+  // 움직임: 걸을 때 통통 튀고 눌렸다 펴지며, 서 있을 땐 숨쉬듯 부푼다(슬라임류는 더 젤리처럼)
+  const dist=Math.hypot(m.x-(m.lx==null?m.x:m.lx),m.y-(m.ly==null?m.y:m.ly));m.lx=m.x;m.ly=m.y;
+  const moving=!m.dead&&dist>.15;m.walkA=Math.max(0,Math.min(1,(m.walkA||0)+(moving?1:-1)*(sdt||.016)*7));
+  m.walkPh=(m.walkPh||0)+(sdt||.016)*(moving?Math.min(16,6+m.sp/12):2.4);
+  const jelly=m.family==='slime'||m.type==='slime'||m.type==='slime_king'||m.family==='mushroom';
+  const ph=m.walkPh+(m.x*.013),hop=Math.abs(Math.sin(ph)),amp=jelly?.17:.07;
+  const yOff=-hop*dh*amp*m.walkA,idle=Math.sin(T*(jelly?3.4:2.1)+m.x*.02)*(jelly?.055:.022)*(1-m.walkA);
+  const sy=1+idle+(jelly?(.5-hop)*.16:(.5-hop)*.05)*m.walkA,sx=1/Math.sqrt(Math.max(.6,sy));
+  ctx.save();ctx.translate(m.x,m.y+yOff);if(mirror)ctx.scale(-1,1);ctx.scale(sx,sy);ctx.drawImage(img,-dw/2,-dh,dw,dh);ctx.restore();ctx.translate(-wob,0);
   if(!m.dead){
     ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#21160e';ctx.fillStyle=m.boss?'#ffda6b':m.rank==='elite'?'#bfa6ff':'#f7f1df';
-    const label=`${m.boss&&m.type!=='slime_king'?'♛ ':''}${m.name} Lv${m.mobLv} T${m.tier}${m.boss?' 우두머리':m.rank==='elite'?' 정예':''}`;
+    const label=`${m.boss&&m.type!=='slime_king'?'♛ ':''}${m.name}${m.boss?' 우두머리':m.rank==='elite'?' 정예':''}`;
     ctx.strokeText(label,m.x,m.y-m.h-20);ctx.fillText(label,m.x,m.y-m.h-20);
     const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   if(!m.dead)vfxMonsterIcons(m,m.y-m.h-10);
