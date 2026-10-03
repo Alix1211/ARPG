@@ -13,7 +13,8 @@ const mon3 = {}, mon1 = {};
 for (const n in A.monsters3){ mon3[n] = {}; for (const d in A.monsters3[n]) mon3[n][d] = load(A.monsters3[n][d]); }
 for (const n in A.monsters1) mon1[n] = load(A.monsters1[n]);
 const monsters = [], dropsLoot = [], enemyShots = [];
-let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0;
+const dropImgs = {};
+let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0;
 
 function combatTargets(){ return dummies.concat(monsters.filter(m => !m.dead && !m.removed)); }
 function waitImages(list){ return Promise.all(list.map(im => im.complete && im.naturalWidth ? Promise.resolve() : new Promise(r => { im.onload = im.onerror = r; }))); }
@@ -58,13 +59,23 @@ async function makeFieldGround(theme){
     }
   }
   const mini = document.createElement('canvas'); mini.width = 360; mini.height = 240; mini.getContext('2d').drawImage(c,0,0,360,240);
-  return { ground:c.toDataURL('image/webp',.78), mini:mini.toDataURL('image/webp',.72) };
+  return { ground:c, mini };
 }
 function mkFieldProp(meta, x, y, kind, name){
   if (!meta) return null; const wt = fieldPropSize(meta.name), w = wt * TS, im = BI[meta.key], ar = im && im.naturalWidth ? im.naturalHeight / im.naturalWidth : 1;
   const h = Math.max(TS*.8, w * ar);
   const soft = isSoftName(meta.name), tree = isTreeName(meta.name);
   return { k:meta.key, name:name || null, x:x*TS, y:y*TS, w, h, cw:soft?0:(tree?.16:.72), cd:soft?0:(tree?.35*TS:.45*TS), tree, shadow:!soft, kind:kind || '', r:kind==='dungeon'?64:46 };
+}
+function fieldPropClear(x, y, meta, out){
+  const soft = isSoftName(meta.name), rr = soft ? 0.7 : Math.max(1.0, fieldPropSize(meta.name) * 0.48);
+  for (const p of out){
+    if (!p || !p.k) continue;
+    const pm = (A.field.props[fieldTheme] || []).find(q => q.key === p.k);
+    const pr = pm && isSoftName(pm.name) ? 0.55 : Math.max(0.9, (p.w / TS) * 0.42);
+    if (Math.hypot(x - p.x / TS, y - p.y / TS) < rr + pr + (soft ? 0.15 : 0.45)) return false;
+  }
+  return true;
 }
 function randomFieldProps(theme){
   const all = A.field.props[theme] || [], out = [];
@@ -82,19 +93,21 @@ function randomFieldProps(theme){
     const x = 2 + Math.random()*56, y = 2 + Math.random()*36;
     if (nearMainPath(x,y,2.4) || inTownReserve(x,y) || Math.hypot(x-56,y-8)<4 || Math.hypot(x-3,y-20)<4) continue;
     const meta = pool[Math.floor(Math.random()*pool.length)]; if (!meta) break;
+    if (!fieldPropClear(x,y,meta,out)) continue;
     const p = mkFieldProp(meta,x,y,'',null); if (p) out.push(p);
   }
   return out;
 }
 async function prepareField(theme){
+  const t0 = performance.now();
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
   const bg = await makeFieldGround(fieldTheme), props = randomFieldProps(fieldTheme);
   const map = {
     name:FIELD_INFO[fieldTheme][1], map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini, blds:[], props, npcs:[],
     spawn:[3.2*TS,20*TS], exits:[{x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'}]
   };
-  map.G = load(map.ground); map.MINI = load(map.mini); await waitImages([map.G,map.MINI]);
-  MAPS.field = map; return map;
+  map.G = bg.ground; map.MINI = bg.mini;
+  MAPS.field = map; fieldBuildMs = performance.now() - t0; return map;
 }
 function ensureRegionUI(){
   if ($('regionPick')) return;
@@ -127,11 +140,17 @@ const THEME_MOBS = {
   winter:['wolf','bear','skeleton','elem_ice'], ice:['elem_ice','darkmage','skeleton'], volcano:['demon','orc','elem_fire'], swamp:['harpy','spider','slime','mushroom']
 };
 function mobImageSet(n){ return mon3[n] || (mon1[n] ? {front:mon1[n],left:mon1[n],right:mon1[n]} : null); }
+function pointInSolid(px, py, pad=0){
+  for (const s of solids) if (px > s.x0 - pad && px < s.x1 + pad && py > s.y0 - pad && py < s.y1 + pad) return true;
+  return false;
+}
 function spawnFieldMonsters(theme){
   monsters.length=0; dropsLoot.length=0; enemyShots.length=0;
   const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16;
   for(let i=0;i<count;i++){
-    let x=0,y=0,t=0; do{x=7+Math.random()*48;y=3+Math.random()*34;t++;}while(t<80&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5));
+    let x=0,y=0,t=0;
+    do{ x=7+Math.random()*48; y=3+Math.random()*34; t++; }
+    while(t<140&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||pointInSolid(x*TS,y*TS,24)));
     const type=pool[i%pool.length], d=MOBDEF[type], imgs=mobImageSet(type); if(!imgs) continue;
     const sc=type==='bear'||type==='demon'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
     monsters.push({monster:1,type,x:x*TS,y:y*TS,w,h,hp:d.hp,maxHp:d.hp,sp:d.sp,dmg:d.dmg,ranged:d.ranged||0,range:d.range||42,
@@ -218,11 +237,16 @@ function drawMonster(m){
   if(!m.dead&&(m.hurt>0||m.state==='chase')){const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   ctx.restore();
 }
+function dropImage(icon){
+  if (!A.icons[icon]) return null;
+  if (!dropImgs[icon]) dropImgs[icon] = load(A.icons[icon]);
+  return dropImgs[icon];
+}
 function drawEncounterGround(){
   if(!combatMap())return;
   for(const d of dropsLoot){if(d.picked)continue;const bob=Math.sin(T*4+d.ph)*2;
     if(d.kind==='gold'){ctx.fillStyle='#ffe06a';ctx.strokeStyle='#8d5d18';ctx.lineWidth=2;ctx.beginPath();ctx.arc(d.x,d.y-8+bob,7,0,7);ctx.fill();ctx.stroke();}
-    else{const im=A.icons[d.item.icon]?load(A.icons[d.item.icon]):null;if(im&&im.complete)ctx.drawImage(im,d.x-14,d.y-30+bob,28,28);}
+    else{const im=dropImage(d.item.icon);if(im&&im.complete)ctx.drawImage(im,d.x-14,d.y-30+bob,28,28);}
   }
 }
 function drawEncounterFx(){
@@ -243,7 +267,7 @@ function autoAimMonster(){
 window.__FD_READY=true;
 window.__FD={
   async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
-  state(){return {map:MAP,theme:fieldTheme,serial:fieldSerial,monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold};},
+  state(){return {map:MAP,theme:fieldTheme,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
   prepareField, openRegionSelect
 };
