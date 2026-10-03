@@ -70,7 +70,7 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
-const P = { x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0 };
+const P = { name: '루크레아', x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0, passives: { magicGuide: 1 } };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
   if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
@@ -613,7 +613,7 @@ function updAtk(dt){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
-    const w = WB[a.wt]; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0 });
+    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, speed: w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0, home });
   }
   if (k > 1.2) P.atk = null;
 }
@@ -634,9 +634,29 @@ function drawPops(dt){
   ctx.globalAlpha = 1;
   while (pops.length && pops[0].t > 0.9) pops.shift();
 }
+function nearestShotTarget(x, y, lim = 720){
+  let best = null, bd = lim;
+  for (const t of combatTargets()){
+    if (!t || t.dead || t.removed) continue;
+    const ty = t.y - (t.h || 60) * 0.45, d = Math.hypot(t.x - x, ty - y);
+    if (d < bd){ bd = d; best = t; }
+  }
+  return best;
+}
+function guideShot(s, dt){
+  if (!s.home || s.done) return;
+  if (!s.target || s.target.dead || s.target.removed) s.target = nearestShotTarget(s.x, s.y, 720);
+  const t = s.target; if (!t) return;
+  const tx = t.x, ty = t.y - (t.h || 60) * 0.45, dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy) || 1;
+  const speed = s.speed || Math.hypot(s.vx, s.vy) || 300;
+  const blend = Math.min(1, dt * (2.5 + s.home * 2.2));
+  s.vx += (dx / d * speed - s.vx) * blend;
+  s.vy += (dy / d * speed - s.vy) * blend;
+}
 function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
+    if (!s.done) guideShot(s, dt);
     s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
     if (!s.done){
       for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
@@ -694,8 +714,9 @@ function cast(id, mod){
   P.mp -= cost; CD[id] = k.cd; syncBars();
   const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
   const ox = P.dir === 'side' ? d[0] * 30 : 0, oy = P.dir === 'front' ? -34 : P.dir === 'back' ? -80 : -44;
-  if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6) });
-  else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2) });
+  const home = (P.passives && P.passives.magicGuide) || 0;
+  if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, speed: 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6), home });
+  else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, speed: 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2), home });
   else if (id === 'holy1_heal'){
     const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
     pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: true }); sfx.push({ type: 'heal', t: 0 });
