@@ -18,7 +18,7 @@ const FIELD_TIER={spring:1,summer:1,autumn:2,winter:2,ice:3,volcano:4,swamp:5};
 const PLAYER_STATUS={slow:0,stone:0,bleed:0,burn:0,bleedTick:0,burnTick:0};
 let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0;
 
-function combatTargets(){ return dummies.concat(monsters.filter(m => !m.dead && !m.removed)); }
+function combatTargets(){ return dummies.concat(monsters.filter(m => !m.dead && !m.removed && !(m.vanishT>0))); }
 function waitImages(list){ return Promise.all(list.map(im => im.complete && im.naturalWidth ? Promise.resolve() : new Promise(r => { im.onload = im.onerror = r; }))); }
 function fieldPattern(g, im){ try { return g.createPattern(im, 'repeat'); } catch(e){ return '#607d45'; } }
 function fieldPropMeta(theme, prefix){
@@ -333,25 +333,50 @@ function hitMonster(m,d,stagger,dmOver){
   pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
   if(m.hp<=0) killMonster(m);
 }
-function randomDropItem(){
-  if(!window.UI) return null; const r=Math.random();
-  if(r<.62){ const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)]; return UI.make({kind:'weapon',wt,g:Math.random()<.25?2:1}); }
-  const kinds=['head','body','hands','feet']; return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],g:Math.random()<.25?2:1});
+function monsterTier(m){
+  if(m&&m.tier)return m.tier;
+  if(MAP==='field')return FIELD_TIER[fieldTheme]||1;
+  return 1;
+}
+function randomDropItem(m){
+  if(!window.UI)return null;
+  const tier=monsterTier(m),r=Math.random();
+  if(r<.58){
+    const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)];
+    return UI.make({kind:'weapon',wt,tier,roll:true});
+  }
+  if(r<.90){
+    const kinds=['head','body','hands','feet'];
+    return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,roll:true});
+  }
+  return UI.make({kind:Math.random()<.55?'ring':'neck',tier,roll:true});
 }
 function monsterExp(m){
-  const raw = (m.maxHp || 30) / 6 + (m.dmg || 0) * 0.6 + (m.ranged ? 2 : 0);
-  return Math.max(5, Math.min(30, Math.round(raw)));
+  const tier=monsterTier(m),base=[0,18,42,68,105,145][tier]||18;
+  const cap=[0,8,18,30,45,99][tier]||8;
+  const over=Math.max(0,(P.lv||1)-cap),penalty=Math.max(.15,1-over*.08);
+  return Math.max(3,Math.round(base*penalty));
 }
 function killMonster(m){
+  if(m.type==='skeleton'&&!m.revived&&Math.random()<.48){
+    m.revived=true;m.dead=true;m.death=0;m.hp=0;m.reviveT=1.5;return;
+  }
   m.dead=true;m.death=0;m.hp=0;
-  dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:2+Math.floor(Math.random()*8),ph:Math.random()*7});
-  if(Math.random()<.32){ const it=randomDropItem(); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7}); }
-  if (window.GAME && GAME.gainExp) GAME.gainExp(monsterExp(m));
+  const tier=monsterTier(m),coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55));
+  dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
+  const find=(window.UI&&UI.findBonus)?UI.findBonus():0;
+  if(Math.random()<Math.min(.62,.30+find/250)){
+    const it=randomDropItem(m); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
+  }
+  if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
 }
 function appendEncounterSprites(list){ if(!combatMap())return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
 function drawMonster(m){
-  const a=m.dead?Math.max(0,1-m.death):1, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
-  ctx.save();ctx.globalAlpha=a;ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
+  const baseA=m.dead?Math.max(0,1-m.death):1, a=m.vanishT>0?.10:baseA, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
+  ctx.save();ctx.globalAlpha=a;
+  if(m.chargeWind>0){ctx.strokeStyle='#ff6b42';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,34+Math.sin(T*18)*4,12,0,0,7);ctx.stroke();}
+  if(m.enraged){ctx.strokeStyle='rgba(255,60,35,.55)';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(m.x,m.y-m.h*.42,m.w*.45,m.h*.52,0,0,7);ctx.stroke();}
+  ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
   const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
   if(!m.dead&&(m.hurt>0||m.state==='chase')){const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   ctx.restore();
@@ -370,10 +395,25 @@ function drawEncounterGround(){
 }
 function drawEncounterFx(){
   if(!combatMap())return;
-  for(const s of enemyShots){const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,10);g.addColorStop(0,'#fff');g.addColorStop(.35,'#d9a4ff');g.addColorStop(1,'rgba(125,60,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,11,0,7);ctx.fill();}
+  for(const h of enemyHazards){
+    if(h.kind==='lightning'){
+      if(h.t<h.delay){
+        const k=h.t/h.delay;ctx.save();ctx.globalAlpha=.35+.45*k;ctx.strokeStyle='#ffe45c';ctx.lineWidth=3;
+        ctx.beginPath();ctx.arc(h.x,h.y,h.r*(1-.35*k),0,7);ctx.stroke();ctx.restore();
+      }else{
+        const k=Math.min(1,(h.t-h.delay)/.22);ctx.save();ctx.globalAlpha=1-k;ctx.strokeStyle='#dff4ff';ctx.lineWidth=8*(1-k)+2;
+        ctx.beginPath();ctx.moveTo(h.x-5,h.y-150);ctx.lineTo(h.x+7,h.y-100);ctx.lineTo(h.x-4,h.y-58);ctx.lineTo(h.x,h.y);ctx.stroke();ctx.restore();
+      }
+    }
+  }
+  for(const s of enemyShots){
+    const col=s.kind==='stone'?'#b7b7a6':s.kind==='web'?'#e8f7ff':s.kind==='burn'?'#ff8a33':s.kind==='slow'?'#8edcff':s.kind==='feather'?'#ffd8ef':'#d9a4ff';
+    const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,10);g.addColorStop(0,'#fff');g.addColorStop(.35,col);g.addColorStop(1,'rgba(80,50,130,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,s.kind==='stone'?13:11,0,7);ctx.fill();
+  }
 }
 function drawEncounterMini(mx,sx,sy){
-  if(!combatMap())return;mx.fillStyle='#e3483c';for(const m of monsters)if(!m.dead&&!m.removed){mx.beginPath();mx.arc(m.x*sx,m.y*sy,2.2,0,7);mx.fill();}
+  if(!combatMap())return;mx.fillStyle='#e3483c';for(const m of monsters)if(!m.dead&&!m.removed&&!(m.vanishT>0)){mx.beginPath();mx.arc(m.x*sx,m.y*sy,2.2,0,7);mx.fill();}
 }
 function autoAimMonster(){
   if(!combatMap()||!monsters.length)return;
