@@ -109,7 +109,6 @@ function gainExp(amount){
     const sp = P.lv % 10 === 0 ? 10 : 5;
     P.statPts = (P.statPts || 0) + sp; addStat += sp;
     P.skillPts = (P.skillPts || 0) + 1; addSkill++;
-    syncLifeUnlocks(true);
   }
   const lv = $('lvTxt'); if (lv) lv.textContent = P.lv;
   if (ups){
