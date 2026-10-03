@@ -12,9 +12,17 @@ PX = 64          # 바닥 그림의 칸당 픽셀
 MW, MH = 46, 32  # 마을 크기(칸)
 random.seed(7); np.random.seed(7)
 
+CDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.enc_cache')
+os.makedirs(CDIR, exist_ok=True)
 def enc(img, q=82, fmt='WEBP'):
+    # 같은 그림·같은 품질이면 예전에 압축한 결과를 그대로 씀 (빌드 시간 단축)
+    import hashlib
+    h = hashlib.md5(img.tobytes() + repr((img.size, img.mode, q, fmt)).encode()).hexdigest()
+    cp = os.path.join(CDIR, h + '.txt')
+    if os.path.exists(cp): return open(cp).read()
     b = io.BytesIO(); img.save(b, fmt, quality=q, method=6)
-    return 'data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode()
+    out = 'data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode()
+    open(cp, 'w').write(out); return out
 
 def tex(path):
     t = Image.open(path).convert('RGB').resize((PX, PX), Image.LANCZOS)
@@ -297,6 +305,8 @@ for k in ['01', '02', '02b', '18', '21', '14']:
 tabs = Image.open(R + 'ui/kit_c/kit_c_11.png').convert('RGBA')
 for i, (x, y, w, h) in enumerate([(6, 4, 79, 72), (89, 4, 81, 72), (175, 5, 80, 71), (260, 4, 79, 72), (346, 3, 77, 73)]):
     KIT[f'tab{i}'] = enc(tabs.crop((max(0, x - 5), 0, min(tabs.width, x + w + 5), tabs.height)), 90)
+for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close')]:
+    im = Image.open(R + f'ui/hud_icons/{f}.png').convert('RGBA'); im.thumbnail((128, 128), Image.LANCZOS); KIT['h_' + k] = enc(im, 90)
 for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close')]:
     im = Image.open(R + f'ui/hud_icons/{f}.png').convert('RGBA'); im.thumbnail((128, 128), Image.LANCZOS); KIT['h_' + k] = enc(im, 90)
 ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())

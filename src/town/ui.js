@@ -112,10 +112,10 @@ function fit(){
 }
 addEventListener('resize', fit);
 function openChar(t){ tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); pickSel = null; render(); fit(); }
-function closeChar(){ $('char').classList.remove('on'); $('info').classList.remove('on'); G.setOpen(null); syncHud(); }
+function closeChar(){ $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
-for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('info').classList.remove('on'); render(); });
+for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
 
 function slotEl(it, x, y, w, h, onTap, selected){
   const s = el('button', 'slot'); s.type = 'button';
@@ -170,11 +170,11 @@ function render(){
   const cnt = el('div', 'bcnt', `${bag.filter(Boolean).length} / ${BAG}`); R.append(cnt);
 }
 function tapBag(i){
-  if (!bag[i]){ pickSel = null; $('info').classList.remove('on'); render(); return; }
+  if (!bag[i]){ pickSel = null; $('iinfo').classList.remove('on'); render(); return; }
   pickSel = { from: 'bag', i }; render(); showInfo(bag[i], 'bag');
 }
 function tapEq(s){
-  if (!eq[s]){ pickSel = null; $('info').classList.remove('on'); render(); return; }
+  if (!eq[s]){ pickSel = null; $('iinfo').classList.remove('on'); render(); return; }
   pickSel = { from: 'eq', slot: s }; render(); showInfo(eq[s], 'eq');
 }
 function cmpLine(it, other){
@@ -194,7 +194,7 @@ function targetSlot(it){
   return it.kind;
 }
 function showInfo(it, from){
-  const I = $('info'); I.innerHTML = '';
+  const I = $('iinfo'); I.innerHTML = '';
   const nm = el('div', 'iname', it.name); nm.style.color = RART[it.rar]; I.append(nm);
   I.append(el('div', 'isub', `${RARN[it.rar]} · ${it.kind === 'weapon' ? WN[it.wt] : SLOTN[targetSlot(it)]}`));
   const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
