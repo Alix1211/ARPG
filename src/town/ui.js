@@ -55,15 +55,16 @@ function gradeForTier(tier){
 function rollAffix(it, used){
   const pool=AFFIX.filter(a=>a.slots.includes(it.kind)&&!used.has(a.id)); if(!pool.length)return;
   const a=pool[Math.floor(Math.random()*pool.length)]; used.add(a.id);
-  const tier=it.tier||1, q=.25+Math.random()*.75, scale=(tier-1)/4;
+  const tier=it.tier||1, q=.25+Math.random()*.75, scale=(tier-1)/6;
   const v=a.pct?Math.round((a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)))):Math.max(1,Math.round((a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)))));
   it.aff.push({id:a.id,k:a.k,nm:a.nm,st:a.st,v,pct:a.pct});
   it.st[a.st]=(it.st[a.st]||0)+v;
 }
 function finalizeName(it){
+  const accName=['구리','은','금','보석','별빛','룬','고대'];
   const base = it.kind==='weapon' ? GRADE_NAME[it.g-1]+' '+WN[it.wt]
-    : it.kind==='ring' ? ['구리','은','금','보석','별빛'][it.tier-1]+' 반지'
-    : it.kind==='neck' ? ['구리','은','금','보석','별빛'][it.tier-1]+' 목걸이'
+    : it.kind==='ring' ? accName[it.tier-1]+' 반지'
+    : it.kind==='neck' ? accName[it.tier-1]+' 목걸이'
     : GRADE_NAME[it.g-1]+' '+({head:'투구',body:'갑옷',hands:'장갑',feet:'신발'}[it.kind]);
   const pf=(it.aff||[]).find(a=>a.k==='P'), sf=(it.aff||[]).find(a=>a.k==='S');
   it.name=(sf?sf.nm+' ':'')+(pf?pf.nm+' ':'')+base;
