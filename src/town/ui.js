@@ -204,6 +204,8 @@ const IMPLEMENTED = new Set(['fire1','ice1','holy1_heal','sword1','sword2']);
 const SKN = { fire1:'불덩이', ice1:'얼음 화살', holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
+const quickLearned=id=>id==='townPortal'?((G.P.lifeSkills&&G.P.lifeSkills.townPortal)||0)>0:skillLearned(id);
+const quickIcon=id=>id==='townPortal'?K.ring:A.skicon[id];
 const skBtns = [...document.querySelectorAll('.sk')];
 const C0 = 62;
 skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
@@ -220,30 +222,32 @@ for (const k of ['hp', 'mp']) potEl[k].addEventListener('pointerdown', e => {
   if (G.drink(k)){ POT[k]--; syncPot(); }
 });
 syncPot();
-function needWeapon(id){ const w = SKW[id.replace(/[0-9].*$/, '')]; return w || null; }
+function needWeapon(id){if(id==='townPortal')return null;const w=SKW[id.replace(/[0-9].*$/,'')];return w||null;}
 function syncQS(){
   skBtns.forEach((b,i)=>{
-    if(QS[i]&&!skillLearned(QS[i]))QS[i]=null;
+    if(QS[i]&&!quickLearned(QS[i]))QS[i]=null;
     const id=QS[i];
-    b.style.backgroundImage=`url(${id?A.skicon[id]:K.ring})`;
+    b.style.backgroundImage=`url(${id?quickIcon(id):K.ring})`;
+    b.dataset.glyph=id==='townPortal'?'↩':'';
     b.classList.toggle('empty',!id);
     const nw=id&&needWeapon(id),off=nw&&(!eq[cur]||eq[cur].wt!==nw);
-    b.dataset.pen=off?'60%':(id&&!nw&&eq[cur]&&eq[cur].wt==='staff'?'+25%':'');
+    b.dataset.pen=id==='townPortal'?'':(off?'60%':(id&&!nw&&eq[cur]&&eq[cur].wt==='staff'?'+25%':''));
   });
 }
 skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
   e.preventDefault();
   if ($('char').classList.contains('on')){ if (QS[i]) startDrag(e, QS[i], i); return; }   // 창이 열려 있으면 빼거나 옮기기
   if (G.isOpen()) return;
-  const id=QS[i]; if(!id||!skillLearned(id))return;
-  const nw=needWeapon(id), wt=eq[cur]?eq[cur].wt:null;
-  G.cast(id, nw ? (wt === nw ? { dmg: 1, mp: 1 } : { dmg: 0.6, mp: 1.5 }) : (wt === 'staff' ? { dmg: 1.25, mp: 1 } : { dmg: 1, mp: 1 }));
+  const id=QS[i];if(!id||!quickLearned(id))return;
+  if(id==='townPortal'){G.useTownPortal();return;}
+  const nw=needWeapon(id),wt=eq[cur]?eq[cur].wt:null;
+  G.cast(id,nw?(wt===nw?{dmg:1,mp:1}:{dmg:.6,mp:1.5}):(wt==='staff'?{dmg:1.25,mp:1}:{dmg:1,mp:1}));
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
 let drag = null; const ghost = $('ghost');
 function startDrag(e, id, from){
-  drag = { id, from }; ghost.src = A.skicon[id]; ghost.style.display = 'block'; moveGhost(e);
+  drag={id,from};ghost.src=quickIcon(id);ghost.style.display='block';moveGhost(e);
   $('cluster').classList.add('drop'); try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
 }
 function moveGhost(e){ ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
@@ -334,7 +338,10 @@ function render(){
       const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,row=el('div','liferow');
       row.append(el('b','',dv.name),el('span','',locked?`Lv${dv.unlock} 해금`:`Lv${rank}/${dv.max}`),el('small','',locked?'아직 잠김':(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1])));
       const ctl=el('span','');ctl.style.cssText='display:flex;gap:2px;align-items:center';
-      if(key==='townPortal'&&!locked&&rank>0){const use=el('button','growplus','↩');use.type='button';use.title='타운 포탈 사용';use.onclick=()=>{closeChar();G.useTownPortal();};ctl.append(use);}
+      if(key==='townPortal'&&!locked&&rank>0){
+        const q=el('button','growplus','Q');q.type='button';q.title='퀵슬롯에 등록';q.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,'townPortal',null);});ctl.append(q);
+        const use=el('button','growplus','↩');use.type='button';use.title='타운 포탈 바로 사용';use.onclick=()=>{closeChar();G.useTownPortal();};ctl.append(use);
+      }
       const plus=el('button','growplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=()=>G.investLife(key);ctl.append(plus);row.append(ctl);pane.append(row);
     }
     pane.append(el('div','sectionhead','무기 숙련도 · 적중할 때 자동 상승'));
@@ -453,7 +460,7 @@ function saveGame(){
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,eq,cur,pot:POT,qs:QS,
-      trade:window.TRADE?TRADE.saveData():null}));
+      trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}
 }
 function loadGame(){
@@ -463,12 +470,12 @@ function loadGame(){
   for(const k in eq)eq[k]=d.eq&&d.eq[k]||null;
   cur=d.cur==='w2'&&eq.w2?'w2':'w1';
   if(d.pot){POT.hp=d.pot.hp|0;POT.mp=d.pot.mp|0;}
-  if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&A.skicon[d.qs[i]]?d.qs[i]:null;
+  if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&(d.qs[i]==='townPortal'||A.skicon[d.qs[i]])?d.qs[i]:null;
   let mx=0;for(const it of [...bag,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
   const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;
-  if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);return d;
+  if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
 const saved=loadGame();syncHud();syncPot();
 if(saved){G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);G.say('이어서 합니다. 금화 '+G.P.gold+'닢 그대로!');}
