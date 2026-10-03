@@ -117,13 +117,14 @@ async function prepareDungeon(floor){
 function spawnDungeonMonsters(){
   monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;
   const M=MAPS.dungeon,tier=dungeonTier(dunFloor),pool=DUN_MOBS[tier-1];
-  const hpK=1+(tier-1)*.58+((dunFloor-1)%3)*.12;
-  const dmK=1+(tier-1)*.36+((dunFloor-1)%3)*.08;
+  const tmin=(tier-1)*10+1,within=Math.max(0,Math.min(9,(P.lv||tmin)-tmin));
+  const hpK=(1+(tier-1)*.58+((dunFloor-1)%3)*.12)*(1+within*.05);
+  const dmK=(1+(tier-1)*.36+((dunFloor-1)%3)*.08)*(1+within*.024);
   const add=(type,x,y,boss)=>{
     const d=MOBDEF[type],imgs=mobImageSet(type);if(!d||!imgs)return;
     const sc=boss?1.7:type==='gargoyle'||type==='orc'?1.1:type==='slime'||type==='spider'?.8:1,w=82*sc;
     const hp=Math.round(d.hp*hpK*(boss?2.3:1)),dmg=Math.round(d.dmg*dmK*(boss?1.25:1));
-    monsters.push({monster:1,type,boss:!!boss,tier,x,y,w,h:w,hp,maxHp:hp,sp:d.sp*(1+(tier-1)*.025),dmg,
+    monsters.push({monster:1,type,boss:!!boss,tier,mobLv:tmin+within,x,y,w,h:w,hp,maxHp:hp,sp:d.sp*(1+(tier-1)*.025)*(1+within*.003),dmg,
       ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',
       skillCd:1+Math.random()*2,imgs,face:'front',flip:false,state:'wander',tx:x,ty:y,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   };
