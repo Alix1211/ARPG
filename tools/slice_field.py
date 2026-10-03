@@ -9,7 +9,7 @@ NAMES = {
  'autumn': 'tree_maple tree_ginkgo tree_bare stump bush_orange bush_dry rock_big rocks log grass_dry leaf_pile pumpkins scarecrow hay cart cave',
  'winter': 'tree_pine_big tree_pine tree_bare stump_snow bush_snow bush_frost rock_snow rocks log_snow grass_dry snow_pile snowman signpost campfire_out sled cave',
  'ice': 'tree_frozen tree_crystal bush_icethorn stump_ice bush_frost crystals rock_ice ice_shards log_frozen grass_frost ice_pillar ice_floe armor_frozen icicle_rock altar_ice cave',
- 'volcano': 'tree_burnt_big tree_burnt stump_char bush_ash flame_flower obsidian rock_lava lava_stones log_ember grass_thorn crater vent armor_molten lava_edge altar_fire cave',
+ 'volcano': 'tree_burnt_big tree_burnt stump_char bush_ash flame_flower obsidian rock_lava lava_stones log_ember grass_thorn crater gravestone armor_molten lava_edge altar_fire cave',
  'swamp': 'tree_willow tree_mangrove tree_dead stump_rot bush_swamp reeds rock_moss rocks log_mushroom grass_swamp lilypads toadstools pillar_sunk boardwalk witch_pot cave',
 }
 def cut(s, b, band):
