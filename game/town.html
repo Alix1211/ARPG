@@ -34,6 +34,10 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #shop .frame{flex:1;display:grid;grid-template-columns:1fr 190px;gap:10px;max-height:82vh}
 #shopHead{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:18px}
 #shopHead small{font-size:14px;color:#8a5a2a}
+#shopTabs{display:flex;gap:5px;margin-left:auto;margin-right:10px}
+#shopTabs .btn{padding:3px 12px;font-size:12px;opacity:.48}
+#shopTabs .btn.on{opacity:1;box-shadow:inset 0 0 0 2px #f0c469,0 2px 0 #2c160a}
+#shopMarket{grid-column:1/3;font-size:11px;color:#7a5a32;margin-top:-6px}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;align-content:start;overflow:auto;max-height:52vh}
 .cell{position:relative;aspect-ratio:1;border:0;padding:6px;background:var(--slot) center/100% 100% no-repeat}
 .cell.sel{background-image:var(--slotOn)}
@@ -164,7 +168,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
   <div class="row"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn ghost" type="button" data-close>닫기</button></div></div></div>
-<div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><small>내 금화 <b id="shopGold">0</b></small></div>
+<div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><div id="shopTabs"><button class="btn on" id="tabBuy" type="button">사기</button><button class="btn" id="tabSell" type="button">팔기</button></div><small>내 금화 <b id="shopGold">0</b></small></div>
+  <div id="shopMarket"></div>
   <div id="grid"></div>
   <div id="info"><img id="infoIc" alt=""><div id="infoName"></div><div id="infoSlot"></div><div id="infoPrice"></div>
     <button class="btn" id="buy" type="button">사기</button><div id="shopSay"></div><button class="btn ghost" type="button" data-close>나가기</button></div></div></div>
@@ -176,7 +181,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1634</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-0802</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
@@ -257,7 +262,7 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
-const P = { x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0 };
+const P = { name: '루크레아', x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0, statPts: 0, skillPts: 0, passives: { magicGuide: 1 }, lifeSkills: {} };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
   if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
@@ -273,6 +278,38 @@ function move(dx, dy){
 }
 function setGold(v){ P.gold = v; $('gold').textContent = '금화 ' + v; $('shopGold').textContent = v; }
 setGold(P.gold);
+
+const LIFE_UNLOCK = [
+  [2, 'townPortal', '타운 포탈'], [4, 'identify', '감정'], [6, 'discount', '디스카운트'],
+  [8, 'overcount', '오버카운트'], [10, 'enchant', '마법부여'], [12, 'moneyScent', '돈 냄새']
+];
+function syncLifeUnlocks(silent=false){
+  P.lifeSkills = P.lifeSkills || {};
+  const got = [];
+  for (const [lv, key, name] of LIFE_UNLOCK){
+    if (P.lv >= lv && !P.lifeSkills[key]){ P.lifeSkills[key] = 1; got.push(name); }
+  }
+  if (!silent && got.length) say('생활스킬 해금: ' + got.join(', '));
+  return got;
+}
+function gainExp(amount){
+  amount = Math.max(0, Math.round(amount || 0)); if (!amount) return false;
+  P.exp = (P.exp || 0) + amount;
+  let ups = 0, addStat = 0, addSkill = 0;
+  while (P.exp >= 100){
+    P.exp -= 100; P.lv = (P.lv || 1) + 1; ups++;
+    const sp = P.lv % 10 === 0 ? 10 : 5;
+    P.statPts = (P.statPts || 0) + sp; addStat += sp;
+    P.skillPts = (P.skillPts || 0) + 1; addSkill++;
+  }
+  const lv = $('lvTxt'); if (lv) lv.textContent = P.lv;
+  if (ups){
+    syncLifeUnlocks(false);
+    say('레벨 ' + P.lv + '! 능력치 +' + addStat + 'P · 스킬 +' + addSkill + 'P');
+  }
+  if (window.UI && UI.save) UI.save();
+  return true;
+}
 
 // ======================= 입력 =======================
 const keys = {};
@@ -384,41 +421,171 @@ const GOODS = {
   general: [{ ic: 'php', name: '체력 물약', slot: '물약', price: 20, potion: 'hp' }, { ic: 'pmp', name: '마나 물약', slot: '물약', price: 20, potion: 'mp' }],
   pawn: [{ ic: 'ring', name: '구리 반지', slot: '반지', price: 120, spec: { kind: 'ring' } }, { ic: 'neck', name: '구리 목걸이', slot: '목걸이', price: 150, spec: { kind: 'neck' } }],
 };
-let sel = null;
+let sel = null, shopNpc = null, shopMode = 'buy';
+const SELL_BASE = {
+  weapon: {1:30, 2:75},
+  head: {1:20, 2:40}, body: {1:35, 2:70}, hands: {1:15, 2:30}, feet: {1:15, 2:30},
+  ring: 120, neck: 150
+};
+const SHOP_BUY_RATE = {
+  arms:    { weapon:1.00, armor:1.00, accessory:0.60, material:0.60, potion:0.50, junk:0.50 },
+  pawn:    { weapon:0.85, armor:0.85, accessory:1.20, material:1.00, potion:0.70, junk:1.00 },
+  general: { weapon:0.60, armor:0.60, accessory:0.60, material:0.90, potion:1.00, junk:0.90 },
+};
+// 작은 마을이 붙으면 CUR.market 또는 NPC.market에 아래 키만 넣으면 같은 판매식이 바로 적용된다.
+// 일부 품목은 ±20~35% 차이. 먼 마을까지 오가며 시세차익을 노리는 루크레아의 생활 동기.
+const REGION_MARKET = {
+  town:    { weapon:1.00, armor:1.00, accessory:1.00, material:1.00, potion:1.00, junk:1.00 },
+  spring:  { weapon:0.90, armor:0.95, accessory:1.20, material:1.10, potion:0.90, junk:1.05 },
+  summer:  { weapon:1.10, armor:0.90, accessory:1.00, material:1.25, potion:0.85, junk:1.00 },
+  autumn:  { weapon:0.90, armor:1.15, accessory:1.25, material:0.85, potion:1.00, junk:1.10 },
+  winter:  { weapon:1.20, armor:1.25, accessory:0.85, material:1.30, potion:1.10, junk:0.90 },
+  ice:     { weapon:1.15, armor:1.30, accessory:0.80, material:1.35, potion:1.20, junk:0.85 },
+  volcano: { weapon:1.30, armor:1.15, accessory:1.05, material:1.35, potion:1.20, junk:0.85 },
+  swamp:   { weapon:0.85, armor:0.80, accessory:1.30, material:1.30, potion:1.25, junk:1.15 },
+};
+const MARKET_NAME = { town:'큰 마을', spring:'봄 마을', summer:'여름 마을', autumn:'가을 마을', winter:'겨울 마을', ice:'얼음 마을', volcano:'화산 마을', swamp:'늪 마을' };
+const MARKET_RESET_MS = 480000; // 게임 하루 8분
+const sellFlow = { sold:{}, resetAt:Date.now()+MARKET_RESET_MS };
+function sellCat(it){
+  if (!it) return 'junk';
+  if (it.kind === 'weapon') return 'weapon';
+  if (['head','body','hands','feet'].includes(it.kind)) return 'armor';
+  if (it.kind === 'ring' || it.kind === 'neck') return 'accessory';
+  if (it.kind === 'material') return 'material';
+  if (it.kind === 'potion') return 'potion';
+  return 'junk';
+}
+function goodsCat(it){
+  if (!it) return 'junk';
+  if (it.potion) return 'potion';
+  return sellCat(it.spec || {kind:'junk'});
+}
+function buyPrice(it){
+  const r = REGION_MARKET[marketRegion()] || REGION_MARKET.town;
+  return Math.max(1, Math.round(it.price * (r[goodsCat(it)] || 1)));
+}
+function baseSellValue(it){
+  if (!it) return 1;
+  let v = 10;
+  if (it.kind === 'weapon') v = (SELL_BASE.weapon[it.g] || Math.round(75 * Math.max(1, it.g - 1)));
+  else if (['head','body','hands','feet'].includes(it.kind)) v = (SELL_BASE[it.kind][it.g] || SELL_BASE[it.kind][2]);
+  else if (it.kind === 'ring' || it.kind === 'neck') v = SELL_BASE[it.kind];
+  else v = Math.max(1, it.price || 10);
+  return v * (1 + (it.rar || 0));
+}
+function marketRegion(){
+  const k = (shopNpc && shopNpc.market) || (CUR && CUR.market) || 'town';
+  return REGION_MARKET[k] ? k : 'town';
+}
+function resetSellFlow(){
+  if (Date.now() < sellFlow.resetAt) return;
+  sellFlow.sold = {}; sellFlow.resetAt = Date.now() + MARKET_RESET_MS;
+}
+function sellPressure(shop, cat){
+  resetSellFlow();
+  const key = marketRegion() + ':' + shop + ':' + cat, n = sellFlow.sold[key] || 0;
+  return Math.max(0.80, 1 - n * 0.02); // 케인: 너무 심한 폭락 금지
+}
+function sellRate(it){
+  const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general', region = marketRegion();
+  return (SHOP_BUY_RATE[shop]?.[cat] || 0.60) * (REGION_MARKET[region]?.[cat] || 1) * sellPressure(shop, cat);
+}
+function sellPrice(it){ return Math.max(1, Math.round(baseSellValue(it) * 0.40 * sellRate(it))); }
+function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
+function shopMarketText(){
+  const region = marketRegion(), r = REGION_MARKET[region];
+  const word = v => v >= 1.18 ? '▲ 높음' : v <= 0.88 ? '▼ 낮음' : '보통';
+  return (MARKET_NAME[region] || region) + ' 시세 · 무기 ' + word(r.weapon) + ' · 방어구 ' + word(r.armor) + ' · 장신구 ' + word(r.accessory);
+}
 function openShop(n){
-  const list = GOODS[n.shop] || [];
+  shopNpc = n; shopMode = 'buy'; sel = null;
   $('shopName').textContent = n.title.replace(' 주인', '');
   $('shopImg').src = A.port[n.k];
-  const g = $('grid'); g.innerHTML = '';
-  list.forEach((it, i) => {
-    const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
-    const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
-    const pr = document.createElement('span'); pr.textContent = it.price; c.append(pr);
-    c.addEventListener('click', () => pick(it, c));
-    g.append(c);
-    if (i === 0) setTimeout(() => pick(it, c));
-  });
-  show('shop');
+  show('shop'); renderShop();
 }
-function pick(it, c){
-  sel = it;
+function setShopMode(mode){
+  shopMode = mode === 'sell' ? 'sell' : 'buy'; sel = null; renderShop();
+}
+function renderShop(){
+  $('tabBuy').classList.toggle('on', shopMode === 'buy');
+  $('tabSell').classList.toggle('on', shopMode === 'sell');
+  $('shopMarket').textContent = shopMarketText();
+  $('shopSay').textContent = '';
+  const g = $('grid'); g.innerHTML = '';
+  if (shopMode === 'buy'){
+    const list = GOODS[shopNpc.shop] || [];
+    list.forEach((it, i) => {
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
+      const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
+      const price = buyPrice(it);
+      const pr = document.createElement('span'); pr.textContent = price; c.append(pr);
+      c.addEventListener('click', () => pickBuy(it, c, price)); g.append(c);
+      if (i === 0) setTimeout(() => pickBuy(it, c));
+    });
+    if (!list.length) clearShopInfo('살 물건이 없습니다.');
+  } else {
+    const list = window.UI ? UI.bagItems() : [];
+    if (!list.length){ clearShopInfo('팔 물건이 없습니다.'); return; }
+    list.forEach((row, i) => {
+      const it = row.it, price = sellPrice(it), rate = sellRate(it);
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
+      const im = document.createElement('img'); im.src = A.icons[it.icon] || ''; im.alt = it.name; c.append(im);
+      const pr = document.createElement('span'); pr.textContent = price + rateMark(rate); c.append(pr);
+      c.addEventListener('click', () => pickSell(row.i, it, c)); g.append(c);
+      if (i === 0) setTimeout(() => pickSell(row.i, it, c));
+    });
+  }
+}
+function clearShopInfo(msg){
+  sel = null; $('infoIc').src = ''; $('infoName').textContent = msg || ''; $('infoSlot').textContent = '';
+  $('infoPrice').textContent = ''; $('buy').textContent = shopMode === 'sell' ? '팔기' : '사기'; $('buy').disabled = true;
+}
+function pickBuy(it, c, price){
+  if (shopMode !== 'buy') return;
+  price = price || buyPrice(it); sel = { mode:'buy', it, price };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
   $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
-  $('infoSlot').textContent = it.slot + ' · 일반';
-  $('infoPrice').textContent = '금화 ' + it.price;
-  $('buy').disabled = P.gold < it.price;
-  $('shopSay').textContent = '';
+  const rr = REGION_MARKET[marketRegion()]?.[goodsCat(it)] || 1;
+  $('infoSlot').textContent = it.slot + ' · 일반 · 지역시세' + rateMark(rr);
+  $('infoPrice').textContent = '금화 ' + price + rateMark(rr);
+  $('buy').textContent = '사기'; $('buy').disabled = P.gold < price; $('shopSay').textContent = '';
 }
+function pickSell(idx, it, c){
+  if (shopMode !== 'sell') return;
+  const price = sellPrice(it), rate = sellRate(it);
+  sel = { mode:'sell', idx, it, price, rate };
+  for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
+  $('infoIc').src = A.icons[it.icon] || ''; $('infoName').textContent = it.name;
+  const names = {weapon:'무기',armor:'방어구',accessory:'장신구',material:'재료',potion:'물약',junk:'잡템'};
+  $('infoSlot').textContent = (names[sellCat(it)] || '물건') + ' · ' + ['일반','마법','희귀','전설'][it.rar || 0];
+  $('infoPrice').textContent = '금화 ' + price + rateMark(rate);
+  $('buy').textContent = '팔기'; $('buy').disabled = false; $('shopSay').textContent = '';
+}
+$('tabBuy').addEventListener('click', () => setShopMode('buy'));
+$('tabSell').addEventListener('click', () => setShopMode('sell'));
 $('buy').addEventListener('click', () => {
-  if (!sel || P.gold < sel.price) return;
-  if (sel.potion){ setGold(P.gold - sel.price); UI.addPotion(sel.potion, 1);
-    $('shopSay').textContent = `${sel.name} 하나 샀습니다. 금화가 ${sel.price}닢 줄었습니다… (오른쪽 물약 버튼에 바로 채워졌습니다)`; $('buy').disabled = P.gold < sel.price; return; }
+  if (!sel) return;
+  if (sel.mode === 'sell'){
+    const cur = UI.bagItems().find(x => x.i === sel.idx);
+    if (!cur || cur.it.id !== sel.it.id){ renderShop(); return; }
+    const price = sellPrice(cur.it), rate = sellRate(cur.it), cat = sellCat(cur.it), shop = shopNpc.shop;
+    const removed = UI.removeBagAt(sel.idx); if (!removed) return;
+    const key = marketRegion() + ':' + shop + ':' + cat; sellFlow.sold[key] = (sellFlow.sold[key] || 0) + 1;
+    setGold(P.gold + price); if (UI.save) UI.save();
+    $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
+    renderShop(); $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
+    return;
+  }
+  const it = sel.it, price = sel.price || buyPrice(sel.it); if (!it || P.gold < price) return;
+  if (it.potion){ setGold(P.gold - price); UI.addPotion(it.potion, 1);
+    $('shopSay').textContent = it.name + ' 하나 샀습니다. 금화가 ' + price + '닢 줄었습니다…'; $('buy').disabled = P.gold < price; if (UI.save) UI.save(); return; }
   if (UI.bagFull()){ $('shopSay').textContent = '가방이 가득 찼습니다.'; return; }
-  setGold(P.gold - sel.price);
-  UI.add(UI.make({ ...sel.spec, price: sel.price }));
-  $('shopSay').textContent = `${sel.name}을(를) 가방에 넣었습니다. 금화가 ${sel.price}닢 줄었습니다… (엘프가 지갑을 오래 쳐다봅니다)`;
-  $('buy').disabled = P.gold < sel.price;
+  setGold(P.gold - price); UI.add(UI.make({ ...it.spec, price })); if (UI.save) UI.save();
+  $('shopSay').textContent = it.name + '을(를) 가방에 넣었습니다. 루크레아가 지갑을 오래 쳐다봅니다.';
+  $('buy').disabled = P.gold < price;
 });
+window.__SHOP = { open: openShop, mode: setShopMode, price: sellPrice, buyPrice, rate: sellRate, state: () => ({mode:shopMode, region:marketRegion(), sold:{...sellFlow.sold}, gold:P.gold}) };
 
 
 // ======================= 행인 =======================
@@ -498,7 +665,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, drink, cast, cdLeft: id => (CD[id] || 0) / (SK[id] ? SK[id].cd : 1), setHold: v => { P.hold = v; }, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
+window.GAME = { P, drink, cast, gainExp, syncLifeUnlocks, cdLeft: id => (CD[id] || 0) / (SK[id] ? SK[id].cd : 1), setHold: v => { P.hold = v; }, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -805,7 +972,7 @@ function updAtk(dt){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
-    const w = WB[a.wt]; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0 });
+    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, speed: w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0, home });
   }
   if (k > 1.2) P.atk = null;
 }
@@ -826,9 +993,29 @@ function drawPops(dt){
   ctx.globalAlpha = 1;
   while (pops.length && pops[0].t > 0.9) pops.shift();
 }
+function nearestShotTarget(x, y, lim = 720){
+  let best = null, bd = lim;
+  for (const t of combatTargets()){
+    if (!t || t.dead || t.removed) continue;
+    const ty = t.y - (t.h || 60) * 0.45, d = Math.hypot(t.x - x, ty - y);
+    if (d < bd){ bd = d; best = t; }
+  }
+  return best;
+}
+function guideShot(s, dt){
+  if (!s.home || s.done) return;
+  if (!s.target || s.target.dead || s.target.removed) s.target = nearestShotTarget(s.x, s.y, 720);
+  const t = s.target; if (!t) return;
+  const tx = t.x, ty = t.y - (t.h || 60) * 0.45, dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy) || 1;
+  const speed = s.speed || Math.hypot(s.vx, s.vy) || 300;
+  const blend = Math.min(1, dt * (2.5 + s.home * 2.2));
+  s.vx += (dx / d * speed - s.vx) * blend;
+  s.vy += (dy / d * speed - s.vy) * blend;
+}
 function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
+    if (!s.done) guideShot(s, dt);
     s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
     if (!s.done){
       for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
@@ -886,8 +1073,9 @@ function cast(id, mod){
   P.mp -= cost; CD[id] = k.cd; syncBars();
   const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
   const ox = P.dir === 'side' ? d[0] * 30 : 0, oy = P.dir === 'front' ? -34 : P.dir === 'back' ? -80 : -44;
-  if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6) });
-  else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2) });
+  const home = (P.passives && P.passives.magicGuide) || 0;
+  if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, speed: 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6), home });
+  else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, speed: 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2), home });
   else if (id === 'holy1_heal'){
     const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
     pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: true }); sfx.push({ type: 'heal', t: 0 });
@@ -1229,10 +1417,15 @@ function randomDropItem(){
   if(r<.62){ const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)]; return UI.make({kind:'weapon',wt,g:Math.random()<.25?2:1}); }
   const kinds=['head','body','hands','feet']; return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],g:Math.random()<.25?2:1});
 }
+function monsterExp(m){
+  const raw = (m.maxHp || 30) / 6 + (m.dmg || 0) * 0.6 + (m.ranged ? 2 : 0);
+  return Math.max(5, Math.min(30, Math.round(raw)));
+}
 function killMonster(m){
   m.dead=true;m.death=0;m.hp=0;
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:2+Math.floor(Math.random()*8),ph:Math.random()*7});
   if(Math.random()<.32){ const it=randomDropItem(); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7}); }
+  if (window.GAME && GAME.gainExp) GAME.gainExp(monsterExp(m));
 }
 function appendEncounterSprites(list){ if(!combatMap())return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
 function drawMonster(m){
@@ -1789,7 +1982,7 @@ function render(){
   } else if (tab === 'skill'){
     L.style.backgroundImage = 'none'; L.style.width = '458px'; L.style.height = '595px';
     const pane = el('div', 'skpane'); L.append(pane);
-    pane.append(el('div', 'skhead', '스킬'), el('div', 'sknote', '배운 스킬을 오른쪽 아래 빈 칸으로 끌어다 놓으세요 · 칸 밖에 놓으면 빠짐'));
+    pane.append(el('div', 'skhead', `스킬 · 보유 ${Pp.skillPts || 0}P`), el('div', 'sknote', '배운 스킬을 오른쪽 아래 빈 칸으로 끌어다 놓으세요 · 칸 밖에 놓으면 빠짐'));
     for (const [gname, ids] of SKG){
       const row = el('div', 'skrow'); row.append(el('b', '', gname));
       for (const id of ids){
@@ -1813,7 +2006,7 @@ function render(){
       const r = el('div', 'srow'); r.style.top = (232 + i * 47.7) + 'px';
       r.append(el('b', '', n), el('em', '', v), el('small', '', sub)); L.append(r);
     });
-    const lv = el('div', 'slv', `Lv ${Pp.lv} · 견습 모험가`); L.append(lv);
+    const lv = el('div', 'slv', `${Pp.name || '루크레아'} · Lv ${Pp.lv} · 견습 모험가 · 능력치 ${Pp.statPts || 0}P · 스킬 ${Pp.skillPts || 0}P`); L.append(lv);
   }
   // 가방
   const R = $('bagPane'); R.innerHTML = '';
@@ -1891,14 +2084,23 @@ function unequip(s){
 window.UI = {
   addPotion(k, n){ POT[k] += n; syncPot(); },
   make, add(it){ const i = bag.indexOf(null); if (i < 0) return false; bag[i] = it; return true; },
-  bagFull: () => bag.indexOf(null) < 0, isOpen: () => $('char').classList.contains('on'), close: closeChar,
+  bagFull: () => bag.indexOf(null) < 0,
+  bagItems: () => bag.map((it, i) => it ? { i, it } : null).filter(Boolean),
+  removeBagAt(i){
+    if (i < 0 || i >= BAG || !bag[i]) return null;
+    const it = bag[i]; bag[i] = null; pickSel = null; $('iinfo').classList.remove('on');
+    if ($('char').classList.contains('on')) render();
+    if (typeof saveGame === 'function') saveGame();
+    return it;
+  },
+  isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };
 // ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
 const SKEY = 'arpg_save_v1';
 function saveGame(){
   try {
     const P = G.P;
-    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
+    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), name: P.name, passives: P.passives, lifeSkills: P.lifeSkills, statPts: P.statPts, skillPts: P.skillPts, gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
   } catch (e) {}
 }
 function loadGame(){
@@ -1910,7 +2112,7 @@ function loadGame(){
   if (d.pot){ POT.hp = d.pot.hp | 0; POT.mp = d.pot.mp | 0; }
   if (d.qs) for (let i = 0; i < 5; i++) QS[i] = d.qs[i] && A.skicon[d.qs[i]] ? d.qs[i] : null;
   let mx = 0; for (const it of [...bag, ...Object.values(eq)]) if (it && it.id > mx) mx = it.id; seq = mx + 1;
-  const P = G.P; P.lv = d.lv || 1; P.exp = d.exp || 0; G.setGold(d.gold | 0);
+  const P = G.P; P.name = d.name || P.name || '루크레아'; P.lv = d.lv || 1; P.exp = d.exp || 0; P.statPts = d.statPts | 0; P.skillPts = d.skillPts | 0; P.lifeSkills = Object.assign({}, P.lifeSkills || {}, d.lifeSkills || {}); P.passives = Object.assign({ magicGuide: 1 }, P.passives || {}, d.passives || {}); if (G.syncLifeUnlocks) G.syncLifeUnlocks(true); G.setGold(d.gold | 0);
   return d;
 }
 const saved = loadGame();
