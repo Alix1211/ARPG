@@ -521,9 +521,9 @@ function loadGame(){
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
 const saved=loadGame();
-// 테스트용: 구현된 액티브 스킬을 전부 배운 상태(1랭크)로 만들고 스킬 포인트를 넉넉히 준다. 정식 시작 전에 false로 바꿀 것.
+// 테스트용: 구현된 액티브 스킬을 전부 배운 상태(1랭크)로 만든다(포인트는 건드리지 않음 — 저장 검사와 충돌). 정식 시작 전에 false로 바꿀 것.
 const TEST_UNLOCK_ALL_SKILLS=true;
-if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}if((G.P.skillPts|0)<10)G.P.skillPts=10;}
+if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}}
 syncHud();syncPot();
 if(saved){
   G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);
