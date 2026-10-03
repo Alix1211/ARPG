@@ -115,7 +115,7 @@ const SWAPPOS = [30, 88];
 const QS = [null, null, null, null, null];
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
-const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬은 그 무기를 들어야 씀 (마법은 아무 무기나)
+const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 아무 무기나 100%, 지팡이면 +25%
 const LEARNED = new Set(['fire1', 'ice1', 'holy1_heal', 'sword1', 'sword2']);   // 시험용: 스킬 체계 전까지 배운 상태
 const SKN = { fire1: '불덩이', ice1: '얼음 화살', holy1_heal: '치유', sword1: '강하게 베기', sword2: '회전 베기' };
 const skBtns = [...document.querySelectorAll('.sk')];
@@ -128,7 +128,8 @@ function syncQS(){
     const id = QS[i];
     b.style.backgroundImage = `url(${id ? A.skicon[id] : K.ring})`;
     b.classList.toggle('empty', !id);
-    const nw = id && needWeapon(id); b.style.filter = nw && (!eq[cur] || eq[cur].wt !== nw) ? 'grayscale(1) brightness(.6) drop-shadow(0 3px 4px #0009)' : '';
+    const nw = id && needWeapon(id), off = nw && (!eq[cur] || eq[cur].wt !== nw);
+    b.dataset.pen = off ? '60%' : (id && !nw && eq[cur] && eq[cur].wt === 'staff' ? '+25%' : '');
   });
 }
 skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
@@ -136,9 +137,8 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
   if ($('char').classList.contains('on')){ if (QS[i]) startDrag(e, QS[i], i); return; }   // 창이 열려 있으면 빼거나 옮기기
   if (G.isOpen()) return;
   const id = QS[i]; if (!id) return;
-  const nw = needWeapon(id);
-  if (nw && (!eq[cur] || eq[cur].wt !== nw)){ G.say(`${WN[nw]}을(를) 들어야 쓸 수 있습니다`); return; }
-  G.cast(id);
+  const nw = needWeapon(id), wt = eq[cur] ? eq[cur].wt : null;
+  G.cast(id, nw ? (wt === nw ? { dmg: 1, mp: 1 } : { dmg: 0.6, mp: 1.5 }) : (wt === 'staff' ? { dmg: 1.25, mp: 1 } : { dmg: 1, mp: 1 }));
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
@@ -151,8 +151,9 @@ function moveGhost(e){ ghost.style.left = e.clientX + 'px'; ghost.style.top = e.
 addEventListener('pointermove', e => { if (drag) moveGhost(e); });
 addEventListener('pointerup', e => {
   if (!drag) return;
-  ghost.style.display = 'none'; $('cluster').classList.remove('drop');
-  const t = document.elementFromPoint(e.clientX, e.clientY), slot = t && t.closest && t.closest('.sk');
+  ghost.style.display = 'none';
+  const t = document.elementFromPoint(e.clientX, e.clientY), slot = t && t.closest && t.closest('.sk');   // 칸이 창 위에 떠 있을 때 먼저 찾음
+  $('cluster').classList.remove('drop');
   if (slot){
     const i = +slot.dataset.i;
     if (drag.from != null){ const tmp = QS[i]; QS[i] = drag.id; QS[drag.from] = tmp; }       // 칸끼리 맞바꾸기

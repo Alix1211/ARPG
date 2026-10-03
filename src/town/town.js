@@ -665,12 +665,13 @@ const SK = {
 };
 const CD = {}; const sfx = [];
 function faceVec(){ return P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0]; }
-function cast(id){
-  const k = SK[id]; if (!k) return false;
+function cast(id, mod){
+  const k = SK[id]; if (!k) return false; mod = mod || { dmg: 1, mp: 1 };
   if ((CD[id] || 0) > 0) return false;
-  if (P.mp < k.mp){ say('마나가 부족합니다'); return false; }
-  P.mp -= k.mp; CD[id] = k.cd; syncBars();
-  const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8);
+  const cost = Math.round(k.mp * mod.mp);
+  if (P.mp < cost){ say('마나가 부족합니다'); return false; }
+  P.mp -= cost; CD[id] = k.cd; syncBars();
+  const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
   const ox = P.dir === 'side' ? d[0] * 30 : 0, oy = P.dir === 'front' ? -34 : P.dir === 'back' ? -80 : -44;
   if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6) });
   else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2) });
