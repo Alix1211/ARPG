@@ -372,6 +372,34 @@ function travel(id,pos,dir){
   },320);
   return true;
 }
+function locationState(){
+  const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
+  if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';}
+  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
+  return st;
+}
+async function resumeLocation(st){
+  if(!st||!st.map)return false;
+  const map=st.map,dir=st.dir||'front';
+  try{
+    if(map==='field'&&typeof prepareField==='function'){
+      await prepareField(st.theme||'spring');buildWorld('field');
+    }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
+      await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
+    }else if(map==='out'){
+      buildWorld('out');
+    }else{
+      buildWorld('town');
+    }
+    P.x=Number.isFinite(st.x)?st.x:P.x;P.y=Number.isFinite(st.y)?st.y:P.y;P.dir=dir;P.atk=null;
+    const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(map==='dungeon'&&window.GUILD&&window.__DUN)GUILD.onDungeonFloor(__DUN.state().floor||1);
+    return true;
+  }catch(e){
+    buildWorld('town');P.x=23*TS;P.y=22.2*TS;P.dir='front';return false;
+  }
+}
+
 function emergencyEscape(){
   // 테스트용: 전투/상태/층이동 꼬임을 무시하고 강제로 큰 마을 복귀.
   traveling=false;closeAll();
@@ -652,7 +680,7 @@ function syncBars(){
 window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
-  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, walkableAt, nearestSafePosition,
+  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
