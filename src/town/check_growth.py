@@ -41,7 +41,7 @@ async def main():
 
         # 생활스킬 자동 해금 + 투자 효과
         await ev("() => { GAME.P.lv=40; GAME.P.lifePts=10; GAME.syncLifeUnlocks(true); }")
-        q0=await ev("() => TRADE.quote('town','wheat').buy")
+        q0=await ev("() => TRADE.quote('town','obsidian').buy")
         find0=await ev("() => UI.findBonus()")
         await ev("() => { GAME.investLife('discount'); GAME.investLife('moneyScent'); }")
         q1=await ev("() => TRADE.quote('town','wheat').buy")
