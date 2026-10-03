@@ -41,11 +41,21 @@ const SFX = (() => {
     crit(t){ S.hit(t); tone(t + 0.02, 0.25, 1320, 1180, 0.09, 1); tone(t + 0.02, 0.25, 1980, 1760, 0.05, 1); },
     kill(t){ noise(t, 0.35, 1400, 200, 0.7, 0.22, 1); tone(t, 0.25, 260, 90, 0.14); },
     hurt(t){ tone(t, 0.16, 110, 60, 0.5); noise(t, 0.1, 900, 300, 0.9, 0.28); },
-    fire(t){ noise(t, 0.45, 300, 900, 0.6, 0.3, 1, 'lowpass'); tone(t, 0.35, 90, 60, 0.2); },
-    ice(t){ tone(t, 0.18, vary(1760), vary(2640), 0.08, 1, 'triangle'); noise(t, 0.12, 4000, 7000, 4, 0.12, 1); },
-    heal(t){ [523, 659, 784].forEach((f, i) => tone(t + i * 0.07, 0.5, f, 0, 0.09, 1, 'sine', 0.03)); },
-    slash(t){ noise(t, 0.22, 700, 3500, 1.1, 0.4, 1); tone(t, 0.12, 180, 70, 0.25); },
-    spin(t){ noise(t, 0.4, 600, 2400, 1.0, 0.32, 1); noise(t + 0.15, 0.3, 2400, 800, 1.0, 0.25, 1); },
+    fire(t){
+      noise(t,.32,220,1450,.6,.48,1,'lowpass');noise(t+.04,.22,900,3200,1.1,.3,1);
+      tone(t,.24,105,48,.34,1,'sine');tone(t+.05,.18,260,95,.18,1,'triangle');
+    },
+    ice(t){
+      tone(t,.16,vary(2100),vary(3300),.13,1,'triangle');tone(t+.035,.2,vary(1450),vary(2400),.09,1,'sine');
+      noise(t,.18,5200,8500,4.5,.2,1);noise(t+.08,.16,3400,6200,3,.15,1);
+    },
+    heal(t){ [523,659,784,1046].forEach((f,i)=>tone(t+i*.055,.55,f,0,.085,1,'sine',.025)); },
+    slash(t){ noise(t,.25,550,4300,1,.48,1);tone(t,.14,190,58,.34,1);noise(t+.08,.11,2800,5200,2.5,.18,1); },
+    spin(t){ noise(t,.48,480,3000,.8,.42,1);noise(t+.1,.38,3200,700,.9,.3,1);tone(t,.24,135,62,.28,1); },
+    rock(t){ noise(t,.16,420,120,.9,.38,0);tone(t,.12,105,55,.24,0,'triangle'); },
+    charge(t){ noise(t,.28,180,980,.7,.32,1,'lowpass');tone(t,.22,90,52,.22,0); },
+    lightning(t){ noise(t,.12,6000,1800,4,.23,1);tone(t,.16,980,210,.16,1,'sawtooth'); },
+    slime(t){ noise(t,.22,520,170,.7,.3,0,'lowpass');tone(t,.16,180,95,.13,0,'sine'); },
     coin(t){ tone(t, 0.18, 1568, 0, 0.12, 1, 'sine', 0.002); tone(t + 0.07, 0.3, 2093, 0, 0.11, 1, 'sine', 0.002); },
     buy(t){ S.coin(t); tone(t + 0.12, 0.3, 1046, 0, 0.06, 1); },
     item(t){ tone(t, 0.22, 784, 0, 0.12, 1, 'triangle', 0.002); tone(t + 0.06, 0.3, 1175, 0, 0.09, 1, 'triangle', 0.002); },
@@ -83,7 +93,7 @@ const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.v
   wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 28 : 12); });   // 허수아비·몬스터 공통 타격
   if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(18); });
   if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(45); } });
-  wrap('cast', null, (ok, id) => { if (!ok) return; SFX.play({ fire1: 'fire', ice1: 'ice', holy1_heal: 'heal', sword1: 'slash', sword2: 'spin' }[id] || 'staff'); HAP(15); });
+  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',ice1:'ice',holy1_heal:'heal',sword1:'slash',sword2:'spin'}[id]||'staff');HAP(id==='sword2'?[18,20,28]:id==='fire1'?[12,22,34]:id==='sword1'?28:18);});
   wrap('drink', null, (ok) => { if (ok){ SFX.play('potion'); HAP([10, 40, 10]); } });
   wrap('travel', () => { if (!traveling) SFX.play('travel'); });
   if (typeof openDungeonChest === 'function') wrap('openDungeonChest', (spot) => { const m = spot && spot.data && spot.data.mimic; SFX.play(m ? 'mimic' : 'chest'); HAP(m ? [60, 30, 60] : [15, 40, 15]); });
