@@ -275,5 +275,10 @@ window.__FD={
   async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
   state(){return {map:MAP,theme:fieldTheme,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
+  debugTarget(dx,dy){
+    const m=monsters.find(x=>!x.dead&&!x.removed); if(!m)return false;
+    for(const x of monsters) if(x!==m) x.removed=true;
+    m.x=P.x+dx; m.y=P.y+dy; m.vx=m.vy=0; return {x:m.x,y:m.y};
+  },
   prepareField, openRegionSelect
 };
