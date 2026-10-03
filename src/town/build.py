@@ -97,6 +97,7 @@ else:
     ground = make_ground(); ground.save(CACHE)
 
 
+
 # ---- 그림자 (해는 왼쪽 위: 그림자는 오른쪽 아래로 눕는다) ----
 def bake_shadows(base, items):
     k = PX / TS
@@ -159,17 +160,54 @@ for k, name, cx, by, wt, dxr in B:
     blds.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, door=dxr))
 
 # 소품 (건물 부품 중 바닥에 세울 수 있는 것만)
-P = [('part_36', '의뢰 게시판', 26.6, 12.9, 1.5),
-     ('part_35', None, 9.6, 15.5, 0.75),
-     ('part_37', None, 33.2, 24.9, 0.8), ('part_37', None, 33.9, 25.3, 0.8), ('part_38', None, 39.0, 25.4, 0.9),
-     ('part_37', None, 12.3, 25.8, 0.8), ('part_38', None, 18.0, 25.8, 0.9),
-     ('part_34', None, 4.6, 15.6, 1.2), ('part_38', None, 44.2, 24.9, 0.9)]
+# 소품: key, 이름(살펴보기), x, 바닥y, 폭(칸), 충돌(폭 비율, 깊이 칸) — 충돌 0이면 통과
+TP = 'town_props/'; BP = 'building_parts/'
+P = [
+ (TP+'fountain', None, 23.0, 18.4, 4.0, (0.86, 1.3)),
+ (TP+'lamp_iron', None, 13.7, 13.3, 1.0, (0.5, 0.3)), (TP+'lamp_iron', None, 32.3, 13.3, 1.0, (0.5, 0.3)),
+ (TP+'lamp_iron', None, 13.7, 20.8, 1.0, (0.5, 0.3)), (TP+'lamp_iron', None, 32.3, 20.8, 1.0, (0.5, 0.3)),
+ (TP+'lamp_wood', None, 20.7, 24.0, 1.1, (0.4, 0.3)), (TP+'lamp_wood', None, 25.3, 24.0, 1.1, (0.4, 0.3)),
+ (TP+'lamp_wood', None, 20.7, 28.4, 1.1, (0.4, 0.3)), (TP+'lamp_wood', None, 25.3, 28.4, 1.1, (0.4, 0.3)),
+ (TP+'lamp_wood', None, 12.6, 15.2, 1.1, (0.4, 0.3)), (TP+'lamp_wood', None, 33.4, 15.2, 1.1, (0.4, 0.3)),
+ (TP+'bench_iron', None, 18.2, 20.0, 2.0, (0.9, 0.5)), (TP+'bench_iron', None, 27.8, 20.0, 2.0, (0.9, 0.5)),
+ (TP+'bench_stone', None, 17.6, 14.3, 2.1, (0.9, 0.5)),
+ (TP+'stall_blue', '과일 노점', 15.6, 17.6, 3.0, (0.85, 0.9)), (TP+'stall_red', '물약 노점', 30.4, 17.6, 3.0, (0.85, 0.9)),
+ (TP+'flag_pole', None, 19.4, 12.7, 1.2, (0.4, 0.3)), (TP+'flag_pole', None, 26.6, 12.7, 1.2, (0.4, 0.3)),
+ (BP+'part_36', '의뢰 게시판', 28.2, 13.3, 1.5, (0.8, 0.3)),
+ (TP+'urn_flowers', None, 21.6, 12.9, 0.9, (0.7, 0.3)), (TP+'urn_flowers', None, 24.4, 12.9, 0.9, (0.7, 0.3)),
+ (TP+'well', '우물', 4.6, 20.4, 2.4, (0.8, 0.9)),
+ (BP+'part_35', None, 9.4, 15.6, 0.7, (0.6, 0.3)),
+ (TP+'pot_flowers', None, 5.0, 15.4, 0.9, (0.7, 0.3)),
+ (TP+'flowerbed_stone', None, 12.4, 10.8, 1.9, (0.9, 0.5)), (TP+'flowerbed_stone', None, 18.2, 10.6, 1.9, (0.9, 0.5)),
+ (TP+'flowerbed_wood', None, 34.6, 10.8, 1.8, (0.9, 0.5)),
+ (TP+'barrel_bucket', None, 12.4, 26.0, 1.4, (0.8, 0.4)), (BP+'part_38', None, 18.0, 26.0, 0.9, (0.9, 0.4)),
+ (TP+'barrel_bucket', None, 33.4, 25.8, 1.4, (0.8, 0.4)),
+ (TP+'woodpile', None, 39.0, 25.9, 1.9, (0.9, 0.5)), (TP+'hay', None, 44.6, 21.6, 1.8, (0.85, 0.6)),
+ (TP+'cart', None, 44.2, 27.4, 2.4, (0.85, 0.6)),
+ (TP+'signpost', '이정표', 25.9, 21.4, 1.2, (0.4, 0.3)),
+ (TP+'fence_h', None, 1.3, 27.4, 1.9, (1, 0.25)), (TP+'fence_h', None, 3.1, 27.4, 1.9, (1, 0.25)), (TP+'fence_h', None, 4.9, 27.4, 1.9, (1, 0.25)),
+ (TP+'fence_corner', None, 6.6, 27.4, 1.7, (1, 0.25)),
+ (TP+'fence_h', None, 4.2, 12.0, 1.9, (1, 0.25)), (TP+'fence_h', None, 11.8, 12.0, 1.9, (1, 0.25)),
+ (TP+'bush_white', None, 10.4, 12.0, 1.2, (0.8, 0.4)), (TP+'bush_red', None, 2.4, 12.0, 1.2, (0.8, 0.4)),
+ (TP+'bush_red', None, 27.6, 10.4, 1.2, (0.8, 0.4)), (TP+'bush_white', None, 35.0, 12.4, 1.2, (0.8, 0.4)),
+ (TP+'bush_white', None, 41.0, 12.6, 1.2, (0.8, 0.4)), (TP+'bush_red', None, 7.8, 21.0, 1.2, (0.8, 0.4)),
+ (TP+'bush_white', None, 26.6, 26.4, 1.2, (0.8, 0.4)), (TP+'bush_red', None, 19.6, 26.4, 1.2, (0.8, 0.4)),
+ (TP+'rock_1', None, 37.4, 4.6, 1.4, (0.8, 0.4)), (TP+'rock_2', None, 44.6, 7.8, 1.4, (0.8, 0.4)),
+ (TP+'tree_big', None, 2.4, 5.0, 4.0, (0.16, 0.3)), (TP+'tree_small', None, 5.6, 7.4, 3.0, (0.16, 0.3)),
+ (TP+'tree_big', None, 22.0, 4.6, 4.0, (0.16, 0.3)), (TP+'tree_blossom', None, 26.4, 6.6, 3.2, (0.16, 0.3)),
+ (TP+'tree_blossom', None, 19.2, 7.0, 3.2, (0.16, 0.3)), (TP+'tree_small', None, 35.0, 6.0, 3.0, (0.16, 0.3)),
+ (TP+'tree_big', None, 44.0, 16.6, 4.0, (0.16, 0.3)), (TP+'tree_small', None, 2.0, 19.6, 3.0, (0.16, 0.3)),
+ (TP+'tree_blossom', None, 8.2, 30.0, 3.2, (0.16, 0.3)), (TP+'tree_big', None, 13.2, 31.6, 4.0, (0.16, 0.3)),
+ (TP+'tree_big', None, 33.2, 31.6, 4.0, (0.16, 0.3)), (TP+'tree_small', None, 38.6, 30.6, 3.0, (0.16, 0.3)),
+ (TP+'tree_blossom', None, 43.8, 31.0, 3.2, (0.16, 0.3)), (TP+'tree_small', None, 12.0, 6.4, 3.0, (0.16, 0.3)),
+]
 props = []
-for k, name, cx, by, wt in P:
-    im = Image.open(R + f'building_parts/{k}.png').convert('RGBA')
+for k, name, cx, by, wt, col in P:
+    im = Image.open(R + k + '.png').convert('RGBA')
     w = wt * TS; h = w * im.height / im.width
-    if k not in assets: assets[k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
-    props.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h))
+    key = k.split('/')[-1]
+    if key not in assets: assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
+    props.append(dict(k=key, path=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, cw=col[0], cd=col[1] * TS, tree=key.startswith('tree')))
 
 # 엘프
 el = {}
@@ -182,15 +220,56 @@ for d in ['front', 'back', 'side']:
 face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((70, 10, 280, 200)).resize((120, 108), Image.LANCZOS)
 
 ui = {}
-for k in ['04', '05', '06']:
+for k in ['03', '04', '05', '06', '14', '15']:
     ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
 
+# ---- 사람 (시나리오 장부 번호 = 초상화 번호) ----
+# 번호, 이름, 직함, 건물 key(문 옆에 섬) 또는 None, x, y(칸, 건물 없을 때), 왼쪽(-1)/오른쪽(1), 첫마디, 가게 종류
+NPC = [
+ (5,  '토비', '여관 주인', 'house_blue', 1, '어서 와요~ 오늘도 방은 비워 뒀어요~', 'inn'),
+ (21, '마르코', '잡화점 주인', 'shop_general', 1, '필요한 게 있으면 말만 하세요.', None),
+ (23, '루나', '무기·방어구점 주인', 'shop_weapons', -1, '무기든 갑옷이든, 천천히 골라 보세요.', 'arms'),
+ (42, '그레타', '대장간 주인', 'smithy', 1, '망치 소리 시끄럽지? 볼일 있으면 크게 말해!', None),
+ (12, '핀', '견습 대장장이', 'shop_tools', -1, '도, 도구 보러 오셨어요?', None),
+ (40, '브란', '술집 주인', 'tavern', 1, '한잔하고 가. 외상은 안 되고.', None),
+ (39, '하르트', '길드장', 'guild_hall', -1, '의뢰는 게시판에 붙여 두었네.', None),
+ (29, '에드먼', '학자', 'scholar_dome', 1, '아, 손님인가? 책 좀 치우고…', None),
+ (43, '페닉스', '금고 관리인', 'manor_vault', -1, '맡기실 돈이 있으신가요?', None),
+ (28, '고르던', '전당포 주인', 'townhouse_pawn', -1, '물건을 보여 주게. 값은 내가 매기지.', 'pawn'),
+ (15, '오토', '촌장', 'cottage_thatch', 1, '허허, 어서 오게나.', None),
+ (1,  '라이너', '성문 경비병', ('gate', 20.6, 30.4), 1, '성문 밖은 던전입니다. 준비는 되셨습니까?', None),
+ (2,  '에다', '성문 경비병', ('gate', 25.4, 30.4), -1, '들어가기 전에 물약은 챙겼지?', None),
+ (6,  '미나', '꽃장수', ('free', 19.0, 18.6), 1, '꽃 한 송이 어때요?', None),
+]
+bpos = {b['k']: b for b in blds}
+npcs = []
+for no, name, title, where, side, line, shop in NPC:
+    im = Image.open(R + f'npc/npc_{no:02d}.png').convert('RGBA')
+    h = 100; w = h * im.width / im.height
+    key = f'npc_{no:02d}'
+    assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 88)
+    if isinstance(where, tuple):
+        x, y = where[1] * TS, where[2] * TS
+    else:
+        b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
+    npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
+
+# 가게 물건 아이콘
+ICON = {}
+def icon(path):
+    im = Image.open(path).convert('RGBA'); im.thumbnail((96, 96), Image.LANCZOS); return enc(im, 88)
+for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
+    for g in (1, 2): ICON[f'{t}_{g:02d}'] = icon(R + f'weapons/{t}_{g:02d}.png')
+for r in range(4): ICON[f'armor_{r}'] = icon(R + f'armor/tier_knight_{r}_01.png')
+ICON['ring'] = icon(R + 'accessories/acc_0_01.png'); ICON['neck'] = icon(R + 'accessories/acc_1_01.png')
+
+
 SH = [dict(path=R + f"buildings/{b['k']}.png", x=b['x'], y=b['y'], w=b['w'], h=b['h'], sq=0.5 if b['k'] in ('watchtower','gate_twin_tower') else 0.42) for b in blds]
-SH += [dict(path=R + f"building_parts/{p['k']}.png", x=p['x'], y=p['y'], w=p['w'], h=p['h'], sq=0.5, foot=0.02) for p in props]
+SH += [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p['w'], h=p['h'], sq=0.55 if p['tree'] else 0.5, foot=0.03) for p in props]
 ground = bake_shadows(ground, SH)
 mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON)
 js = open('/home/claude/arpg/src/town/town.js').read()
 html = open('/home/claude/arpg/src/town/shell.html').read()
 html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)
