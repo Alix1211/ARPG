@@ -284,7 +284,8 @@ for no, name, title, where, side, line, shop in NPC:
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
 
 # 승인표의 모든 장비를 명시적으로 로딩(없는 이미지 대체 금지)
-CATALOG = json.load(open(os.path.join(HERE, 'data/tier_match.json')))
+with open(os.path.join(HERE, 'data/tier_match.json'), encoding='utf-8') as f:
+    CATALOG = json.load(f)
 ICON = {}
 def icon(path):
     im = Image.open(path).convert('RGBA'); im.thumbnail((96,96), Image.LANCZOS); return enc(im,88)
@@ -410,6 +411,11 @@ for th, folder, pre, plist in [('ruins', 'dungeon', 'd_', RUINS_PROPS), ('cave',
 SFXF = {}
 for f in sorted(_g.glob(R + 'sfx/*.mp3')):
     SFXF[os.path.basename(f)[:-4]] = 'data:audio/mpeg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
+BGMF = {}
+for name in ('town', 'field', 'dungeon', 'boss'):
+    f = R + 'bgm/' + name + '.mp3'
+    if os.path.exists(f):
+        BGMF[name] = 'data:audio/mpeg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
 # 전투 이펙트 그림(assets/vfx, tools/vfx_slice.py로 시트에서 자른 것). 쓰는 종류만, 종류별 최대 크기로 줄여 담는다.
 VFXA = {}
 VFX_MAX = {'burst_': 224, 'hit_': 128, 'shot_': 128, 'ring_': 256, 'heal_': 240, 'status_icon_': 56, 'status_down_': 56, 'status_ground_': 128}
@@ -424,11 +430,13 @@ CAMPART = {}
 for nm in ('day','night'):
     im = Image.open(R + f'illustrations/camp_{nm}.png').convert('RGB'); im.thumbnail((1100,1100), Image.LANCZOS); CAMPART[nm] = enc(im, 84)
 A = dict(tierCatalog=CATALOG, camp=CAMPART, vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF)
-js = open(os.path.join(HERE, 'tier_match.js')).read() + '\n' + open(os.path.join(HERE, 'town.js')).read()
-js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'vfx.js')).read() + '\n' + open(os.path.join(HERE, 'skills2.js')).read() + '\n' + open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
-html = open(os.path.join(HERE, 'shell.html')).read()
-js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
+def source(name):
+    with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
+js = source('tier_match.js') + '\n' + source('town.js')
+js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('field_dungeon.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('trade.js') + '\n' + source('guild.js'))
+html = source('shell.html')
+js += '\n' + source('ui.js')
 import time as _t
 html = html.replace('/*VER*/', _t.strftime('%m%d-%H%M', _t.gmtime(_t.time() + 9 * 3600)))   # 한국시간(서버가 UTC라 +9시간)
 # 그림(data:)은 따로 game/art_<해시>.js 로 뺀다 — 그림이 안 바뀌면 파일 이름도 그대로라서
@@ -447,10 +455,11 @@ art_name = 'art_' + hashlib.sha1(art_js.encode()).hexdigest()[:10] + '.js'
 GAME_DIR = os.path.join(ROOT, 'game')
 for old_art in glob.glob(os.path.join(GAME_DIR, 'art_*.js')):
     if os.path.basename(old_art) != art_name: os.remove(old_art)
-if not os.path.exists(os.path.join(GAME_DIR, art_name)): open(os.path.join(GAME_DIR, art_name), 'w').write(art_js)
+if not os.path.exists(os.path.join(GAME_DIR, art_name)):
+    with open(os.path.join(GAME_DIR, art_name), 'w', encoding='utf-8') as f: f.write(art_js)
 RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@@')?window.ART[+o.slice(2)]:o;"
            "if(Array.isArray(o))return o.map(r);if(o&&typeof o==='object'){for(const k in o)o[k]=r(o[k]);}return o;})(")
 html = html.replace('<script>\n/*ASSETS*/', '<script src="' + art_name + '"></script>\n<script>\n/*ASSETS*/')
 html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
-open(os.path.join(GAME_DIR, 'town.html'), 'w').write(html)
+with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
 print('ok', len(html) // 1024, 'KB +', art_name, len(art_js) // 1024, 'KB')

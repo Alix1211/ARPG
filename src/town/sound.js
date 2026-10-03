@@ -3,6 +3,7 @@
 // 짧은 잔향을 섞는다. 나중에 진짜 효과음 파일이 오면 SFX.files[이름] 에 넣으면 그 파일이 대신 재생된다.
 const SFX = (() => {
   let ac = null, out = null, rev = null, on = true, last = {};
+  const fileVoices = {};
   try { on = localStorage.getItem('arpg_sound') !== 'off'; } catch (e) {}
   function init(){
     if (ac) return;
@@ -72,11 +73,25 @@ const SFX = (() => {
   return {
     files: (typeof A !== 'undefined' && A.sfx) || {},
     get on(){ return on; },
-    toggle(){ on = !on; try { localStorage.setItem('arpg_sound', on ? 'on' : 'off'); } catch (e) {} return on; },
+    toggle(){
+      on = !on;
+      try { localStorage.setItem('arpg_sound', on ? 'on' : 'off'); } catch (e) {}
+      if (!on) for (const voices of Object.values(fileVoices)) for (const a of voices) a.pause();
+      if (typeof BGM !== 'undefined') BGM.sync();
+      return on;
+    },
     play(name){
       if (!on) return; init(); if (!ac || ac.state !== 'running') return;
       const now = ac.currentTime; if (last[name] && now - last[name] < 0.035) return; last[name] = now;   // 같은 소리 겹침 방지
-      if (this.files[name]){ const a = new Audio(this.files[name]); a.volume = 0.7; a.play().catch(() => {}); return; }
+      if (this.files[name]){
+        const voices = fileVoices[name] || (fileVoices[name] = []);
+        let a = voices.find(v => v.paused || v.ended);
+        if (!a && voices.length < 4){ a = new Audio(this.files[name]); a.preload = 'auto'; voices.push(a); }
+        if (!a) a = voices[0];
+        a.pause(); a.currentTime = 0; a.volume = 0.7;
+        a.play().catch(() => {});
+        return;
+      }
       if (S[name]) S[name](now + 0.005);
     },
   };
