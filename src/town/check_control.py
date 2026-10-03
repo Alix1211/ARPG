@@ -48,16 +48,17 @@ async def main():
         up=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='fire').slice(-1)[0]")
         assert up and up['vy'] < 0 and abs(up['vy']) > abs(up['vx'])*2, up
 
-        # 지팡이 기본탄도 아래 타깃을 향해야 한다.
+        # 지팡이는 새 필드/새 타깃으로 분리해, 발사 직후 방향만 확인한다.
+        await pg.evaluate("() => __FD.enter('spring')")
         await pg.wait_for_timeout(850)
         await pg.evaluate("""() => {
-          __FD.debugTarget(0,220);
+          __FD.debugTarget(0,320);
           GAME.P.passives.magicGuide=1;
           GAME.setWeapon({wt:'staff',icon:'staff_01',st:{matk:10}});
           __P.dir='side'; __P.flip=false; GAME.swing();
         }""")
-        await pg.wait_for_timeout(430)
-        staff=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='staff').slice(-1)[0]")
+        await pg.wait_for_timeout(365)
+        staff=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='staff'&&!s.done).slice(-1)[0]")
         assert staff and staff['vy'] > 0 and abs(staff['vy']) > abs(staff['vx'])*2, staff
 
         assert not errs, errs
