@@ -807,9 +807,11 @@ function frame(now){
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
   const DUN = MAP === 'dungeon';
-  if (!DUN) weather(sdt, camX, camY, vw, vh);
-  updAtk(sdt); updSkills(sdt); if (typeof updEncounters === 'function') updEncounters(sdt);
-  if (MAP === 'town') updVils(sdt, dayLook(DAY.t).lamp > 0.6);
+  if(!simPaused){
+    if(!DUN)weather(dt,camX,camY,vw,vh);
+    updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
+    if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
+  }
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
