@@ -181,6 +181,7 @@ const GOODS = {
       { ic: t + '_02', name: '낡은 ' + WN[t], slot: '무기', price: 75, spec: { kind: 'weapon', wt: t, g: 2 } }]),
     [{ ic: 'armor_0', name: '낡은 투구', slot: '투구', price: 40, spec: { kind: 'head', g: 2 } }, { ic: 'armor_1', name: '낡은 갑옷', slot: '갑옷', price: 70, spec: { kind: 'body', g: 2 } },
      { ic: 'armor_2', name: '낡은 장갑', slot: '장갑', price: 30, spec: { kind: 'hands', g: 2 } }, { ic: 'armor_3', name: '낡은 신발', slot: '신발', price: 30, spec: { kind: 'feet', g: 2 } }]),
+  general: [{ ic: 'php', name: '체력 물약', slot: '물약', price: 20, potion: 'hp' }, { ic: 'pmp', name: '마나 물약', slot: '물약', price: 20, potion: 'mp' }],
   pawn: [{ ic: 'ring', name: '구리 반지', slot: '반지', price: 120, spec: { kind: 'ring' } }, { ic: 'neck', name: '구리 목걸이', slot: '목걸이', price: 150, spec: { kind: 'neck' } }],
 };
 let sel = null;
@@ -191,7 +192,7 @@ function openShop(n){
   const g = $('grid'); g.innerHTML = '';
   list.forEach((it, i) => {
     const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
-    const im = document.createElement('img'); im.src = A.icons[it.ic]; im.alt = it.name; c.append(im);
+    const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
     const pr = document.createElement('span'); pr.textContent = it.price; c.append(pr);
     c.addEventListener('click', () => pick(it, c));
     g.append(c);
@@ -202,7 +203,7 @@ function openShop(n){
 function pick(it, c){
   sel = it;
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
-  $('infoIc').src = A.icons[it.ic]; $('infoName').textContent = it.name;
+  $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
   $('infoSlot').textContent = it.slot + ' · 일반';
   $('infoPrice').textContent = '금화 ' + it.price;
   $('buy').disabled = P.gold < it.price;
@@ -210,6 +211,8 @@ function pick(it, c){
 }
 $('buy').addEventListener('click', () => {
   if (!sel || P.gold < sel.price) return;
+  if (sel.potion){ setGold(P.gold - sel.price); UI.addPotion(sel.potion, 1);
+    $('shopSay').textContent = `${sel.name} 하나 샀습니다. 금화가 ${sel.price}닢 줄었습니다… (오른쪽 물약 버튼에 바로 채워졌습니다)`; $('buy').disabled = P.gold < sel.price; return; }
   if (UI.bagFull()){ $('shopSay').textContent = '가방이 가득 찼습니다.'; return; }
   setGold(P.gold - sel.price);
   UI.add(UI.make({ ...sel.spec, price: sel.price }));
@@ -295,7 +298,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, cast, cdLeft: id => (CD[id] || 0) / (SK[id] ? SK[id].cd : 1), setHold: v => { P.hold = v; }, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
+window.GAME = { P, drink, cast, cdLeft: id => (CD[id] || 0) / (SK[id] ? SK[id].cd : 1), setHold: v => { P.hold = v; }, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -607,7 +610,7 @@ function drawPops(dt){
   for (const p of pops){
     p.t += dt; const k = p.t / 0.9;
     ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.font = `900 ${p.crit ? 26 : 20}px sans-serif`; ctx.textAlign = 'center';
-    ctx.lineWidth = 4; ctx.strokeStyle = '#2a140a'; ctx.fillStyle = p.heal ? '#8dffb0' : p.crit ? '#ffcf3a' : '#fff4dc';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#2a140a'; ctx.fillStyle = p.heal ? '#8dffb0' : p.mana ? '#8fd0ff' : p.crit ? '#ffcf3a' : '#fff4dc';
     const y = p.y - k * 34; ctx.strokeText(p.txt, p.x, y); ctx.fillText(p.txt, p.x, y);
   }
   ctx.globalAlpha = 1;
@@ -688,7 +691,17 @@ function cast(id, mod){
   }
   return true;
 }
+let potCd = 0;
+function drink(k){
+  if (potCd > 0) return false;
+  if (k === 'hp' ? P.hp >= P.maxHp : P.mp >= P.maxMp){ say(k === 'hp' ? '체력이 가득합니다… 아까워요' : '마나가 가득합니다… 아까워요'); return false; }
+  const v = Math.round((k === 'hp' ? P.maxHp : P.maxMp) * 0.4);
+  if (k === 'hp') P.hp = Math.min(P.maxHp, P.hp + v); else P.mp = Math.min(P.maxMp, P.mp + v);
+  potCd = 1; syncBars(); pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: k === 'hp', mana: k === 'mp' });
+  return true;
+}
 function updSkills(dt){
+  potCd = Math.max(0, potCd - dt);
   for (const id in CD) CD[id] = Math.max(0, CD[id] - dt);
   if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
 }

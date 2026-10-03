@@ -122,6 +122,18 @@ const skBtns = [...document.querySelectorAll('.sk')];
 const C0 = 62;
 skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
 $('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWAPPOS[1]) + 'px';
+// 물약 버튼 2개: 스킬 칸 위 (케인 지시)
+const POT = { hp: 3, mp: 2 };   // 시작할 때 체력 물약 3, 마나 물약 2 — 잡화점(마르코)에서 삼
+const potEl = { hp: $('potHp'), mp: $('potMp') };
+potEl.hp.style.cssText += `left:${C0 - 26}px;top:${C0 - 172}px;background-image:url(${K.h_php})`;
+potEl.mp.style.cssText += `left:${C0 + 40}px;top:${C0 - 172}px;background-image:url(${K.h_pmp})`;
+function syncPot(){ for (const k of ['hp', 'mp']){ potEl[k].querySelector('b').textContent = POT[k]; potEl[k].classList.toggle('none', !POT[k]); } }
+for (const k of ['hp', 'mp']) potEl[k].addEventListener('pointerdown', e => {
+  e.preventDefault(); if (G.isOpen()) return;
+  if (!POT[k]){ G.say(k === 'hp' ? '체력 물약이 없습니다' : '마나 물약이 없습니다'); return; }
+  if (G.drink(k)){ POT[k]--; syncPot(); }
+});
+syncPot();
 function needWeapon(id){ const w = SKW[id.replace(/[0-9].*$/, '')]; return w || null; }
 function syncQS(){
   skBtns.forEach((b, i) => {
@@ -311,6 +323,7 @@ function unequip(s){
   pickSel = { from: 'bag', i }; render(); showInfo(bag[i], 'bag'); syncHud();
 }
 window.UI = {
+  addPotion(k, n){ POT[k] += n; syncPot(); },
   make, add(it){ const i = bag.indexOf(null); if (i < 0) return false; bag[i] = it; return true; },
   bagFull: () => bag.indexOf(null) < 0, isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };

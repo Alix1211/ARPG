@@ -253,7 +253,7 @@ for k in ['03', '04', '05', '06', '14', '15']:
 # 번호, 이름, 직함, 건물 key(문 옆에 섬) 또는 None, x, y(칸, 건물 없을 때), 왼쪽(-1)/오른쪽(1), 첫마디, 가게 종류
 NPC = [
  (5,  '토비', '여관 주인', 'house_blue', 1, '어서 와요~ 오늘도 방은 비워 뒀어요~', 'inn'),
- (21, '마르코', '잡화점 주인', 'shop_general', 1, '필요한 게 있으면 말만 하세요.', None),
+ (21, '마르코', '잡화점 주인', 'shop_general', 1, '필요한 게 있으면 말만 하세요.', 'general'),
  (23, '루나', '무기·방어구점 주인', 'shop_weapons', -1, '무기든 갑옷이든, 천천히 골라 보세요.', 'arms'),
  (42, '그레타', '대장간 주인', 'smithy', 1, '망치 소리 시끄럽지? 볼일 있으면 크게 말해!', None),
  (12, '핀', '견습 대장장이', 'shop_tools', -1, '도, 도구 보러 오셨어요?', None),
@@ -305,9 +305,9 @@ for k in ['01', '02', '02b', '18', '21', '14']:
 tabs = Image.open(R + 'ui/kit_c/kit_c_11.png').convert('RGBA')
 for i, (x, y, w, h) in enumerate([(6, 4, 79, 72), (89, 4, 81, 72), (175, 5, 80, 71), (260, 4, 79, 72), (346, 3, 77, 73)]):
     KIT[f'tab{i}'] = enc(tabs.crop((max(0, x - 5), 0, min(tabs.width, x + w + 5), tabs.height)), 90)
-for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close')]:
+for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close'), ('php', '31_btn_potion_hp'), ('pmp', '32_btn_potion_mp')]:
     im = Image.open(R + f'ui/hud_icons/{f}.png').convert('RGBA'); im.thumbnail((128, 128), Image.LANCZOS); KIT['h_' + k] = enc(im, 90)
-for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close')]:
+for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close'), ('php', '31_btn_potion_hp'), ('pmp', '32_btn_potion_mp')]:
     im = Image.open(R + f'ui/hud_icons/{f}.png').convert('RGBA'); im.thumbnail((128, 128), Image.LANCZOS); KIT['h_' + k] = enc(im, 90)
 WPNI = {}
 for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
