@@ -180,3 +180,8 @@
 - 케인: 문플로처럼 안드로이드 앱으로 감싸고 업데이트하며 하자. 그림은 이제 가끔만 바뀜.
 - 한 일: build.py가 그림(data:)을 game/art_<해시>.js(약 14.5MB)로 따로 빼고 town.html은 코드만(약 190KB). 그림이 같으면 파일 이름도 같아 다시 받지 않음. 옛 art_*.js는 빌드 때 자동 삭제. 자동 검사 워크플로가 game/ 전체를 커밋하도록 수정. shell.html: 앱(ArpgBridge)일 때 arpg_ 저장을 앱 쪽에도 같이 적고, 전체화면 버튼 숨김.
 - 남은 일: android/ 앱 틀(문플로 방식: 켤 때 깃허브 페이지의 최신 판, 안 되면 앱 안 예비 판) + APK 자동 빌드 — 케인이 사용량 확인 후 진행 여부 결정 대기. android/는 아직 커밋 안 함(Claude 작업 폴더에만 있음).
+
+## 2026-10-03 17:45 (작성: Claude)
+- 케인: 앱 틀 만들어 줘.
+- 한 일: android/ (문플로 방식) — 앱 이름 "골드 퀘스트 사가", 가로 고정·전체화면·화면 꺼짐 방지, 켤 때 https://alix1211.github.io/ARPG/game/town.html 최신 판(40초 안에 못 받으면 앱 안 예비 판), 저장은 ArpgBridge(SharedPreferences)로 두 판이 공유, 뒤로 가기=창 닫기/두 번 누르면 종료, 아이콘=엘프 얼굴+초상화 고리. 서명 열쇠 android/arpg.keystore(비밀번호 arpg1234) — 바꾸면 덮어 설치가 안 되니 절대 바꾸지 말 것. .github/workflows/android-apk.yml: android/ 바뀌면 APK를 만들어 Releases(app-latest)에 arpg.apk로 올림. 첫 빌드 성공.
+- 남은 일 / 다음 사람이 알아야 할 것: 게임 내용만 바꿀 땐 앱을 다시 만들 필요 없음(game/ 커밋→페이지 배포→앱이 켤 때 받음). 크롬 저장은 앱으로 안 넘어감(옮기기 기능 없음).

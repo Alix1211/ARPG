@@ -74,6 +74,8 @@ python3 src/town/overlap.py      # 물건끼리 겹치는 곳(울타리끼리는
 
 **NPC 업스케일** (이미 48명 완료): `tools/upscale_npc.py` — Real-ESRGAN 애니 모델(`RealESRGAN_x4plus_anime_6B.pth`)을 spandrel+torch로 돌려 4배 후 2배로 줄임. 원본 내용은 바꾸지 않는다.
 
+**안드로이드 앱**: `android/`(웹뷰 틀). 앱은 켤 때 GitHub Pages의 game/town.html을 받으므로 게임만 고칠 땐 앱 재빌드 불필요. android/를 고치면 Actions가 APK를 Releases `app-latest`에 올림(받기: https://github.com/Alix1211/ARPG/releases/download/app-latest/arpg.apk). 서명 열쇠 `android/arpg.keystore`는 절대 바꾸지 말 것. 그림은 빌드 때 `game/art_<해시>.js`로 따로 나감 — town.html과 함께 커밋.
+
 **케인에게 보여 주기**: Claude는 결과 HTML을 아티팩트로 올려 링크를 준다. 다른 AI는 game/*.html 파일을 전달하거나 GitHub Pages 등으로 연다. 태블릿에서 가로·전체화면으로 테스트하므로 **전체화면 버튼은 필수**.
 
 ## 7. 커밋 규칙
