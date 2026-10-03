@@ -343,16 +343,17 @@ window.UI = {
   isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };
 // ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
-const SKEY = 'arpg_save_v1';
+const SKEY = 'arpg_save_v2';
+try { localStorage.removeItem('arpg_save_v1'); } catch (e) {}
 function saveGame(){
   try {
     const P = G.P;
-    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), name: P.name, passives: P.passives, lifeSkills: P.lifeSkills, statPts: P.statPts, skillPts: P.skillPts, gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS, trade: window.TRADE ? TRADE.saveData() : null }));
+    localStorage.setItem(SKEY, JSON.stringify({ v: 2, t: Date.now(), name: P.name, passives: P.passives, lifeSkills: P.lifeSkills, statPts: P.statPts, skillPts: P.skillPts, gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS, trade: window.TRADE ? TRADE.saveData() : null }));
   } catch (e) {}
 }
 function loadGame(){
   let d = null; try { d = JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch (e) {}
-  if (!d || d.v !== 1) return null;
+  if (!d || d.v !== 2) return null;
   for (let i = 0; i < BAG; i++) bag[i] = d.bag && d.bag[i] || null;
   for (const k in eq) eq[k] = d.eq && d.eq[k] || null;
   cur = d.cur === 'w2' && eq.w2 ? 'w2' : 'w1';
