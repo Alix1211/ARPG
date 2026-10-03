@@ -190,10 +190,12 @@ html.app #fs{display:none}
 (function(){ const B = window.ArpgBridge; if (!B) return;
   document.documentElement.classList.add('app');
   const ls = window.localStorage, set = Storage.prototype.setItem, rm = Storage.prototype.removeItem;
+  // 2026-10-03 성장 시스템 재설계: 기존 v1 세이브는 완전 폐기.
+  try { rm.call(ls, 'arpg_save_v1'); B.del('arpg_save_v1'); } catch (e) {}
   try { const m = JSON.parse(B.load() || '{}');
     for (const k in m){ const cur = ls.getItem(k);
       if (cur === null) set.call(ls, k, m[k]);
-      else if (k === 'arpg_save_v1'){ try { if ((JSON.parse(m[k]).t || 0) > (JSON.parse(cur).t || 0)) set.call(ls, k, m[k]); } catch (e) {} } } } catch (e) {}
+      else if (k === 'arpg_save_v2'){ try { if ((JSON.parse(m[k]).t || 0) > (JSON.parse(cur).t || 0)) set.call(ls, k, m[k]); } catch (e) {} } } } catch (e) {}
   Storage.prototype.setItem = function(k, v){ set.call(this, k, v); if (this === ls && /^arpg_/.test(k)) try { B.put(k, String(v)); } catch (e) {} };
   Storage.prototype.removeItem = function(k){ rm.call(this, k); if (this === ls && /^arpg_/.test(k)) try { B.del(k); } catch (e) {} };
 })();
