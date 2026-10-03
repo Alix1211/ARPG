@@ -229,31 +229,9 @@ function drawVil(v){
 
 
 // ======================= 휘두르기 · 말풍선 · 인터페이스 연결 =======================
-const slashes = []; let bubble = null;
-function swing(wt){
-  if (!wt){ say('맨손입니다'); return; }
-  const v = P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0];
-  slashes.push({ x: P.x + v[0] * 34, y: P.y - 34 + v[1] * 26, a: Math.atan2(v[1], v[0]), t: 0, wt });
-}
+let bubble = null;
 function say(txt){ bubble = { txt, t: 0 }; }
-function drawFx(dt){
-  for (const s of slashes){
-    s.t += dt; const k = s.t / 0.22; if (k > 1) continue;
-    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.a);
-    ctx.globalAlpha = 1 - k; ctx.lineCap = 'round';
-    if (s.wt === 'bow' || s.wt === 'staff'){
-      ctx.strokeStyle = s.wt === 'staff' ? '#a9d8ff' : '#fff2c8'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(k * 40, 0); ctx.lineTo(k * 40 + 26, 0); ctx.stroke();
-    } else if (s.wt === 'spear'){
-      ctx.strokeStyle = '#fff6dc'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(18 + k * 22, 0); ctx.stroke();
-    } else {
-      ctx.strokeStyle = '#fff6dc'; ctx.lineWidth = 5 * (1 - k) + 1;
-      ctx.beginPath(); ctx.arc(0, 0, 30, -1.1 + k * 0.4, 1.1 * (k * 2 - 1) + 0.2); ctx.stroke();
-    }
-    ctx.restore();
-  }
-  while (slashes.length && slashes[0].t > 0.3) slashes.shift();
-}
+function drawFx(dt){ drawShots(dt); }
 function drawBubble(dt, camX, camY){
   const b = $('bubble');
   if (!bubble){ b.style.display = 'none'; return; }
@@ -267,7 +245,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
+window.GAME = { P, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -445,7 +423,7 @@ function frame(now){
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
-  P.moving = !panel && mag > 0.15;
+  P.moving = !panel && mag > 0.15 && !atkBusy();
   if (P.moving){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
@@ -462,6 +440,7 @@ function frame(now){
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
   weather(dt, camX, camY, vw, vh);
+  updAtk(dt);
   updVils(dt, dayLook(DAY.t).lamp > 0.6);
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
@@ -506,15 +485,125 @@ function frame(now){
   drawBubble(dt, camX, camY);
   requestAnimationFrame(frame);
 }
+// ======================= 무기 들기와 공격 모션 =======================
+// 몸 그림(무기 없음) 위·아래에 무기 아이콘(5종×10등급)을 따로 그려 얹는다.
+// 무기 아이콘은 모두 "끝이 위, 손잡이가 아래"로 서 있다. 각도 0 = 끝이 위, 시계 방향이 +.
+const WIMG = {}; for (const k in A.wpn) WIMG[k] = load(A.wpn[k]);
+let WPN = null;
+function setWeapon(it){ WPN = it ? { wt: it.wt, img: WIMG[it.icon] } : null; }
+const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
+const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
+const DUR = { sword: 0.32, spear: 0.36, bow: 0.42, staff: 0.46, gauntlet: 0.22 };
+const PI = Math.PI;
+function wDraw(x, y, ang, sc = 1){
+  const im = WPN && WPN.img; if (!im || !im.complete || !im.naturalWidth) return;
+  const L = WL[WPN.wt] * sc, w = L * im.naturalWidth / im.naturalHeight;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -L * GRIP[WPN.wt], w, L); ctx.restore();
+}
+const shots = [];
+function attack(){
+  if (!WPN){ say('맨손입니다'); return; }
+  if (P.atk && P.atk.t < DUR[P.atk.wt] * 0.75) return;
+  P.atk = { t: 0, wt: WPN.wt, dir: P.dir, flip: P.flip, n: P.atk ? P.atk.n + 1 : 0, shot: false };
+}
+function swing(){ attack(); }
+const atkBusy = () => !!P.atk && P.atk.t < DUR[P.atk.wt];
+function updAtk(dt){
+  if (!P.atk) return;
+  const a = P.atk; a.t += dt;
+  const k = a.t / DUR[a.wt];
+  if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
+    a.shot = true;
+    const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
+    const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
+    shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, t: 0, kind: a.wt });
+  }
+  if (k > 1.2) P.atk = null;
+}
+function drawShots(dt){
+  for (const s of shots){
+    s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
+    const al = Math.max(0, 1 - s.t / 0.5); ctx.globalAlpha = al;
+    const a = Math.atan2(s.vy, s.vx);
+    if (s.kind === 'bow'){
+      ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(a);
+      ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(8, 0); ctx.stroke();
+      ctx.fillStyle = '#d8d8e0'; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(6, -4); ctx.lineTo(6, 4); ctx.fill();
+      ctx.fillStyle = '#f3e6c8'; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-27, -4); ctx.lineTo(-19, 0); ctx.lineTo(-27, 4); ctx.fill();
+      ctx.restore();
+    } else {
+      const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 14);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, '#9fd8ff'); g.addColorStop(1, 'rgba(90,160,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, 7); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  while (shots.length && shots[0].t > 0.5) shots.shift();
+}
+// 휘두름 궤적(초승달)
+function arcFx(cx, cy, r, a0, a1, k){
+  if (k <= 0 || k >= 1) return;
+  ctx.save(); ctx.globalAlpha = 0.85 * (1 - k); ctx.strokeStyle = '#fff6dc'; ctx.lineCap = 'round';
+  ctx.lineWidth = 7 * (1 - k) + 1.5; ctx.beginPath();
+  // 각도 0 = 위 → 캔버스 각도로 바꿈(-PI/2)
+  ctx.arc(cx, cy, r, Math.min(a0, a1) - PI / 2, Math.max(a0, a1) - PI / 2); ctx.stroke(); ctx.restore();
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+// 공격 단계: 준비(0~0.3) → 타격(0.3~0.6) → 회수
+function phase(k){ return k < 0.3 ? { w: k / 0.3, s: 0, r: 0 } : k < 0.6 ? { w: 1, s: (k - 0.3) / 0.3, r: 0 } : { w: 1, s: 1, r: Math.min(1, (k - 0.6) / 0.4) }; }
+function weaponLayers(){
+  // 반환: { back: fn, front: fn, lunge:[dx,dy] } — 좌표는 "오른쪽을 보는" 기준(옆모습은 나중에 뒤집음)
+  const x = P.x, y = P.y, out = { back: null, front: null, lunge: [0, 0] };
+  if (!WPN) return out;
+  const wt = WPN.wt;
+  if (!atkBusy()){ // 걷기·서 있기: 등에 멤
+    if (wt === 'gauntlet') return out;
+    if (P.dir === 'front') out.back = () => wDraw(x + 13, y - 40, -0.42);
+    else if (P.dir === 'side') out.back = () => wDraw(x - 8, y - 42, -0.55);
+    else out.front = () => wDraw(x - 9, y - 40, 0.42);
+    return out;
+  }
+  const a = P.atk, k = Math.min(1, a.t / DUR[wt]), ph = phase(k), d = a.dir;
+  const thrust = ph.s * (1 - ph.r), alt = a.n % 2 ? 1 : -1;
+  out.lunge = d === 'side' ? [3 * thrust, 0] : d === 'front' ? [0, 3 * thrust] : [0, -3 * thrust];
+  if (d === 'side'){
+    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(-0.6, -2.0, ph.w) : lerp(-2.0, 1.9, ph.s) - ph.r * 0.6;
+      out.front = () => { wDraw(x + 10, y - 42, an); arcFx(x + 10, y - 42, 50, -1.6, lerp(-1.6, 1.9, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
+    else if (wt === 'spear') out.front = () => wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2);
+    else if (wt === 'bow') out.front = () => wDraw(x + 20, y - 44, 0);
+    else if (wt === 'staff') out.front = () => wDraw(x + 12, y - 38, lerp(0.15, 1.05, thrust) - 0.25 * ph.w * (1 - ph.s));
+    else out.front = () => wDraw(x + 14 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), PI / 2, 1.1);
+  } else if (d === 'back'){
+    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(0, -1.5, ph.w) : lerp(-1.5, 1.5, ph.s);
+      out.back = () => { wDraw(x + 4, y - 58, an); arcFx(x + 4, y - 58, 48, -1.5, lerp(-1.5, 1.5, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
+    else if (wt === 'spear') out.back = () => wDraw(x + 7, y - 58 - 32 * thrust, 0);
+    else if (wt === 'bow') out.back = () => wDraw(x, y - 80, PI / 2);
+    else if (wt === 'staff') out.back = () => wDraw(x + 9, y - 60 - 8 * thrust, lerp(0.25, -0.1, thrust));
+    else out.back = () => wDraw(x + 10 * alt, y - 70 - 16 * thrust, 0, 1.1);
+  } else { // 정면(아래로 공격): 무기를 몸 앞에, 아래를 향하게
+    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(PI - 0.3, PI - 1.4, ph.w) : lerp(PI - 1.4, PI + 1.4, ph.s);
+      out.front = () => { wDraw(x, y - 36, an); arcFx(x, y - 36, 46, PI - 1.4, lerp(PI - 1.4, PI + 1.4, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
+    else if (wt === 'spear') out.front = () => wDraw(x + 7, y - 52 + 30 * thrust, PI);
+    else if (wt === 'bow') out.front = () => wDraw(x, y - 44, PI / 2);
+    else if (wt === 'staff') out.front = () => wDraw(x + 11, y - 46, lerp(PI - 0.2, PI - 0.55, thrust));
+    else out.front = () => wDraw(x + 9 * alt, y - 34 + 16 * thrust, PI, 1.1);
+  }
+  return out;
+}
 function drawMe(){
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x, P.y, 17, 6, 0, 0, 7); ctx.fill();
-  const fr = EL[P.dir][P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
+  const busy = atkBusy(), dir = busy ? P.atk.dir : P.dir, flip = busy ? P.atk.flip : P.flip;
+  const fr = EL[dir][!busy && P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
   const h = 98, w = h * 170 / 172, by = P.y + h * (11 / 344);
+  const L = weaponLayers();
   ctx.save();
-  if (P.flip && P.dir === 'side'){ ctx.translate(P.x, 0); ctx.scale(-1, 1); ctx.translate(-P.x, 0); }
-  ctx.drawImage(fr, P.x - w / 2, by - h, w, h);
+  if (flip && dir === 'side'){ ctx.translate(P.x, 0); ctx.scale(-1, 1); ctx.translate(-P.x, 0); }
+  if (L.back) L.back();
+  ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h);
+  if (L.front) L.front();
   ctx.restore();
 }
+
 P.hp = P.maxHp; P.mp = P.maxMp;
 window.__P = P; window.__W = W; window.__D = DAY; window.__V = vils;
 requestAnimationFrame(frame);

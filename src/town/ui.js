@@ -39,6 +39,8 @@ const BAG = 42, bag = new Array(BAG).fill(null);
 const eq = { w1: null, w2: null, head: null, body: null, hands: null, feet: null, neck: null, ring1: null, ring2: null };
 let cur = 'w1';                    // 지금 든 무기 칸
 eq.w1 = make({ kind: 'weapon', wt: 'bow', g: 1 });
+// 시험용: 다른 무기 4종을 가방에 넣고 시작 (모션 확인용)
+['sword', 'spear', 'gauntlet', 'staff'].forEach((wt, i) => { bag[i] = make({ kind: 'weapon', wt, g: 1, price: 30 }); });
 
 const BASE = { str: 5, vit: 5, int: 5, mag: 6, dex: 8, luck: 3 };
 function totals(){
@@ -65,6 +67,7 @@ const atk = $('atk'), atkIc = $('atkIc'), atkCap = $('atkCap');
 function syncHud(){
   const w = eq[cur];
   atkIc.src = w ? A.icons[w.icon] : '';
+  G.setWeapon(w);
   atkIc.style.visibility = w ? 'visible' : 'hidden';
   $('swapNo').textContent = cur === 'w1' ? '1' : '2';
   const d = derived();
