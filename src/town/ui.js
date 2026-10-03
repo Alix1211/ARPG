@@ -313,7 +313,7 @@ function render(){
       const row=el('div','skrow');row.append(el('b','',gname));
       for(const id of ids){
         const wrap=el('div','skcwrap'),rank=skillRank(id),impl=IMPLEMENTED.has(id);
-        const c=el('button','skc'+(impl?'':' lock'));c.type='button';c.title=SKN[id]||'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
+        const c=el('button','skc'+(impl&&rank>0?'':' lock'));c.type='button';c.title=SKN[id]||(impl?'아직 배우지 않음':'추후 구현');c.style.backgroundImage=`url(${A.skicon[id]})`;
         if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
         wrap.append(c,el('span','skrank',impl?`Lv${rank}/5`:'-'));
         if(impl){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5;plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
