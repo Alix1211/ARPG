@@ -267,7 +267,7 @@ function updatePlayerStatus(dt){
   else PLAYER_STATUS.burnTick=0;
 }
 function playerMoveFactor(){ return PLAYER_STATUS.stone>0?0:(PLAYER_STATUS.slow>0?.48:1); }
-function playerControlLocked(){ return PLAYER_STATUS.stone>0; }
+function playerControlLocked(){ return PLAYER_STATUS.stone>0||P.castRoot>0; }
 function enemyShot(m,dx,dy,speed,status,kind,dmgMul=1){
   const q=Math.hypot(dx,dy)||1;
   enemyShots.push({x:m.x,y:m.y-m.h*.55,vx:dx/q*speed,vy:dy/q*speed,t:0,life:1.6,dmg:Math.max(1,Math.round(m.dmg*dmgMul)),status:status||'',statusDur:status==='stone'?1.15:status==='slow'?2.2:3.2,kind:kind||'bolt',done:false});
@@ -324,7 +324,7 @@ function applyMonsterStatus(m,kind,dur){
   if(!m||m.dead||!kind)return;
   if(kind==='burn'){m.burnT=Math.max(m.burnT||0,dur||3);m.burnTick=Math.min(m.burnTick||.55,.55);}
   else if(kind==='slow'){m.slowT=Math.max(m.slowT||0,dur||2.5);}
-  else if(kind==='freeze'){m.freezeT=Math.max(m.freezeT||0,dur||.75);m.stun=Math.max(m.stun||0,dur||.75);}
+  else if(kind==='freeze'){if(m.boss||m.elite)dur=(dur||.75)*.4;m.freezeT=Math.max(m.freezeT||0,dur||.75);m.stun=Math.max(m.stun||0,dur||.75);}
 }
 function updEncounters(dt){
   playerInv=Math.max(0,playerInv-dt); updatePlayerStatus(dt);
@@ -355,7 +355,7 @@ function updEncounters(dt){
       } else {m.death+=dt;if(m.death>1)m.removed=true;}
       continue;
     }
-    m.hurt=Math.max(0,m.hurt-dt);m.stun=Math.max(0,m.stun-dt);m.cd=Math.max(0,(m.cd||0)-dt);m.skillCd=Math.max(0,(m.skillCd||0)-dt);
+    m.hurt=Math.max(0,m.hurt-dt);m.stun=Math.max(0,m.stun-dt);m.stunImm=Math.max(0,(m.stunImm||0)-dt);m.cd=Math.max(0,(m.cd||0)-dt);m.skillCd=Math.max(0,(m.skillCd||0)-dt);
     m.slowT=Math.max(0,(m.slowT||0)-dt);m.freezeT=Math.max(0,(m.freezeT||0)-dt);
     if(m.burnT>0){
       m.burnT=Math.max(0,m.burnT-dt);m.burnTick=(m.burnTick||0)-dt;
@@ -392,9 +392,12 @@ function updEncounters(dt){
 function hitMonster(m,d,stagger,dmOver){
   if(!m||m.dead)return;
   const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
-  m.hp-=v;m.hurt=.18;m.stun=stagger?.32:.12;
+  // 정예·우두머리는 경직을 한 번 받으면 잠시 면역(무한 경직 방지)
+  let st=stagger?.32:.12,kb=stagger?20:12;
+  if(m.boss||m.elite){if(m.stunImm>0){st=0;kb*=.3;}else if(stagger)m.stunImm=4;}
+  m.hp-=v;m.hurt=.18;m.stun=st;
   if(!dmOver&&WPN&&window.GAME&&GAME.gainMastery)GAME.gainMastery(WPN.wt,1);
-  const q=Math.hypot(d[0],d[1])||1,k=stagger?20:12,nx=m.x+d[0]/q*k,ny=m.y+d[1]/q*k;
+  const q=Math.hypot(d[0],d[1])||1,nx=m.x+d[0]/q*kb,ny=m.y+d[1]/q*kb;
   if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;}
   pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
   sfx.push({type:'hit',t:0,x:m.x,y:m.y-m.h*.55,r:crit?58:40,crit});
@@ -527,12 +530,13 @@ window.__FD={
   async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
   state(){return {map:MAP,theme:fieldTheme,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
-  debugTarget(dx,dy){
+  debugTarget(dx,dy,freeze){
     const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;
     for(const x of monsters)if(x!==m)x.removed=true;
-    m.x=P.x+dx;m.y=P.y+dy;m.vx=m.vy=0;return {x:m.x,y:m.y};
+    m.x=P.x+dx;m.y=P.y+dy;m.vx=m.vy=0;if(freeze)m.stun=99;return {x:m.x,y:m.y};
   },
   debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
+  flinchTest(){const m={monster:1,boss:1,hp:9999,maxHp:9999,x:P.x+500,y:P.y+500,h:60,w:60,hurt:0,stun:0,type:'test'};hitMonster(m,[1,0],true,1);const a=m.stun;m.stun=0;hitMonster(m,[1,0],true,1);return [a,m.stun];},
   debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
   rest:restAtCamp,prepareField,openRegionSelect
 };

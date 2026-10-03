@@ -81,7 +81,7 @@ const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:fals
   hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
-  skillLv:{fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0},
+  skillLv:{fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
   passives:{magicGuide:0,precision:0,rapid:0,manaFlow:0,survival:0,greed:0},
   lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){
@@ -404,7 +404,7 @@ function emergencyEscape(){
   // 테스트용: 전투/상태/층이동 꼬임을 무시하고 강제로 큰 마을 복귀.
   traveling=false;closeAll();
   if(typeof PLAYER_STATUS!=='undefined')for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
-  P.atk=null;P.moving=false;
+  P.atk=null;P.moving=false;zones.length=0;P.castRoot=0;
   buildWorld('town');P.x=23*TS;P.y=22.2*TS;P.dir='front';
   const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
   const fade=$('fade');if(fade)fade.classList.remove('on');
@@ -663,7 +663,7 @@ function drawVil(v){
 // ======================= 휘두르기 · 말풍선 · 인터페이스 연결 =======================
 let bubble = null;
 function say(txt){ bubble = { txt, t: 0 }; }
-function drawFx(dt){ drawShots(dt); drawSkillFx(dt); if (typeof vfxPlayerStatus === 'function') vfxPlayerStatus(); }
+function drawFx(dt){ drawShots(dt); drawSkillFx(dt); if (typeof vfxZonesTop === 'function') vfxZonesTop(); if (typeof vfxPlayerStatus === 'function') vfxPlayerStatus(); }
 function drawBubble(dt, camX, camY){
   const b = $('bubble');
   if (!bubble){ b.style.display = 'none'; return; }
@@ -679,7 +679,7 @@ function syncBars(){
 }
 window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
-  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
+  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
 
@@ -1095,7 +1095,12 @@ function drawShots(dt){
     if(!s.done && blocked(nx,ny)){s.x=nx;s.y=ny;boom(s,null);}
     else{s.x=nx;s.y=ny;}
     if (!s.done){
-      for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+      if (s.pierce){   // 관통: 대상마다 한 번씩 맞히고 계속 날아간다(검기·파편·파동권)
+        const hw = s.hw || 22;
+        for (const t of combatTargets()){ if (!s.hit.has(t) && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ s.hit.add(t); pierceHit(s, t); } }
+      } else {
+        for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+      }
       if (!s.done && s.t > s.life) boom(s, null);
     }
     if (s.done){ // 지팡이 폭발 고리
@@ -1135,9 +1140,9 @@ function boom(s,t){
   };
   if(s.blast){
     for(const u of combatTargets())if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);
-    sfx.push({type:s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact',t:0,x:s.x,y:s.y,r:s.blast});
+    sfx.push({type:s.fx||(s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact'),t:0,x:s.x,y:s.y,r:s.blast});
   }else if(t){
-    hit(t);sfx.push({type:s.kind==='ice'?'icehit':'impact',t:0,x:s.x,y:s.y,r:34});
+    hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:34});
   }
 }
 
@@ -1185,7 +1190,12 @@ function cast(id,mod){
     }
     sfx.push({type:spin?'spinpower':'slashpower',t:0,a:Math.atan2(d[1],d[0]),x:P.x,y:P.y-30,r:reach});
     if(hitN)pops.push({x:P.x,y:P.y-115,t:0,txt:spin?'회전 베기!':'강베기!',crit:true});
+  }else if(SK2[id]){
+    if(castExtra(id,d,rank,cm,mod,skillMul)===false){P.mp+=cost;CD[id]=0;syncBars();return false;}
   }
+  // 공통 규칙: 스킬을 쓰면 다른 슬롯도 잠깐 잠기고, 큰 스킬은 시전 중 제자리에 선다
+  for(const o in SK)if(o!==id)CD[o]=Math.max(CD[o]||0,Math.min(GCD,SK[o].cd));
+  if(k.root)P.castRoot=k.root;
   return true;
 }
 let potCd = 0;
@@ -1199,6 +1209,8 @@ function drink(k){
 }
 function updSkills(dt){
   potCd = Math.max(0, potCd - dt);
+  P.castRoot = Math.max(0, (P.castRoot || 0) - dt);
+  updZones(dt);
   for (const id in CD) CD[id] = Math.max(0, CD[id] - dt);
   if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
 }

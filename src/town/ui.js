@@ -200,8 +200,12 @@ const QS = [null, null, null, null, null];
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 아무 무기나 100%, 지팡이면 +25%
-const IMPLEMENTED = new Set(['fire1','ice1','holy1_heal','sword1','sword2']);
-const SKN = { fire1:'불덩이', ice1:'얼음 화살', holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기' };
+const IMPLEMENTED = new Set(['fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
+const SKN = { fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'얼음 화살', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
+  holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
+const SKD = { fire1:'불덩이를 쏴 폭발·화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음 화살, 둔화·빙결', ice2:'전방 부채꼴 냉기, 둔화',
+  bolt1:'적에게 휘어 날아가는 번개 구체', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'짧게 관통하는 어둠 칼날, 마나 조금 회복', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
+  holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기', bow2:'부채꼴로 화살 여러 발', fist2:'앞으로 뻗는 투기, 4랭크부터 관통' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
 const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};
@@ -335,7 +339,7 @@ function render(){
       const row=el('div','skrow');row.append(el('b','',gname));
       for(const id of ids){
         const wrap=el('div','skcwrap'),rank=skillRank(id),impl=IMPLEMENTED.has(id);
-        const c=el('button','skc'+(impl&&rank>0?'':' lock'));c.type='button';c.title=SKN[id]||(impl?'아직 배우지 않음':'추후 구현');c.style.backgroundImage=`url(${A.skicon[id]})`;
+        const c=el('button','skc'+(impl&&rank>0?'':' lock'));c.type='button';c.title=SKN[id]?SKN[id]+' · '+SKD[id]+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
         if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
         wrap.append(c,el('span','skrank',impl?`Lv${rank}/5`:'-'));
         if(impl){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5;plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}

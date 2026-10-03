@@ -39,7 +39,7 @@ async def main():
         fire=await ev("() => __CTRL.shots().filter(x=>x.kind==='fire').at(-1)")
         assert fire and fire['blast']>=78 and fire['status']=='burn' and fire['dmg']>=20,fire
 
-        await ev("() => GAME.cast('ice1')")
+        await ev("() => { GAME.clearCd(); GAME.cast('ice1'); }")
         ice=await ev("() => __CTRL.shots().filter(x=>x.kind==='ice').at(-1)")
         assert ice and ice['blast']>=34 and ice['status']=='slow' and ice['dmg']>=14,ice
 

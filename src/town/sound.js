@@ -54,6 +54,7 @@ const SFX = (() => {
     spin(t){ noise(t,.48,480,3000,.8,.42,1);noise(t+.1,.38,3200,700,.9,.3,1);tone(t,.24,135,62,.28,1); },
     rock(t){ noise(t,.16,420,120,.9,.38,0);tone(t,.12,105,55,.24,0,'triangle'); },
     charge(t){ noise(t,.28,180,980,.7,.32,1,'lowpass');tone(t,.22,90,52,.22,0); },
+    dark(t){ tone(t,.36,vary(150),vary(70),.3,1,'sawtooth');noise(t,.3,700,160,.8,.25,1,'lowpass');tone(t+.05,.3,vary(420),vary(210),.1,1,'triangle'); },
     lightning(t){ noise(t,.12,6000,1800,4,.23,1);tone(t,.16,980,210,.16,1,'sawtooth'); },
     slime(t){ noise(t,.22,520,170,.7,.3,0,'lowpass');tone(t,.16,180,95,.13,0,'sine'); },
     coin(t){ tone(t, 0.18, 1568, 0, 0.12, 1, 'sine', 0.002); tone(t + 0.07, 0.3, 2093, 0, 0.11, 1, 'sine', 0.002); },
@@ -93,7 +94,7 @@ const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.v
   wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 28 : 12); });   // 허수아비·몬스터 공통 타격
   if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(18); });
   if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(45); } });
-  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',ice1:'ice',holy1_heal:'heal',sword1:'slash',sword2:'spin'}[id]||'staff');HAP(id==='sword2'?[18,20,28]:id==='fire1'?[12,22,34]:id==='sword1'?28:18);});
+  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',fire2:'fire',fire3:'fire',ice1:'ice',ice2:'ice',bolt1:'lightning',bolt2:'lightning',dark1:'dark',dark3:'dark',holy1_heal:'heal',sword1:'slash',sword2:'spin',sword3:'slash',bow2:'bow',fist2:'punch'}[id]||'staff');HAP(id==='sword2'||id==='fire3'||id==='dark3'?[18,20,28]:id==='fire1'||id==='fire2'?[12,22,34]:id==='sword1'||id==='sword3'?28:18);});
   wrap('drink', null, (ok) => { if (ok){ SFX.play('potion'); HAP([10, 40, 10]); } });
   wrap('travel', () => { if (!traveling) SFX.play('travel'); });
   if (typeof openDungeonChest === 'function') wrap('openDungeonChest', (spot) => { const m = spot && spot.data && spot.data.mimic; SFX.play(m ? 'mimic' : 'chest'); HAP(m ? [60, 30, 60] : [15, 40, 15]); });

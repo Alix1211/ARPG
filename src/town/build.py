@@ -417,7 +417,7 @@ for f in sorted(_g.glob(R + 'vfx/*.png')):
 A = dict(vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF)
 js = open(os.path.join(HERE, 'town.js')).read()
-js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'vfx.js')).read() + '\n' + open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
+js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'vfx.js')).read() + '\n' + open(os.path.join(HERE, 'skills2.js')).read() + '\n' + open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t
