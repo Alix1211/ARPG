@@ -148,7 +148,7 @@ function gainMastery(wt,amount=1){
   const m=P.mastery&&P.mastery[wt];if(!m)return false;
   m.xp=(m.xp||0)+Math.max(0,amount);let up=0;
   while(m.lv<50&&m.xp>=masteryNeed(m.lv)){m.xp-=masteryNeed(m.lv);m.lv++;up++;}
-  if(up)say((typeof WN!=='undefined'&&WN[wt]?WN[wt]:wt)+' 숙련 '+m.lv+'!');
+  if(up){say((typeof WN!=='undefined'&&WN[wt]?WN[wt]:wt)+' 숙련 '+m.lv+'!');if(window.UI&&UI.refresh)UI.refresh();}
   if(window.UI&&UI.save)UI.save();
   return true;
 }
