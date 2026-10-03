@@ -42,7 +42,7 @@ async def main():
         down=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='fire').slice(-1)[0]")
         assert down and down['vy'] > 0 and abs(down['vy']) > abs(down['vx'])*2, down
 
-        await pg.wait_for_timeout(1250)
+        await pg.wait_for_timeout(1500)
         await pg.evaluate("() => { GAME.P.mp=999; GAME.P.passives.magicGuide=1; __P.dir='side'; __P.flip=false; __FD.debugTarget(0,-220); GAME.cast('fire1',{dmg:1,mp:1}); }")
         await pg.wait_for_timeout(30)
         up=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='fire').slice(-1)[0]")
