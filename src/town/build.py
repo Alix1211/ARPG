@@ -212,6 +212,21 @@ for k, name, cx, by, wt, col in P:
     if key not in assets: assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
     props.append(dict(k=key, path=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, cw=col[0], cd=col[1] * TS, tree=key.startswith('tree')))
 
+
+# 행인 걷기 (옆모습은 왼쪽을 봄)
+VIL = [('youth', 1.0, 'house_red'), ('kid', 0.82, 'house_blue'), ('grandpa', 0.95, 'cottage_thatch'), ('maiden', 0.97, 'tavern'), ('auntie', 0.97, 'shop_general')]
+vils = []
+for name, sc, home in VIL:
+    fr = {}
+    for d in ['front', 'back', 'side']:
+        L = []
+        for i in range(5):
+            im = Image.open(R + f'characters/villager_{name}/{d}_{i}.png').convert('RGBA')
+            h = 98 * sc; w = h * im.width / im.height
+            L.append(enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 86))
+        fr[d] = L
+    vils.append(dict(name=name, sc=sc, home=home, w=w, h=h, fr=fr))
+
 # 엘프
 el = {}
 for d in ['front', 'back', 'side']:
@@ -275,7 +290,7 @@ SH += [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p['w'], h=p['h'],
 ground = bake_shadows(ground, SH)
 mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils)
 js = open(os.path.join(HERE, 'town.js')).read()
 html = open(os.path.join(HERE, 'shell.html')).read()
 html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)

@@ -164,6 +164,66 @@ $('buy').addEventListener('click', () => {
   $('buy').disabled = P.gold < sel.price;
 });
 
+
+// ======================= 행인 =======================
+const WP = [[14.5,14],[18,13.6],[28,13.6],[31.5,14],[14.5,19.9],[20,20.7],[26,20.7],[31.5,19.9],[23,13.9],[19.6,16.4],[26.4,16.4],
+  [23,23],[23,27],[22.6,30.2],[10,16.5],[5,16.5],[8,12.2],[36,16.5],[41,16.5],[38,12.4],[11,27.1],[16,27.1],[30.5,27.1],[36,26.9],[41.5,26.4],[15.3,11.3],[31.4,11.3]]
+  .map(([x, y]) => ({ x: x * TS, y: y * TS }));
+const VI = {};
+const vils = A.vils.map((v, i) => {
+  VI[v.name] = {}; for (const d in v.fr) VI[v.name][d] = v.fr[d].map(load);
+  const hb = A.blds.find(b => b.k === v.home);
+  const home = { x: hb.x + hb.door * hb.w + (i % 2 ? 22 : -22), y: hb.y + 10 };
+  const st = WP[(i * 5) % WP.length];
+  return { ...v, x: st.x, y: st.y, home, tx: st.x, ty: st.y, wait: rand(0, 3), dir: 'front', flip: false, t: 0, moving: false,
+    sp: v.name === 'kid' ? 95 : v.name === 'grandpa' ? 42 : rand(55, 70), stuck: 0, hidden: false, ph: rand(0, 7) };
+});
+function vBlocked(x, y){
+  const r = 9;
+  if (x < r || y < 30 || x > MWp - r || y > MHp - 6) return true;
+  for (const s of solids){
+    const cx = Math.max(s.x0, Math.min(x, s.x1)), cy = Math.max(s.y0, Math.min(y, s.y1));
+    if ((x - cx) ** 2 + (y - cy) ** 2 < r * r) return true;
+  }
+  return Math.hypot(x - P.x, y - P.y) < 22;
+}
+function updVils(dt, night){
+  for (const v of vils){
+    if (v.hidden){ // 아침이 되면 집에서 나옴
+      if (!night && Math.random() < dt * 0.3){ v.hidden = false; v.x = v.home.x; v.y = v.home.y; v.wait = 0.5; }
+      continue;
+    }
+    if (night && !v.goingHome){ v.goingHome = true; v.tx = v.home.x; v.ty = v.home.y; v.wait = 0; }
+    if (!night) v.goingHome = false;
+    if (v.wait > 0){ v.wait -= dt; v.moving = false; v.t = 0; continue; }
+    const dx = v.tx - v.x, dy = v.ty - v.y, d = Math.hypot(dx, dy);
+    if (d < 6){
+      if (v.goingHome){ v.hidden = true; continue; }
+      v.wait = rand(1.2, 4.5); const n = WP[Math.floor(rand(0, WP.length))]; v.tx = n.x + rand(-20, 20); v.ty = n.y + rand(-14, 14);
+      v.dir = 'front'; continue;
+    }
+    const sp = (v.goingHome ? v.sp * 1.3 : v.sp) * (v.name === 'kid' && Math.sin(T * 0.7 + v.ph) > 0.6 ? 1.8 : 1);
+    const mx = dx / d * sp * dt, my = dy / d * sp * dt, ox = v.x, oy = v.y;
+    if (!vBlocked(v.x + mx, v.y)) v.x += mx;
+    if (!vBlocked(v.x, v.y + my)) v.y += my;
+    const moved = Math.hypot(v.x - ox, v.y - oy);
+    v.moving = moved > 0.2; v.t += dt * (sp / 60);
+    if (moved < sp * dt * 0.3){ v.stuck += dt; if (v.stuck > 1.2){ v.stuck = 0;
+      if (v.goingHome){ v.hidden = true; continue; }
+      const n = WP[Math.floor(rand(0, WP.length))]; v.tx = n.x; v.ty = n.y; } }
+    else v.stuck = 0;
+    if (Math.abs(dx) > Math.abs(dy) * 1.2){ v.dir = 'side'; v.flip = dx > 0; } else v.dir = dy < 0 ? 'back' : 'front';
+  }
+}
+function drawVil(v){
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(v.x, v.y, 15 * v.sc, 5.5 * v.sc, 0, 0, 7); ctx.fill();
+  const fr = VI[v.name][v.dir][v.moving ? 1 + (Math.floor(v.t * 8) % 4) : 0];
+  ctx.save();
+  if (v.flip && v.dir === 'side'){ ctx.translate(v.x, 0); ctx.scale(-1, 1); ctx.translate(-v.x, 0); }
+  ctx.drawImage(fr, v.x - v.w / 2, v.y - v.h + 4, v.w, v.h);
+  ctx.restore();
+}
+
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
 const drops = [], splash = [], leaves = [], birds = [];
@@ -275,7 +335,8 @@ function dayLook(t){
 }
 const dayName = t => t < 0.08 ? '아침' : t < 0.45 ? '낮' : t < 0.63 ? '오후' : t < 0.74 ? '저녁' : t < 0.95 ? '밤' : '새벽';
 const lamps = A.props.filter(p => p.k.startsWith('lamp')).map(p => ({ x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 }));
-$('place').addEventListener('click', () => { DAY.t = (Math.floor(DAY.t * 5 + 1) % 5) / 5 + 0.02; });
+const PH = [0.03, 0.25, 0.55, 0.68, 0.82];
+$('place').addEventListener('click', () => { const i = PH.findIndex(p => p > DAY.t + 0.005); DAY.t = PH[i < 0 ? 0 : i]; });
 function drawDay(camX, camY){
   const L = dayLook(DAY.t);
   const [r, g, b] = L.c;
@@ -326,6 +387,7 @@ function drawMini(camX, camY){
   for (const b of A.blds){ const fw = b.w * 0.8; mx.fillRect((b.x - fw / 2) * sx, (b.y - b.h * 0.42) * sy, fw * sx, b.h * 0.34 * sy); }
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
+  mx.fillStyle = '#e8f2ff'; for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
   mx.strokeStyle = '#fff8'; mx.lineWidth = 2;
   mx.strokeRect(camX * sx, camY * sy, VW / Z * sx, VH / Z * sy);
   mx.fillStyle = '#ff3b2f'; mx.strokeStyle = '#fff'; mx.beginPath(); mx.arc(P.x * sx, P.y * sy, 5, 0, 7); mx.fill(); mx.stroke();
@@ -357,6 +419,7 @@ function frame(now){
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
   weather(dt, camX, camY, vw, vh);
+  updVils(dt, dayLook(DAY.t).lamp > 0.6);
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
@@ -365,9 +428,11 @@ function frame(now){
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
+  for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.me){ drawMe(); continue; }
+    if (s.vil){ drawVil(s.vil); continue; }
     if (s.tree){ // 바람에 우듬지가 살짝 흔들림
       const sk = Math.sin(T * 1.3 + s.ph) * 0.012 * W.wind;
       ctx.save(); ctx.translate(s.x, s.y); ctx.transform(1, 0, sk, 1, 0, 0);
@@ -405,6 +470,6 @@ function drawMe(){
   ctx.drawImage(fr, P.x - w / 2, by - h, w, h);
   ctx.restore();
 }
-window.__P = P; window.__W = W; window.__D = DAY;
+window.__P = P; window.__W = W; window.__D = DAY; window.__V = vils;
 requestAnimationFrame(frame);
 })();
