@@ -94,14 +94,21 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .btitle{position:absolute;left:0;right:0;top:40px;text-align:center;color:#fff4d8;font-weight:900;font-size:20px;text-shadow:0 1px 2px #000}
 .bgold{position:absolute;left:96px;top:528px;font-weight:900;font-size:15px;color:#7a4a0a}
 .bcnt{position:absolute;right:96px;top:528px;font-weight:800;font-size:13px;color:#6b5b45}
-#iinfo{position:fixed;display:none;z-index:9;right:max(10px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);width:230px;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);text-align:center}
+#iinfo{position:fixed;display:none;z-index:9;right:max(10px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);width:168px;border:24px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);text-align:center}
 #iinfo.on{display:block}
-.iname{font-weight:900;font-size:17px}
-.isub{font-size:12px;color:#6b5b45;margin:2px 0 4px}
-.iic{width:72px;height:72px;object-fit:contain}
-.ist{list-style:none;padding:0;margin:4px 0;font-size:14px;font-weight:700}
+.iname{font-weight:900;font-size:15px;line-height:1.2}
+.isub{font-size:11px;color:#6b5b45;margin:2px 0 3px;line-height:1.25}
+.iic{width:54px;height:54px;object-fit:contain}
+.ist{list-style:none;padding:0;margin:3px 0;font-size:13px;font-weight:700;line-height:1.35}
 .ist .up{color:#2a8a2a} .ist .dn{color:#c0221c}
-.icmp{font-size:11px;color:#6b5b45}
+.icmp{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:0;display:flex;flex-direction:column;gap:4px;width:150px}
+.ccard{border:16px solid transparent;border-image:var(--panel) 62 fill stretch;padding:5px 0 3px;color:var(--ink);text-align:center;font-size:12px}
+.ctag{font-size:11px;font-weight:900;color:#7a3b1a}
+.ctag.held{color:#b3541a}
+.cname{font-weight:900;font-size:13px;line-height:1.2}
+.cempty{color:#8a7a62;font-weight:700;margin:2px 0}
+.ccard .ist{font-size:12px;margin:2px 0 0}
+.cnote{align-self:center;font-size:10px;font-weight:700;color:#f3e6c8;background:#2b1b0fcc;border-radius:8px;padding:1px 8px}
 .ibtns{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .3s;z-index:20}
 #fade.slow{transition-duration:.55s}
@@ -224,7 +231,7 @@ html.app #fs{display:none}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1514</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1551</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -3373,16 +3380,36 @@ function tapEq(s){
   if (!eq[s]){ pickSel = null; $('iinfo').classList.remove('on'); render(); return; }
   pickSel = { from: 'eq', slot: s }; render(); showInfo(eq[s], 'eq');
 }
-function cmpLine(it, other){
+function r2(x){ return Math.round(x * 100) / 100; }
+// 새 장비(it)와 낀 장비(o)의 수치를 한 줄씩. 숫자는 낀 장비 값, ▲▼는 "새 장비가 이만큼 더 좋다/나쁘다"
+function cmpLine(o, it){
   const out = [];
-  const keys = new Set([...Object.keys(it.st), ...Object.keys(other ? other.st : {})]);
+  const keys = new Set([...Object.keys(o ? o.st : {}), ...Object.keys(it ? it.st : {})]);
   for (const k of keys){
-    const a = it.st[k] || 0, b = other ? (other.st[k] || 0) : 0;
+    const a = o ? (o.st[k] || 0) : 0, b = it ? (it.st[k] || 0) : 0;
     const li = el('li', '', `${STN[k]} ${a}`);
-    if (other && a !== b){ const sp = el('span', a > b ? 'up' : 'dn', a > b ? ` ▲${a - b}` : ` ▼${b - a}`); li.append(sp); }
+    if (it && o !== it && a !== b){ const d = r2(Math.abs(b - a)); li.append(el('span', b > a ? 'up' : 'dn', b > a ? ` ▲${d}` : ` ▼${d}`)); }
     out.push(li);
   }
   return out;
+}
+const CMPN = { w1: '무기1', w2: '무기2', ring1: '왼손 반지', ring2: '오른손 반지' };
+// 가방 장비를 고르면 정보창 왼쪽에 "지금 낀 장비" 카드를 붙인다. 무기·반지는 두 장, 나머지는 한 장.
+function cmpCards(it){
+  const slots = it.kind === 'weapon' ? ['w1', 'w2'] : it.kind === 'ring' ? ['ring1', 'ring2'] : [it.kind];
+  const box = el('div', 'icmp');
+  for (const s of slots){
+    const o = eq[s], c = el('div', 'ccard'), held = (s === 'w1' || s === 'w2') && s === cur && !!o;
+    c.append(el('div', 'ctag' + (held ? ' held' : ''), (CMPN[s] || SLOTN[s]) + (held ? ' · 손에 듦' : '')));
+    if (o){
+      const nm = el('div', 'cname', o.name); nm.style.color = RART[o.rar]; c.append(nm);
+      if (o.kind === 'weapon') c.append(el('div', 'isub', WN[o.wt]));
+    } else c.append(el('div', 'cempty', '비어 있음'));
+    const ul = el('ul', 'ist'); cmpLine(o, it).forEach(li => ul.append(li)); c.append(ul);
+    box.append(c);
+  }
+  box.append(el('div', 'cnote', '▲▼ = 새 장비 기준 차이'));
+  return box;
 }
 function targetSlot(it){
   if (it.kind === 'weapon') return eq.w1 ? (eq.w2 ? cur : 'w2') : 'w1';
@@ -3396,9 +3423,8 @@ function showInfo(it, from){
   if (it.kind === 'weapon') I.append(el('div', 'isub', WINFO[it.wt]));
   const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
   const ul = el('ul', 'ist');
-  const other = from === 'bag' ? eq[targetSlot(it)] : null;
-  cmpLine(it, other).forEach(li => ul.append(li)); I.append(ul);
-  if (from === 'bag' && other) I.append(el('div', 'icmp', `▲▼ 지금 낀 ${other.name}과 비교`));
+  cmpLine(it, null).forEach(li => ul.append(li)); I.append(ul);
+  if (from === 'bag') I.append(cmpCards(it));
   const row = el('div', 'ibtns');
   if (from === 'bag'){
     if (it.kind === 'weapon'){
