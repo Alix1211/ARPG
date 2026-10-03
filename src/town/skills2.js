@@ -145,7 +145,7 @@ function pierceHit(s, t){
   hitTarget(t, [Math.sign(t.x - s.x) || Math.sign(s.vx) || 1, Math.sign(s.vy) * .4 || 0], !!s.stagger, s.dmg);
   if (s.status) applyMonsterStatus(t, s.status, s.statusDur || 2.5);
   sfx.push({ type:s.fx || 'impact', t:0, x:t.x, y:t.y - (t.h || 60) * .5, r:34 });
-  if (s.mpGain && (s.mpGot || 0) < (s.mpCap || 2)){ s.mpGot = (s.mpGot || 0) + s.mpGain; P.mp = Math.min(P.maxMp, P.mp + s.mpGain); syncBars(); }
+  if (s.mpGain && (s.mpGot || 0) < (s.mpCap || 2)){ s.mpGot = (s.mpGot || 0) + s.mpGain; P.mp = Math.min(P.maxMp, P.mp + s.mpGain * NUM); syncBars(); }
 }
 
 function updZones(dt){

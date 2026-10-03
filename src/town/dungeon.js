@@ -123,7 +123,7 @@ function spawnDungeonMonsters(){
   const add=(type,x,y,boss)=>{
     const d=MOBDEF[type],imgs=mobImageSet(type);if(!d||!imgs)return;
     const sc=boss?1.7:type==='gargoyle'||type==='orc'?1.1:type==='slime'||type==='spider'?.8:1,w=82*sc;
-    const hp=Math.round(d.hp*hpK*(boss?2.3:1)),dmg=Math.round(d.dmg*dmK*(boss?1.25:1));
+    const hp=Math.round(d.hp*hpK*(boss?2.3:1)*NUM),dmg=Math.round(d.dmg*dmK*(boss?1.25:1)*NUM);
     monsters.push({monster:1,type,boss:!!boss,tier,mobLv:tmin+within,x,y,w,h:w,hp,maxHp:hp,sp:d.sp*(1+(tier-1)*.025)*(1+within*.003),dmg,
       ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',
       skillCd:1+Math.random()*2,imgs,face:'front',flip:false,state:'wander',tx:x,ty:y,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
@@ -166,7 +166,7 @@ function openDungeonChest(spot){
   if (src.mimic){ // 미믹!
     p.opened = 1; p.hide = 1; spots.splice(spots.indexOf(spot), 1);
     const d = MOBDEF.mimic, imgs = mobImageSet('mimic');
-    if (imgs){ const tier=dungeonTier(dunFloor),hp=Math.round(d.hp*(1+(tier-1)*.58)); monsters.push({monster:1,type:'mimic',tier,x:p.x,y:p.y,w:80,h:80,hp,maxHp:hp,sp:d.sp,dmg:Math.round(d.dmg*(1+(tier-1)*.36)),ranged:0,range:42,skill:d.skill||'charge',skillCd:1,imgs,face:'front',flip:false,state:'chase',tx:p.x,ty:p.y,wait:0,cd:.6,hurt:0,stun:0,dead:false,death:0}); }
+    if (imgs){ const tier=dungeonTier(dunFloor),hp=Math.round(d.hp*(1+(tier-1)*.58)*NUM); monsters.push({monster:1,type:'mimic',tier,x:p.x,y:p.y,w:80,h:80,hp,maxHp:hp,sp:d.sp,dmg:Math.round(d.dmg*(1+(tier-1)*.36)*NUM),ranged:0,range:42,skill:d.skill||'charge',skillCd:1,imgs,face:'front',flip:false,state:'chase',tx:p.x,ty:p.y,wait:0,cd:.6,hurt:0,stun:0,dead:false,death:0}); }
     say('상자가… 이빨이 있다?!'); return;
   }
   p.opened = 1; p.img = BI.d_chest_open || p.img; spots.splice(spots.indexOf(spot), 1);

@@ -77,8 +77,10 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
+// 수치 규모: 체력·마나·공격·방어·경험치 같은 정수 수치는 '기준 단위 × NUM'으로 다룬다(세분화된 수치 변화용). 스킬표(SK)·몬스터 기준값 등은 기준 단위로 적고 쓰는 곳에서 곱한다.
+const NUM = 100;
 const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
-  hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
+  hp:40*NUM, mp:28*NUM, maxHp:40*NUM, maxMp:28*NUM, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
   skillLv:{fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
@@ -150,7 +152,7 @@ function syncLifeUnlocks(silent=false){
 function lifeRank(k){return (P.lifeSkills&&P.lifeSkills[k])||0;}
 function expNeed(lv){
   lv=Math.max(1,Math.min(LEVEL_CAP,lv||1));
-  return Math.round(120+18*(lv-1)+2.2*Math.pow(lv-1,1.55));
+  return Math.round((120+18*(lv-1)+2.2*Math.pow(lv-1,1.55))*NUM);
 }
 function targetKillsForLevel(lv){
   return Math.min(240,90+Math.floor(Math.max(1,lv)*2.2));
@@ -677,7 +679,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
+window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
@@ -1160,7 +1162,7 @@ function cast(id,mod){
   if(typeof playerControlLocked==='function'&&playerControlLocked())return false;
   const k=SK[id],rank=(P.skillLv&&P.skillLv[id])||0;if(!k||rank<1)return false;mod=mod||{dmg:1,mp:1};
   if((CD[id]||0)>0)return false;
-  const cm=combatNow(),cost=Math.max(1,Math.round(k.mp*mod.mp*(1-(cm.manaReduce||0)/100)));
+  const cm=combatNow(),cost=Math.max(1,Math.round(k.mp*NUM*mod.mp*(1-(cm.manaReduce||0)/100)));
   if(P.mp<cost){say('마나가 부족합니다');return false;}
   P.mp-=cost;CD[id]=k.cd;syncBars();
   const d=faceVec(),home=(P.passives&&P.passives.magicGuide)||0;
@@ -1212,7 +1214,7 @@ function updSkills(dt){
   P.castRoot = Math.max(0, (P.castRoot || 0) - dt);
   updZones(dt);
   for (const id in CD) CD[id] = Math.max(0, CD[id] - dt);
-  if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
+  if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2 * NUM; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
 }
 function drawSkillFx(dt){
   for(const f of sfx){

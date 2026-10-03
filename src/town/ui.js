@@ -4,6 +4,7 @@
 const $ = id => document.getElementById(id);
 const G = window.GAME;            // town.js가 넘겨주는 것: P, setGold, near(), act(), closeAll(), isOpen()
 const K = A.kit;                  // 키트 그림
+const NUM = G.NUM || 100;         // 수치 규모(town.js). 체력·마나·공격·방어 등 고정값은 기준 단위×NUM
 const RARN = ['일반', '마법', '희귀', '전설'];
 const RARC = ['#e8dcc0', '#6fb4ff', '#ffd34d', '#ff8a2a'];
 const RART = ['#5b4630', '#2f6fb8', '#a8780a', '#c4580a'];
@@ -56,7 +57,8 @@ function rollAffix(it, used){
   const pool=AFFIX.filter(a=>a.slots.includes(it.kind)&&!used.has(a.id)); if(!pool.length)return;
   const a=pool[Math.floor(Math.random()*pool.length)]; used.add(a.id);
   const tier=it.tier||1, q=.25+Math.random()*.75, scale=(tier-1)/6;
-  const v=a.pct?Math.round((a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)))):Math.max(1,Math.round((a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)))));
+  const raw=a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)), flat=!a.pct&&a.st!=='luck';   // 체력·마나·방어 같은 고정값은 NUM배로 더 잘게 굴린다
+  const v=a.pct?Math.round(raw):Math.max(1,Math.round(flat?raw*NUM:raw));
   it.aff.push({id:a.id,k:a.k,nm:a.nm,st:a.st,v,pct:a.pct});
   it.st[a.st]=(it.st[a.st]||0)+v;
 }
@@ -76,15 +78,15 @@ function make(spec){
   const mul=GRADE_MUL[g-1];
   if(spec.kind==='weapon'){
     it.wt=spec.wt; it.icon=`${spec.wt}_${String(g).padStart(2,'0')}`;
-    const k=spec.wt==='staff'?'matk':'atk'; it.st[k]=Math.max(1,Math.round(10*WMULT[spec.wt]*mul));
+    const k=spec.wt==='staff'?'matk':'atk'; it.st[k]=Math.max(1,Math.round(10*WMULT[spec.wt]*mul*NUM));
   } else if(spec.kind==='ring'||spec.kind==='neck'){
     const at=Math.min(5,tier); it.icon=spec.kind+'_'+at;
-    if(spec.kind==='ring') it.st.luck=Math.max(1,tier); else {it.st.hp=3*tier;it.st.mp=2*tier;}
+    if(spec.kind==='ring') it.st.luck=Math.max(1,tier); else {it.st.hp=3*tier*NUM;it.st.mp=2*tier*NUM;}
   } else {
     const style=spec.style|| (Math.random()<.5?'knight':'mage'); it.style=style;
     it.icon=`${style}_${spec.kind}_${String(g).padStart(2,'0')}`;
     const base={head:[2,1,1],body:[4,4,0],hands:[1,1,0],feet:[1,2,0]}[spec.kind];
-    it.st.def=Math.max(1,Math.round(base[0]*mul)); if(base[1])it.st.hp=Math.max(1,Math.round(base[1]*mul)); if(base[2])it.st.mp=Math.max(1,Math.round(base[2]*mul));
+    it.st.def=Math.max(1,Math.round(base[0]*mul*NUM)); if(base[1])it.st.hp=Math.max(1,Math.round(base[1]*mul*NUM)); if(base[2])it.st.mp=Math.max(1,Math.round(base[2]*mul*NUM));
   }
   if(roll && it.rar>0){
     const used=new Set(), n=it.rar===1?1:it.rar===2?(2+Math.floor(Math.random()*3)):4;
@@ -117,13 +119,13 @@ function derived(){
   const t=totals(),b=G.P.stats||{str:5,vit:5,int:5,mag:6,dex:8,luck:3};
   const wt=eq[cur]&&eq[cur].wt, mb=wt&&G.masteryBonus?G.masteryBonus(wt):{lv:0,dmg:0,as:0};
   const passive=G.P.passives||{}, life=G.P.lifeSkills||{};
-  const phys=Math.max(1,Math.round((t.atk+b.str*.85)*(1+t.atkPct/100)*(1+mb.dmg/100)));
-  const magic=Math.max(1,Math.round((t.matk+b.int*.85)*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
-  const maxHp=Math.round(20+b.vit*5+t.hp), maxMp=Math.round(10+b.mag*4+t.mp);
+  const phys=Math.max(1,Math.round((t.atk+b.str*.85*NUM)*(1+t.atkPct/100)*(1+mb.dmg/100)));
+  const magic=Math.max(1,Math.round((t.matk+b.int*.85*NUM)*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
+  const maxHp=Math.round((20+b.vit*5)*NUM+t.hp), maxMp=Math.round((10+b.mag*4)*NUM+t.mp);
   const as=b.dex*.45+t.as+mb.as+(passive.rapid||0)*3;
   const crit=Math.min(65,5+b.dex*.08+t.crit+(passive.precision||0)*2);
   const critDmg=150+t.critDmg;
-  const damageReduce=Math.min(65,t.def*.75+(passive.survival||0)*3);
+  const damageReduce=Math.min(65,t.def/NUM*.75+(passive.survival||0)*3);
   const manaReduce=Math.min(35,(passive.manaFlow||0)*4);
   const coin=(b.luck+t.luck)*1.5+t.coin+(passive.greed||0)*3+(life.moneyScent||0)*2;
   const find=t.find+(passive.greed||0)*5+(life.moneyScent||0)*5;

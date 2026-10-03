@@ -25,11 +25,11 @@ async def main():
         fl=await ev("() => __FD.flinchTest()")
         assert fl[0]>.3 and fl[1]==0,fl
         # 공통 쿨타임: 한 스킬을 쓰면 다른 슬롯도 잠깐 잠긴다
-        r=await ev("() => { GAME.clearCd(); GAME.P.mp=999; GAME.P.skillLv.fire1=1; GAME.P.skillLv.ice1=1; const a=GAME.cast('fire1'); const c=GAME.cdLeft('ice1'); const b2=GAME.cast('ice1'); return [a,c>0,b2]; }")
+        r=await ev("() => { GAME.clearCd(); GAME.P.mp=99999; GAME.P.skillLv.fire1=1; GAME.P.skillLv.ice1=1; const a=GAME.cast('fire1'); const c=GAME.cdLeft('ice1'); const b2=GAME.cast('ice1'); return [a,c>0,b2]; }")
         assert r==[True,True,False],r
         for sid in SKILLS:
             await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(900)
-            await ev("""(id) => { GAME.clearCd(); GAME.P.hp=GAME.P.maxHp; GAME.P.mp=999; GAME.P.skillLv[id]=1;
+            await ev("""(id) => { GAME.clearCd(); GAME.P.hp=GAME.P.maxHp; GAME.P.mp=99999; GAME.P.skillLv[id]=1;
               __P.dir='side'; __P.flip=false; __P.x+=500; __FD.debugTarget(110,0,true); }""",sid)
             before=await ev("() => __FD.debugMonster()")
             assert before,sid

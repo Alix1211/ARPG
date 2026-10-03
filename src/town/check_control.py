@@ -37,13 +37,13 @@ async def main():
         # 필드에서 위/아래 타깃에 마법이 실제 좌표 방향으로 출발하는지.
         await pg.evaluate("() => __FD.enter('spring')")
         await pg.wait_for_timeout(850)
-        await pg.evaluate("() => { GAME.P.mp=999; GAME.P.passives.magicGuide=1; __P.dir='side'; __P.flip=false; __FD.debugTarget(0,220); GAME.cast('fire1',{dmg:1,mp:1}); }")
+        await pg.evaluate("() => { GAME.P.mp=99999; GAME.P.passives.magicGuide=1; __P.dir='side'; __P.flip=false; __FD.debugTarget(0,220); GAME.cast('fire1',{dmg:1,mp:1}); }")
         await pg.wait_for_timeout(30)
         down=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='fire').slice(-1)[0]")
         assert down and down['vy'] > 0 and abs(down['vy']) > abs(down['vx'])*2, down
 
         await pg.wait_for_timeout(1500)
-        await pg.evaluate("() => { GAME.P.mp=999; GAME.P.passives.magicGuide=1; __P.dir='side'; __P.flip=false; __FD.debugTarget(0,-220); GAME.cast('fire1',{dmg:1,mp:1}); }")
+        await pg.evaluate("() => { GAME.P.mp=99999; GAME.P.passives.magicGuide=1; __P.dir='side'; __P.flip=false; __FD.debugTarget(0,-220); GAME.cast('fire1',{dmg:1,mp:1}); }")
         await pg.wait_for_timeout(30)
         up=await pg.evaluate("() => __CTRL.shots().filter(s=>s.kind==='fire').slice(-1)[0]")
         assert up and up['vy'] < 0 and abs(up['vy']) > abs(up['vx'])*2, up

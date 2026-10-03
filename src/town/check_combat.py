@@ -32,7 +32,7 @@ async def main():
 
         # 강화된 마법: 큰 계수/범위 + 상태이상.
         await ev("""() => {
-          GAME.P.skillLv.fire1=1;GAME.P.skillLv.ice1=1;GAME.P.mp=999;
+          GAME.P.skillLv.fire1=1;GAME.P.skillLv.ice1=1;GAME.P.mp=99999;
           GAME.P.passives.magicGuide=0;
           GAME.cast('fire1');
         }""")
