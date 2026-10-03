@@ -119,7 +119,7 @@ function spawnDungeonMonsters(){
   const M=MAPS.dungeon,tier=dungeonTier(dunFloor),pool=DUN_MOBS[tier-1];
   const tmin=(tier-1)*10+1,within=Math.max(0,Math.min(9,(P.lv||tmin)-tmin));
   const hpK=(1+(tier-1)*.58+((dunFloor-1)%3)*.12)*(1+within*.05);
-  const dmK=(1+(tier-1)*.36+((dunFloor-1)%3)*.08)*(1+within*.024);
+  const dmK=(1+(tier-1)*.36+((dunFloor-1)%3)*.08)*(1+within*.035);
   const add=(type,x,y,boss)=>{
     const d=MOBDEF[type],imgs=mobImageSet(type);if(!d||!imgs)return;
     const sc=boss?1.7:type==='gargoyle'||type==='orc'?1.1:type==='slime'||type==='spider'?.8:1,w=82*sc;
