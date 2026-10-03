@@ -388,18 +388,25 @@ og = bake_shadows(og, [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p
 OUT = dict(map=dict(w=outmap.OUT_W, h=outmap.OUT_H, ts=TS, px=PX), ground=enc(og, 80), mini=enc(og.resize((outmap.OUT_W * 6, outmap.OUT_H * 6), Image.LANCZOS), 80),
            blds=[], props=oprops, npcs=onpcs, name='성 밖 갈림길', spawn=[15.0 * TS, 5.7 * TS], back=[23.0 * TS, 27.9 * TS])
 
-# ---- 던전 타일·소품 ----
-DTI = {}
-for k in ['floor', 'floor_crack', 'floor_moss', 'wall_front', 'wall_front_moss', 'wall_top']:
-    im = Image.open(R + f'dungeon/tiles/{k}.png').convert('RGB').resize((TS, TS), Image.LANCZOS); DTI[k] = enc(im, 85)
-DPR = {}
-for k, src, wt, cw, cd in [('stairs_up', 'tiles/stairs_up', 1.0, 0, 0), ('stairs_down', 'tiles/stairs_down', 1.0, 0, 0), ('torch', 'props/torch', 0.55, 0, 0),
-                           ('pillar', 'props/pillar', 1.1, 0.6, 0.5), ('chest_closed', 'props/chest_closed', 1.0, 0.8, 0.4), ('chest_open', 'props/chest_open', 1.0, 0.8, 0.4),
-                           ('barrel', 'props/barrel', 0.8, 0.7, 0.35), ('jar', 'props/jar', 0.6, 0.6, 0.3), ('bones', 'props/bones', 0.9, 0, 0), ('cobweb', 'props/cobweb', 1.0, 0, 0)]:
-    im = Image.open(R + f'dungeon/{src}.png').convert('RGBA'); im = im.crop(im.getbbox())
-    w = wt * TS; h = w * im.height / im.width
-    assets['d_' + k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 86)
-    DPR[k] = dict(src=assets['d_' + k], w=w, h=h, cw=cw, cd=cd)
+# ---- 던전 타일·소품: 두 가지 모습 (ruins=성 밖 입구의 석조 던전, cave=필드 동굴 입구의 자연 동굴) ----
+DTI = {}; DPR = {}
+RUINS_PROPS = [('stairs_up', 'tiles/stairs_up', 1.0, 0, 0), ('stairs_down', 'tiles/stairs_down', 1.0, 0, 0), ('torch', 'props/torch', 0.55, 0, 0),
+               ('pillar', 'props/pillar', 1.1, 0.6, 0.5), ('chest_closed', 'props/chest_closed', 1.0, 0.8, 0.4), ('chest_open', 'props/chest_open', 1.0, 0.8, 0.4),
+               ('barrel', 'props/barrel', 0.8, 0.7, 0.35), ('jar', 'props/jar', 0.6, 0.6, 0.3), ('bones', 'props/bones', 0.9, 0, 0), ('cobweb', 'props/cobweb', 1.0, 0, 0)]
+CAVE_PROPS = [('stairs_up', 'tiles/stairs_up', 1.0, 0, 0), ('stairs_down', 'tiles/stairs_down', 1.0, 0, 0), ('torch', 'props/torch', 0.55, 0, 0),
+              ('pillar', 'props/pillar', 1.0, 0.6, 0.5), ('chest_closed', 'props/chest_closed', 1.0, 0.8, 0.4), ('chest_open', 'props/chest_open', 1.0, 0.8, 0.4),
+              ('barrel', 'props/barrel', 0.8, 0.7, 0.35), ('jar', 'props/jar', 0.65, 0.6, 0.3), ('bones', 'props/bones', 1.0, 0, 0), ('cobweb', 'props/cobweb', 1.0, 0, 0),
+              ('stalagmites', 'props/stalagmites', 1.2, 0.8, 0.4), ('mushroom', 'props/mushroom', 0.8, 0, 0), ('crystal', 'props/crystal', 0.95, 0.5, 0.3),
+              ('rocks', 'props/rocks', 1.1, 0.7, 0.35), ('minecart', 'props/minecart', 1.05, 0.8, 0.4)]
+for th, folder, pre, plist in [('ruins', 'dungeon', 'd_', RUINS_PROPS), ('cave', 'dungeon_cave', 'dc_', CAVE_PROPS)]:
+    DTI[th] = {}; DPR[th] = {}
+    for k in ['floor', 'floor_crack', 'floor_moss', 'wall_front', 'wall_front_moss', 'wall_top']:
+        im = Image.open(R + f'{folder}/tiles/{k}.png').convert('RGB').resize((TS, TS), Image.LANCZOS); DTI[th][k] = enc(im, 85)
+    for k, src, wt, cw, cd in plist:
+        im = Image.open(R + f'{folder}/{src}.png').convert('RGBA'); im = im.crop(im.getbbox())
+        w = wt * TS; h = w * im.height / im.width
+        assets[pre + k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 86)
+        DPR[th][k] = dict(src=assets[pre + k], key=pre + k, w=w, h=h, cw=cw, cd=cd)
 
 # 효과음 파일이 있으면 합성음 대신 씀: assets/sfx/<이름>.mp3 (docs/sound_list.md)
 SFXF = {}

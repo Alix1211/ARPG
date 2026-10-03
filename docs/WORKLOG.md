@@ -380,3 +380,5 @@
 - 로컬 검사는 combat·control·skill·check_skills만 돌리고 나머지는 CI에 맡김(케인의 사용량 절약 요청).
 
 - 수치 100배(NUM) 1차 적용: 플레이어 체력/마나/공격/방어, 장비 고정 수치와 옵션, 몬스터 체력/공격, 경험치 곡선(몬스터·퀘스트 경험치는 파생이라 자동), 스킬 마나 소비/회복을 100배. 기준표는 기준 단위 유지(곱하는 곳: cast 비용, 마나 회복, 몬스터 생성, make/rollAffix, derived). 방어 피해감소율은 def/NUM 보정으로 동일. 검사의 마나 999는 99999로. 로컬은 combat·control·skills만 돌림, 전체는 CI.
+
+- 던전 그림 두 모습으로 분리. 케인의 새 동굴 시트를 `tools/cave_slice.py`로 잘라 `assets/dungeon_cave`에 저장(타일 21·소품 19), 옛 석조 던전은 `assets/dungeon` 그대로. build.py는 두 세트를 `A.dtiles/dprops[ruins|cave]`로 담고, dungeon.js가 입구(enterDungeonFromOut=ruins, enterDungeonFromHere=cave)에 따라 고른다. 처음에 두 입구가 같은 던전임을 모르고 통째로 교체했다가 케인 지적으로 분리함. 테스트용 `__DUN.setTheme/theme/rooms` 추가.

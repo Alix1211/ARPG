@@ -2,8 +2,10 @@
 // 동굴 입구 → 지하 N층. 층마다 방+복도 랜덤 생성, 어둠·횃불, 상자, 몬스터, 계단.
 // 필드 코드(field_dungeon.js)의 몬스터·드랍·판정을 그대로 함께 쓴다.
 const combatMap = () => MAP === 'field' || MAP === 'dungeon';
-const DT = {}; for (const k in A.dtiles) DT[k] = load(A.dtiles[k]);
-const DP = {}; for (const k in A.dprops) DP[k] = load(A.dprops[k].src);
+// 던전은 두 가지 모습: ruins(성 밖 입구, 석조) · cave(필드 동굴 입구, 자연 동굴). 들어온 입구에 따라 정해지고 층을 내려가도 유지된다.
+const DT = {}, DP = {}; let dunTheme = 'ruins';
+for (const th in A.dtiles){ DT[th] = {}; for (const k in A.dtiles[th]) DT[th][k] = load(A.dtiles[th][k]); }
+for (const th in A.dprops){ DP[th] = {}; for (const k in A.dprops[th]) DP[th][k] = load(A.dprops[th][k].src); }
 Object.assign(MOBDEF, {
   gargoyle: { hp:68, sp:48, dmg:8, ranged:1, range:195, skill:'petrify' },
   mimic: { hp:82, sp:76, dmg:11, skill:'charge' },
@@ -55,18 +57,18 @@ function gridBlocked(px, py, r){
 // ---- 그리기: 바닥·벽 ----
 async function paintDungeon(D){
   const W = dunW * TS, H = dunH * TS, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const g = c.getContext('2d'); await waitImages(Object.values(DT));
+  const g = c.getContext('2d'); const T = DT[dunTheme]; await waitImages(Object.values(T));
   g.fillStyle = '#0b0a0d'; g.fillRect(0, 0, W, H);
   for (let y = 0; y < dunH; y++) for (let x = 0; x < dunW; x++){
     if (D.g[y][x]){
-      const r = Math.random(), im = r < 0.08 ? DT.floor_crack : r < 0.15 ? DT.floor_moss : DT.floor;
+      const r = Math.random(), im = r < 0.08 ? T.floor_crack : r < 0.15 ? T.floor_moss : T.floor;
       g.drawImage(im, x * TS, y * TS, TS + 1, TS + 1);
     } else if (y + 1 < dunH && D.g[y + 1][x]){ // 바닥 바로 위 = 벽 앞면
-      g.drawImage(Math.random() < 0.18 ? DT.wall_front_moss : DT.wall_front, x * TS, y * TS, TS + 1, TS + 1);
-      if (y - 1 >= 0 && !D.g[y - 1][x]) g.drawImage(DT.wall_top, x * TS, (y - 1) * TS, TS + 1, TS + 1);
+      g.drawImage(Math.random() < 0.18 ? T.wall_front_moss : T.wall_front, x * TS, y * TS, TS + 1, TS + 1);
+      if (y - 1 >= 0 && !D.g[y - 1][x]) g.drawImage(T.wall_top, x * TS, (y - 1) * TS, TS + 1, TS + 1);
     } else {
       let near = false; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (D.g[y + dy] && D.g[y + dy][x + dx]) near = true;
-      if (near) g.drawImage(DT.wall_top, x * TS, y * TS, TS + 1, TS + 1);
+      if (near) g.drawImage(T.wall_top, x * TS, y * TS, TS + 1, TS + 1);
     }
   }
   // 벽 아래 그늘
@@ -78,7 +80,7 @@ async function paintDungeon(D){
   return { ground: c.toDataURL('image/webp', 0.8), mini: mini.toDataURL('image/webp', 0.8) };
 }
 function dprop(k, x, y, extra){
-  const d = A.dprops[k]; return Object.assign({ k: 'd_' + k, x: x * TS, y: y * TS, w: d.w, h: d.h, cw: d.cw || 0, cd: (d.cd || 0) * TS }, extra || {});
+  const d = A.dprops[dunTheme][k]; return Object.assign({ k: d.key, x: x * TS, y: y * TS, w: d.w, h: d.h, cw: d.cw || 0, cd: (d.cd || 0) * TS }, extra || {});
 }
 async function prepareDungeon(floor){
   dunFloor = floor; dunMaxFloor = Math.max(dunMaxFloor, floor);
@@ -94,8 +96,8 @@ async function prepareDungeon(floor){
       props.push(dprop('torch', x + 0.5, y + 0.95, { flame: 1 })); torches.push({ x: (x + 0.5) * TS, y: (y + 0.4) * TS });
     }
   }
-  // 방 꾸미기: 기둥·통·항아리·해골·거미줄, 상자
-  const deco = ['barrel', 'jar', 'bones', 'cobweb', 'bones', 'jar'];
+  // 방 꾸미기: 동굴 기둥(석순)·통·항아리·해골·거미줄·버섯·수정·바위·광산 수레, 상자
+  const deco = dunTheme === 'cave' ? ['barrel', 'jar', 'bones', 'cobweb', 'mushroom', 'crystal', 'rocks', 'rocks', 'stalagmites', 'minecart', 'bones'] : ['barrel', 'jar', 'bones', 'cobweb', 'bones', 'jar'];
   D.rooms.forEach((r, i) => {
     if (r === D.start) return;
     for (let k = 0; k < 2 + Math.floor(Math.random() * 3); k++){
@@ -153,8 +155,8 @@ async function goDungeon(floor,fromAbove){
     return true;
   }finally{dunBusy=false;}
 }
-function enterDungeonFromOut(){closeAll();goDungeon(1);}
-function enterDungeonFromHere(){goDungeon(1);}
+function enterDungeonFromOut(){closeAll();dunTheme='ruins';goDungeon(1);}
+function enterDungeonFromHere(){dunTheme='cave';goDungeon(1);}
 function nextDungeonFloor(){if(!dunBusy)goDungeon(dunFloor+1);}
 function previousDungeonFloor(){
   if(dunBusy)return;
@@ -202,9 +204,10 @@ function drawDungeonShade(camX, camY){
 }
 
 window.__DUN={
+  setTheme:t=>{dunTheme=t;},theme:()=>dunTheme,rooms:()=>(MAPS.dungeon.rooms||[]).map(r=>[r.cx,r.cy]),
   go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
-  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor}),
-  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
+  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor,theme:dunTheme}),
+  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunTheme=s.theme||'ruins';dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
   state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
     blocked:blocked(P.x,P.y),moves:[[16,0],[-16,0],[0,16],[0,-16]].filter(([dx,dy])=>!blocked(P.x+dx,P.y+dy)).length}),
   spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)])
