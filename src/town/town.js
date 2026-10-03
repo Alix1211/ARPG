@@ -65,6 +65,7 @@ for (const n of npcs){
   if (CUR.exits) exits.push(...CUR.exits);
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
+  const panic=$('panic'); if(panic) panic.hidden=(id==='town');
   if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
 }
 buildWorld('town');
@@ -89,6 +90,23 @@ function blocked(x, y){
 function move(dx, dy){
   if (!blocked(P.x + dx, P.y)) P.x += dx;
   if (!blocked(P.x, P.y + dy)) P.y += dy;
+}
+function walkableAt(x,y){
+  if(blocked(x,y))return false;
+  let n=0;
+  for(const [dx,dy] of [[16,0],[-16,0],[0,16],[0,-16]]) if(!blocked(x+dx,y+dy)) n++;
+  return n>=2;
+}
+function nearestSafePosition(x,y){
+  if(walkableAt(x,y))return [x,y];
+  const radii=[12,24,36,48,64,80,96,120,144];
+  for(const r of radii){
+    for(let i=0;i<16;i++){
+      const a=i*Math.PI/8,cx=x+Math.cos(a)*r,cy=y+Math.sin(a)*r;
+      if(walkableAt(cx,cy))return [cx,cy];
+    }
+  }
+  return [x,y];
 }
 function setGold(v){ P.gold = v; $('gold').textContent = '금화 ' + v; $('shopGold').textContent = v; }
 setGold(P.gold);
@@ -298,14 +316,29 @@ function act(){
 const OUT_TXT = { '이정표': '↑ 마을   ← 필드   → 던전', '연습용 허수아비': '마음껏 때려 보세요. 허수아비는 불평하지 않습니다.' };
 // 장소 이동(어두워졌다 밝아짐)
 let traveling = false;
-function travel(id, pos, dir){
-  if (traveling) return; traveling = true; closeAll();
-  const f = $('fade'); f.classList.add('on');
-  setTimeout(() => {
-    buildWorld(id); P.x = pos[0]; P.y = pos[1]; P.dir = dir || 'front'; P.atk = null;
-    setTimeout(() => { f.classList.remove('on'); traveling = false; }, 120);
-  }, 320);
+function travel(id,pos,dir){
+  if(traveling)return false;traveling=true;closeAll();
+  const f=$('fade');f.classList.add('on');
+  setTimeout(()=>{
+    buildWorld(id);P.x=pos[0];P.y=pos[1];P.dir=dir||'front';P.atk=null;
+    const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    setTimeout(()=>{f.classList.remove('on');traveling=false;},120);
+  },320);
+  return true;
 }
+function emergencyEscape(){
+  // 테스트용: 전투/상태/층이동 꼬임을 무시하고 강제로 큰 마을 복귀.
+  traveling=false;closeAll();
+  if(typeof PLAYER_STATUS!=='undefined')for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
+  P.atk=null;P.moving=false;
+  buildWorld('town');P.x=23*TS;P.y=22.2*TS;P.dir='front';
+  const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+  const fade=$('fade');if(fade)fade.classList.remove('on');
+  say('테스트 비상탈출: 큰 마을로 복귀했습니다.');
+  if(window.UI&&UI.save)UI.save();
+  return true;
+}
+$('panic').addEventListener('click',emergencyEscape);
 function openDlg(n){
   talking = n;
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
@@ -572,7 +605,8 @@ function syncBars(){
 window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
-  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, isOpen:()=>!!panel, setOpen:v=>{panel=v;}, swing, say, setMax };
+  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, walkableAt, nearestSafePosition,
+  isOpen:()=>!!panel, setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
