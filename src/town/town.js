@@ -253,7 +253,8 @@ const REGION_MARKET = {
   swamp:   { weapon:0.85, armor:0.80, accessory:1.30, material:1.30, potion:1.25, junk:1.15 },
 };
 const MARKET_NAME = { town:'큰 마을', spring:'봄 마을', summer:'여름 마을', autumn:'가을 마을', winter:'겨울 마을', ice:'얼음 마을', volcano:'화산 마을', swamp:'늪 마을' };
-const sellFlow = { sold:{}, resetAt:Date.now()+DAYLEN*1000 };
+const MARKET_RESET_MS = 480000; // 게임 하루 8분
+const sellFlow = { sold:{}, resetAt:Date.now()+MARKET_RESET_MS };
 function sellCat(it){
   if (!it) return 'junk';
   if (it.kind === 'weapon') return 'weapon';
@@ -278,7 +279,7 @@ function marketRegion(){
 }
 function resetSellFlow(){
   if (Date.now() < sellFlow.resetAt) return;
-  sellFlow.sold = {}; sellFlow.resetAt = Date.now() + DAYLEN * 1000;
+  sellFlow.sold = {}; sellFlow.resetAt = Date.now() + MARKET_RESET_MS;
 }
 function sellPressure(shop, cat){
   resetSellFlow();
