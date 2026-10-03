@@ -188,8 +188,25 @@ function spawnFieldMonsters(theme){
       imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   }
 }
+function snapshotDynamicWorld(){
+  return {
+    monsters:monsters.slice(),dropsLoot:dropsLoot.slice(),enemyShots:enemyShots.slice(),enemyHazards:enemyHazards.slice(),
+    solids:solids.slice(),spots:spots.slice(),sprites:sprites.slice(),trees:trees.slice(),npcs:npcs.slice(),dummies:dummies.slice(),exits:exits.slice(),
+    lamps:lamps.slice()
+  };
+}
+function restoreDynamicWorld(s){
+  if(!s)return;
+  const put=(dst,src)=>{dst.splice(0,dst.length,...(src||[]));};
+  put(monsters,s.monsters);put(dropsLoot,s.dropsLoot);put(enemyShots,s.enemyShots);put(enemyHazards,s.enemyHazards);
+  put(solids,s.solids);put(spots,s.spots);put(sprites,s.sprites);put(trees,s.trees);put(npcs,s.npcs);put(dummies,s.dummies);put(exits,s.exits);
+  lamps=(s.lamps||[]).slice();
+}
 function afterDynamicBuild(id){
-  if(id==='field') spawnFieldMonsters(fieldTheme); else if(id==='dungeon') spawnDungeonMonsters(); else { dunGrid=null; monsters.length=0; dropsLoot.length=0; enemyShots.length=0; }
+  if(window.__PORTAL_RUNTIME_RESTORE)return;
+  if(id==='field')spawnFieldMonsters(fieldTheme);
+  else if(id==='dungeon')spawnDungeonMonsters();
+  else {dunGrid=null;monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;}
 }
 function monsterBlocked(x,y){ return blocked(x,y); }
 function moveMonster(m,dx,dy){
