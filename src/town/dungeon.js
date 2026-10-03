@@ -166,15 +166,21 @@ function openDungeonChest(spot){
   const p = spot.prop, src = spot.data || {}; if (!p || p.opened) return;
   if (src.mimic){ // 미믹!
     p.opened = 1; p.hide = 1; spots.splice(spots.indexOf(spot), 1);
+    // 위장 상자가 사라지면 그 상자만의 충돌도 해제한다. 주변 벽/소품은 유지한다.
+    const solidIndex=solids.findIndex(s=>s.x0===src.x-src.w*src.cw/2&&s.x1===src.x+src.w*src.cw/2&&s.y0===src.y-src.cd&&s.y1===src.y-2);
+    const chestSolid=solidIndex>=0?solids.splice(solidIndex,1)[0]:null;
     const id=src.mimicId||TIER_MATCH.mimics[dungeonTier(dunFloor)-1];
     if(!id)throw Error('미믹 티어 누락');
-    const m=createMonster(id,p.x,p.y+TS*1.6,{floor:dunFloor});
-    let placed=false;
+    const m=createMonster(id,p.x,p.y,{floor:dunFloor});
+    let placed=spawnClear(m);
     for(let ring=1;ring<=5&&!placed;ring++)for(let step=0;step<16;step++){
       const a=step*Math.PI/8;m.x=p.x+Math.cos(a)*TS*ring;m.y=p.y+Math.sin(a)*TS*ring;
       if(spawnClear(m)){placed=true;break;}
     }
-    if(!placed){p.opened=0;p.hide=0;spots.push(spot);say('상자가 몸을 숨기고 있습니다. 주변을 비워 주세요.');return;}
+    if(!placed){
+      if(chestSolid)solids.splice(solidIndex,0,chestSolid);
+      p.opened=0;p.hide=0;spots.push(spot);say('상자가 몸을 숨기고 있습니다. 주변을 비워 주세요.');return;
+    }
     m.tx=m.homeX=m.x;m.ty=m.homeY=m.y;m.state='chase';monsters.push(m);
     say('상자가… 이빨이 있다?!'); return;
   }

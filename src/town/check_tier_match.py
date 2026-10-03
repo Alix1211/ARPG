@@ -183,7 +183,7 @@ async def runtime_checks():
             for attempt in range(8):
                 await pg.evaluate('f=>__DUN.go(f)', (tier-1)*3+1)
                 mimic = await pg.evaluate('__DUN.debugMimic()')
-                if mimic:
+                if mimic and mimic['opened']:
                     break
             assert mimic and mimic['closed'] and mimic['opened'] and not mimic['blocked'], (tier,mimic)
             assert (tier-1)*10 < mimic['mobLv'] <= tier*10, mimic
