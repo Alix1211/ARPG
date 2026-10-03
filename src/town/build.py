@@ -430,7 +430,7 @@ js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'vfx.js')).read() +
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t
-html = html.replace('/*VER*/', _t.strftime('%m%d-%H%M'))
+html = html.replace('/*VER*/', _t.strftime('%m%d-%H%M', _t.gmtime(_t.time() + 9 * 3600)))   # 한국시간(서버가 UTC라 +9시간)
 # 그림(data:)은 따로 game/art_<해시>.js 로 뺀다 — 그림이 안 바뀌면 파일 이름도 그대로라서
 # 앱·브라우저가 한 번 받은 그림을 다시 받지 않고, 평소 업데이트는 가벼운 town.html 만 받는다.
 ART = []

@@ -1181,11 +1181,11 @@ function cast(id,mod){
   }else if(id==='ice1'){
     // 얼음 알갱이 5발이 좁게 퍼지며 후두두둑 날아간다. 가까울수록 많이 맞고, 쌓이면 더 느려지다 3랭크부터 얼어붙는다.
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(620,range):{vx:d[0]*620,vy:d[1]*620,target:null};
+    const range=home?360+home*95:0,aim=home>0?magicAim(270,range):{vx:d[0]*270,vy:d[1]*270,target:null};
     const a0=Math.atan2(aim.vy,aim.vx),N=5,pd=Math.round(base*(1.75+rank*.06)*.3);
     for(let i=0;i<N;i++){
-      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=600+Math.random()*60;
-      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:.62,wait:i*.035+Math.random()*.03,kind:'ice',pellet:true,blast:0,dmg:pd,
+      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=250+Math.random()*30;
+      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:1.45,wait:i*.05+Math.random()*.04,kind:'ice',pellet:true,blast:0,dmg:pd,
         status:'slow',statusDur:2.4+rank*.2,stagger:rank>=5,chill:true,chillFreeze:rank>=3?.85+rank*.08:0,home:0,target:null});
     }
     sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});

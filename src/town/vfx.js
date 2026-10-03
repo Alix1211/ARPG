@@ -188,7 +188,7 @@ function vfxZonesGround(){
         }
       }
     } else if (z.type === 'voidring' || z.type === 'darkpulse'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (z.type === 'darkpulse' ? .3 : .35)) : 1;
+      const e = Math.min(1, z.t / (z.exp || z.dur)), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (z.type === 'darkpulse' ? .3 : .35)) : 1;
       ctx.save(); ctx.translate(z.x, z.y + 4); ctx.scale(1, .55);
       const g = ctx.createRadialGradient(0, 0, cr * .6, 0, 0, cr + 18); g.addColorStop(0, 'rgba(120,40,200,0)'); g.addColorStop(.8, 'rgba(120,40,200,.34)'); g.addColorStop(1, 'rgba(120,40,200,0)');
       ctx.globalAlpha = a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, cr + 18, 0, 7); ctx.fill();
@@ -211,7 +211,7 @@ function vfxZonesTop(){
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 40, 0, 7); ctx.fill();
       }
     } else if (z.type === 'voidring' || z.type === 'darkpulse'){
-      const sm = z.type === 'darkpulse', e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (sm ? .3 : .35)) : 1;
+      const sm = z.type === 'darkpulse', e = Math.min(1, z.t / (z.exp || z.dur)), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (sm ? .3 : .35)) : 1;
       const n = sm ? 8 : 12;
       for (let i = 0; i < n; i++){
         const an = i * (6.2832 / n) + z.t * 2;

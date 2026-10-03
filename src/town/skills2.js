@@ -69,11 +69,11 @@ function castExtra(id, d, rank, cm, mod, skillMul){
     }
     case 'bolt1': {
       // 전기 구체 3개가 전방 60도로 아주 느리게 퍼져 나가며, 닿아 있는 동안 계속 감전시킨다
-      const rng = 360 + home * 80, aim = home > 0 ? magicAim(170, rng) : { vx:d[0] * 170, vy:d[1] * 170 };
-      const a0 = Math.atan2(aim.vy, aim.vx), tick = Math.round(mag * (.42 + rank * .02));
+      const rng = 360 + home * 80, aim = home > 0 ? magicAim(95, rng) : { vx:d[0] * 95, vy:d[1] * 95 };
+      const a0 = Math.atan2(aim.vy, aim.vx), tick = Math.round(mag * (.28 + rank * .014));   // 느려진 만큼 한 적에게 틱이 더 많이 들어가므로 틱 피해를 낮춤
       for (const off of [-1, 0, 1]){
         const a = a0 + off * Math.PI / 6;
-        shots.push({ x:P.x + Math.cos(a0) * 28, y:P.y - 44 + Math.sin(a0) * 28, vx:Math.cos(a) * 170, vy:Math.sin(a) * 170, speed:170, t:0, life:2.7, kind:'bolt',
+        shots.push({ x:P.x + Math.cos(a0) * 28, y:P.y - 44 + Math.sin(a0) * 28, vx:Math.cos(a) * 95, vy:Math.sin(a) * 95, speed:95, t:0, life:4.4, kind:'bolt',
           pierce:true, rehit:.24, hit:new Map(), hw:30, blast:0, fx:'voltburst', dmg:tick, stagger:false });
       }
       sfx.push({ type:'castbolt', t:0, x:P.x, y:P.y - 34, r:34 });
@@ -103,9 +103,9 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'dark1': {
-      // 발밑에서 원이 360도로 퍼지며 사방을 벤다(화염구의 25% 정도, 범위는 좁게). 낮은 확률로 혼돈.
-      zones.push({ type:'darkpulse', map:(typeof MAP !== 'undefined' ? MAP : ''), x:P.x, y:P.y, t:0, dur:.28, R:118 + rank * 6, hit:new Set(),
-        dmg:Math.round(mag * (2.45 + rank * .08) * .25), chaos:.12 + rank * .02 });
+      // 발밑에서 원이 360도로 퍼지고(0.28초) 그대로 머물며 0.28초마다 3번 벤다(총 0.84초). 한 번당 화염구의 7.5%. 낮은 확률로 혼돈(대상당 한 번만 굴림).
+      zones.push({ type:'darkpulse', map:(typeof MAP !== 'undefined' ? MAP : ''), x:P.x, y:P.y, t:0, exp:.28, dur:.84, R:118 + rank * 6, nextTick:.28, chaosRolled:new Set(),
+        dmg:Math.round(mag * (2.45 + rank * .08) * .25 * .3), chaos:.12 + rank * .02 });
       sfx.push({ type:'castdark', t:0, x:P.x, y:P.y - 34, r:30 });
       return true;
     }
@@ -170,12 +170,14 @@ function updZones(dt){
       }
       if (z.t > z.delay + z.life) zones.splice(i, 1);
     } else if (z.type === 'darkpulse'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
-      for (const t of combatTargets()){
-        if (z.hit.has(t) || skGround(t, z) > cr + 14) continue;
-        z.hit.add(t);
-        hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], false, z.dmg);
-        if (Math.random() < z.chaos){ applyMonsterStatus(t, 'confuse', 2.5); pops.push({ x:t.x, y:t.y - (t.h || 60) - 6, t:0, txt:'혼돈!', crit:true }); }
+      const e = Math.min(1, z.t / z.exp), cr = z.R * (1 - Math.pow(1 - e, 2));
+      while (z.nextTick <= z.dur + .001 && z.t >= z.nextTick){
+        z.nextTick += .28;
+        for (const t of combatTargets()){
+          if (skGround(t, z) > cr + 14) continue;
+          hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], false, z.dmg);
+          if (!z.chaosRolled.has(t)){ z.chaosRolled.add(t); if (Math.random() < z.chaos){ applyMonsterStatus(t, 'confuse', 2.5); pops.push({ x:t.x, y:t.y - (t.h || 60) - 6, t:0, txt:'혼돈!', crit:true }); } }
+        }
       }
       if (z.t > z.dur + .3) zones.splice(i, 1);
     } else if (z.type === 'voidring'){
