@@ -142,6 +142,13 @@ function tradeLoadData(d){
   if(!d)return; tradeState.cargo=d.cargo&&typeof d.cargo==='object'?d.cargo:{}; tradeState.pressure=d.pressure&&typeof d.pressure==='object'?d.pressure:{};
   tradeState.resetAt=+d.resetAt||Date.now()+TRADE_DAY_MS;
 }
+function tradeConsume(id,qty){
+  qty=Math.max(1,qty|0);const c=cargoEntry(id);
+  if(c.qty<qty)return false;
+  c.qty-=qty;if(c.qty<=0)delete tradeState.cargo[id];
+  if($('trade').classList.contains('on'))renderTrade();
+  return true;
+}
 function renderTradeSummary(L){
   L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
   const d=document.createElement('div');d.className='tradeSummary';
@@ -164,7 +171,7 @@ function renderTradeCargo(R){
 window.TRADE={
   open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,
   cargo:()=>JSON.parse(JSON.stringify(tradeState.cargo)),goods:TRADE_GOODS,regions:TRADE_REGIONS,
-  saveData:tradeSaveData,loadData:tradeLoadData,renderSummary:renderTradeSummary,renderCargo:renderTradeCargo,
+  saveData:tradeSaveData,loadData:tradeLoadData,consume:tradeConsume,renderSummary:renderTradeSummary,renderCargo:renderTradeCargo,
   state:()=>({region:tradeRegion,slots:cargoSlots(),cargo:JSON.parse(JSON.stringify(tradeState.cargo)),resetAt:tradeState.resetAt}),
   debugRegion:r=>{tradeRegion=TRADE_REGIONS[r]?r:'town';return tradeRegion;}
 };
