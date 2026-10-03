@@ -507,7 +507,7 @@ function drawEnemySkillFx(){
   }
   ctx.restore();
 }
-function drawMonster(m){
+function drawMonster(m,sdt){
   const baseA=m.dead?Math.max(0,1-m.death):1, a=m.vanishT>0?.10:baseA, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
   ctx.save();ctx.globalAlpha=a;
   if(m.chargeWind>0){ctx.strokeStyle='#ff6b42';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,34+Math.sin(T*18)*4,12,0,0,7);ctx.stroke();}
@@ -518,11 +518,21 @@ function drawMonster(m){
   }
   ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
   const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);const mirror=m.face==='left'&&(!MOBDEF[m.type].images.left||m.type==='swamp_mage');
-  if(mirror){ctx.save();ctx.translate(m.x,0);ctx.scale(-1,1);ctx.drawImage(img,-m.w/2,m.y-m.h,m.w,m.h);ctx.restore();}
-  else ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
+  // 그림 비율 유지(좌우로 늘어나지 않게), 너무 넓은 그림만 상자 폭 1.45배까지로 제한
+  const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1,ar=iw/ih;
+  let dh=m.h,dw=dh*ar;if(dw>m.w*1.45){dw=m.w*1.45;dh=dw/ar;}
+  // 움직임: 걸을 때 통통 튀고 눌렸다 펴지며, 서 있을 땐 숨쉬듯 부푼다(슬라임류는 더 젤리처럼)
+  const dist=Math.hypot(m.x-(m.lx==null?m.x:m.lx),m.y-(m.ly==null?m.y:m.ly));m.lx=m.x;m.ly=m.y;
+  const moving=!m.dead&&dist>.15;m.walkA=Math.max(0,Math.min(1,(m.walkA||0)+(moving?1:-1)*(sdt||.016)*7));
+  m.walkPh=(m.walkPh||0)+(sdt||.016)*(moving?Math.min(16,6+m.sp/12):2.4);
+  const jelly=m.family==='slime'||m.type==='slime'||m.type==='slime_king'||m.family==='mushroom';
+  const ph=m.walkPh+(m.x*.013),hop=Math.abs(Math.sin(ph)),amp=jelly?.17:.07;
+  const yOff=-hop*dh*amp*m.walkA,idle=Math.sin(T*(jelly?3.4:2.1)+m.x*.02)*(jelly?.055:.022)*(1-m.walkA);
+  const sy=1+idle+(jelly?(.5-hop)*.16:(.5-hop)*.05)*m.walkA,sx=1/Math.sqrt(Math.max(.6,sy));
+  ctx.save();ctx.translate(m.x,m.y+yOff);if(mirror)ctx.scale(-1,1);ctx.scale(sx,sy);ctx.drawImage(img,-dw/2,-dh,dw,dh);ctx.restore();ctx.translate(-wob,0);
   if(!m.dead){
     ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#21160e';ctx.fillStyle=m.boss?'#ffda6b':m.rank==='elite'?'#bfa6ff':'#f7f1df';
-    const label=`${m.boss&&m.type!=='slime_king'?'♛ ':''}${m.name} Lv${m.mobLv} T${m.tier}${m.boss?' 우두머리':m.rank==='elite'?' 정예':''}`;
+    const label=`${m.boss&&m.type!=='slime_king'?'♛ ':''}${m.name}${m.boss?' 우두머리':m.rank==='elite'?' 정예':''}`;
     ctx.strokeText(label,m.x,m.y-m.h-20);ctx.fillText(label,m.x,m.y-m.h-20);
     const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
   if(!m.dead)vfxMonsterIcons(m,m.y-m.h-10);

@@ -1168,14 +1168,14 @@ function cast(id,mod){
   const skillMul=(1+(rank-1)*.18)*(1+(cm.skill||0)/100);
   if(id==='fire1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.fire||0)/100);
-    const range=home?330+home*90:0,aim=home>0?magicAim(500,range):{vx:d[0]*500,vy:d[1]*500,target:null},ux=aim.vx/500,uy=aim.vy/500;
+    const range=home?330+home*90:0,aim=home>0?magicAim(340,range):{vx:d[0]*340,vy:d[1]*340,target:null},ux=aim.vx/340,uy=aim.vy/340;
     const blast=78+(rank>=3?14:0)+(rank>=5?18:0);
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:500,t:0,life:1.15,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:340,t:0,life:1.7,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
     sfx.push({type:'castfire',t:0,x:P.x,y:P.y-36,r:40});
   }else if(id==='ice1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(760,range):{vx:d[0]*760,vy:d[1]*760,target:null},ux=aim.vx/760,uy=aim.vy/760;
-    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:760,t:0,life:.95,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
+    const range=home?360+home*95:0,aim=home>0?magicAim(480,range):{vx:d[0]*480,vy:d[1]*480,target:null},ux=aim.vx/480,uy=aim.vy/480;
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:480,t:0,life:1.5,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
     sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();

@@ -68,8 +68,8 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'bolt1': {
-      const hm = 1 + home, rng = 360 + home * 80, aim = magicAim(640, rng), ux = aim.vx / 640, uy = aim.vy / 640;
-      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:640, t:0, life:1.0, kind:'bolt', blast:26, fx:'voltburst',
+      const hm = 1 + home, rng = 360 + home * 80, aim = magicAim(420, rng), ux = aim.vx / 420, uy = aim.vy / 420;
+      shots.push({ x:P.x + ux * 28, y:P.y - 44 + uy * 28, vx:aim.vx, vy:aim.vy, speed:420, t:0, life:1.5, kind:'bolt', blast:26, fx:'voltburst',
         dmg:Math.round(mag * (1.85 + rank * .06)), stagger:true, home:hm, homeRange:rng, target:aim.target });
       sfx.push({ type:'castbolt', t:0, x:P.x, y:P.y - 34, r:34 });
       return true;
