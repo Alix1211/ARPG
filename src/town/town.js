@@ -474,7 +474,7 @@ function frame(now){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
     P.run = kb ? !keys.shift : mag > 0.82;
-    const sp = (P.run ? 320 : 165 * Math.min(1, mag / 0.82)) * (atkBusy() ? 0.7 : 1);   // 공격하면서 움직이면 조금 느려짐
+    const sp = (P.run ? 320 : 165 * Math.min(1, mag / 0.82)) * (atkBusy() && !WB[P.atk.wt].noSlow ? 0.7 : 1);   // 공격하면서 움직이면 조금 느려짐
     move(dx / mag * sp * dt, dy / mag * sp * dt);
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += dt;
@@ -546,7 +546,15 @@ let WPN = null;
 function setWeapon(it){ WPN = it ? { wt: it.wt, img: WIMG[it.icon], dmg: it.st.atk || it.st.matk || 1 } : null; }
 const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
-const DUR = { sword: 0.32, spear: 0.36, bow: 0.42, staff: 0.46, gauntlet: 0.22 };
+// 무기별 기준(같은 단계·같은 옵션일 때). 아이템 옵션이 이 값을 올리거나 내린다. docs/weapons.md
+const WB = {
+  sword:    { dur: 0.40, reach: 80, cone: 75 },                         // 넓은 부채꼴, 앞의 여러 마리
+  spear:    { dur: 0.50, reach: 120, width: 20, pierce: 2 },            // 길고 좁은 일직선, 두 마리 관통
+  gauntlet: { dur: 0.22, reach: 56, width: 34, pierce: 1, stagger: 1 }, // 아주 짧고 빠름, 움찔
+  bow:      { dur: 0.35, speed: 820, life: 0.75, noSlow: 1 },           // 빠르고 아주 멀리, 걸어도 안 느려짐
+  staff:    { dur: 0.75, speed: 300, life: 1.2, blast: 52 },            // 느린 구슬, 맞은 자리 폭발
+};
+const DUR = {}; for (const k in WB) DUR[k] = WB[k].dur;
 const PI = Math.PI;
 function wDraw(x, y, ang, sc = 1, mir = false){
   const im = WPN && WPN.img; if (!im || !im.complete || !im.naturalWidth) return;
@@ -568,23 +576,26 @@ function updAtk(dt){
   if (!a.hit && k > 0.45 && a.wt !== 'bow' && a.wt !== 'staff'){
     a.hit = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
-    const reach = { sword: 78, spear: 104, gauntlet: 66 }[a.wt];
+    const w = WB[a.wt], hits = [];
     for (const t of dummies){
-      const dx = t.x - P.x, dy = (t.y - 30) - (P.y - 30), along = dx * d[0] + dy * d[1], side = Math.abs(dx * d[1] - dy * d[0]);
-      if (along > -10 && along < reach && side < 46) hitDummy(t, d);
+      const dx = t.x - P.x, dy = t.y - P.y, along = dx * d[0] + dy * d[1], side = Math.abs(dx * d[1] - dy * d[0]), dist = Math.hypot(dx, dy);
+      if (w.cone){ if (dist < w.reach && (dist < 20 || along / dist > Math.cos(w.cone * PI / 180))) hits.push([along, t]); }
+      else if (along > -10 && along < w.reach && side < w.width) hits.push([along, t]);
     }
+    hits.sort((p, q) => p[0] - q[0]);
+    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitDummy(t, d, w.stagger));
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
-    shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, t: 0, kind: a.wt });
+    const w = WB[a.wt]; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0 });
   }
   if (k > 1.2) P.atk = null;
 }
-function hitDummy(t, d){
+function hitDummy(t, d, stagger){
   const dm = WPN ? WPN.dmg : 1, crit = Math.random() < 0.1, v = crit ? dm * 2 : dm;
-  t.dummy.wob = 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
+  t.dummy.wob = stagger ? 1.4 : 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
   pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });
 }
 const pops = [];
@@ -602,8 +613,17 @@ function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
     s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
-    if (!s.done) for (const t of dummies){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ s.done = true; s.t = 0.5; hitDummy(t, [Math.sign(s.vx), 0]); break; } }
-    const al = Math.max(0, 1 - s.t / 0.5); ctx.globalAlpha = al;
+    if (!s.done){
+      for (const t of dummies){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+      if (!s.done && s.t > s.life) boom(s, null);
+    }
+    if (s.done){ // 지팡이 폭발 고리
+      if (s.blast){ s.bt = (s.bt || 0) + dt; const k = Math.min(1, s.bt / 0.3);
+        ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#bfe4ff'; ctx.lineWidth = 4 * (1 - k) + 1;
+        ctx.beginPath(); ctx.ellipse(s.x, s.y, s.blast * (0.4 + 0.6 * k), s.blast * (0.25 + 0.4 * k), 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+      continue;
+    }
+    const al = Math.min(1, (s.life - s.t) / 0.15); ctx.globalAlpha = Math.max(0, al);
     const a = Math.atan2(s.vy, s.vx);
     if (s.kind === 'bow'){
       ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(a);
@@ -618,7 +638,12 @@ function drawShots(dt){
     }
   }
   ctx.globalAlpha = 1;
-  while (shots.length && shots[0].t > 0.5) shots.shift();
+  while (shots.length && shots[0].done && (!shots[0].blast || shots[0].bt > 0.3)) shots.shift();
+}
+function boom(s, t){
+  s.done = true; s.vx = s.vy = 0;
+  if (s.blast){ for (const u of dummies) if (Math.hypot(u.x - s.x, (u.y - 30) - s.y) < s.blast + 16) hitDummy(u, [Math.sign(u.x - s.x) || 1, 0]); }
+  else if (t) hitDummy(t, [Math.sign(s.vx) || 1, 0]);
 }
 // 휘두름 궤적(초승달)
 function arcFx(cx, cy, r, a0, a1, k){

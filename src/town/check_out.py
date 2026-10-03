@@ -7,8 +7,7 @@ async def main():
         errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto(URL);await pg.wait_for_timeout(1000);ev=pg.evaluate
         g=await ev("A.blds.find(b=>b.k==='gate_twin_tower')")
-        await ev(f"__P.x={g['x']};__P.y={g['y']-g['h']*0.18+20}");await pg.wait_for_timeout(200)
-        print('tag at gate',await ev("tag.textContent"));await pg.keyboard.press('e');await pg.wait_for_timeout(700)
+        await ev(f"__P.x={g['x']};__P.y={g['y']-g['h']*0.42-12}");await pg.wait_for_timeout(900)
         print('place',await ev("place.textContent"),'pos',await ev("[Math.round(__P.x),Math.round(__P.y)]"))
         # 허수아비 때리기: 첫 허수아비 왼쪽에 서서 오른쪽 보고 공격
         d=await ev("A.out.props.find(p=>p.kind==='dummy')")

@@ -9,7 +9,9 @@ const RARC = ['#e8dcc0', '#6fb4ff', '#ffd34d', '#ff8a2a'];
 const RART = ['#5b4630', '#2f6fb8', '#a8780a', '#c4580a'];
 const SLOTN = { w1: '무기1', w2: '무기2', head: '투구', body: '갑옷', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
-const WBASE = { sword: 4, spear: 5, gauntlet: 3, bow: 4, staff: 5 };
+// 무기별 한 번 피해 배율(검=100% 기준). docs/weapons.md
+const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 2.0 };
+const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '조금 느림 0.5초 · 김 · 두 마리 관통', gauntlet: '아주 빠름 0.22초 · 아주 짧음 · 움찔', bow: '빠름 0.35초 · 아주 멂 · 걸어도 안 느려짐', staff: '느림 0.75초 · 중간 · 맞은 자리 폭발' };
 
 // ---- 아이템 ----
 let seq = 1;
@@ -20,7 +22,7 @@ function make(spec){
   if (spec.kind === 'weapon'){
     it.wt = spec.wt; it.icon = `${spec.wt}_${String(it.g).padStart(2, '0')}`;
     it.name = (it.g === 1 ? '나무 ' : '낡은 ') + WN[spec.wt];
-    it.st[spec.wt === 'staff' ? 'matk' : 'atk'] = Math.round(WBASE[spec.wt] * (it.g === 1 ? 1 : 1.6));
+    it.st[spec.wt === 'staff' ? 'matk' : 'atk'] = Math.max(1, Math.round(10 * WMULT[spec.wt] * (it.g === 1 ? 1 : 1.6)));   // 기준 10 × 무기 배율 × 등급
   } else if (spec.kind === 'ring' || spec.kind === 'neck'){
     it.icon = spec.kind; it.name = spec.kind === 'ring' ? '구리 반지' : '구리 목걸이';
     if (spec.kind === 'ring') it.st.luck = 1; else { it.st.hp = 3; it.st.mp = 2; }
@@ -204,6 +206,7 @@ function showInfo(it, from){
   const I = $('iinfo'); I.innerHTML = '';
   const nm = el('div', 'iname', it.name); nm.style.color = RART[it.rar]; I.append(nm);
   I.append(el('div', 'isub', `${RARN[it.rar]} · ${it.kind === 'weapon' ? WN[it.wt] : SLOTN[targetSlot(it)]}`));
+  if (it.kind === 'weapon') I.append(el('div', 'isub', WINFO[it.wt]));
   const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
   const ul = el('ul', 'ist');
   const other = from === 'bag' ? eq[targetSlot(it)] : null;
