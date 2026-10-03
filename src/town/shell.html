@@ -110,8 +110,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
 #fs{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:10px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
 #snd{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:44px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
-#joy{left:0;bottom:0;width:42%;height:62%;pointer-events:auto}
-#stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none}
+#joy{left:0;bottom:0;width:46%;height:72%;pointer-events:auto}
+#stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none;opacity:.45;transition:opacity .15s}
+#stick.act{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff70,#ffffff35);box-shadow:0 2px 6px #0005}
 #cluster{position:fixed;right:max(24px,calc(env(safe-area-inset-right) + 24px));bottom:52px;width:124px;height:124px;pointer-events:none}
 #atk{position:absolute;inset:0;border:0;padding:0;border-radius:50%;background:var(--ring) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 4px 6px #000a);transition:transform .08s}

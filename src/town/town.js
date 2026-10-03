@@ -96,10 +96,14 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 }, stick = $('stick'), knob = $('knob');
+// 떠다니는 조이스틱: 왼쪽 아무 데나 누르면 그 자리에 생기고, 손가락이 멀리 가면 따라온다. 떼면 제자리로.
+function placeStick(x, y){ stick.style.left = (x - 64) + 'px'; stick.style.top = (y - 64) + 'px'; stick.style.bottom = 'auto'; }
+function homeStick(){ stick.style.left = stick.style.top = stick.style.bottom = ''; stick.classList.remove('act'); }
 $('joy').addEventListener('pointerdown', e => {
   if (panel) return;
-  const r = stick.getBoundingClientRect();
-  joy.id = e.pointerId; joy.ox = r.left + r.width / 2; joy.oy = r.top + r.height / 2; joy.dx = joy.dy = 0;
+  joy.id = e.pointerId; joy.dx = joy.dy = 0;
+  joy.ox = Math.max(70, Math.min(innerWidth - 70, e.clientX)); joy.oy = Math.max(70, Math.min(innerHeight - 70, e.clientY));
+  placeStick(joy.ox, joy.oy); stick.classList.add('act');
   try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
   knob.style.transform = '';
   joyMove(e);
@@ -111,14 +115,15 @@ addEventListener('pointermove', e => {
 });
 function joyMove(e){
   let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), m = 44;
-  if (d > m){ dx *= m / d; dy *= m / d; }
+  if (d > m * 1.6){ const k = (d - m * 1.6) / d; joy.ox += dx * k; joy.oy += dy * k; dx -= dx * k; dy -= dy * k; placeStick(joy.ox, joy.oy); }   // 받침이 손가락을 따라옴
+  const d2 = Math.hypot(dx, dy); if (d2 > m){ dx *= m / d2; dy *= m / d2; }
   joy.dx = dx / m; joy.dy = dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`;
 }
-function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; } }
+function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); } }
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
 $('joy').addEventListener('lostpointercapture', endJoy);
 // 창 밖으로 나가거나 다른 창을 보면 조이스틱·키 입력을 모두 풀어 줌
-function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; for (const k in keys) keys[k] = false; }
+function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); for (const k in keys) keys[k] = false; }
 addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', releaseAll); document.addEventListener('pointerleave', releaseAll);
 $('fs').addEventListener('click', () => {
   const d = document.documentElement;
@@ -135,7 +140,7 @@ const PROP_TXT = {
   '과일 노점': '주인이 자리를 비웠습니다.',
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
-function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; }
+function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
 function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (typeof closeRegionSelect === 'function') closeRegionSelect(true); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }

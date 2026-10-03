@@ -110,8 +110,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
 #fs{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:10px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
 #snd{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:44px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
-#joy{left:0;bottom:0;width:42%;height:62%;pointer-events:auto}
-#stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none}
+#joy{left:0;bottom:0;width:46%;height:72%;pointer-events:auto}
+#stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none;opacity:.45;transition:opacity .15s}
+#stick.act{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff70,#ffffff35);box-shadow:0 2px 6px #0005}
 #cluster{position:fixed;right:max(24px,calc(env(safe-area-inset-right) + 24px));bottom:52px;width:124px;height:124px;pointer-events:none}
 #atk{position:absolute;inset:0;border:0;padding:0;border-radius:50%;background:var(--ring) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 4px 6px #000a);transition:transform .08s}
@@ -175,7 +176,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1607</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1634</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
@@ -282,10 +283,14 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 }, stick = $('stick'), knob = $('knob');
+// 떠다니는 조이스틱: 왼쪽 아무 데나 누르면 그 자리에 생기고, 손가락이 멀리 가면 따라온다. 떼면 제자리로.
+function placeStick(x, y){ stick.style.left = (x - 64) + 'px'; stick.style.top = (y - 64) + 'px'; stick.style.bottom = 'auto'; }
+function homeStick(){ stick.style.left = stick.style.top = stick.style.bottom = ''; stick.classList.remove('act'); }
 $('joy').addEventListener('pointerdown', e => {
   if (panel) return;
-  const r = stick.getBoundingClientRect();
-  joy.id = e.pointerId; joy.ox = r.left + r.width / 2; joy.oy = r.top + r.height / 2; joy.dx = joy.dy = 0;
+  joy.id = e.pointerId; joy.dx = joy.dy = 0;
+  joy.ox = Math.max(70, Math.min(innerWidth - 70, e.clientX)); joy.oy = Math.max(70, Math.min(innerHeight - 70, e.clientY));
+  placeStick(joy.ox, joy.oy); stick.classList.add('act');
   try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
   knob.style.transform = '';
   joyMove(e);
@@ -297,14 +302,15 @@ addEventListener('pointermove', e => {
 });
 function joyMove(e){
   let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), m = 44;
-  if (d > m){ dx *= m / d; dy *= m / d; }
+  if (d > m * 1.6){ const k = (d - m * 1.6) / d; joy.ox += dx * k; joy.oy += dy * k; dx -= dx * k; dy -= dy * k; placeStick(joy.ox, joy.oy); }   // 받침이 손가락을 따라옴
+  const d2 = Math.hypot(dx, dy); if (d2 > m){ dx *= m / d2; dy *= m / d2; }
   joy.dx = dx / m; joy.dy = dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`;
 }
-function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; } }
+function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); } }
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
 $('joy').addEventListener('lostpointercapture', endJoy);
 // 창 밖으로 나가거나 다른 창을 보면 조이스틱·키 입력을 모두 풀어 줌
-function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; for (const k in keys) keys[k] = false; }
+function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); for (const k in keys) keys[k] = false; }
 addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', releaseAll); document.addEventListener('pointerleave', releaseAll);
 $('fs').addEventListener('click', () => {
   const d = document.documentElement;
@@ -321,7 +327,7 @@ const PROP_TXT = {
   '과일 노점': '주인이 자리를 비웠습니다.',
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
-function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; }
+function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
 function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (typeof closeRegionSelect === 'function') closeRegionSelect(true); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
