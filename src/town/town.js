@@ -917,6 +917,7 @@ function frame(now){
   ctx.drawImage(G, 0, 0, MWp, MHp);
   if (!DUN) drawGroundFx();
   if (typeof drawEncounterGround === 'function') drawEncounterGround(sdt);
+  vfxGroundPass();
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
@@ -1203,7 +1204,7 @@ function updSkills(dt){
 }
 function drawSkillFx(dt){
   for(const f of sfx){
-    f.t+=dt;const dur=({heal:.75,hit:.26,hurt:.3,kill:.55,fireburst:.55,iceburst:.55,icehit:.45,castfire:.5,castice:.5,slashpower:.42,spinpower:.45})[f.type]||.38,k=f.t/dur;if(k>1)continue;
+    f.t+=dt;const dur=VFX_DUR[f.type]||.38,k=f.t/dur;if(k>1)continue;
     const x=f.x??P.x,y=f.y??P.y-30,r=f.r||72;
     if(vfxSkill(f,k,x,y,r))continue;
     ctx.save();ctx.globalAlpha=Math.max(0,1-k);ctx.lineCap='round';
