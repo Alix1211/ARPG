@@ -352,10 +352,12 @@ function randomDropItem(m){
   return UI.make({kind:Math.random()<.55?'ring':'neck',tier,roll:true});
 }
 function monsterExp(m){
-  const tier=monsterTier(m),base=[0,18,42,68,105,145][tier]||18;
-  const cap=[0,8,18,30,45,99][tier]||8;
-  const over=Math.max(0,(P.lv||1)-cap),penalty=Math.max(.15,1-over*.08);
-  return Math.max(3,Math.round(base*penalty));
+  const tier=monsterTier(m), min=[0,1,8,18,30,45][tier]||1, cap=[0,8,18,30,45,99][tier]||8;
+  const need=window.GAME&&GAME.expNeed?GAME.expNeed(P.lv):100;
+  let mult=1;
+  if((P.lv||1)>cap) mult=Math.max(.12,1-((P.lv||1)-cap)*.10);
+  else if((P.lv||1)<min) mult=1.15;
+  return Math.max(3,Math.round(need/6*mult*(.92+Math.random()*.16)));
 }
 function killMonster(m){
   if(m.type==='skeleton'&&!m.revived&&Math.random()<.48){
