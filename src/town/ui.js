@@ -249,24 +249,36 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
-let drag = null; const ghost = $('ghost');
-function startDrag(e, id, from){
-  drag={id,from};ghost.src=quickIcon(id);ghost.style.display='block';moveGhost(e);
-  $('cluster').classList.add('drop'); try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
+let drag=null,dragSuppressClickUntil=0;const ghost=$('ghost');
+function startDrag(e,id,from){
+  drag={id,from,sx:e.clientX,sy:e.clientY,moved:false};ghost.src=quickIcon(id);ghost.style.display='block';moveGhost(e);
+  $('cluster').classList.add('drop');try{e.target.setPointerCapture(e.pointerId);}catch(er){}
 }
-function moveGhost(e){ ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
-addEventListener('pointermove', e => { if(drag){if(e.cancelable)e.preventDefault();moveGhost(e);} },{passive:false});
-addEventListener('pointerup', e => {
-  if (!drag) return;
-  ghost.style.display = 'none';
-  const t = document.elementFromPoint(e.clientX, e.clientY), slot = t && t.closest && t.closest('.sk');   // 칸이 창 위에 떠 있을 때 먼저 찾음
-  $('cluster').classList.remove('drop');
-  if (slot){
-    const i = +slot.dataset.i;
-    if (drag.from != null){ const tmp = QS[i]; QS[i] = drag.id; QS[drag.from] = tmp; }       // 칸끼리 맞바꾸기
-    else { const old = QS.indexOf(drag.id); if (old >= 0) QS[old] = null; QS[i] = drag.id; }
-  } else if (drag.from != null) QS[drag.from] = null;                                          // 칸 밖에 놓으면 빼기
-  drag = null; syncQS(); saveGame();
+function moveGhost(e){
+  if(drag&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
+  ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+}
+function quickDropIndex(x,y){
+  let best=-1,bd=1e9;
+  skBtns.forEach((b,i)=>{
+    const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,d=Math.hypot(x-cx,y-cy);
+    const inside=x>=r.left-18&&x<=r.right+18&&y>=r.top-18&&y<=r.bottom+18;
+    if(inside&&d<bd){best=i;bd=d;}
+  });
+  return best;
+}
+function dragClickSuppressed(){return Date.now()<dragSuppressClickUntil;}
+addEventListener('pointermove',e=>{if(drag){if(e.cancelable)e.preventDefault();moveGhost(e);}},{passive:false});
+addEventListener('pointerup',e=>{
+  if(!drag)return;
+  ghost.style.display='none';$('cluster').classList.remove('drop');
+  const d=drag,i=quickDropIndex(e.clientX,e.clientY);
+  if(i>=0){
+    if(d.from!=null){const tmp=QS[i];QS[i]=d.id;QS[d.from]=tmp;}
+    else{const old=QS.indexOf(d.id);if(old>=0)QS[old]=null;QS[i]=d.id;}
+  }else if(d.from!=null)QS[d.from]=null;
+  if(d.moved)dragSuppressClickUntil=Date.now()+350;
+  drag=null;syncQS();saveGame();
 });
 
 // ---- 캐릭터 창 ----
@@ -348,7 +360,7 @@ function render(){
         let moved=false,sx=0,sy=0;
         ic.addEventListener('pointerdown',e=>{e.preventDefault();sx=e.clientX;sy=e.clientY;moved=false;startDrag(e,'townPortal',null);});
         ic.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>10)moved=true;});
-        ic.addEventListener('click',e=>{if(moved)return;e.preventDefault();closeChar();G.useTownPortal();});
+        ic.addEventListener('click',e=>{if(moved||dragClickSuppressed())return;e.preventDefault();closeChar();G.useTownPortal();});
       }
       const desc=locked?`Lv${dv.unlock} 해금`:(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1]);
       const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=e=>{e.stopPropagation();G.investLife(key);};
