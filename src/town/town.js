@@ -62,6 +62,10 @@ for (const n of npcs){
   sprites.push(n);
   spots.push({ name: n.name, x: n.x, y: n.y + 6, r: 50, kind: 'npc', npc: n });
 }
+  if(id==='town'&&townPortalReturn){
+    sprites.push({portal:true,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,w:112,h:98,key:TOWN_PORTAL_Y-2});
+    spots.push({name:'귀환 포탈',x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,r:58,kind:'town_portal'});
+  }
   if (CUR.exits) exits.push(...CUR.exits);
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
@@ -71,6 +75,8 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
+let townPortalReturn=null,portalArrivalUntil=0;
+const TOWN_PORTAL_X=26.15*TS,TOWN_PORTAL_Y=19.15*TS;
 const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
   hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
@@ -190,12 +196,36 @@ function investLife(key){
   const d=LIFE_DEF[key],cur=lifeRank(key);if(!d||P.lv<d.unlock||cur<1||cur>=d.max||P.lifePts<1)return false;
   P.lifeSkills[key]=cur+1;P.lifePts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
+function portalTransition(id,pos,dir,onArrive){
+  if(traveling)return false;traveling=true;closeAll();
+  const f=$('fade');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
+  setTimeout(()=>{
+    buildWorld(id);P.x=pos[0];P.y=pos[1];P.dir=dir||'front';P.atk=null;
+    const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(onArrive)onArrive();
+    setTimeout(()=>{
+      f.classList.remove('on');
+      setTimeout(()=>{f.classList.remove('slow');traveling=false;},560);
+    },180);
+  },560);
+  return true;
+}
 function useTownPortal(){
   const r=lifeRank('townPortal');if(!r){say('타운 포탈을 아직 배우지 못했습니다.');return false;}
+  if(MAP==='town'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r]*60000;
   if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
-  P.portalReadyAt=now+cd;travel('town',[23*TS,22.2*TS],'front');if(window.UI&&UI.save)UI.save();return true;
+  townPortalReturn={map:MAP,pos:[P.x,P.y],dir:P.dir||'front'};
+  P.portalReadyAt=now+cd;
+  const ok=portalTransition('town',[23*TS,22.2*TS],'front',()=>{portalArrivalUntil=performance.now()+1700;});
+  if(window.UI&&UI.save)UI.save();return ok;
 }
+function returnTownPortal(){
+  if(MAP!=='town'||!townPortalReturn)return false;
+  const q=townPortalReturn;townPortalReturn=null;
+  return portalTransition(q.map,q.pos,q.dir,()=>{portalArrivalUntil=performance.now()+1200;});
+}
+function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
 function gainExp(amount){
   amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
   P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
@@ -305,6 +335,7 @@ function act(){
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
   if (near.kind === 'trade' && window.TRADE) return TRADE.open(near.market || (CUR && CUR.market) || 'town');
+  if (near.kind === 'town_portal') return returnTownPortal();
   if (near.kind === 'dungeon') return enterDungeonFromHere();
   if (near.kind === 'stairs_down') return nextDungeonFloor();
   if (near.kind === 'stairs_up') return previousDungeonFloor();
@@ -605,7 +636,7 @@ function syncBars(){
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
 window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
-  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal,
+  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
@@ -780,6 +811,30 @@ function drawMini(camX, camY){
 }
 
 let last = performance.now(), T = 0;
+function drawTownPortal(p){
+  const pulse=.5+.5*Math.sin(T*4.6),spin=T*1.9;
+  ctx.save();ctx.translate(p.x,p.y);
+  ctx.fillStyle='rgba(4,5,20,.82)';ctx.beginPath();ctx.ellipse(0,0,48,18,0,0,7);ctx.fill();
+  for(let i=0;i<3;i++){
+    ctx.strokeStyle=i===0?'rgba(93,225,255,.90)':i===1?'rgba(128,104,255,.78)':'rgba(225,120,255,.60)';
+    ctx.lineWidth=4-i;ctx.beginPath();ctx.ellipse(0,0,46-i*7,17-i*3,spin*(i%2?-.18:.22),0,Math.PI*1.55);ctx.stroke();
+  }
+  ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(0,-13,4,0,-13,58);g.addColorStop(0,'rgba(170,245,255,.55)');g.addColorStop(.45,'rgba(92,130,255,.20)');g.addColorStop(1,'rgba(120,70,255,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,-18,58,50,0,0,7);ctx.fill();
+  for(let i=0;i<7;i++){const a=spin+i*2.1,x=Math.cos(a)*32,y=-8-Math.abs(Math.sin(a*1.7+i))*38-pulse*6;ctx.fillStyle='rgba(180,235,255,.65)';ctx.beginPath();ctx.arc(x,y,2+(i%3),0,7);ctx.fill();}
+  ctx.restore();ctx.globalCompositeOperation='source-over';
+}
+function drawPortalArrivalAura(){
+  const left=portalArrivalUntil-performance.now();if(left<=0)return;
+  const a=Math.min(1,left/450),r=28+(1-left/1700)*28;
+  ctx.save();ctx.translate(P.x,P.y-34);ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(0,0,5,0,0,62);g.addColorStop(0,'rgba(210,250,255,.42)');g.addColorStop(.45,'rgba(95,150,255,.24)');g.addColorStop(1,'rgba(120,80,255,0)');
+  ctx.globalAlpha=a;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,62,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(155,225,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,32,r,10,0,T*2,T*2+Math.PI*1.65);ctx.stroke();
+  ctx.strokeStyle='rgba(188,120,255,.72)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,18,r*.72,26,0,-T*1.7,-T*1.7+Math.PI*1.45);ctx.stroke();
+  ctx.restore();ctx.globalCompositeOperation='source-over';
+}
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char',sdt=simPaused?0:dt;
@@ -828,7 +883,8 @@ function frame(now){
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.hide) continue;
-    if (s.me){ drawMe(); continue; }
+    if (s.me){ drawPortalArrivalAura();drawMe(); continue; }
+    if (s.portal){drawTownPortal(s);continue;}
     if (s.vil){ drawVil(s.vil); continue; }
     if (s.mon){ drawMonster(s.mon, sdt); continue; }
     if (s.dummy){ // 맞으면 흔들림
