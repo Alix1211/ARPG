@@ -172,8 +172,8 @@ function vfxHazard(h){
     return vfxDraw(ring, h.x, h.y + 4, r * 3.0 * (.7 + p * .3), { alpha: .35 + .5 * p, sy: .85 });
   }
   const k = Math.min(1, (h.t - delay) / (h.kind === 'lightning' ? .32 : .4));
-  if (h.kind === 'lightning') return vfxPlay('burst_volt_0', h.x, h.y + 8, r * 4.6, k, { base: true, s0: .8 });
-  if (h.kind === 'slime') return vfxPlay('burst_poison_1', h.x, h.y + 8, r * 3.2, k, { base: true });
+  if (h.kind === 'lightning'){ vfxGroundBurst(k, h.x, h.y + 8, r * 1.5, '#ffe45c', false); return vfxPlay('burst_volt_0', h.x, h.y + 8, r * 3.6, k, { base: true, s0: .8 }); }
+  if (h.kind === 'slime'){ vfxGroundBurst(k, h.x, h.y + 8, r * 1.3, '#8cff38', false); return vfxPlay('burst_poison_1', h.x, h.y + 8, r * 2.6, k, { base: true }); }
   return vfxPlay('hit_slash_2', h.x, h.y - 6, r * 2.5, k, { rot: -Math.PI / 4 + (h.x % 2 ? 0 : Math.PI), add: true, s0: .7 });
 }
 // 몬스터에 걸린 상태이상 표시. 몬스터 그림 아래(발)에 깔리는 효과
