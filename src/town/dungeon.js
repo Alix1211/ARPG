@@ -148,6 +148,7 @@ async function goDungeon(floor,fromAbove){
     if(!travel('dungeon',pos,'front'))return false;
     await new Promise(r=>setTimeout(r,560));
     const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(window.GUILD)GUILD.onDungeonFloor(floor);
     return true;
   }finally{dunBusy=false;}
 }
