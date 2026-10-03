@@ -19,7 +19,7 @@ const DUN_MOBS = [
   ['demon','harpy','gargoyle','darkmage']
 ];
 const dungeonTier = floor => Math.max(1,Math.min(7,Math.ceil(Math.max(1,floor)/3)));
-let dunFloor = 0, dunGrid = null, dunW = 44, dunH = 32, dunMaxFloor = 0;
+let dunFloor=0,dunGrid=null,dunW=44,dunH=32,dunMaxFloor=0,dunBusy=false;
 
 // ---- 지도 만들기: 방 + 복도 ----
 function genDungeon(){
@@ -109,7 +109,7 @@ async function prepareDungeon(floor){
   const map = {
     name: '던전 지하 ' + floor + '층', map: { w: dunW, h: dunH, ts: TS, px: TS }, ground: paint.ground, mini: paint.mini,
     blds: [], props, npcs: [], grid: D.g, torches, rooms: D.rooms, startRoom: D.start, farRoom: D.far,
-    spawn: [D.start.cx * TS + TS / 2, (D.start.cy + 1.2) * TS], exits: [],
+    spawn: [(D.start.cx + .5) * TS, (D.start.cy + .5) * TS], exits: [],
   };
   map.G = load(map.ground); map.MINI = load(map.mini); await waitImages([map.G, map.MINI]);
   MAPS.dungeon = map; return map;
@@ -137,18 +137,27 @@ function spawnDungeonMonsters(){
 }
 
 // ---- 들어가기·층 이동 ----
-async function goDungeon(floor, fromAbove){
-  say(floor === 1 ? '어둡고 축축하다… 돈 냄새가 난다.' : '지하 ' + floor + '층');
-  const m = await prepareDungeon(floor);
-  const pos = fromAbove === false ? [m.farRoom.cx * TS + TS * 1.5, (m.farRoom.cy + 1) * TS] : m.spawn;
-  travel('dungeon', pos, 'front');
+async function goDungeon(floor,fromAbove){
+  if(dunBusy||traveling)return false;
+  dunBusy=true;
+  try{
+    say(floor===1?'어둡고 축축하다… 돈 냄새가 난다.':'지하 '+floor+'층');
+    const m=await prepareDungeon(floor);
+    // 계단 바로 위/타일 경계 대신 방 중심의 안전 바닥에서 시작.
+    const pos=fromAbove===false?[(m.farRoom.cx+.5)*TS,(m.farRoom.cy+.5)*TS]:m.spawn;
+    if(!travel('dungeon',pos,'front'))return false;
+    await new Promise(r=>setTimeout(r,560));
+    const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    return true;
+  }finally{dunBusy=false;}
 }
-function enterDungeonFromOut(){ closeAll(); goDungeon(1); }
-function enterDungeonFromHere(){ goDungeon(1); }
-function nextDungeonFloor(){ goDungeon(dunFloor + 1); }
+function enterDungeonFromOut(){closeAll();goDungeon(1);}
+function enterDungeonFromHere(){goDungeon(1);}
+function nextDungeonFloor(){if(!dunBusy)goDungeon(dunFloor+1);}
 function previousDungeonFloor(){
-  if (dunFloor <= 1){ dunGrid = null; travel('out', [27.3 * TS, 11.6 * TS], 'front'); return; }
-  goDungeon(dunFloor - 1, false);
+  if(dunBusy)return;
+  if(dunFloor<=1){dunGrid=null;travel('out',[27.3*TS,11.6*TS],'front');return;}
+  goDungeon(dunFloor-1,false);
 }
 function openDungeonChest(spot){
   const p = spot.prop, src = spot.data || {}; if (!p || p.opened) return;
@@ -190,4 +199,9 @@ function drawDungeonShade(camX, camY){
   ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-window.__DUN = { go:goDungeon, tier:()=>dungeonTier(dunFloor), floorTier:dungeonTier, state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name}), spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)]) };
+window.__DUN={
+  go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
+  state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
+    blocked:blocked(P.x,P.y),moves:[[16,0],[-16,0],[0,16],[0,-16]].filter(([dx,dy])=>!blocked(P.x+dx,P.y+dy)).length}),
+  spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)])
+};
