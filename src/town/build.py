@@ -243,7 +243,7 @@ for d in ['front', 'back', 'side']:
         im = Image.open(R + f'characters/elf/{d}_{i}.png').convert('RGBA')
         fr.append(enc(im.resize((170, 172), Image.LANCZOS), 88))
     el[d] = fr
-face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((70, 10, 280, 200)).resize((120, 108), Image.LANCZOS)
+face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((105, 45, 275, 215)).resize((128, 128), Image.LANCZOS)   # 얼굴 중심 정사각
 
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
@@ -315,7 +315,8 @@ for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
         im = Image.open(R + f'weapons/{t}_{g:02d}.png').convert('RGBA'); im = im.crop(im.getbbox())
         im.thumbnail((200, 200), Image.LANCZOS); WPNI[f'{t}_{g:02d}'] = enc(im, 88)
 s2b = Image.open(R + 'ui/kit_c/kit_c_02b.png').convert('RGBA')
-KIT['hpbar'] = enc(s2b.crop((148, 97, 344, 129)), 90); KIT['mpbar'] = enc(s2b.crop((148, 132, 344, 164)), 90)
+KIT['hpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_hp.png').convert('RGBA'), 92); KIT['mpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_mp.png').convert('RGBA'), 92)   # tools/hud_clean.py로 테두리만 깨끗하게 잘라 낸 막대
+KIT['pring'] = enc(Image.open(R + 'ui/hud_clean/portrait_ring.png').convert('RGBA'), 92)   # 안쪽을 뚫은 초상화 고리
 rg = Image.open(R + 'ui/hud_icons/ring_empty.png').convert('RGBA'); rg.thumbnail((200, 200), Image.LANCZOS); KIT['ring'] = enc(rg, 90)
 SKI = {}
 import glob as _g

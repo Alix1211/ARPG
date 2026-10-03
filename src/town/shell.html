@@ -94,15 +94,15 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #me{left:max(8px,env(safe-area-inset-left));top:6px;display:flex;align-items:flex-start;gap:4px}
 #me .ring{position:relative;width:82px;height:88px;flex:none}
 #me .ring img{position:absolute;inset:0;width:100%;height:100%}
-#me .ring .face{inset:13px 12px 16px 12px;width:auto;height:auto;border-radius:50%;object-fit:cover;background:#e8d6b0}
+#me .ring .face{left:13px;top:19px;right:auto;bottom:auto;width:56px;height:56px;border-radius:50%;object-fit:cover;object-position:50% 50%;background:radial-gradient(circle at 50% 40%,#fbeed2,#d9bb8c)}
 .bars{display:flex;flex-direction:column;gap:3px;margin-top:10px}
-.bar{position:relative;width:166px;height:27px;background:var(--hpbar) center/100% 100% no-repeat}
-.bar.mp{background-image:var(--mpbar)}
-.bar .tr{position:absolute;left:25.5%;width:66.5%;top:29%;height:44%;border-radius:7px;background:#3a2414;overflow:hidden}
-.bar i{display:block;height:100%;border-radius:7px}
+.bar{position:relative;width:166px;aspect-ratio:5.896;background:var(--hpbar) center/100% 100% no-repeat;--l:17.84%;--t:24.44%;--w:75.25%;--h:45.19%}
+.bar.mp{background-image:var(--mpbar);aspect-ratio:5.203;--t:30.07%;--w:75.38%;--h:40.52%}
+.bar .tr{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;box-shadow:inset 0 2px 1px #fff5,inset 0 -2px 2px #0004;transition:width .2s}
 .bar.hp i{background:linear-gradient(#ff7a6a,#d2291f 60%,#a51a14)}
 .bar.mp i{background:linear-gradient(#7cc4ff,#2a6fd6 60%,#1d4fa8)}
-.bar span{position:absolute;left:25.5%;width:66.5%;top:29%;height:44%;font-size:10px;line-height:12px;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
+.bar span{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
 .coin{color:#ffe08a;font-weight:800;font-size:13px;text-shadow:0 1px 2px #000,0 0 3px #000;margin-left:30px}
 #bagBtn{position:relative;flex:none;margin-top:16px;width:50px;height:50px;border:0;padding:0;border-radius:50%;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 2px 3px #0009)}
 #mm{right:max(10px,env(safe-area-inset-right));top:8px;width:176px;height:150px;border-radius:50%;border:4px solid #c9923e;box-shadow:0 0 0 3px #4a2a12,inset 0 0 0 2px #e3b35f,0 3px 8px #0009;overflow:hidden;background:#000}

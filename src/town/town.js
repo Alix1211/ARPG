@@ -12,7 +12,7 @@ let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
 for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
 const BI = {}; for (const k in A.b) BI[k] = load(A.b[k]);
 const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
-$('face').src = A.face; $('ringImg').src = A.ui['05'];
+$('face').src = A.face; $('ringImg').src = A.kit.pring;
 $('tag').style.backgroundImage = `url(${A.ui['06']})`;
 document.documentElement.style.setProperty('--panel', `url(${A.ui['04']})`);
 document.documentElement.style.setProperty('--slot', `url(${A.ui['14']})`);
