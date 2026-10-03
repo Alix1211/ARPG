@@ -317,8 +317,29 @@ for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
 ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())
 ELF_FRONT = enc(ef, 90)
 
+# ---- 성 밖 갈림길 들판 ----
+import outmap
+og = outmap.gen_ground(R, outmap.OUT_W, outmap.OUT_H, PX, outmap.OUT_DIRT, 11, os.path.join(HERE, '.ground_out_cache.png'))
+oprops = []
+for k, name, cx, by, wt, col, kind in outmap.OUT_PROPS:
+    im = Image.open(R + k + '.png').convert('RGBA')
+    w = wt * TS; h = w * im.height / im.width
+    key = 'o_' + k.replace('/', '_')
+    if key not in assets: assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
+    oprops.append(dict(k=key, path=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, cw=col[0] if col else 0, cd=(col[1] if col else 0) * TS,
+                       tree=kind == 'tree', kind=kind))
+onpcs = []
+for k, name, title, cx, by, hh, line, act in outmap.OUT_NPCS:
+    im = Image.open(R + f'npc_guard/{k}.png').convert('RGBA'); w = hh * im.width / im.height
+    if k not in assets: assets[k] = enc(im.resize((round(w * SCALE), round(hh * SCALE)), Image.LANCZOS), 88)
+    pt = im.copy(); pt.thumbnail((520, 600), Image.LANCZOS); PORT[k] = enc(pt, 88)
+    onpcs.append(dict(k=k, name=name, title=title, x=cx * TS, y=by * TS, w=w, h=hh, line=line, shop=None, go=act, at=None))
+og = bake_shadows(og, [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p['w'], h=p['h'], sq=0.55 if p['tree'] else 0.45, foot=0.03) for p in oprops])
+OUT = dict(map=dict(w=outmap.OUT_W, h=outmap.OUT_H, ts=TS, px=PX), ground=enc(og, 80), mini=enc(og.resize((outmap.OUT_W * 6, outmap.OUT_H * 6), Image.LANCZOS), 80),
+           blds=[], props=oprops, npcs=onpcs, name='성 밖 갈림길', spawn=[15.0 * TS, 5.6 * TS], back=[23.0 * TS, 30.4 * TS])
+
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT)
 js = open(os.path.join(HERE, 'town.js')).read()
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
