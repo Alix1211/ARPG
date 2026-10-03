@@ -199,15 +199,72 @@ function moveMonster(m,dx,dy){
 function faceMonster(m,dx,dy){
   if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; } else m.face='front';
 }
-function hurtPlayer(v,dx,dy){
-  if(playerInv>0||traveling) return; playerInv=.55; P.hp=Math.max(0,P.hp-v); syncBars();
-  pops.push({x:P.x,y:P.y-95,t:0,txt:'-'+v,enemy:true});
+function defeatPlayer(){
+  const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
+  for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;
+  say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
+  travel('town',[23*TS,22.2*TS],'front');
+}
+function rawPlayerDamage(v,label){
+  v=Math.max(1,Math.round(v)); P.hp=Math.max(0,P.hp-v); syncBars();
+  pops.push({x:P.x,y:P.y-95,t:0,txt:(label?label+' ':'')+'-'+v,enemy:true});
+  if(P.hp<=0) defeatPlayer();
+}
+function applyPlayerStatus(kind,dur){
+  if(!kind)return; PLAYER_STATUS[kind]=Math.max(PLAYER_STATUS[kind]||0,dur||2);
+  if(kind==='slow') pops.push({x:P.x,y:P.y-110,t:0,txt:'둔화!',enemy:true});
+  else if(kind==='stone') pops.push({x:P.x,y:P.y-110,t:0,txt:'석화!',enemy:true});
+  else if(kind==='bleed') pops.push({x:P.x,y:P.y-110,t:0,txt:'출혈!',enemy:true});
+  else if(kind==='burn') pops.push({x:P.x,y:P.y-110,t:0,txt:'화상!',enemy:true});
+}
+function hurtPlayer(v,dx,dy,status,statusDur){
+  if(playerInv>0||traveling) return false;
+  playerInv=.55; rawPlayerDamage(v);
   const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
-  if(P.hp<=0){
-    const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
-    say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
-    travel('town',[23*TS,22.2*TS],'front');
+  if(status) applyPlayerStatus(status,statusDur);
+  return true;
+}
+function updatePlayerStatus(dt){
+  for(const k of ['slow','stone','bleed','burn']) PLAYER_STATUS[k]=Math.max(0,(PLAYER_STATUS[k]||0)-dt);
+  if(PLAYER_STATUS.bleed>0){ PLAYER_STATUS.bleedTick-=dt; if(PLAYER_STATUS.bleedTick<=0){PLAYER_STATUS.bleedTick=.8;rawPlayerDamage(Math.max(1,P.maxHp*.025),'출혈');} }
+  else PLAYER_STATUS.bleedTick=0;
+  if(PLAYER_STATUS.burn>0){ PLAYER_STATUS.burnTick-=dt; if(PLAYER_STATUS.burnTick<=0){PLAYER_STATUS.burnTick=.7;rawPlayerDamage(Math.max(1,P.maxHp*.02),'화상');} }
+  else PLAYER_STATUS.burnTick=0;
+}
+function playerMoveFactor(){ return PLAYER_STATUS.stone>0?0:(PLAYER_STATUS.slow>0?.48:1); }
+function playerControlLocked(){ return PLAYER_STATUS.stone>0; }
+function enemyShot(m,dx,dy,speed,status,kind,dmgMul=1){
+  const q=Math.hypot(dx,dy)||1;
+  enemyShots.push({x:m.x,y:m.y-m.h*.55,vx:dx/q*speed,vy:dy/q*speed,t:0,life:1.6,dmg:Math.max(1,Math.round(m.dmg*dmgMul)),status:status||'',statusDur:status==='stone'?1.15:status==='slow'?2.2:3.2,kind:kind||'bolt',done:false});
+}
+function specialMonsterAI(m,dx,dy,d,dt){
+  if(m.enraged){ /* marker only */ }
+  if(m.skill==='berserk'&&!m.enraged&&m.hp<m.maxHp*.48){m.enraged=true;m.sp*=1.55;m.dmg=Math.round(m.dmg*1.35);pops.push({x:m.x,y:m.y-m.h,t:0,txt:'광폭!',crit:true});}
+  if(m.chargeWind>0){m.chargeWind-=dt;if(m.chargeWind<=0){m.chargeT=.42;m.chargeHit=false;}return true;}
+  if(m.chargeT>0){
+    m.chargeT-=dt; moveMonster(m,m.chargeDx*m.sp*3.6*dt,m.chargeDy*m.sp*3.6*dt);
+    if(!m.chargeHit&&Math.hypot(P.x-m.x,P.y-m.y)<38){m.chargeHit=true;hurtPlayer(Math.round(m.dmg*1.35),P.x-m.x,P.y-m.y);}
+    return true;
   }
+  if(m.vanishT>0){
+    m.vanishT-=dt;
+    if(m.vanishT<=0){
+      const q=d||1,tx=P.x-dx/q*58,ty=P.y-dy/q*58;
+      if(!monsterBlocked(tx,ty)){m.x=tx;m.y=ty;}
+    }
+    return true;
+  }
+  if(m.skillCd>0)return false;
+  if(m.skill==='charge'&&d<225){const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.42;m.skillCd=3.5;return true;}
+  if(m.skill==='lightning'&&d<270){enemyHazards.push({kind:'lightning',x:P.x,y:P.y-25,t:0,delay:.65,life:1.0,r:38,dmg:Math.round(m.dmg*1.25),done:false});m.skillCd=2.8+Math.random()*.7;return true;}
+  if(m.skill==='petrify'&&d<230){enemyShot(m,dx,dy,185,'stone','stone',.75);m.skillCd=3.0;return true;}
+  if(m.skill==='radial'&&d<235){
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;enemyShots.push({x:m.x,y:m.y-m.h*.5,vx:Math.cos(a)*220,vy:Math.sin(a)*220,t:0,life:1.55,dmg:Math.max(1,Math.round(m.dmg*.8)),kind:'feather',done:false});}
+    m.skillCd=2.7+Math.random()*.5;return true;
+  }
+  if(m.skill==='blink'&&d<230){m.vanishT=.55;m.skillCd=3.8+Math.random()*.8;return true;}
+  if(m.skill==='web'&&d<165){enemyShot(m,dx,dy,205,'slow','web',.65);m.skillCd=2.8;return true;}
+  return false;
 }
 function updEncounters(dt){
   playerInv=Math.max(0,playerInv-dt);
