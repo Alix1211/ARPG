@@ -215,17 +215,30 @@ function useTownPortal(){
   if(MAP==='town'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r]*60000;
   if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
-  townPortalReturn={map:MAP,pos:[P.x,P.y],dir:P.dir||'front'};
+  townPortalReturn={
+    map:MAP,pos:[P.x,P.y],dir:P.dir||'front',
+    runtime:typeof snapshotDynamicWorld==='function'?snapshotDynamicWorld():null,
+    dungeon:MAP==='dungeon'&&window.__DUN&&__DUN.snapshotPortal?__DUN.snapshotPortal():null
+  };
   P.portalReadyAt=now+cd;
   const ok=portalTransition('town',[23*TS,22.2*TS],'front',()=>{portalArrivalUntil=performance.now()+1700;});
   if(window.UI&&UI.save)UI.save();return ok;
 }
 function returnTownPortal(){
   if(MAP!=='town'||!townPortalReturn)return false;
-  const q=townPortalReturn;townPortalReturn=null;
-  return portalTransition(q.map,q.pos,q.dir,()=>{portalArrivalUntil=performance.now()+1200;});
+  const q=townPortalReturn;
+  if(q.map==='dungeon'&&q.dungeon&&window.__DUN&&__DUN.preparePortalRestore)__DUN.preparePortalRestore(q.dungeon);
+  window.__PORTAL_RUNTIME_RESTORE=true;
+  townPortalReturn=null;
+  const ok=portalTransition(q.map,q.pos,q.dir,()=>{
+    if(q.runtime&&typeof restoreDynamicWorld==='function')restoreDynamicWorld(q.runtime);
+    window.__PORTAL_RUNTIME_RESTORE=false;
+    portalArrivalUntil=performance.now()+1200;
+  });
+  if(!ok){window.__PORTAL_RUNTIME_RESTORE=false;townPortalReturn=q;}
+  return ok;
 }
-function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
+function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,returnFloor:townPortalReturn&&townPortalReturn.dungeon?townPortalReturn.dungeon.floor:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
 function gainExp(amount){
   amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
   P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
