@@ -252,7 +252,7 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
 let drag=null,dragSuppressClickUntil=0;const ghost=$('ghost');
 function startDrag(e,id,from){
   drag={id,from,sx:e.clientX,sy:e.clientY,moved:false};ghost.src=quickIcon(id);ghost.style.display='block';moveGhost(e);
-  $('cluster').classList.add('drop');try{e.target.setPointerCapture(e.pointerId);}catch(er){}
+  $('cluster').classList.add('drop');
 }
 function moveGhost(e){
   if(drag&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
@@ -464,6 +464,7 @@ window.UI = {
   make,add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
+  dragDebug:()=>drag?{id:drag.id,from:drag.from,moved:drag.moved}:null,quickDropIndex,
   refresh(){syncHud();if($('char').classList.contains('on'))render();},
   bagFull:()=>bag.indexOf(null)<0,
   bagItems:()=>bag.map((it,i)=>it?{i,it}:null).filter(Boolean),
