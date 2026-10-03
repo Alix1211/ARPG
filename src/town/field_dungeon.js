@@ -12,8 +12,10 @@ for (const th of FIELD_THEMES.map(x => x[0])){
 const mon3 = {}, mon1 = {};
 for (const n in A.monsters3){ mon3[n] = {}; for (const d in A.monsters3[n]) mon3[n][d] = load(A.monsters3[n][d]); }
 for (const n in A.monsters1) mon1[n] = load(A.monsters1[n]);
-const monsters = [], dropsLoot = [], enemyShots = [];
+const monsters = [], dropsLoot = [], enemyShots = [], enemyHazards = [];
 const dropImgs = {};
+const FIELD_TIER={spring:1,summer:1,autumn:2,winter:2,ice:3,volcano:4,swamp:5};
+const PLAYER_STATUS={slow:0,stone:0,bleed:0,burn:0,bleedTick:0,burnTick:0};
 let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0;
 
 function combatTargets(){ return dummies.concat(monsters.filter(m => !m.dead && !m.removed)); }
@@ -153,14 +155,17 @@ async function selectRegion(theme, btn){
 function returnFromField(){ travel('out',[2.2*TS,11.4*TS],'side'); }
 
 const MOBDEF = {
-  wolf:{hp:38,sp:92,dmg:5}, rabbit:{hp:18,sp:108,dmg:3}, bear:{hp:76,sp:58,dmg:9}, orc:{hp:58,sp:64,dmg:7},
-  harpy:{hp:44,sp:78,dmg:6,ranged:1,range:185}, rogue:{hp:42,sp:82,dmg:6,ranged:1,range:170}, darkmage:{hp:48,sp:54,dmg:8,ranged:1,range:210},
-  demon:{hp:80,sp:62,dmg:10}, slime:{hp:24,sp:45,dmg:4}, goblin:{hp:32,sp:70,dmg:5}, skeleton:{hp:36,sp:62,dmg:5},
-  spider:{hp:26,sp:90,dmg:4}, mushroom:{hp:30,sp:40,dmg:5}, elem_fire:{hp:46,sp:58,dmg:7,ranged:1,range:175}, elem_ice:{hp:46,sp:58,dmg:7,ranged:1,range:175}
+  wolf:{hp:38,sp:92,dmg:5}, rabbit:{hp:18,sp:108,dmg:3}, bear:{hp:76,sp:58,dmg:9,skill:'charge'}, orc:{hp:58,sp:64,dmg:7},
+  harpy:{hp:44,sp:78,dmg:6,ranged:1,range:185,skill:'radial'}, rogue:{hp:42,sp:82,dmg:6,ranged:1,range:170,skill:'blink',shotStatus:'bleed'},
+  darkmage:{hp:48,sp:54,dmg:8,ranged:1,range:230,skill:'lightning'},
+  gargoyle:{hp:68,sp:48,dmg:8,ranged:1,range:195,skill:'petrify'},
+  demon:{hp:80,sp:62,dmg:10,skill:'berserk'}, slime:{hp:24,sp:45,dmg:4,touchStatus:'slow'}, goblin:{hp:32,sp:70,dmg:5}, skeleton:{hp:36,sp:62,dmg:5,skill:'revive'},
+  spider:{hp:26,sp:90,dmg:4,skill:'web'}, mushroom:{hp:30,sp:40,dmg:5}, elem_fire:{hp:46,sp:58,dmg:7,ranged:1,range:175,shotStatus:'burn'},
+  elem_ice:{hp:46,sp:58,dmg:7,ranged:1,range:175,shotStatus:'slow'}
 };
 const THEME_MOBS = {
   spring:['wolf','rabbit','goblin','slime'], summer:['wolf','bear','spider','goblin'], autumn:['rogue','orc','mushroom','goblin'],
-  winter:['wolf','bear','skeleton','elem_ice'], ice:['elem_ice','darkmage','skeleton'], volcano:['demon','orc','elem_fire'], swamp:['harpy','spider','slime','mushroom']
+  winter:['wolf','bear','skeleton','elem_ice'], ice:['elem_ice','darkmage','gargoyle','skeleton'], volcano:['demon','orc','elem_fire'], swamp:['harpy','spider','slime','mushroom']
 };
 function mobImageSet(n){ return mon3[n] || (mon1[n] ? {front:mon1[n],left:mon1[n],right:mon1[n]} : null); }
 function pointInSolid(px, py, pad=0){
