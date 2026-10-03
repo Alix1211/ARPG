@@ -34,6 +34,10 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #shop .frame{flex:1;display:grid;grid-template-columns:1fr 190px;gap:10px;max-height:82vh}
 #shopHead{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:18px}
 #shopHead small{font-size:14px;color:#8a5a2a}
+#shopTabs{display:flex;gap:5px;margin-left:auto;margin-right:10px}
+#shopTabs .btn{padding:3px 12px;font-size:12px;opacity:.48}
+#shopTabs .btn.on{opacity:1;box-shadow:inset 0 0 0 2px #f0c469,0 2px 0 #2c160a}
+#shopMarket{grid-column:1/3;font-size:11px;color:#7a5a32;margin-top:-6px}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;align-content:start;overflow:auto;max-height:52vh}
 .cell{position:relative;aspect-ratio:1;border:0;padding:6px;background:var(--slot) center/100% 100% no-repeat}
 .cell.sel{background-image:var(--slotOn)}
@@ -164,7 +168,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
   <div class="row"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn ghost" type="button" data-close>닫기</button></div></div></div>
-<div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><small>내 금화 <b id="shopGold">0</b></small></div>
+<div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><div id="shopTabs"><button class="btn on" id="tabBuy" type="button">사기</button><button class="btn" id="tabSell" type="button">팔기</button></div><small>내 금화 <b id="shopGold">0</b></small></div>
+  <div id="shopMarket"></div>
   <div id="grid"></div>
   <div id="info"><img id="infoIc" alt=""><div id="infoName"></div><div id="infoSlot"></div><div id="infoPrice"></div>
     <button class="btn" id="buy" type="button">사기</button><div id="shopSay"></div><button class="btn ghost" type="button" data-close>나가기</button></div></div></div>
