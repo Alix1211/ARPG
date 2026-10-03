@@ -123,11 +123,11 @@ html.app #fs{display:none}
 .bar span{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
 .coin{color:#ffe08a;font-weight:800;font-size:13px;text-shadow:0 1px 2px #000,0 0 3px #000;margin-left:30px}
 #bagBtn{position:relative;flex:none;margin-top:16px;width:50px;height:50px;border:0;padding:0;border-radius:50%;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 2px 3px #0009)}
-#questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:4px;pointer-events:none}
+#questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:2px;pointer-events:auto;cursor:pointer}
 #questTrack.on{display:flex}
-.qtrack{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:24px;padding:3px 7px;border-radius:7px;background:#171008b8;border:1px solid #8f6a37aa;color:#f6e7c8;font:800 11px/1.2 sans-serif;text-shadow:0 1px 2px #000;box-shadow:0 2px 5px #0005}
-.qtrack.done{border-color:#d7b65a;color:#fff0ad}
-.qcheck{width:13px;height:13px;border:2px solid #d1a85b;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#26180c}
+.qtrack{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:22px;padding:1px 4px;color:#f6e7c8;font:800 11px/1.2 sans-serif;text-shadow:0 2px 3px #000,0 0 5px #000;pointer-events:none}
+.qtrack.done{color:#fff0ad}
+.qcheck{width:13px;height:13px;border:2px solid #d1a85b;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#26180ccc;box-shadow:0 1px 2px #000}
 .qtrack.done .qcheck::after{content:'✓';color:#ffe26f;font-weight:900}
 .qtitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qprog{font-size:10px;color:#ffd978;white-space:nowrap}
@@ -224,7 +224,7 @@ html.app #fs{display:none}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1320</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1359</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -622,6 +622,34 @@ function travel(id,pos,dir){
   },320);
   return true;
 }
+function locationState(){
+  const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
+  if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';}
+  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
+  return st;
+}
+async function resumeLocation(st){
+  if(!st||!st.map)return false;
+  const map=st.map,dir=st.dir||'front';
+  try{
+    if(map==='field'&&typeof prepareField==='function'){
+      await prepareField(st.theme||'spring');buildWorld('field');
+    }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
+      await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
+    }else if(map==='out'){
+      buildWorld('out');
+    }else{
+      buildWorld('town');
+    }
+    P.x=Number.isFinite(st.x)?st.x:P.x;P.y=Number.isFinite(st.y)?st.y:P.y;P.dir=dir;P.atk=null;
+    const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(map==='dungeon'&&window.GUILD&&window.__DUN)GUILD.onDungeonFloor(__DUN.state().floor||1);
+    return true;
+  }catch(e){
+    buildWorld('town');P.x=23*TS;P.y=22.2*TS;P.dir='front';return false;
+  }
+}
+
 function emergencyEscape(){
   // 테스트용: 전투/상태/층이동 꼬임을 무시하고 강제로 큰 마을 복귀.
   traveling=false;closeAll();
@@ -902,7 +930,7 @@ function syncBars(){
 window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
-  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, walkableAt, nearestSafePosition,
+  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
@@ -2608,6 +2636,8 @@ function guildProgressText(q){
 }
 function guildTrack(){
   const host=$('questTrack');if(!host)return;
+  host.onclick=()=>guildOpen();
+  host.title='의뢰창 열기';
   host.innerHTML='';
   if(!guildState.active.length){host.classList.remove('on');return;}
   host.classList.add('on');
@@ -3188,7 +3218,7 @@ function saveGame(){
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,eq,cur,pot:POT,qs:QS,
-      trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
+      location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}
 }
 function loadGame(){
@@ -3206,7 +3236,12 @@ function loadGame(){
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
 const saved=loadGame();syncHud();syncPot();
-if(saved){G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);G.say('이어서 합니다. 금화 '+G.P.gold+'닢 그대로!');}
+if(saved){
+  G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);
+  Promise.resolve(G.resumeLocation?G.resumeLocation(saved.location):false).then(()=>{
+    G.say('이어서 합니다. 금화 '+G.P.gold+'닢 그대로!');
+  });
+}
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
 window.UI.save=saveGame;window.UI.reset=()=>{try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
 })();
