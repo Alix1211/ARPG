@@ -286,7 +286,8 @@ function itemName(it){
   const b = baseName(it);
   if (it.uq) return UNIQ[it.uq].nm + ' ' + b;
   const pf = it.aff.find(a => a.k === 'P'), sf = it.aff.find(a => a.k === 'S');
-  return (pf ? pf.nm + ' ' : '') + b + (sf ? ' · ' + sf.nm : '');
+  // 한국어는 '~의'가 앞에 와야 자연스러워서 접미 옵션 이름도 장비 이름 앞에 붙인다 (곰의 날카로운 장검)
+  return (sf ? sf.nm + ' ' : '') + (pf ? pf.nm + ' ' : '') + b;
 }
 function iconKey(it){
   if (it.slot === 'weapon') return it.wt + '_' + it.grade;
@@ -1509,7 +1510,7 @@ function hud(){
 }
 let last = performance.now();
 function loop(now){ const dt = Math.min(0.05, (now - last) / 1000); last = now; update(dt); draw(now / 1000); hud(); requestAnimationFrame(loop); }
-window.__G = { get P(){ return P; }, get W(){ return W; }, get S(){ return S; }, enterFloor, enterTown, makeItem, dropItem, stats, openBag, simDrops };
+window.__G = { get P(){ return P; }, get W(){ return W; }, get S(){ return S; }, enterFloor, enterTown, makeItem, dropItem, stats, openBag, simDrops, itemName };
 titleScreen();
 requestAnimationFrame(loop);
 })();
