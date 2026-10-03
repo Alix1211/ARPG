@@ -190,4 +190,4 @@ function drawDungeonShade(camX, camY){
   ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-window.__DUN = { go:goDungeon, tier:()=>dungeonTier(dunFloor), state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name}), spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)]) };
+window.__DUN = { go:goDungeon, tier:()=>dungeonTier(dunFloor), floorTier:dungeonTier, state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name}), spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)]) };
