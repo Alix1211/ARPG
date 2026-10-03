@@ -18,14 +18,14 @@ async def main():
         errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto(URL); await pg.wait_for_timeout(1000)
         timings=[]
-        for theme in THEMES:
-            st=await enter(pg,theme); timings.append(st['buildMs'])
+        for ti,theme in enumerate(THEMES,1):
+            st=await enter(pg,theme); timings.append(st['buildMs']); assert st['tier']==ti,(theme,st)
         a=await enter(pg,'spring'); layout_a=a['layout']; serial_a=a['serial']
         b=await enter(pg,'spring')
         assert b['serial']>serial_a, (a,b)
         assert b['layout']!=layout_a, (layout_a,b['layout'])
         before=await pg.evaluate("() => ({lv:GAME.P.lv, exp:GAME.P.exp, stat:GAME.P.statPts||0, skill:GAME.P.skillPts||0})")
-        await pg.evaluate("() => { GAME.P.exp = 99; }")
+        await pg.evaluate("() => { GAME.P.exp = GAME.expNeed(GAME.P.lv) - 1; }")
         assert await pg.evaluate("() => __FD.hitFirst()")
         await pg.wait_for_timeout(100)
         after=await pg.evaluate("() => ({lv:GAME.P.lv, exp:GAME.P.exp, stat:GAME.P.statPts||0, skill:GAME.P.skillPts||0})")
