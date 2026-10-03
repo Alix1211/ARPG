@@ -177,13 +177,13 @@ html.app #fs{display:none}
 #cluster.drop{z-index:12}
 #cluster.drop .sk{outline:2px dashed #ffe08a;outline-offset:2px}
 #ghost{position:fixed;width:58px;height:58px;margin:-29px 0 0 -29px;pointer-events:none;display:none;z-index:13;filter:drop-shadow(0 4px 6px #000a)}
-.skpane{position:absolute;inset:0;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);overflow:auto;padding-right:4px}
+.skpane{position:absolute;inset:0;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);overflow-y:auto;overflow-x:hidden;padding-right:4px;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .skhead{font-weight:900;font-size:16px;margin:-8px 0 2px;text-align:center}
 .sknote{font-size:11px;color:#6b5b45;text-align:center;margin-bottom:4px}
 .skrow{display:flex;align-items:center;gap:6px;min-height:56px}
 .skrow>b{width:58px;font-size:13px;flex:none}
 .skcwrap{display:flex;align-items:center;gap:2px;position:relative}
-.skc{width:46px;height:46px;border:0;padding:0;border-radius:50%;background:center/100% 100% no-repeat;touch-action:none;cursor:grab}
+.skc{width:46px;height:46px;border:0;padding:0;border-radius:50%;background:center/100% 100% no-repeat;touch-action:pan-y;cursor:grab}
 .skc.lock{filter:grayscale(1) brightness(.55);cursor:default}
 .skrank{font-size:10px;font-weight:900;min-width:26px;text-align:center;color:#6b3d18}
 .growplus{width:25px;height:25px;border:1px solid #9b6d35;background:#6d421d;color:#ffe9b5;border-radius:6px;font-weight:900;padding:0;line-height:22px}
@@ -235,7 +235,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-2302</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-0824</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1472,11 +1472,11 @@ function cast(id,mod){
   }else if(id==='ice1'){
     // 얼음 알갱이 5발이 좁게 퍼지며 후두두둑 날아간다. 가까울수록 많이 맞고, 쌓이면 더 느려지다 3랭크부터 얼어붙는다.
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(620,range):{vx:d[0]*620,vy:d[1]*620,target:null};
+    const range=home?360+home*95:0,aim=home>0?magicAim(270,range):{vx:d[0]*270,vy:d[1]*270,target:null};
     const a0=Math.atan2(aim.vy,aim.vx),N=5,pd=Math.round(base*(1.75+rank*.06)*.3);
     for(let i=0;i<N;i++){
-      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=600+Math.random()*60;
-      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:.62,wait:i*.035+Math.random()*.03,kind:'ice',pellet:true,blast:0,dmg:pd,
+      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=250+Math.random()*30;
+      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:1.45,wait:i*.05+Math.random()*.04,kind:'ice',pellet:true,blast:0,dmg:pd,
         status:'slow',statusDur:2.4+rank*.2,stagger:rank>=5,chill:true,chillFreeze:rank>=3?.85+rank*.08:0,home:0,target:null});
     }
     sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
@@ -1673,7 +1673,7 @@ function vfxSkill(f, k, x, y, r){
     case 'fireburst': return vfxPlay('burst_fire_' + vfxPick(f, [0, 1, 2]), x, y + 14, Math.max(96, r * 1.9), k, { base: true, s0: .45 });
     case 'iceburst':  return vfxPlay('burst_ice_' + vfxPick(f, [0, 2, 4]), x, y + 14, Math.max(90, r * 1.9), k, { base: true, s0: .45 });
     case 'icehit':    return vfxPlay('burst_ice_2', x, y + 10, Math.max(70, r * 2.3), k, { base: true, s0: .5 });
-    case 'heal':      return vfxPlay('heal_green', P.x, P.y,  r * 2.4, k, { s0: .75 });
+    case 'heal':      return true;   // 치유 마법진은 vfxGroundPass가 캐릭터 발밑(아래 층)에 그린다
     case 'castfire': case 'castice': case 'castdark': case 'castbolt': return true;
     case 'firestorm':{
       const e = 1 - Math.pow(1 - Math.min(1, k * 1.6), 3);
@@ -1780,6 +1780,7 @@ function vfxGroundPass(){
     else if (f.type === 'castice') vfxCastCircle(k, P.x, P.y + 4, r, '#5fcfff', '#e8fbff', 'ring_blue');
     else if (f.type === 'castdark') vfxCastCircle(k, P.x, P.y + 4, r, '#a050ff', '#ecd9ff', 'ring_blue');
     else if (f.type === 'castbolt') vfxCastCircle(k, P.x, P.y + 4, r, '#ffe45c', '#fffbd0', 'ring_gold');
+    else if (f.type === 'heal') vfxPlay('heal_green', P.x, P.y + 10, r * 2.2, k, { s0: .75, base: true, sy: .78 });
     else if (f.type === 'firestorm') vfxGroundBurst(k, x, y + 14, r, '#ff8a2a', true);
     else if (f.type === 'frostwave') vfxGroundBurst(k, x + Math.cos(f.a || 0) * r * .5, y + 14 + Math.sin(f.a || 0) * r * .5, r * .7, '#8de4ff', false);
     else if (f.type === 'fireburst') vfxGroundBurst(k, x, y + 14, r, '#ff8a2a', true);
@@ -1810,7 +1811,7 @@ function vfxZonesGround(){
         }
       }
     } else if (z.type === 'voidring' || z.type === 'darkpulse'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (z.type === 'darkpulse' ? .3 : .35)) : 1;
+      const e = Math.min(1, z.t / (z.exp || z.dur)), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (z.type === 'darkpulse' ? .3 : .35)) : 1;
       ctx.save(); ctx.translate(z.x, z.y + 4); ctx.scale(1, .55);
       const g = ctx.createRadialGradient(0, 0, cr * .6, 0, 0, cr + 18); g.addColorStop(0, 'rgba(120,40,200,0)'); g.addColorStop(.8, 'rgba(120,40,200,.34)'); g.addColorStop(1, 'rgba(120,40,200,0)');
       ctx.globalAlpha = a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, cr + 18, 0, 7); ctx.fill();
@@ -1833,7 +1834,7 @@ function vfxZonesTop(){
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 40, 0, 7); ctx.fill();
       }
     } else if (z.type === 'voidring' || z.type === 'darkpulse'){
-      const sm = z.type === 'darkpulse', e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (sm ? .3 : .35)) : 1;
+      const sm = z.type === 'darkpulse', e = Math.min(1, z.t / (z.exp || z.dur)), cr = z.R * (1 - Math.pow(1 - e, 2)), a = z.t > z.dur ? Math.max(0, 1 - (z.t - z.dur) / (sm ? .3 : .35)) : 1;
       const n = sm ? 8 : 12;
       for (let i = 0; i < n; i++){
         const an = i * (6.2832 / n) + z.t * 2;
@@ -2038,11 +2039,11 @@ function castExtra(id, d, rank, cm, mod, skillMul){
     }
     case 'bolt1': {
       // 전기 구체 3개가 전방 60도로 아주 느리게 퍼져 나가며, 닿아 있는 동안 계속 감전시킨다
-      const rng = 360 + home * 80, aim = home > 0 ? magicAim(170, rng) : { vx:d[0] * 170, vy:d[1] * 170 };
-      const a0 = Math.atan2(aim.vy, aim.vx), tick = Math.round(mag * (.42 + rank * .02));
+      const rng = 360 + home * 80, aim = home > 0 ? magicAim(95, rng) : { vx:d[0] * 95, vy:d[1] * 95 };
+      const a0 = Math.atan2(aim.vy, aim.vx), tick = Math.round(mag * (.28 + rank * .014));   // 느려진 만큼 한 적에게 틱이 더 많이 들어가므로 틱 피해를 낮춤
       for (const off of [-1, 0, 1]){
         const a = a0 + off * Math.PI / 6;
-        shots.push({ x:P.x + Math.cos(a0) * 28, y:P.y - 44 + Math.sin(a0) * 28, vx:Math.cos(a) * 170, vy:Math.sin(a) * 170, speed:170, t:0, life:2.7, kind:'bolt',
+        shots.push({ x:P.x + Math.cos(a0) * 28, y:P.y - 44 + Math.sin(a0) * 28, vx:Math.cos(a) * 95, vy:Math.sin(a) * 95, speed:95, t:0, life:4.4, kind:'bolt',
           pierce:true, rehit:.24, hit:new Map(), hw:30, blast:0, fx:'voltburst', dmg:tick, stagger:false });
       }
       sfx.push({ type:'castbolt', t:0, x:P.x, y:P.y - 34, r:34 });
@@ -2072,9 +2073,9 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       return true;
     }
     case 'dark1': {
-      // 발밑에서 원이 360도로 퍼지며 사방을 벤다(화염구의 25% 정도, 범위는 좁게). 낮은 확률로 혼돈.
-      zones.push({ type:'darkpulse', map:(typeof MAP !== 'undefined' ? MAP : ''), x:P.x, y:P.y, t:0, dur:.28, R:118 + rank * 6, hit:new Set(),
-        dmg:Math.round(mag * (2.45 + rank * .08) * .25), chaos:.12 + rank * .02 });
+      // 발밑에서 원이 360도로 퍼지고(0.28초) 그대로 머물며 0.28초마다 3번 벤다(총 0.84초). 한 번당 화염구의 7.5%. 낮은 확률로 혼돈(대상당 한 번만 굴림).
+      zones.push({ type:'darkpulse', map:(typeof MAP !== 'undefined' ? MAP : ''), x:P.x, y:P.y, t:0, exp:.28, dur:.84, R:118 + rank * 6, nextTick:.28, chaosRolled:new Set(),
+        dmg:Math.round(mag * (2.45 + rank * .08) * .25 * .3), chaos:.12 + rank * .02 });
       sfx.push({ type:'castdark', t:0, x:P.x, y:P.y - 34, r:30 });
       return true;
     }
@@ -2139,12 +2140,14 @@ function updZones(dt){
       }
       if (z.t > z.delay + z.life) zones.splice(i, 1);
     } else if (z.type === 'darkpulse'){
-      const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
-      for (const t of combatTargets()){
-        if (z.hit.has(t) || skGround(t, z) > cr + 14) continue;
-        z.hit.add(t);
-        hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], false, z.dmg);
-        if (Math.random() < z.chaos){ applyMonsterStatus(t, 'confuse', 2.5); pops.push({ x:t.x, y:t.y - (t.h || 60) - 6, t:0, txt:'혼돈!', crit:true }); }
+      const e = Math.min(1, z.t / z.exp), cr = z.R * (1 - Math.pow(1 - e, 2));
+      while (z.nextTick <= z.dur + .001 && z.t >= z.nextTick){
+        z.nextTick += .28;
+        for (const t of combatTargets()){
+          if (skGround(t, z) > cr + 14) continue;
+          hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], false, z.dmg);
+          if (!z.chaosRolled.has(t)){ z.chaosRolled.add(t); if (Math.random() < z.chaos){ applyMonsterStatus(t, 'confuse', 2.5); pops.push({ x:t.x, y:t.y - (t.h || 60) - 6, t:0, txt:'혼돈!', crit:true }); } }
+        }
       }
       if (z.t > z.dur + .3) zones.splice(i, 1);
     } else if (z.type === 'voidring'){
