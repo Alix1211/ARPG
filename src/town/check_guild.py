@@ -31,8 +31,13 @@ async def main():
         q=await ev("() => GUILD.state().board.find(q=>q.type==='kill_any')")
         assert q
         assert await ev("(id)=>GUILD.accept(id)",q['id'])
+        assert await ev("() => document.getElementById('questTrack').classList.contains('on')")
+        assert await ev("(t)=>document.getElementById('questTrack').innerText.includes(t)",q['title'])
+        assert await ev("(n)=>document.getElementById('questTrack').innerText.includes('0 / '+n)",q['need'])
         g0=await ev("() => GAME.P.gold"); e0=await ev("() => GAME.P.exp")
-        for _ in range(q['need']):
+        await ev("() => GUILD.onKill({dead:true,type:'wolf'})")
+        assert await ev("(n)=>document.getElementById('questTrack').innerText.includes('1 / '+n)",q['need'])
+        for _ in range(q['need']-1):
             await ev("() => GUILD.onKill({dead:true,type:'wolf'})")
         assert await ev("(id)=>GUILD.claim(id)",q['id'])
         g1=await ev("() => GAME.P.gold")
@@ -104,6 +109,23 @@ async def main():
         await ev("() => GAME.act()");await pg.wait_for_timeout(1300)
         assert await ev("() => document.getElementById('place').dataset.map")!='마을'
         assert not await ev("() => GAME.portalState().open")
+
+        # 던전 포탈도 같은 층/같은 자리/같은 몬스터 상태로 왕복.
+        await ev("() => { GAME.P.portalReadyAt=0; }")
+        assert await ev("() => __DUN.go(3)")
+        await pg.wait_for_timeout(900)
+        dbefore=await ev("() => ({s:__DUN.state(),x:GAME.P.x,y:GAME.P.y})")
+        assert dbefore['s']['floor']==3
+        assert await ev("() => GAME.useTownPortal()")
+        await pg.wait_for_timeout(1300)
+        ps=await ev("() => GAME.portalState()")
+        assert ps['open'] and ps['returnTo']=='dungeon' and ps['returnFloor']==3,ps
+        await ev("() => { const s=GAME.portalState();GAME.P.x=s.x;GAME.P.y=s.y; }")
+        await pg.wait_for_timeout(80);await ev("() => GAME.act()");await pg.wait_for_timeout(1300)
+        dafter=await ev("() => ({s:__DUN.state(),x:GAME.P.x,y:GAME.P.y})")
+        assert dafter['s']['floor']==3,(dbefore,dafter)
+        assert dafter['s']['monsters']==dbefore['s']['monsters'],(dbefore,dafter)
+        assert abs(dafter['x']-dbefore['x'])<40 and abs(dafter['y']-dbefore['y'])<40,(dbefore,dafter)
 
         assert not errs,errs
         print('guild + portal quick ok',{'gold':(g0,g1),'delivery':(c0,c1),'saved':active_id})
