@@ -224,10 +224,15 @@ function randomDropItem(){
   if(r<.62){ const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)]; return UI.make({kind:'weapon',wt,g:Math.random()<.25?2:1}); }
   const kinds=['head','body','hands','feet']; return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],g:Math.random()<.25?2:1});
 }
+function monsterExp(m){
+  const raw = (m.maxHp || 30) / 6 + (m.dmg || 0) * 0.6 + (m.ranged ? 2 : 0);
+  return Math.max(5, Math.min(30, Math.round(raw)));
+}
 function killMonster(m){
   m.dead=true;m.death=0;m.hp=0;
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:2+Math.floor(Math.random()*8),ph:Math.random()*7});
   if(Math.random()<.32){ const it=randomDropItem(); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7}); }
+  if (window.GAME && GAME.gainExp) GAME.gainExp(monsterExp(m));
 }
 function appendEncounterSprites(list){ if(!combatMap())return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
 function drawMonster(m){
