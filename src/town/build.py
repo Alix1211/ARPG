@@ -353,7 +353,7 @@ for name in ['bear','darkmage','demon','dragon','harpy','lich','orc','rabbit','r
             im = Image.open(p).convert('RGBA'); im.thumbnail((240,240), Image.LANCZOS); d[dr] = enc(im, 86)
     if d: MON3[name] = d
 MON1 = {}
-for name in ['goblin_01','slime_01','skeleton_01','spider_01','mushroom_01','gargoyle_01','elem_fire_01','elem_ice_01']:
+for name in ['goblin_01','slime_01','skeleton_01','spider_01','mushroom_01','gargoyle_01','elem_fire_01','elem_ice_01','mimic_01']:
     p = R + f'monsters/{name}.png'
     if os.path.exists(p):
         im = Image.open(p).convert('RGBA'); im.thumbnail((200,200), Image.LANCZOS); MON1[name.rsplit('_',1)[0]] = enc(im, 86)
@@ -379,10 +379,23 @@ og = bake_shadows(og, [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p
 OUT = dict(map=dict(w=outmap.OUT_W, h=outmap.OUT_H, ts=TS, px=PX), ground=enc(og, 80), mini=enc(og.resize((outmap.OUT_W * 6, outmap.OUT_H * 6), Image.LANCZOS), 80),
            blds=[], props=oprops, npcs=onpcs, name='성 밖 갈림길', spawn=[15.0 * TS, 5.7 * TS], back=[23.0 * TS, 27.9 * TS])
 
+# ---- 던전 타일·소품 ----
+DTI = {}
+for k in ['floor', 'floor_crack', 'floor_moss', 'wall_front', 'wall_front_moss', 'wall_top']:
+    im = Image.open(R + f'dungeon/tiles/{k}.png').convert('RGB').resize((TS, TS), Image.LANCZOS); DTI[k] = enc(im, 85)
+DPR = {}
+for k, src, wt, cw, cd in [('stairs_up', 'tiles/stairs_up', 1.0, 0, 0), ('stairs_down', 'tiles/stairs_down', 1.0, 0, 0), ('torch', 'props/torch', 0.55, 0, 0),
+                           ('pillar', 'props/pillar', 1.1, 0.6, 0.5), ('chest_closed', 'props/chest_closed', 1.0, 0.8, 0.4), ('chest_open', 'props/chest_open', 1.0, 0.8, 0.4),
+                           ('barrel', 'props/barrel', 0.8, 0.7, 0.35), ('jar', 'props/jar', 0.6, 0.6, 0.3), ('bones', 'props/bones', 0.9, 0, 0), ('cobweb', 'props/cobweb', 1.0, 0, 0)]:
+    im = Image.open(R + f'dungeon/{src}.png').convert('RGBA'); im = im.crop(im.getbbox())
+    w = wt * TS; h = w * im.height / im.width
+    assets['d_' + k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 86)
+    DPR[k] = dict(src=assets['d_' + k], w=w, h=h, cw=cw, cd=cd)
+
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR)
 js = open(os.path.join(HERE, 'town.js')).read()
-js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'field_dungeon.js')).read())
+js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read())
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t

@@ -139,7 +139,7 @@ function spawnFieldMonsters(theme){
   }
 }
 function afterDynamicBuild(id){
-  if(id==='field') spawnFieldMonsters(fieldTheme); else { monsters.length=0; dropsLoot.length=0; enemyShots.length=0; }
+  if(id==='field') spawnFieldMonsters(fieldTheme); else if(id==='dungeon') spawnDungeonMonsters(); else { dunGrid=null; monsters.length=0; dropsLoot.length=0; enemyShots.length=0; }
 }
 function monsterBlocked(x,y){ return blocked(x,y); }
 function moveMonster(m,dx,dy){
@@ -161,7 +161,7 @@ function hurtPlayer(v,dx,dy){
 }
 function updEncounters(dt){
   playerInv=Math.max(0,playerInv-dt);
-  if(MAP!=='field') return;
+  if(!combatMap()) return;
   for(const s of enemyShots){
     s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
     if(!s.done&&Math.hypot(s.x-P.x,s.y-(P.y-35))<18){ s.done=true; hurtPlayer(s.dmg,s.vx,s.vy); }
@@ -210,7 +210,7 @@ function killMonster(m){
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:2+Math.floor(Math.random()*8),ph:Math.random()*7});
   if(Math.random()<.32){ const it=randomDropItem(); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7}); }
 }
-function appendEncounterSprites(list){ if(MAP!=='field')return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
+function appendEncounterSprites(list){ if(!combatMap())return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
 function drawMonster(m){
   const a=m.dead?Math.max(0,1-m.death):1, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
   ctx.save();ctx.globalAlpha=a;ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
@@ -219,32 +219,26 @@ function drawMonster(m){
   ctx.restore();
 }
 function drawEncounterGround(){
-  if(MAP!=='field')return;
+  if(!combatMap())return;
   for(const d of dropsLoot){if(d.picked)continue;const bob=Math.sin(T*4+d.ph)*2;
     if(d.kind==='gold'){ctx.fillStyle='#ffe06a';ctx.strokeStyle='#8d5d18';ctx.lineWidth=2;ctx.beginPath();ctx.arc(d.x,d.y-8+bob,7,0,7);ctx.fill();ctx.stroke();}
     else{const im=A.icons[d.item.icon]?load(A.icons[d.item.icon]):null;if(im&&im.complete)ctx.drawImage(im,d.x-14,d.y-30+bob,28,28);}
   }
 }
 function drawEncounterFx(){
-  if(MAP!=='field')return;
+  if(!combatMap())return;
   for(const s of enemyShots){const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,10);g.addColorStop(0,'#fff');g.addColorStop(.35,'#d9a4ff');g.addColorStop(1,'rgba(125,60,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,11,0,7);ctx.fill();}
 }
 function drawEncounterMini(mx,sx,sy){
-  if(MAP!=='field')return;mx.fillStyle='#e3483c';for(const m of monsters)if(!m.dead&&!m.removed){mx.beginPath();mx.arc(m.x*sx,m.y*sy,2.2,0,7);mx.fill();}
+  if(!combatMap())return;mx.fillStyle='#e3483c';for(const m of monsters)if(!m.dead&&!m.removed){mx.beginPath();mx.arc(m.x*sx,m.y*sy,2.2,0,7);mx.fill();}
 }
 function autoAimMonster(){
-  if(MAP!=='field'||!monsters.length)return;
+  if(!combatMap()||!monsters.length)return;
   const lim=WPN&&(WPN.wt==='bow'||WPN.wt==='staff')?620:190; let best=null,bd=lim;
   for(const m of monsters){if(m.dead||m.removed)continue;const d=Math.hypot(m.x-P.x,m.y-P.y);if(d<bd){bd=d;best=m;}}
   if(!best)return;const dx=best.x-P.x,dy=best.y-P.y;
   if(Math.abs(dx)>Math.abs(dy)*.72||(dy>0&&Math.abs(dx)>16)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
 }
-function drawDungeonShade(){}
-function enterDungeonFromOut(){ say('던전 연결은 다음 작업에서 이어집니다.'); }
-function enterDungeonFromHere(){ say('던전 연결은 다음 작업에서 이어집니다.'); }
-function nextDungeonFloor(){ say('아래층은 다음 작업에서 이어집니다.'); }
-function previousDungeonFloor(){ say('윗층은 다음 작업에서 이어집니다.'); }
-function openDungeonChest(){ say('상자는 던전 작업에서 이어집니다.'); }
 
 window.__FD_READY=true;
 window.__FD={

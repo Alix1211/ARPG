@@ -51,10 +51,10 @@ for (const p of CUR.props){
     continue;
   }
   if (p.cw > 0) solids.push({ x0: p.x - p.w * p.cw / 2, x1: p.x + p.w * p.cw / 2, y0: p.y - p.cd, y1: p.y - 2 });
-  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom' };
+  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.flat ? -1e9 : p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom', mimic: p.mimic, flame: p.flame };
   sprites.push(s); if (p.tree) trees.push(s);
   if (p.kind === 'dummy'){ s.dummy = { hp: 0, wob: 0, ph: 0 }; dummies.push(s); }
-  if (p.name) spots.push({ name: p.name, x: p.x, y: p.y + 16, r: p.r || 46, kind: p.kind || 'prop', data: p });
+  if (p.name) spots.push({ name: p.name, x: p.x, y: p.flat ? p.y - p.h / 2 : p.y + 16, r: p.r || (p.flat ? 40 : 46), kind: p.kind || 'prop', data: p, prop: s });
 }
 for (const n of CUR.npcs) npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
 for (const n of npcs){
@@ -73,6 +73,7 @@ buildWorld('town');
 const P = { x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0 };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
+  if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
   for (const s of solids){
     const cx = Math.max(s.x0, Math.min(x, s.x1)), cy = Math.max(s.y0, Math.min(y, s.y1));
     if ((x - cx) ** 2 + (y - cy) ** 2 < P.r * P.r) return true;
@@ -502,14 +503,15 @@ function frame(now){
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
-  weather(dt, camX, camY, vw, vh);
+  const DUN = MAP === 'dungeon';
+  if (!DUN) weather(dt, camX, camY, vw, vh);
   updAtk(dt); updSkills(dt); if (typeof updEncounters === 'function') updEncounters(dt);
   if (MAP === 'town') updVils(dt, dayLook(DAY.t).lamp > 0.6);
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(G, 0, 0, MWp, MHp);
-  drawGroundFx();
+  if (!DUN) drawGroundFx();
   if (typeof drawEncounterGround === 'function') drawEncounterGround(dt);
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
@@ -518,6 +520,7 @@ function frame(now){
   if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list);
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
+    if (s.hide) continue;
     if (s.me){ drawMe(); continue; }
     if (s.vil){ drawVil(s.vil); continue; }
     if (s.mon){ drawMonster(s.mon, dt); continue; }
@@ -539,13 +542,13 @@ function frame(now){
     if (s.shadow){ ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(s.x + s.w * 0.10, s.y + 4, Math.max(8, s.w * 0.28), Math.max(3, s.w * 0.08), 0.22, 0, 7); ctx.fill(); }
     ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
-  drawLeaves();
+  if (!DUN) drawLeaves();
   drawFx(dt); if (typeof drawEncounterFx === 'function') drawEncounterFx(dt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + dt / DAYLEN) % 1;
-  drawDay(camX, camY);
+  if (!DUN) drawDay(camX, camY); else if ($('place').textContent !== CUR.name) $('place').textContent = CUR.name;
   if (typeof drawDungeonShade === 'function') drawDungeonShade(camX, camY);
-  drawRain(VW, VH);
+  if (!DUN) drawRain(VW, VH);
 
   const tag = $('tag');
   if (near && !panel){
