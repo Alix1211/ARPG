@@ -606,7 +606,7 @@ window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, walkableAt, nearestSafePosition,
-  isOpen:()=>!!panel, setOpen:v=>{panel=v;}, swing, say, setMax };
+  isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -779,8 +779,9 @@ function drawMini(camX, camY){
 
 let last = performance.now(), T = 0;
 function frame(now){
-  const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
-  let dx = joy.dx, dy = joy.dy;
+  const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
+  const simPaused=panel==='char',sdt=simPaused?0:dt;
+  let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
@@ -793,9 +794,9 @@ function frame(now){
     P.run = kb ? !keys.shift : mag > 0.82;
     const statusMul=typeof playerMoveFactor==='function'?playerMoveFactor():1,moveMul=1+Math.max(0,combatNow().move||0)/100;
     const sp=(P.run?320:165*Math.min(1,mag/.82))*(atkBusy()&&!WB[P.atk.wt].noSlow?.7:1)*statusMul*moveMul;   // 공격하면서 움직이면 조금 느려짐
-    move(dx / mag * sp * dt, dy / mag * sp * dt);
+    move(dx / mag * sp * sdt, dy / mag * sp * sdt);
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
-    P.t += dt;
+    P.t += sdt;
   } else P.t = 0;
   if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
   near = null; let bd = 1e9;
@@ -806,15 +807,15 @@ function frame(now){
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
   const DUN = MAP === 'dungeon';
-  if (!DUN) weather(dt, camX, camY, vw, vh);
-  updAtk(dt); updSkills(dt); if (typeof updEncounters === 'function') updEncounters(dt);
-  if (MAP === 'town') updVils(dt, dayLook(DAY.t).lamp > 0.6);
+  if (!DUN) weather(sdt, camX, camY, vw, vh);
+  updAtk(sdt); updSkills(sdt); if (typeof updEncounters === 'function') updEncounters(sdt);
+  if (MAP === 'town') updVils(sdt, dayLook(DAY.t).lamp > 0.6);
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(G, 0, 0, MWp, MHp);
   if (!DUN) drawGroundFx();
-  if (typeof drawEncounterGround === 'function') drawEncounterGround(dt);
+  if (typeof drawEncounterGround === 'function') drawEncounterGround(sdt);
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
@@ -825,7 +826,7 @@ function frame(now){
     if (s.hide) continue;
     if (s.me){ drawMe(); continue; }
     if (s.vil){ drawVil(s.vil); continue; }
-    if (s.mon){ drawMonster(s.mon, dt); continue; }
+    if (s.mon){ drawMonster(s.mon, sdt); continue; }
     if (s.dummy){ // 맞으면 흔들림
       const d = s.dummy; d.wob = Math.max(0, d.wob - dt * 2.2); d.ph += dt * 22;
       const sk = Math.sin(d.ph) * 0.09 * d.wob * (d.dir || 1);
@@ -845,9 +846,9 @@ function frame(now){
     ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
   if (!DUN) drawLeaves();
-  drawFx(dt); if (typeof drawEncounterFx === 'function') drawEncounterFx(dt);
+  drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  DAY.t = (DAY.t + dt / DAYLEN) % 1;
+  DAY.t = (DAY.t + sdt / DAYLEN) % 1;
   if (!DUN) drawDay(camX, camY); else if ($('place').textContent !== CUR.name) $('place').textContent = CUR.name;
   if (typeof drawDungeonShade === 'function') drawDungeonShade(camX, camY);
   if (!DUN) drawRain(VW, VH);
