@@ -405,6 +405,26 @@ html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t
 html = html.replace('/*VER*/', _t.strftime('%m%d-%H%M'))
-html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)
-open(os.path.join(ROOT, 'game', 'town.html'), 'w').write(html)
-print('ok', len(html) // 1024, 'KB')
+# 그림(data:)은 따로 game/art_<해시>.js 로 뺀다 — 그림이 안 바뀌면 파일 이름도 그대로라서
+# 앱·브라우저가 한 번 받은 그림을 다시 받지 않고, 평소 업데이트는 가벼운 town.html 만 받는다.
+ART = []
+def _pull(o):
+    if isinstance(o, str) and o.startswith('data:'):
+        ART.append(o); return '@@' + str(len(ART) - 1)
+    if isinstance(o, dict): return {k: _pull(v) for k, v in o.items()}
+    if isinstance(o, list): return [_pull(v) for v in o]
+    return o
+A2 = _pull(A)
+import hashlib, glob
+art_js = 'window.ART=' + json.dumps(ART) + ';'
+art_name = 'art_' + hashlib.sha1(art_js.encode()).hexdigest()[:10] + '.js'
+GAME_DIR = os.path.join(ROOT, 'game')
+for old_art in glob.glob(os.path.join(GAME_DIR, 'art_*.js')):
+    if os.path.basename(old_art) != art_name: os.remove(old_art)
+if not os.path.exists(os.path.join(GAME_DIR, art_name)): open(os.path.join(GAME_DIR, art_name), 'w').write(art_js)
+RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@@')?window.ART[+o.slice(2)]:o;"
+           "if(Array.isArray(o))return o.map(r);if(o&&typeof o==='object'){for(const k in o)o[k]=r(o[k]);}return o;})(")
+html = html.replace('<script>\n/*ASSETS*/', '<script src="' + art_name + '"></script>\n<script>\n/*ASSETS*/')
+html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
+open(os.path.join(GAME_DIR, 'town.html'), 'w').write(html)
+print('ok', len(html) // 1024, 'KB +', art_name, len(art_js) // 1024, 'KB')

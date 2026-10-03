@@ -43,7 +43,7 @@ jobs:
       - name: Publish built town.html
         shell: bash
         run: |
-          if git diff --quiet -- game/town.html; then
+          if [ -z "$(git status --porcelain -- game/)" ]; then
             echo "town.html unchanged"
             exit 0
           fi
@@ -54,6 +54,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add game/town.html
+          git add -A game/
           git commit -m "빌드: town.html 최신화"
           git push origin HEAD:main
