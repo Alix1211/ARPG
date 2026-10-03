@@ -7,6 +7,7 @@
 <style>
 :root{--ink:#3b2412;--paper:#f3e6c8;--gold:#c9923e;--red:#9e2a22}
 html,body{margin:0;height:100%;background:#1d1510;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",sans-serif}
+*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .hud{position:fixed;pointer-events:none}
 #tag{position:fixed;transform:translate(-50%,-100%);pointer-events:none;display:none;min-width:150px;height:46px;padding:0 26px;background:center/100% 100% no-repeat;color:#fff4d8;font-weight:800;font-size:15px;line-height:44px;text-align:center;white-space:nowrap;text-shadow:0 1px 2px #000}
@@ -176,6 +177,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 /*VER*/</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
+// 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
+for (const ev of ['contextmenu', 'selectstart', 'dragstart']) document.addEventListener(ev, e => e.preventDefault());
 window.addEventListener('error', e => { const d = document.getElementById('err'); d.style.display = 'block'; d.textContent = '오류: ' + e.message + ' (' + (e.lineno || '') + ')'; });
 </script>
 <script>
