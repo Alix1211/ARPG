@@ -377,6 +377,7 @@ function killMonster(m){
     if(m.boss&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
   }
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
+  if(window.GUILD)GUILD.onKill(m);
 }
 function appendEncounterSprites(list){ if(!combatMap())return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
 function drawMonster(m){
