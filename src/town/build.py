@@ -1,0 +1,198 @@
+import base64, io, json, random
+import numpy as np
+from PIL import Image, ImageFilter
+from scipy import ndimage as nd
+
+R = '/home/claude/arpg/assets/'
+TS = 48          # 게임 단위 칸 크기
+PX = 64          # 바닥 그림의 칸당 픽셀
+MW, MH = 46, 32  # 마을 크기(칸)
+random.seed(7); np.random.seed(7)
+
+def enc(img, q=82, fmt='WEBP'):
+    b = io.BytesIO(); img.save(b, fmt, quality=q, method=6)
+    return 'data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode()
+
+def tex(path):
+    t = Image.open(path).convert('RGB').resize((PX, PX), Image.LANCZOS)
+    a = np.asarray(t)
+    return np.tile(a, (MH, MW, 1)).astype(np.float32)
+
+W, H = MW * PX, MH * PX
+grass = tex(R + 'tiles/spring/grass.png')
+flower = tex(R + 'tiles/spring/grass_flower.png')
+cobble = tex(R + 'tiles/spring/path.png')
+dirt = tex(R + 'tiles/spring/dirt.png')
+sand = tex(R + 'tiles/spring/sand.png')
+water = tex(R + 'tiles/spring/water.png')
+
+yy, xx = np.mgrid[0:H, 0:W].astype(np.float32) / PX   # 칸 좌표
+def noise(scale, amp):
+    n = np.random.rand(H // 8 + 2, W // 8 + 2).astype(np.float32)
+    n = nd.gaussian_filter(n, scale / 8)
+    n = (n - n.mean()) / (n.std() + 1e-6)
+    n = np.asarray(Image.fromarray(n).resize((W, H), Image.BILINEAR))
+    return n * amp
+N1 = noise(24, 0.18); N2 = noise(60, 0.5)
+
+def rect_sdf(x0, y0, x1, y1):
+    dx = np.maximum(x0 - xx, xx - x1); dy = np.maximum(y0 - yy, yy - y1)
+    out = np.hypot(np.maximum(dx, 0), np.maximum(dy, 0))
+    inn = np.minimum(np.maximum(dx, dy), 0)
+    return out + inn  # 음수 = 안쪽
+
+def mask_from(sdf, soft=0.12, n=None):
+    d = sdf + (N1 if n is None else n)
+    return np.clip(0.5 - d / soft, 0, 1)[..., None]
+
+CACHE='/home/claude/town/ground.png'
+import os
+def make_ground():
+    img = grass.copy()
+    # 꽃 풀밭 무더기
+    fm = np.zeros((H, W), np.float32)
+    for _ in range(16):
+        cx, cy, r = random.uniform(1, MW - 1), random.uniform(1, MH - 1), random.uniform(1.0, 2.2)
+        fm = np.maximum(fm, np.clip(1.4 - np.hypot(xx - cx, yy - cy) / r + N2 * 0.6, 0, 1))
+    img = img * (1 - fm[..., None]) + flower * fm[..., None]
+
+    # ---- 길과 광장 (칸 좌표) ----
+    PLAZA = (13, 12.6, 33, 20.4)
+    COBBLE = [PLAZA, (21.2, 20, 24.8, 32.5)]              # 광장 + 성문으로 가는 큰길
+    DIRT = [(3, 15.4, 13.2, 17.6), (32.8, 15.4, 43, 17.6),  # 서·동쪽 흙길
+            (6.8, 10.5, 9.2, 15.6), (36.8, 10.5, 39.2, 15.6), # 촌장 집·전당포 앞
+            (14.3, 9.6, 16.3, 12.8), (30.4, 9.8, 32.4, 12.8)]
+
+    def union(rects):
+        s = np.full((H, W), 1e9, np.float32)
+        for r in rects: s = np.minimum(s, rect_sdf(*r))
+        return s
+    sd = union(DIRT)
+    md = mask_from(sd, 0.25)
+    shade = np.clip(0.5 - (sd + N1 - 0.12) / 0.25, 0, 1)[..., None] - md   # 풀 가장자리 그늘
+    img = img * (1 - 0.25 * np.clip(shade, 0, 1))
+    img = img * (1 - md) + dirt * md
+    sc = union(COBBLE)
+    mc = mask_from(sc, 0.06, N1 * 0.25)
+    rim = np.clip(0.5 - (sc - 0.10) / 0.10, 0, 1)[..., None] - mc
+    img = img * (1 - 0.35 * np.clip(rim, 0, 1))
+    img = img * (1 - mc) + cobble * mc
+
+    # 연못(북동쪽)
+    pc = (41.0, 5.0)
+    pd = np.hypot((xx - pc[0]) / 3.4, (yy - pc[1]) / 2.4) - 1 + N2 * 0.08
+    ms = np.clip(0.5 - (pd - 0.28) / 0.1, 0, 1)[..., None]
+    mw = np.clip(0.5 - pd / 0.06, 0, 1)[..., None]
+    img = img * (1 - ms) + sand * ms
+    img = img * (1 - mw) + water * mw
+
+    # 가장자리 살짝 어둡게
+    v = np.clip(np.minimum(np.minimum(xx, MW - xx), np.minimum(yy, MH - yy)) / 2.5, 0, 1)[..., None]
+    img = img * (0.72 + 0.28 * v)
+
+    return Image.fromarray(img.clip(0, 255).astype(np.uint8))
+if os.path.exists(CACHE):
+    ground = Image.open(CACHE).convert('RGB')
+else:
+    ground = make_ground(); ground.save(CACHE)
+
+
+# ---- 그림자 (해는 왼쪽 위: 그림자는 오른쪽 아래로 눕는다) ----
+def bake_shadows(base, items):
+    k = PX / TS
+    sh = Image.new('L', base.size, 0)
+    for it in items:
+        im = Image.open(it['path']).convert('RGBA')
+        w = max(1, round(it['w'] * k)); h = max(1, round(it['h'] * k))
+        a = im.resize((w, h), Image.LANCZOS).split()[3].point(lambda v: 255 if v > 90 else 0)
+        sq = it.get('sq', 0.42); hh = max(1, round(h * sq))
+        a = a.resize((w, hh), Image.BILINEAR)
+        shear = 0.55
+        ow = w + round(hh * shear)
+        a = a.transform((ow, hh), Image.AFFINE, (1, shear, -hh * shear, 0, 1, 0), Image.BILINEAR)
+        x0 = round(it['x'] * k - w / 2); y0 = round(it['y'] * k - hh)
+        foot = round(it.get('foot', 0.05) * h)   # 그림 아래 여백만큼 위로
+        sh.paste(255, (x0, y0 - foot), a)
+        # 밑동 접지 그림자
+        e = Image.new('L', (w, max(4, round(h * 0.12))), 0)
+        from PIL import ImageDraw
+        ImageDraw.Draw(e).ellipse((w * 0.04, 0, w * 0.96, e.height - 1), fill=200)
+        sh.paste(e, (x0, round(it['y'] * k - foot - e.height * 0.6)), e)
+    sh = sh.filter(ImageFilter.GaussianBlur(PX * 0.09))
+    arr = np.asarray(base).astype(np.float32)
+    m = np.asarray(sh).astype(np.float32)[..., None] / 255 * 0.42
+    tint = np.array([20, 30, 60], np.float32)
+    arr = arr * (1 - m) + tint * m
+    return Image.fromarray(arr.clip(0, 255).astype(np.uint8))
+
+# ---- 건물 ----
+# key, 이름, 중심x, 바닥y, 폭(칸), 문 x 보정(폭 비율)
+B = [
+ ('guild_hall', '길드 홀', 23, 12.4, 5.6, 0),
+ ('scholar_dome', '학자의 집', 15.3, 10.0, 4.6, 0),
+ ('manor_vault', '마을 금고', 31.4, 10.0, 5.6, 0),
+ ('cottage_thatch', '촌장 집', 8.0, 10.6, 4.6, 0.02),
+ ('townhouse_pawn', '전당포', 38.0, 10.6, 3.6, 0),
+ ('house_blue', '여관', 7.0, 15.2, 4.4, -0.05),
+ ('house_red', '민가', 3.6, 25.0, 4.6, 0),
+ ('tavern', '술집', 15.0, 25.6, 5.2, 0.05),
+ ('shop_general', '잡화점', 19.0, 21.6, 4.4, -0.08) if False else ('shop_general', '잡화점', 9.8, 24.4, 4.6, -0.08),
+ ('shop_weapons', '무기·방어구점', 30.6, 25.6, 4.8, 0),
+ ('smithy', '대장간', 36.2, 25.2, 5.0, -0.05),
+ ('shop_tools', '도구점', 41.6, 24.6, 4.6, 0),
+ ('watchtower', '망루', 17.6, 31.6, 2.6, 0),
+ ('watchtower', '망루', 28.4, 31.6, 2.6, 0),
+ ('gate_twin_tower', '성문 (던전으로)', 23, 32.4, 6.6, 0),
+]
+SCALE = 1.5   # 게임 단위 대비 그림 해상도
+imgs = {}
+for k in sorted(set(b[0] for b in B)):
+    im = Image.open(R + f'buildings/{k}.png').convert('RGBA')
+    imgs[k] = im
+blds = []
+assets = {}
+for k, name, cx, by, wt, dxr in B:
+    im = imgs[k]
+    w = wt * TS; h = w * im.height / im.width
+    if k not in assets:
+        assets[k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
+    blds.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, door=dxr))
+
+# 소품 (건물 부품 중 바닥에 세울 수 있는 것만)
+P = [('part_36', '의뢰 게시판', 26.6, 12.9, 1.5),
+     ('part_35', None, 9.6, 15.5, 0.75),
+     ('part_37', None, 33.2, 24.9, 0.8), ('part_37', None, 33.9, 25.3, 0.8), ('part_38', None, 39.0, 25.4, 0.9),
+     ('part_37', None, 12.3, 25.8, 0.8), ('part_38', None, 18.0, 25.8, 0.9),
+     ('part_34', None, 4.6, 15.6, 1.2), ('part_38', None, 44.2, 24.9, 0.9)]
+props = []
+for k, name, cx, by, wt in P:
+    im = Image.open(R + f'building_parts/{k}.png').convert('RGBA')
+    w = wt * TS; h = w * im.height / im.width
+    if k not in assets: assets[k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
+    props.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h))
+
+# 엘프
+el = {}
+for d in ['front', 'back', 'side']:
+    fr = []
+    for i in range(5):
+        im = Image.open(R + f'characters/elf/{d}_{i}.png').convert('RGBA')
+        fr.append(enc(im.resize((170, 172), Image.LANCZOS), 88))
+    el[d] = fr
+face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((70, 10, 280, 200)).resize((120, 108), Image.LANCZOS)
+
+ui = {}
+for k in ['04', '05', '06']:
+    ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
+
+SH = [dict(path=R + f"buildings/{b['k']}.png", x=b['x'], y=b['y'], w=b['w'], h=b['h'], sq=0.5 if b['k'] in ('watchtower','gate_twin_tower') else 0.42) for b in blds]
+SH += [dict(path=R + f"building_parts/{p['k']}.png", x=p['x'], y=p['y'], w=p['w'], h=p['h'], sq=0.5, foot=0.02) for p in props]
+ground = bake_shadows(ground, SH)
+mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)
+A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props)
+js = open('/home/claude/arpg/src/town/town.js').read()
+html = open('/home/claude/arpg/src/town/shell.html').read()
+html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)
+open('/home/claude/arpg/game/town.html', 'w').write(html)
+print('ok', len(html) // 1024, 'KB')
