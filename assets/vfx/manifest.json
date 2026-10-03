@@ -1,0 +1,382 @@
+{
+ "hit_spark_0": [
+  220,
+  226
+ ],
+ "hit_slash_0": [
+  261,
+  214
+ ],
+ "hit_spark_1": [
+  234,
+  219
+ ],
+ "hit_slash_1": [
+  257,
+  206
+ ],
+ "hit_spark_2": [
+  225,
+  227
+ ],
+ "hit_slash_2": [
+  238,
+  224
+ ],
+ "hit_spark_3": [
+  234,
+  219
+ ],
+ "hit_slash_3": [
+  268,
+  224
+ ],
+ "hit_spark_4": [
+  206,
+  221
+ ],
+ "hit_slash_4": [
+  243,
+  222
+ ],
+ "hit_rock_0": [
+  230,
+  184
+ ],
+ "hit_rock_1": [
+  215,
+  204
+ ],
+ "hit_rock_2": [
+  201,
+  204
+ ],
+ "hit_rock_3": [
+  218,
+  198
+ ],
+ "hit_rock_4": [
+  213,
+  200
+ ],
+ "hit_rock_5": [
+  246,
+  227
+ ],
+ "hit_rock_6": [
+  231,
+  219
+ ],
+ "hit_rock_7": [
+  233,
+  241
+ ],
+ "hit_rock_8": [
+  228,
+  237
+ ],
+ "hit_rock_9": [
+  241,
+  219
+ ],
+ "hit_rock_10": [
+  250,
+  203
+ ],
+ "hit_rock_11": [
+  223,
+  198
+ ],
+ "hit_rock_12": [
+  244,
+  211
+ ],
+ "hit_rock_13": [
+  239,
+  211
+ ],
+ "hit_rock_14": [
+  237,
+  214
+ ],
+ "burst_fire_0": [
+  214,
+  241
+ ],
+ "burst_fire_1": [
+  250,
+  251
+ ],
+ "burst_fire_2": [
+  256,
+  244
+ ],
+ "burst_fire_3": [
+  232,
+  248
+ ],
+ "burst_fire_4": [
+  239,
+  224
+ ],
+ "burst_ice_0": [
+  229,
+  173
+ ],
+ "burst_ice_1": [
+  260,
+  209
+ ],
+ "burst_ice_2": [
+  234,
+  241
+ ],
+ "burst_ice_3": [
+  257,
+  221
+ ],
+ "burst_ice_4": [
+  186,
+  137
+ ],
+ "burst_volt_0": [
+  238,
+  461
+ ],
+ "burst_volt_1": [
+  263,
+  238
+ ],
+ "burst_volt_2": [
+  258,
+  236
+ ],
+ "burst_volt_3": [
+  257,
+  238
+ ],
+ "burst_volt_4": [
+  227,
+  480
+ ],
+ "burst_poison_0": [
+  251,
+  232
+ ],
+ "burst_poison_1": [
+  247,
+  229
+ ],
+ "burst_poison_2": [
+  245,
+  236
+ ],
+ "burst_poison_3": [
+  201,
+  111
+ ],
+ "burst_poison_4": [
+  487,
+  227
+ ],
+ "burst_dark_0": [
+  236,
+  253
+ ],
+ "burst_dark_1": [
+  278,
+  262
+ ],
+ "burst_dark_2": [
+  249,
+  246
+ ],
+ "burst_dark_3": [
+  256,
+  251
+ ],
+ "burst_dark_4": [
+  227,
+  264
+ ],
+ "status_big_fire": [
+  197,
+  211
+ ],
+ "status_big_ice": [
+  188,
+  220
+ ],
+ "status_big_volt": [
+  196,
+  219
+ ],
+ "status_big_blood": [
+  193,
+  216
+ ],
+ "status_big_slow": [
+  194,
+  216
+ ],
+ "status_big_stone": [
+  231,
+  211
+ ],
+ "status_big_poison": [
+  168,
+  217
+ ],
+ "status_icon_fire": [
+  142,
+  142
+ ],
+ "status_icon_ice": [
+  143,
+  143
+ ],
+ "status_icon_volt": [
+  142,
+  142
+ ],
+ "status_icon_blood": [
+  144,
+  142
+ ],
+ "status_icon_slow": [
+  143,
+  143
+ ],
+ "status_icon_stone": [
+  142,
+  142
+ ],
+ "status_icon_poison": [
+  142,
+  142
+ ],
+ "status_ground_fire": [
+  193,
+  156
+ ],
+ "status_ground_ice": [
+  201,
+  166
+ ],
+ "status_ground_volt": [
+  203,
+  166
+ ],
+ "status_ground_blood": [
+  181,
+  151
+ ],
+ "status_ground_slow": [
+  197,
+  149
+ ],
+ "status_ground_stone": [
+  233,
+  156
+ ],
+ "status_ground_poison": [
+  201,
+  152
+ ],
+ "status_down_fire": [
+  161,
+  137
+ ],
+ "status_down_ice": [
+  162,
+  140
+ ],
+ "status_down_volt": [
+  170,
+  144
+ ],
+ "status_down_blood": [
+  164,
+  137
+ ],
+ "status_down_slow": [
+  169,
+  130
+ ],
+ "status_down_stone": [
+  157,
+  139
+ ],
+ "status_down_poison": [
+  155,
+  130
+ ],
+ "ring_gold": [
+  109,
+  93
+ ],
+ "ring_blue": [
+  92,
+  109
+ ],
+ "ring_red": [
+  198,
+  148
+ ],
+ "vortex": [
+  154,
+  133
+ ],
+ "heal_gold": [
+  168,
+  144
+ ],
+ "heal_green": [
+  154,
+  137
+ ],
+ "heal_arrow": [
+  159,
+  134
+ ],
+ "heal_pink": [
+  171,
+  135
+ ],
+ "star_gold": [
+  129,
+  134
+ ],
+ "ring_green": [
+  156,
+  125
+ ],
+ "shot_fire": [
+  160,
+  109
+ ],
+ "shot_ice": [
+  202,
+  141
+ ],
+ "shot_rock": [
+  146,
+  86
+ ],
+ "shot_poison": [
+  175,
+  102
+ ],
+ "shot_dark": [
+  160,
+  129
+ ],
+ "shot_blade": [
+  196,
+  122
+ ],
+ "shot_holy": [
+  213,
+  135
+ ]
+}

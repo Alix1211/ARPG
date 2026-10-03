@@ -254,7 +254,7 @@ function applyPlayerStatus(kind,dur){
 }
 function hurtPlayer(v,dx,dy,status,statusDur){
   if(playerInv>0||traveling) return false;
-  playerInv=.55; rawPlayerDamage(v);
+  playerInv=.55; rawPlayerDamage(v); sfx.push({type:'hurt',t:0,x:P.x,y:P.y-42,r:36});
   const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
   if(status) applyPlayerStatus(status,statusDur);
   return true;
@@ -397,6 +397,7 @@ function hitMonster(m,d,stagger,dmOver){
   const q=Math.hypot(d[0],d[1])||1,k=stagger?20:12,nx=m.x+d[0]/q*k,ny=m.y+d[1]/q*k;
   if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;}
   pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
+  sfx.push({type:'hit',t:0,x:m.x,y:m.y-m.h*.55,r:crit?58:40,crit});
   if(m.hp<=0)killMonster(m);
 }
 function monsterTier(m){
@@ -432,6 +433,7 @@ function killMonster(m){
     m.revived=true;m.dead=true;m.death=0;m.hp=0;m.reviveT=1.5;return;
   }
   m.dead=true;m.death=0;m.hp=0;
+  sfx.push({type:'kill',t:0,x:m.x,y:m.y,r:44});
   const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.boss?6:(m.type==='mimic'?2:1);
   const coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55)*(1+coinBonus/100)*rewardMul);
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
@@ -447,12 +449,13 @@ function appendEncounterSprites(list){if(!combatMap())return;drawEnemySkillFx();
 function drawEnemySkillFx(){
   ctx.save();
   for(const s of enemyShots){
-    if(s.kind==='rock'){
+    if(s.kind==='rock'&&!vfxReady('shot_rock')){
       ctx.fillStyle='#7b6248';ctx.strokeStyle='#c1a27d';ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(s.x,s.y,8,0,7);ctx.fill();ctx.stroke();
     }
   }
   for(const h of enemyHazards){
+    if(vfxHazard(h))continue;
     const p=Math.max(0,Math.min(1,h.t/Math.max(.01,h.delay))),r=(h.r||40)*(0.35+p*.65);
     ctx.globalAlpha=.25+.5*(1-p);
     ctx.strokeStyle=h.kind==='slime'?'#8cff38':'#ff9b42';ctx.lineWidth=3;
@@ -465,11 +468,14 @@ function drawMonster(m){
   ctx.save();ctx.globalAlpha=a;
   if(m.chargeWind>0){ctx.strokeStyle='#ff6b42';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,34+Math.sin(T*18)*4,12,0,0,7);ctx.stroke();}
   if(m.enraged){ctx.strokeStyle='rgba(255,60,35,.55)';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(m.x,m.y-m.h*.42,m.w*.45,m.h*.52,0,0,7);ctx.stroke();}
-  if(m.burnT>0){ctx.strokeStyle='rgba(255,105,30,.8)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y-m.h*.35,m.w*.38,m.h*.38,0,0,7);ctx.stroke();}
-  if(m.slowT>0||m.freezeT>0){ctx.strokeStyle='rgba(90,190,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.38,8,0,0,7);ctx.stroke();}
+  if(!vfxMonsterGround(m)){
+    if(m.burnT>0){ctx.strokeStyle='rgba(255,105,30,.8)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y-m.h*.35,m.w*.38,m.h*.38,0,0,7);ctx.stroke();}
+    if(m.slowT>0||m.freezeT>0){ctx.strokeStyle='rgba(90,190,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.38,8,0,0,7);ctx.stroke();}
+  }
   ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
   const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
   if(!m.dead&&(m.hurt>0||m.state==='chase')){const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
+  if(!m.dead)vfxMonsterIcons(m,m.y-m.h-10);
   ctx.restore();
 }
 function dropImage(icon){
@@ -487,7 +493,7 @@ function drawEncounterGround(){
 function drawEncounterFx(){
   if(!combatMap())return;
   for(const h of enemyHazards){
-    if(h.kind==='lightning'){
+    if(h.kind==='lightning'&&!vfxReady('ring_gold')){
       if(h.t<h.delay){
         const k=h.t/h.delay;ctx.save();ctx.globalAlpha=.35+.45*k;ctx.strokeStyle='#ffe45c';ctx.lineWidth=3;
         ctx.beginPath();ctx.arc(h.x,h.y,h.r*(1-.35*k),0,7);ctx.stroke();ctx.restore();
@@ -498,6 +504,7 @@ function drawEncounterFx(){
     }
   }
   for(const s of enemyShots){
+    if(vfxEnemyShot(s))continue;
     const col=s.kind==='stone'?'#b7b7a6':s.kind==='web'?'#e8f7ff':s.kind==='burn'?'#ff8a33':s.kind==='slow'?'#8edcff':s.kind==='feather'?'#ffd8ef':'#d9a4ff';
     const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,10);g.addColorStop(0,'#fff');g.addColorStop(.35,col);g.addColorStop(1,'rgba(80,50,130,0)');
     ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,s.kind==='stone'?13:11,0,7);ctx.fill();

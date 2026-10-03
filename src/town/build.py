@@ -405,10 +405,19 @@ for k, src, wt, cw, cd in [('stairs_up', 'tiles/stairs_up', 1.0, 0, 0), ('stairs
 SFXF = {}
 for f in sorted(glob.glob(R + 'sfx/*.mp3')) if 'glob' in dir() else []:
     SFXF[os.path.basename(f)[:-4]] = 'data:audio/mpeg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
-A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+# 전투 이펙트 그림(assets/vfx, tools/vfx_slice.py로 시트에서 자른 것). 쓰는 종류만, 종류별 최대 크기로 줄여 담는다.
+VFXA = {}
+VFX_MAX = {'burst_': 224, 'hit_': 128, 'shot_': 128, 'ring_': 256, 'heal_': 240, 'status_icon_': 56, 'status_down_': 56, 'status_ground_': 128}
+for f in sorted(_g.glob(R + 'vfx/*.png')):
+    nm = os.path.basename(f)[:-4]
+    mx = next((v for k, v in VFX_MAX.items() if nm.startswith(k)), 0)
+    if not mx: continue
+    im = Image.open(f).convert('RGBA'); im.thumbnail((mx, mx), Image.LANCZOS)
+    VFXA[nm] = enc(im, 86)
+A = dict(vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF)
 js = open(os.path.join(HERE, 'town.js')).read()
-js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
+js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'vfx.js')).read() + '\n' + open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t

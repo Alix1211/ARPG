@@ -663,7 +663,7 @@ function drawVil(v){
 // ======================= 휘두르기 · 말풍선 · 인터페이스 연결 =======================
 let bubble = null;
 function say(txt){ bubble = { txt, t: 0 }; }
-function drawFx(dt){ drawShots(dt); drawSkillFx(dt); }
+function drawFx(dt){ drawShots(dt); drawSkillFx(dt); if (typeof vfxPlayerStatus === 'function') vfxPlayerStatus(); }
 function drawBubble(dt, camX, camY){
   const b = $('bubble');
   if (!bubble){ b.style.display = 'none'; return; }
@@ -1098,13 +1098,14 @@ function drawShots(dt){
       if (!s.done && s.t > s.life) boom(s, null);
     }
     if (s.done){ // 지팡이 폭발 고리
-      if (s.blast){ s.bt = (s.bt || 0) + dt; const k = Math.min(1, s.bt / 0.3);
+      if (s.blast && !vfxReady('burst_fire_0')){ s.bt = (s.bt || 0) + dt; const k = Math.min(1, s.bt / 0.3);
         ctx.globalAlpha = 1 - k; ctx.strokeStyle = s.kind === 'fire' ? '#ffb070' : '#bfe4ff'; ctx.lineWidth = 4 * (1 - k) + 1;
         ctx.beginPath(); ctx.ellipse(s.x, s.y, s.blast * (0.4 + 0.6 * k), s.blast * (0.25 + 0.4 * k), 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
       continue;
     }
     const al = Math.min(1, (s.life - s.t) / 0.15); ctx.globalAlpha = Math.max(0, al);
     const a = Math.atan2(s.vy, s.vx);
+    if (vfxShot(s, a)) continue;
     if (s.kind === 'bow'){
       ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(a);
       ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(8, 0); ctx.stroke();
@@ -1202,8 +1203,9 @@ function updSkills(dt){
 }
 function drawSkillFx(dt){
   for(const f of sfx){
-    f.t+=dt;const dur=(f.type==='fireburst'||f.type==='iceburst')?.48:.38,k=f.t/dur;if(k>1)continue;
+    f.t+=dt;const dur=({heal:.75,hit:.26,hurt:.3,kill:.55,fireburst:.55,iceburst:.55,icehit:.45,castfire:.5,castice:.5,slashpower:.42,spinpower:.45})[f.type]||.38,k=f.t/dur;if(k>1)continue;
     const x=f.x??P.x,y=f.y??P.y-30,r=f.r||72;
+    if(vfxSkill(f,k,x,y,r))continue;
     ctx.save();ctx.globalAlpha=Math.max(0,1-k);ctx.lineCap='round';
     if(f.type==='heal'){
       ctx.strokeStyle='#8dffb0';ctx.lineWidth=5*(1-k)+2;
@@ -1229,7 +1231,7 @@ function drawSkillFx(dt){
     }
     ctx.restore();
   }
-  while(sfx.length&&sfx[0].t>.5)sfx.shift();
+  while(sfx.length&&sfx[0].t>.8)sfx.shift();
 }
 
 // 휘두름 궤적(초승달)
