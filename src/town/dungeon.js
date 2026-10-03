@@ -5,10 +5,20 @@ const combatMap = () => MAP === 'field' || MAP === 'dungeon';
 const DT = {}; for (const k in A.dtiles) DT[k] = load(A.dtiles[k]);
 const DP = {}; for (const k in A.dprops) DP[k] = load(A.dprops[k].src);
 Object.assign(MOBDEF, {
-  gargoyle: { hp: 60, sp: 56, dmg: 8 }, mimic: { hp: 70, sp: 70, dmg: 10 },
-  lich: { hp: 320, sp: 50, dmg: 14, ranged: 1, range: 240 },
+  gargoyle: { hp:68, sp:48, dmg:8, ranged:1, range:195, skill:'petrify' },
+  mimic: { hp:82, sp:76, dmg:11, skill:'charge' },
+  lich: { hp:320, sp:50, dmg:14, ranged:1, range:250, skill:'lightning' },
 });
-const DUN_MOBS = [['slime', 'spider', 'skeleton', 'goblin'], ['skeleton', 'spider', 'gargoyle', 'darkmage'], ['skeleton', 'gargoyle', 'darkmage', 'orc']];
+const DUN_MOBS = [
+  ['slime','spider','skeleton','goblin'],
+  ['wolf','spider','skeleton','rogue'],
+  ['skeleton','gargoyle','darkmage','orc'],
+  ['bear','gargoyle','elem_ice','darkmage'],
+  ['gargoyle','elem_ice','darkmage','harpy'],
+  ['demon','elem_fire','orc','darkmage'],
+  ['demon','harpy','gargoyle','darkmage']
+];
+const dungeonTier = floor => Math.max(1,Math.min(7,Math.ceil(Math.max(1,floor)/3)));
 let dunFloor = 0, dunGrid = null, dunW = 44, dunH = 32, dunMaxFloor = 0;
 
 // ---- 지도 만들기: 방 + 복도 ----
@@ -105,24 +115,27 @@ async function prepareDungeon(floor){
   MAPS.dungeon = map; return map;
 }
 function spawnDungeonMonsters(){
-  monsters.length = 0; dropsLoot.length = 0; enemyShots.length = 0;
-  const M = MAPS.dungeon, tier = Math.min(2, Math.floor((dunFloor - 1) / 2)), pool = DUN_MOBS[tier];
-  const hpK = 1 + 0.25 * (dunFloor - 1), dmK = 1 + 0.18 * (dunFloor - 1);
-  const add = (type, x, y, boss) => {
-    const d = MOBDEF[type], imgs = mobImageSet(type); if (!d || !imgs) return;
-    const sc = boss ? 1.7 : type === 'gargoyle' || type === 'orc' ? 1.1 : type === 'slime' || type === 'spider' ? 0.8 : 1, w = 82 * sc;
-    monsters.push({ monster: 1, type, boss: !!boss, x, y, w, h: w, hp: Math.round(d.hp * hpK * (boss ? 1 : 1)), maxHp: Math.round(d.hp * hpK), sp: d.sp, dmg: Math.round(d.dmg * dmK),
-      ranged: d.ranged || 0, range: d.range || 42, imgs, face: 'front', flip: false, state: 'wander', tx: x, ty: y, wait: Math.random() * 2, cd: Math.random(), hurt: 0, stun: 0, dead: false, death: 0 });
+  monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;
+  const M=MAPS.dungeon,tier=dungeonTier(dunFloor),pool=DUN_MOBS[tier-1];
+  const hpK=1+(tier-1)*.58+((dunFloor-1)%3)*.12;
+  const dmK=1+(tier-1)*.36+((dunFloor-1)%3)*.08;
+  const add=(type,x,y,boss)=>{
+    const d=MOBDEF[type],imgs=mobImageSet(type);if(!d||!imgs)return;
+    const sc=boss?1.7:type==='gargoyle'||type==='orc'?1.1:type==='slime'||type==='spider'?.8:1,w=82*sc;
+    const hp=Math.round(d.hp*hpK*(boss?2.3:1)),dmg=Math.round(d.dmg*dmK*(boss?1.25:1));
+    monsters.push({monster:1,type,boss:!!boss,tier,x,y,w,h:w,hp,maxHp:hp,sp:d.sp*(1+(tier-1)*.025),dmg,
+      ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',
+      skillCd:1+Math.random()*2,imgs,face:'front',flip:false,state:'wander',tx:x,ty:y,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   };
-  for (const r of M.rooms){
-    if (r === M.startRoom) continue;
-    const n = 2 + Math.floor(Math.random() * 3) + (dunFloor > 2 ? 1 : 0);
-    for (let i = 0; i < n; i++) add(pool[Math.floor(Math.random() * pool.length)], (r.x + 1 + Math.random() * (r.w - 2)) * TS, (r.y + 1.5 + Math.random() * (r.h - 2)) * TS);
+  for(const r of M.rooms){
+    if(r===M.startRoom)continue;
+    const n=2+Math.floor(Math.random()*3)+Math.min(3,tier-1);
+    for(let i=0;i<n;i++) add(pool[Math.floor(Math.random()*pool.length)],(r.x+1+Math.random()*(r.w-2))*TS,(r.y+1.5+Math.random()*(r.h-2))*TS,false);
   }
-  if (dunFloor % 3 === 0) add('lich', M.farRoom.cx * TS, (M.farRoom.cy - 1) * TS, true);   // 3층마다 우두머리
-  // 상자 중 하나는 미믹일 수도
-  if (Math.random() < 0.35){ const c = M.props.find(p => p.kind === 'chest'); if (c){ c.mimic = 1; } }
+  if(dunFloor%3===0) add('lich',M.farRoom.cx*TS,(M.farRoom.cy-1)*TS,true);
+  if(Math.random()<.35){const c=M.props.find(p=>p.kind==='chest');if(c)c.mimic=1;}
 }
+
 // ---- 들어가기·층 이동 ----
 async function goDungeon(floor, fromAbove){
   say(floor === 1 ? '어둡고 축축하다… 돈 냄새가 난다.' : '지하 ' + floor + '층');
@@ -142,13 +155,13 @@ function openDungeonChest(spot){
   if (src.mimic){ // 미믹!
     p.opened = 1; p.hide = 1; spots.splice(spots.indexOf(spot), 1);
     const d = MOBDEF.mimic, imgs = mobImageSet('mimic');
-    if (imgs) monsters.push({ monster: 1, type: 'mimic', x: p.x, y: p.y, w: 80, h: 80, hp: Math.round(d.hp * (1 + 0.25 * (dunFloor - 1))), maxHp: d.hp, sp: d.sp, dmg: d.dmg, ranged: 0, range: 42, imgs, face: 'front', flip: false, state: 'chase', tx: p.x, ty: p.y, wait: 0, cd: 0.6, hurt: 0, stun: 0, dead: false, death: 0 });
+    if (imgs){ const tier=dungeonTier(dunFloor),hp=Math.round(d.hp*(1+(tier-1)*.58)); monsters.push({monster:1,type:'mimic',tier,x:p.x,y:p.y,w:80,h:80,hp,maxHp:hp,sp:d.sp,dmg:Math.round(d.dmg*(1+(tier-1)*.36)),ranged:0,range:42,skill:d.skill||'charge',skillCd:1,imgs,face:'front',flip:false,state:'chase',tx:p.x,ty:p.y,wait:0,cd:.6,hurt:0,stun:0,dead:false,death:0}); }
     say('상자가… 이빨이 있다?!'); return;
   }
   p.opened = 1; p.img = BI.d_chest_open || p.img; spots.splice(spots.indexOf(spot), 1);
   const gold = 15 + Math.floor(Math.random() * 20) * dunFloor;
   dropsLoot.push({ kind: 'gold', x: p.x - 12, y: p.y + 14, amount: gold, ph: 0 });
-  if (Math.random() < 0.7){ const it = randomDropItem(); if (it) dropsLoot.push({ kind: 'item', x: p.x + 14, y: p.y + 14, item: it, ph: 1 }); }
+  if (Math.random() < 0.7){ const it = randomDropItem({tier:dungeonTier(dunFloor)}); if (it) dropsLoot.push({ kind:'item', x:p.x+14, y:p.y+14, item:it, ph:1 }); }
   say('금화 냄새!');
 }
 // ---- 어둠과 불빛 (화면 좌표) ----
@@ -177,4 +190,4 @@ function drawDungeonShade(camX, camY){
   ctx.globalCompositeOperation = 'source-over'; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-window.__DUN = { go: goDungeon, state: () => ({ map: MAP, floor: dunFloor, monsters: monsters.filter(m => !m.dead).length, chests: spots.filter(s => s.kind === 'chest').length, name: CUR.name }), spots: () => spots.map(s => [s.kind, Math.round(s.x), Math.round(s.y)]) };
+window.__DUN = { go:goDungeon, tier:()=>dungeonTier(dunFloor), state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name}), spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)]) };
