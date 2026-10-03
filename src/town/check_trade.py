@@ -11,6 +11,19 @@ async def main():
         errs=[]; pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.goto(URL); await pg.wait_for_timeout(1000)
 
+        # HUD 기본 진입: 초상화는 능력치, 가방 버튼은 장비.
+        await pg.click('#me .ring'); await pg.wait_for_timeout(100)
+        assert await pg.evaluate("() => document.getElementById('char').classList.contains('on')")
+        assert await pg.evaluate("() => document.getElementById('tabSt').classList.contains('on')")
+        await pg.click('#charClose'); await pg.wait_for_timeout(80)
+
+        await pg.click('#bagBtn'); await pg.wait_for_timeout(100)
+        assert await pg.evaluate("() => document.getElementById('tabEq').classList.contains('on')")
+        await pg.click('#tabTr'); await pg.wait_for_timeout(100)
+        assert await pg.evaluate("() => document.getElementById('tabTr').classList.contains('on')")
+        assert await pg.evaluate("() => document.querySelectorAll('#bagPane .tc').length") == 24
+        await pg.click('#charClose'); await pg.wait_for_timeout(80)
+
         assert await pg.evaluate("() => !!document.getElementById('tabTr')")
         assert await pg.evaluate("() => TRADE.goods.length") == 25
         assert await pg.evaluate("() => Object.keys(TRADE.regions).length") == 8
