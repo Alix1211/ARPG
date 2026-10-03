@@ -173,15 +173,18 @@ function pointInSolid(px, py, pad=0){
   return false;
 }
 function spawnFieldMonsters(theme){
-  monsters.length=0; dropsLoot.length=0; enemyShots.length=0;
-  const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16;
+  monsters.length=0; dropsLoot.length=0; enemyShots.length=0; enemyHazards.length=0;
+  const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16, tier=FIELD_TIER[theme]||1;
+  const hpMul=1+(tier-1)*.55, dmgMul=1+(tier-1)*.34, spMul=1+(tier-1)*.035;
   for(let i=0;i<count;i++){
     let x=0,y=0,t=0;
     do{ x=7+Math.random()*48; y=3+Math.random()*34; t++; }
     while(t<140&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||pointInSolid(x*TS,y*TS,24)));
     const type=pool[i%pool.length], d=MOBDEF[type], imgs=mobImageSet(type); if(!imgs) continue;
-    const sc=type==='bear'||type==='demon'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
-    monsters.push({monster:1,type,x:x*TS,y:y*TS,w,h,hp:d.hp,maxHp:d.hp,sp:d.sp,dmg:d.dmg,ranged:d.ranged||0,range:d.range||42,
+    const sc=type==='bear'||type==='demon'||type==='gargoyle'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
+    const hp=Math.round(d.hp*hpMul), dmg=Math.max(1,Math.round(d.dmg*dmgMul));
+    monsters.push({monster:1,type,tier,x:x*TS,y:y*TS,w,h,hp,maxHp:hp,sp:d.sp*spMul,dmg,ranged:d.ranged||0,range:d.range||42,
+      skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:1.0+Math.random()*2.2,
       imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   }
 }
