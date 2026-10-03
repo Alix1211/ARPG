@@ -510,5 +510,6 @@ window.__FD={
     m.x=P.x+dx;m.y=P.y+dy;m.vx=m.vy=0;return {x:m.x,y:m.y};
   },
   debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
+  debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
   prepareField,openRegionSelect
 };
