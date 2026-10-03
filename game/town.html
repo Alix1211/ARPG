@@ -52,8 +52,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 
 #guild{left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,94vw);max-height:86vh;display:none;overflow:auto}
 #guild.on{display:block}
-#guildHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#guildHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-right:52px;position:relative}
 #guildHead b{font-size:20px}#guildHead small{color:#8a5a2a;font-weight:800}
+#guildClose{position:absolute;right:-10px;top:-12px;width:48px;height:48px;border:0;background:var(--x) center/100% 100% no-repeat;filter:drop-shadow(0 2px 3px #0008);z-index:3}
 #gActive,#gBoard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:6px 0 12px}
 .gq{border:2px solid #b69055;background:#f3e5c8cc;border-radius:10px;padding:9px;color:var(--ink);min-height:98px}
 .gq.done{box-shadow:inset 0 0 0 2px #d39b24}
@@ -103,6 +104,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .icmp{font-size:11px;color:#6b5b45}
 .ibtns{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .3s;z-index:20}
+#fade.slow{transition-duration:.55s}
 #fade.on{opacity:1}
 
 /* ---- HUD (케인 시안: 좌상단 초상·체력·마나·작은 고리 / 우상단 둥근 미니맵 / 좌하단 조이스틱 / 우하단 큰 공격 버튼 + 스킬 5칸 + 교체) ---- */
@@ -168,8 +170,17 @@ html.app #fs{display:none}
 .skrank{font-size:10px;font-weight:900;min-width:26px;text-align:center;color:#6b3d18}
 .growplus{width:25px;height:25px;border:1px solid #9b6d35;background:#6d421d;color:#ffe9b5;border-radius:6px;font-weight:900;padding:0;line-height:22px}
 .growplus:disabled{opacity:.3}
-.passrow,.liferow,.masterrow{display:grid;grid-template-columns:92px 52px 1fr 82px;gap:5px;align-items:center;min-height:34px;border-top:1px solid #9b7d5533;font-size:11px}
-.passrow b,.liferow b,.masterrow b{font-size:12px}.passrow small,.liferow small,.masterrow small{color:#6b5b45}
+.passgrid,.lifegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:4px 0 8px}
+.skilltile{display:grid;grid-template-columns:50px 1fr 26px;grid-template-rows:23px 25px;gap:0 6px;align-items:center;min-height:56px;border:1px solid #a7855738;border-radius:9px;background:#f3e5c866;padding:4px 5px}
+.skilltile .skc{grid-row:1/3;grid-column:1;width:46px;height:46px}
+.skilltile .stname{grid-column:2;font-size:12px;font-weight:900;color:#5e3517;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skilltile .stdesc{grid-column:2;font-size:10px;color:#6b5b45;line-height:1.15;align-self:start}
+.skilltile .stplus{grid-column:3;grid-row:1;width:25px;height:25px}
+.skilltile .strank{grid-column:3;grid-row:2;font-size:9px;font-weight:900;text-align:center;color:#7a3b1a}
+.skilltile.lock{filter:grayscale(.8);opacity:.58}
+.skilltile .skc.life{cursor:default}.skilltile .skc.drag{cursor:grab;touch-action:none}
+.masterrow{display:grid;grid-template-columns:92px 52px 1fr 82px;gap:5px;align-items:center;min-height:34px;border-top:1px solid #9b7d5533;font-size:11px}
+.masterrow b{font-size:12px}.masterrow small{color:#6b5b45}
 .sectionhead{font-size:13px;font-weight:900;margin:8px 0 3px;color:#7a3b1a}
 .statplus{margin-left:auto;width:24px;height:24px;border:1px solid #8d6332;background:#6c421f;color:#ffe8b8;border-radius:50%;font-weight:900}
 #rot{position:fixed;inset:0;background:#1d1510;color:#f3e6c8;display:none;align-items:center;justify-content:center;font-size:18px;font-weight:800;text-align:center}
@@ -190,7 +201,7 @@ html.app #fs{display:none}
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
   <div class="row"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn ghost" type="button" data-close>닫기</button></div></div></div>
-<div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small></div><div class="gsect">진행 중 의뢰</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
+<div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small><button id="guildClose" type="button" data-close aria-label="닫기"></button></div><div class="gsect">진행 중 의뢰</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
 <div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><div id="shopTabs"><button class="btn on" id="tabBuy" type="button">사기</button><button class="btn" id="tabSell" type="button">팔기</button></div><small>내 금화 <b id="shopGold">0</b></small></div>
   <div id="shopMarket"></div>
   <div id="grid"></div>
@@ -204,7 +215,7 @@ html.app #fs{display:none}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1127</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1217</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -255,6 +266,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 // ======================= 배치 =======================
 const solids = [], spots = [], sprites = [], trees = [], npcs = [], dummies = [], exits = [];
 let lamps = [];
+let townPortalReturn=null,portalArrivalUntil=0;
+const TOWN_PORTAL_X=26.15*TS,TOWN_PORTAL_Y=19.15*TS;
 function buildWorld(id){
   MAP = id; CUR = MAPS[id]; G = CUR.G; MINI = CUR.MINI; MWp = CUR.map.w * TS; MHp = CUR.map.h * TS;
   for (const L of [solids, spots, sprites, trees, npcs, dummies, exits]) L.length = 0;
@@ -292,6 +305,10 @@ for (const n of npcs){
   sprites.push(n);
   spots.push({ name: n.name, x: n.x, y: n.y + 6, r: 50, kind: 'npc', npc: n });
 }
+  if(id==='town'&&townPortalReturn){
+    sprites.push({portal:true,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,w:112,h:98,key:TOWN_PORTAL_Y-2});
+    spots.push({name:'귀환 포탈',x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,r:58,kind:'town_portal'});
+  }
   if (CUR.exits) exits.push(...CUR.exits);
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
@@ -420,12 +437,36 @@ function investLife(key){
   const d=LIFE_DEF[key],cur=lifeRank(key);if(!d||P.lv<d.unlock||cur<1||cur>=d.max||P.lifePts<1)return false;
   P.lifeSkills[key]=cur+1;P.lifePts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
+function portalTransition(id,pos,dir,onArrive){
+  if(traveling)return false;traveling=true;closeAll();
+  const f=$('fade');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
+  setTimeout(()=>{
+    buildWorld(id);P.x=pos[0];P.y=pos[1];P.dir=dir||'front';P.atk=null;
+    const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(onArrive)onArrive();
+    setTimeout(()=>{
+      f.classList.remove('on');
+      setTimeout(()=>{f.classList.remove('slow');traveling=false;},560);
+    },180);
+  },560);
+  return true;
+}
 function useTownPortal(){
   const r=lifeRank('townPortal');if(!r){say('타운 포탈을 아직 배우지 못했습니다.');return false;}
+  if(MAP==='town'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r]*60000;
   if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
-  P.portalReadyAt=now+cd;travel('town',[23*TS,22.2*TS],'front');if(window.UI&&UI.save)UI.save();return true;
+  townPortalReturn={map:MAP,pos:[P.x,P.y],dir:P.dir||'front'};
+  P.portalReadyAt=now+cd;
+  const ok=portalTransition('town',[23*TS,22.2*TS],'front',()=>{portalArrivalUntil=performance.now()+1700;});
+  if(window.UI&&UI.save)UI.save();return ok;
 }
+function returnTownPortal(){
+  if(MAP!=='town'||!townPortalReturn)return false;
+  const q=townPortalReturn;townPortalReturn=null;
+  return portalTransition(q.map,q.pos,q.dir,()=>{portalArrivalUntil=performance.now()+1200;});
+}
+function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
 function gainExp(amount){
   amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
   P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
@@ -535,6 +576,7 @@ function act(){
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
   if (near.kind === 'trade' && window.TRADE) return TRADE.open(near.market || (CUR && CUR.market) || 'town');
+  if (near.kind === 'town_portal') return returnTownPortal();
   if (near.kind === 'dungeon') return enterDungeonFromHere();
   if (near.kind === 'stairs_down') return nextDungeonFloor();
   if (near.kind === 'stairs_up') return previousDungeonFloor();
@@ -835,7 +877,7 @@ function syncBars(){
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
 window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
-  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal,
+  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
@@ -1010,6 +1052,30 @@ function drawMini(camX, camY){
 }
 
 let last = performance.now(), T = 0;
+function drawTownPortal(p){
+  const pulse=.5+.5*Math.sin(T*4.6),spin=T*1.9;
+  ctx.save();ctx.translate(p.x,p.y);
+  ctx.fillStyle='rgba(4,5,20,.82)';ctx.beginPath();ctx.ellipse(0,0,48,18,0,0,7);ctx.fill();
+  for(let i=0;i<3;i++){
+    ctx.strokeStyle=i===0?'rgba(93,225,255,.90)':i===1?'rgba(128,104,255,.78)':'rgba(225,120,255,.60)';
+    ctx.lineWidth=4-i;ctx.beginPath();ctx.ellipse(0,0,46-i*7,17-i*3,spin*(i%2?-.18:.22),0,Math.PI*1.55);ctx.stroke();
+  }
+  ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(0,-13,4,0,-13,58);g.addColorStop(0,'rgba(170,245,255,.55)');g.addColorStop(.45,'rgba(92,130,255,.20)');g.addColorStop(1,'rgba(120,70,255,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,-18,58,50,0,0,7);ctx.fill();
+  for(let i=0;i<7;i++){const a=spin+i*2.1,x=Math.cos(a)*32,y=-8-Math.abs(Math.sin(a*1.7+i))*38-pulse*6;ctx.fillStyle='rgba(180,235,255,.65)';ctx.beginPath();ctx.arc(x,y,2+(i%3),0,7);ctx.fill();}
+  ctx.restore();ctx.globalCompositeOperation='source-over';
+}
+function drawPortalArrivalAura(){
+  const left=portalArrivalUntil-performance.now();if(left<=0)return;
+  const a=Math.min(1,left/450),r=28+(1-left/1700)*28;
+  ctx.save();ctx.translate(P.x,P.y-34);ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(0,0,5,0,0,62);g.addColorStop(0,'rgba(210,250,255,.42)');g.addColorStop(.45,'rgba(95,150,255,.24)');g.addColorStop(1,'rgba(120,80,255,0)');
+  ctx.globalAlpha=a;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,62,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(155,225,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,32,r,10,0,T*2,T*2+Math.PI*1.65);ctx.stroke();
+  ctx.strokeStyle='rgba(188,120,255,.72)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,18,r*.72,26,0,-T*1.7,-T*1.7+Math.PI*1.45);ctx.stroke();
+  ctx.restore();ctx.globalCompositeOperation='source-over';
+}
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char',sdt=simPaused?0:dt;
@@ -1058,7 +1124,8 @@ function frame(now){
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.hide) continue;
-    if (s.me){ drawMe(); continue; }
+    if (s.me){ drawPortalArrivalAura();drawMe(); continue; }
+    if (s.portal){drawTownPortal(s);continue;}
     if (s.vil){ drawVil(s.vil); continue; }
     if (s.mon){ drawMonster(s.mon, sdt); continue; }
     if (s.dummy){ // 맞으면 흔들림
@@ -2674,8 +2741,12 @@ const IMPLEMENTED = new Set(['fire1','ice1','holy1_heal','sword1','sword2']);
 const SKN = { fire1:'불덩이', ice1:'얼음 화살', holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
+const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};
+const LIFE_ICON={townPortal:'holy3_revive',identify:'bolt3',discount:'bow3',overcount:'sword3',enchant:'fire3',moneyScent:'dark3'};
+const passiveIcon=id=>A.skicon[PASSIVE_ICON[id]]||K.ring;
+const lifeIcon=id=>A.skicon[LIFE_ICON[id]]||K.ring;
 const quickLearned=id=>id==='townPortal'?((G.P.lifeSkills&&G.P.lifeSkills.townPortal)||0)>0:skillLearned(id);
-const quickIcon=id=>id==='townPortal'?K.ring:A.skicon[id];
+const quickIcon=id=>id==='townPortal'?lifeIcon('townPortal'):A.skicon[id];
 const skBtns = [...document.querySelectorAll('.sk')];
 const C0 = 62;
 skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
@@ -2715,24 +2786,36 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
-let drag = null; const ghost = $('ghost');
-function startDrag(e, id, from){
-  drag={id,from};ghost.src=quickIcon(id);ghost.style.display='block';moveGhost(e);
-  $('cluster').classList.add('drop'); try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
+let drag=null,dragSuppressClickUntil=0;const ghost=$('ghost');
+function startDrag(e,id,from){
+  drag={id,from,sx:e.clientX,sy:e.clientY,moved:false};ghost.src=quickIcon(id);ghost.style.display='block';moveGhost(e);
+  $('cluster').classList.add('drop');
 }
-function moveGhost(e){ ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
-addEventListener('pointermove', e => { if (drag) moveGhost(e); });
-addEventListener('pointerup', e => {
-  if (!drag) return;
-  ghost.style.display = 'none';
-  const t = document.elementFromPoint(e.clientX, e.clientY), slot = t && t.closest && t.closest('.sk');   // 칸이 창 위에 떠 있을 때 먼저 찾음
-  $('cluster').classList.remove('drop');
-  if (slot){
-    const i = +slot.dataset.i;
-    if (drag.from != null){ const tmp = QS[i]; QS[i] = drag.id; QS[drag.from] = tmp; }       // 칸끼리 맞바꾸기
-    else { const old = QS.indexOf(drag.id); if (old >= 0) QS[old] = null; QS[i] = drag.id; }
-  } else if (drag.from != null) QS[drag.from] = null;                                          // 칸 밖에 놓으면 빼기
-  drag = null; syncQS();
+function moveGhost(e){
+  if(drag&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>9)drag.moved=true;
+  ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+}
+function quickDropIndex(x,y){
+  let best=-1,bd=1e9;
+  skBtns.forEach((b,i)=>{
+    const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,d=Math.hypot(x-cx,y-cy);
+    const inside=x>=r.left-18&&x<=r.right+18&&y>=r.top-18&&y<=r.bottom+18;
+    if(inside&&d<bd){best=i;bd=d;}
+  });
+  return best;
+}
+function dragClickSuppressed(){return Date.now()<dragSuppressClickUntil;}
+addEventListener('pointermove',e=>{if(drag){if(e.cancelable)e.preventDefault();moveGhost(e);}},{passive:false});
+addEventListener('pointerup',e=>{
+  if(!drag)return;
+  ghost.style.display='none';$('cluster').classList.remove('drop');
+  const d=drag,i=quickDropIndex(e.clientX,e.clientY);
+  if(i>=0){
+    if(d.from!=null){const tmp=QS[i];QS[i]=d.id;QS[d.from]=tmp;}
+    else{const old=QS.indexOf(d.id);if(old>=0)QS[old]=null;QS[i]=d.id;}
+  }else if(d.from!=null)QS[d.from]=null;
+  if(d.moved)dragSuppressClickUntil=Date.now()+350;
+  drag=null;syncQS();saveGame();
 });
 
 // ---- 캐릭터 창 ----
@@ -2798,21 +2881,27 @@ function render(){
       pane.append(row);
     }
     pane.append(el('div','sectionhead',`패시브 · 같은 스킬포인트 사용`));
+    const pg=el('div','passgrid');pane.append(pg);
     for(const [key,dv] of Object.entries(G.PASSIVE_DEF||{})){
-      const rank=(Pp.passives&&Pp.passives[key])||0,row=el('div','passrow');
-      row.append(el('b','',dv.name),el('span','',`Lv${rank}/${dv.max}`),el('small','',dv.desc));
-      const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=dv.max;plus.onclick=()=>G.investPassive(key);row.append(plus);pane.append(row);
+      const rank=(Pp.passives&&Pp.passives[key])||0,tile=el('div','skilltile');
+      const ic=el('button','skc');ic.type='button';ic.title=dv.name;ic.style.backgroundImage=`url(${passiveIcon(key)})`;ic.tabIndex=-1;
+      const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=dv.max;plus.onclick=e=>{e.stopPropagation();G.investPassive(key);};
+      tile.append(ic,el('b','stname',dv.name),el('small','stdesc',dv.desc),plus,el('span','strank',`Lv${rank}/${dv.max}`));pg.append(tile);
     }
     pane.append(el('div','sectionhead',`생활스킬 · 보유 ${Pp.lifePts||0}P`));
+    const lg=el('div','lifegrid');pane.append(lg);
     for(const [key,dv] of Object.entries(G.LIFE_DEF||{})){
-      const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,row=el('div','liferow');
-      row.append(el('b','',dv.name),el('span','',locked?`Lv${dv.unlock} 해금`:`Lv${rank}/${dv.max}`),el('small','',locked?'아직 잠김':(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1])));
-      const ctl=el('span','');ctl.style.cssText='display:flex;gap:2px;align-items:center';
+      const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,tile=el('div','skilltile'+(locked?' lock':''));
+      const ic=el('button','skc life'+(key==='townPortal'&&!locked&&rank>0?' drag':''));ic.type='button';ic.style.backgroundImage=`url(${lifeIcon(key)})`;ic.title=key==='townPortal'&&!locked&&rank>0?'길게 눌러 퀵슬롯에 등록 / 탭하여 사용':dv.name;
       if(key==='townPortal'&&!locked&&rank>0){
-        const q=el('button','growplus','Q');q.type='button';q.title='퀵슬롯에 등록';q.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,'townPortal',null);});ctl.append(q);
-        const use=el('button','growplus','↩');use.type='button';use.title='타운 포탈 바로 사용';use.onclick=()=>{closeChar();G.useTownPortal();};ctl.append(use);
+        let moved=false,sx=0,sy=0;
+        ic.addEventListener('pointerdown',e=>{e.preventDefault();sx=e.clientX;sy=e.clientY;moved=false;startDrag(e,'townPortal',null);});
+        ic.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>10)moved=true;});
+        ic.addEventListener('click',e=>{if(moved||dragClickSuppressed())return;e.preventDefault();closeChar();G.useTownPortal();});
       }
-      const plus=el('button','growplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=()=>G.investLife(key);ctl.append(plus);row.append(ctl);pane.append(row);
+      const desc=locked?`Lv${dv.unlock} 해금`:(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1]);
+      const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=e=>{e.stopPropagation();G.investLife(key);};
+      tile.append(ic,el('b','stname',dv.name),el('small','stdesc',desc),plus,el('span','strank',locked?`Lv${dv.unlock}`:`Lv${rank}/${dv.max}`));lg.append(tile);
     }
     pane.append(el('div','sectionhead','무기 숙련도 · 적중할 때 자동 상승'));
     for(const wt of ['sword','spear','gauntlet','bow','staff']){
@@ -2912,6 +3001,7 @@ window.UI = {
   make,add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
+  dragDebug:()=>drag?{id:drag.id,from:drag.from,moved:drag.moved}:null,quickDropIndex,
   refresh(){syncHud();if($('char').classList.contains('on'))render();},
   bagFull:()=>bag.indexOf(null)<0,
   bagItems:()=>bag.map((it,i)=>it?{i,it}:null).filter(Boolean),
