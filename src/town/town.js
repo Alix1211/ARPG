@@ -229,41 +229,158 @@ const GOODS = {
   general: [{ ic: 'php', name: '체력 물약', slot: '물약', price: 20, potion: 'hp' }, { ic: 'pmp', name: '마나 물약', slot: '물약', price: 20, potion: 'mp' }],
   pawn: [{ ic: 'ring', name: '구리 반지', slot: '반지', price: 120, spec: { kind: 'ring' } }, { ic: 'neck', name: '구리 목걸이', slot: '목걸이', price: 150, spec: { kind: 'neck' } }],
 };
-let sel = null;
+let sel = null, shopNpc = null, shopMode = 'buy';
+const SELL_BASE = {
+  weapon: {1:30, 2:75},
+  head: {1:20, 2:40}, body: {1:35, 2:70}, hands: {1:15, 2:30}, feet: {1:15, 2:30},
+  ring: 120, neck: 150
+};
+const SHOP_BUY_RATE = {
+  arms:    { weapon:1.00, armor:1.00, accessory:0.60, material:0.60, potion:0.50, junk:0.50 },
+  pawn:    { weapon:0.85, armor:0.85, accessory:1.20, material:1.00, potion:0.70, junk:1.00 },
+  general: { weapon:0.60, armor:0.60, accessory:0.60, material:0.90, potion:1.00, junk:0.90 },
+};
+// 작은 마을이 붙으면 CUR.market 또는 NPC.market에 아래 키만 넣으면 같은 판매식이 바로 적용된다.
+// 일부 품목은 ±20~35% 차이. 먼 마을까지 오가며 시세차익을 노리는 루크레아의 생활 동기.
+const REGION_MARKET = {
+  town:    { weapon:1.00, armor:1.00, accessory:1.00, material:1.00, potion:1.00, junk:1.00 },
+  spring:  { weapon:0.90, armor:0.95, accessory:1.20, material:1.10, potion:0.90, junk:1.05 },
+  summer:  { weapon:1.10, armor:0.90, accessory:1.00, material:1.25, potion:0.85, junk:1.00 },
+  autumn:  { weapon:0.90, armor:1.15, accessory:1.25, material:0.85, potion:1.00, junk:1.10 },
+  winter:  { weapon:1.20, armor:1.25, accessory:0.85, material:1.30, potion:1.10, junk:0.90 },
+  ice:     { weapon:1.15, armor:1.30, accessory:0.80, material:1.35, potion:1.20, junk:0.85 },
+  volcano: { weapon:1.30, armor:1.15, accessory:1.05, material:1.35, potion:1.20, junk:0.85 },
+  swamp:   { weapon:0.85, armor:0.80, accessory:1.30, material:1.30, potion:1.25, junk:1.15 },
+};
+const MARKET_NAME = { town:'큰 마을', spring:'봄 마을', summer:'여름 마을', autumn:'가을 마을', winter:'겨울 마을', ice:'얼음 마을', volcano:'화산 마을', swamp:'늪 마을' };
+const sellFlow = { sold:{}, resetAt:Date.now()+DAYLEN*1000 };
+function sellCat(it){
+  if (!it) return 'junk';
+  if (it.kind === 'weapon') return 'weapon';
+  if (['head','body','hands','feet'].includes(it.kind)) return 'armor';
+  if (it.kind === 'ring' || it.kind === 'neck') return 'accessory';
+  if (it.kind === 'material') return 'material';
+  if (it.kind === 'potion') return 'potion';
+  return 'junk';
+}
+function baseSellValue(it){
+  if (!it) return 1;
+  let v = 10;
+  if (it.kind === 'weapon') v = (SELL_BASE.weapon[it.g] || Math.round(75 * Math.max(1, it.g - 1)));
+  else if (['head','body','hands','feet'].includes(it.kind)) v = (SELL_BASE[it.kind][it.g] || SELL_BASE[it.kind][2]);
+  else if (it.kind === 'ring' || it.kind === 'neck') v = SELL_BASE[it.kind];
+  else v = Math.max(1, it.price || 10);
+  return v * (1 + (it.rar || 0));
+}
+function marketRegion(){
+  const k = (shopNpc && shopNpc.market) || (CUR && CUR.market) || 'town';
+  return REGION_MARKET[k] ? k : 'town';
+}
+function resetSellFlow(){
+  if (Date.now() < sellFlow.resetAt) return;
+  sellFlow.sold = {}; sellFlow.resetAt = Date.now() + DAYLEN * 1000;
+}
+function sellPressure(shop, cat){
+  resetSellFlow();
+  const key = marketRegion() + ':' + shop + ':' + cat, n = sellFlow.sold[key] || 0;
+  return Math.max(0.80, 1 - n * 0.02); // 케인: 너무 심한 폭락 금지
+}
+function sellRate(it){
+  const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general', region = marketRegion();
+  return (SHOP_BUY_RATE[shop]?.[cat] || 0.60) * (REGION_MARKET[region]?.[cat] || 1) * sellPressure(shop, cat);
+}
+function sellPrice(it){ return Math.max(1, Math.round(baseSellValue(it) * 0.40 * sellRate(it))); }
+function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
+function shopMarketText(){
+  const region = marketRegion(), r = REGION_MARKET[region];
+  const word = v => v >= 1.18 ? '▲ 높음' : v <= 0.88 ? '▼ 낮음' : '보통';
+  return (MARKET_NAME[region] || region) + ' 시세 · 무기 ' + word(r.weapon) + ' · 방어구 ' + word(r.armor) + ' · 장신구 ' + word(r.accessory);
+}
 function openShop(n){
-  const list = GOODS[n.shop] || [];
+  shopNpc = n; shopMode = 'buy'; sel = null;
   $('shopName').textContent = n.title.replace(' 주인', '');
   $('shopImg').src = A.port[n.k];
-  const g = $('grid'); g.innerHTML = '';
-  list.forEach((it, i) => {
-    const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
-    const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
-    const pr = document.createElement('span'); pr.textContent = it.price; c.append(pr);
-    c.addEventListener('click', () => pick(it, c));
-    g.append(c);
-    if (i === 0) setTimeout(() => pick(it, c));
-  });
-  show('shop');
+  show('shop'); renderShop();
 }
-function pick(it, c){
-  sel = it;
+function setShopMode(mode){
+  shopMode = mode === 'sell' ? 'sell' : 'buy'; sel = null; renderShop();
+}
+function renderShop(){
+  $('tabBuy').classList.toggle('on', shopMode === 'buy');
+  $('tabSell').classList.toggle('on', shopMode === 'sell');
+  $('shopMarket').textContent = shopMarketText();
+  $('shopSay').textContent = '';
+  const g = $('grid'); g.innerHTML = '';
+  if (shopMode === 'buy'){
+    const list = GOODS[shopNpc.shop] || [];
+    list.forEach((it, i) => {
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
+      const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
+      const pr = document.createElement('span'); pr.textContent = it.price; c.append(pr);
+      c.addEventListener('click', () => pickBuy(it, c)); g.append(c);
+      if (i === 0) setTimeout(() => pickBuy(it, c));
+    });
+    if (!list.length) clearShopInfo('살 물건이 없습니다.');
+  } else {
+    const list = window.UI ? UI.bagItems() : [];
+    if (!list.length){ clearShopInfo('팔 물건이 없습니다.'); return; }
+    list.forEach((row, i) => {
+      const it = row.it, price = sellPrice(it), rate = sellRate(it);
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
+      const im = document.createElement('img'); im.src = A.icons[it.icon] || ''; im.alt = it.name; c.append(im);
+      const pr = document.createElement('span'); pr.textContent = price + rateMark(rate); c.append(pr);
+      c.addEventListener('click', () => pickSell(row.i, it, c)); g.append(c);
+      if (i === 0) setTimeout(() => pickSell(row.i, it, c));
+    });
+  }
+}
+function clearShopInfo(msg){
+  sel = null; $('infoIc').src = ''; $('infoName').textContent = msg || ''; $('infoSlot').textContent = '';
+  $('infoPrice').textContent = ''; $('buy').textContent = shopMode === 'sell' ? '팔기' : '사기'; $('buy').disabled = true;
+}
+function pickBuy(it, c){
+  if (shopMode !== 'buy') return;
+  sel = { mode:'buy', it };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
   $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
-  $('infoSlot').textContent = it.slot + ' · 일반';
-  $('infoPrice').textContent = '금화 ' + it.price;
-  $('buy').disabled = P.gold < it.price;
-  $('shopSay').textContent = '';
+  $('infoSlot').textContent = it.slot + ' · 일반'; $('infoPrice').textContent = '금화 ' + it.price;
+  $('buy').textContent = '사기'; $('buy').disabled = P.gold < it.price; $('shopSay').textContent = '';
 }
+function pickSell(idx, it, c){
+  if (shopMode !== 'sell') return;
+  const price = sellPrice(it), rate = sellRate(it);
+  sel = { mode:'sell', idx, it, price, rate };
+  for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
+  $('infoIc').src = A.icons[it.icon] || ''; $('infoName').textContent = it.name;
+  const names = {weapon:'무기',armor:'방어구',accessory:'장신구',material:'재료',potion:'물약',junk:'잡템'};
+  $('infoSlot').textContent = (names[sellCat(it)] || '물건') + ' · ' + ['일반','마법','희귀','전설'][it.rar || 0];
+  $('infoPrice').textContent = '금화 ' + price + rateMark(rate);
+  $('buy').textContent = '팔기'; $('buy').disabled = false; $('shopSay').textContent = '';
+}
+$('tabBuy').addEventListener('click', () => setShopMode('buy'));
+$('tabSell').addEventListener('click', () => setShopMode('sell'));
 $('buy').addEventListener('click', () => {
-  if (!sel || P.gold < sel.price) return;
-  if (sel.potion){ setGold(P.gold - sel.price); UI.addPotion(sel.potion, 1);
-    $('shopSay').textContent = `${sel.name} 하나 샀습니다. 금화가 ${sel.price}닢 줄었습니다… (오른쪽 물약 버튼에 바로 채워졌습니다)`; $('buy').disabled = P.gold < sel.price; return; }
+  if (!sel) return;
+  if (sel.mode === 'sell'){
+    const cur = UI.bagItems().find(x => x.i === sel.idx);
+    if (!cur || cur.it.id !== sel.it.id){ renderShop(); return; }
+    const price = sellPrice(cur.it), rate = sellRate(cur.it), cat = sellCat(cur.it), shop = shopNpc.shop;
+    const removed = UI.removeBagAt(sel.idx); if (!removed) return;
+    const key = marketRegion() + ':' + shop + ':' + cat; sellFlow.sold[key] = (sellFlow.sold[key] || 0) + 1;
+    setGold(P.gold + price); if (UI.save) UI.save();
+    $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
+    renderShop(); $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
+    return;
+  }
+  const it = sel.it; if (!it || P.gold < it.price) return;
+  if (it.potion){ setGold(P.gold - it.price); UI.addPotion(it.potion, 1);
+    $('shopSay').textContent = it.name + ' 하나 샀습니다. 금화가 ' + it.price + '닢 줄었습니다…'; $('buy').disabled = P.gold < it.price; if (UI.save) UI.save(); return; }
   if (UI.bagFull()){ $('shopSay').textContent = '가방이 가득 찼습니다.'; return; }
-  setGold(P.gold - sel.price);
-  UI.add(UI.make({ ...sel.spec, price: sel.price }));
-  $('shopSay').textContent = `${sel.name}을(를) 가방에 넣었습니다. 금화가 ${sel.price}닢 줄었습니다… (엘프가 지갑을 오래 쳐다봅니다)`;
-  $('buy').disabled = P.gold < sel.price;
+  setGold(P.gold - it.price); UI.add(UI.make({ ...it.spec, price: it.price })); if (UI.save) UI.save();
+  $('shopSay').textContent = it.name + '을(를) 가방에 넣었습니다. 루크레아가 지갑을 오래 쳐다봅니다.';
+  $('buy').disabled = P.gold < it.price;
 });
+window.__SHOP = { open: openShop, mode: setShopMode, price: sellPrice, rate: sellRate, state: () => ({mode:shopMode, region:marketRegion(), sold:{...sellFlow.sold}, gold:P.gold}) };
 
 
 // ======================= 행인 =======================
