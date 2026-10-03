@@ -48,10 +48,24 @@ function guildProgressText(q){
   }
   return Math.min(q.need,q.prog||0)+' / '+q.need;
 }
+function guildTrack(){
+  const host=$('questTrack');if(!host)return;
+  host.innerHTML='';
+  if(!guildState.active.length){host.classList.remove('on');return;}
+  host.classList.add('on');
+  for(const q of guildState.active.slice(0,3)){
+    const done=guildDone(q),row=document.createElement('div');
+    row.className='qtrack'+(done?' done':'');
+    const hasNum=Number.isFinite(q.need)&&q.need>0;
+    const prog=hasNum?guildProgressText(q):'';
+    row.innerHTML='<span class="qcheck"></span><span class="qtitle">'+q.title+'</span><span class="qprog">'+prog+'</span>';
+    host.append(row);
+  }
+}
 function guildAccept(id){
   if(guildState.active.length>=3){say('진행 중 의뢰는 최대 3개입니다.');return false;}
   const i=guildState.board.findIndex(q=>q.id===id);if(i<0)return false;
-  const q=guildState.board.splice(i,1)[0];q.accepted=true;guildState.active.push(q);guildRender();
+  const q=guildState.board.splice(i,1)[0];q.accepted=true;guildState.active.push(q);guildRender();guildTrack();
   if(window.UI&&UI.save)UI.save();return true;
 }
 function guildRandomGear(tier){
@@ -74,7 +88,7 @@ function guildClaim(id){
   guildState.active.splice(i,1);guildState.completed++;
   say('의뢰 완료! EXP '+q.exp+' · '+q.gold+'G'+extra);
   if(!guildState.board.length&&!guildState.active.length)guildGenerate();
-  guildRender();if(window.UI&&UI.save)UI.save();return true;
+  guildRender();guildTrack();if(window.UI&&UI.save)UI.save();return true;
 }
 function guildOnKill(m){
   if(!m||m.dead===false)return;
@@ -83,7 +97,7 @@ function guildOnKill(m){
     if(q.type==='kill_any'){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
     else if(q.type==='kill_type'&&m.type===q.target){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
   }
-  if(changed&&$('guild').classList.contains('on'))guildRender();
+  if(changed&&$('guild').classList.contains('on'))guildRender();if(changed)guildTrack();if(changed)guildTrack();
 }
 function guildOnDungeonFloor(floor){
   let changed=false;
@@ -100,7 +114,7 @@ function guildCard(q,active){
   d.append(btn);return d;
 }
 function guildRender(){
-  guildGenerate();$('guildRank').textContent='견습 · 완료 '+guildState.completed+'건';
+  guildGenerate();guildTrack();$('guildRank').textContent='견습 · 완료 '+guildState.completed+'건';
   const a=$('gActive'),b=$('gBoard');a.innerHTML='';b.innerHTML='';
   if(!guildState.active.length)a.innerHTML='<div class="gq"><small>진행 중인 의뢰가 없습니다.</small></div>';
   for(const q of guildState.active)a.append(guildCard(q,true));
@@ -112,10 +126,10 @@ function guildOpen(){
 function guildClose(){ $('guild').classList.remove('on');if(panel==='guild')panel=null; }
 function guildSaveData(){return JSON.parse(JSON.stringify(guildState));}
 function guildLoadData(d){
-  if(!d)return;guildState={seq:+d.seq||1,board:Array.isArray(d.board)?d.board:[],active:Array.isArray(d.active)?d.active:[],completed:d.completed|0};
+  if(!d){guildTrack();return;}guildState={seq:+d.seq||1,board:Array.isArray(d.board)?d.board:[],active:Array.isArray(d.active)?d.active:[],completed:d.completed|0};guildTrack();
 }
 window.GUILD={
   open:guildOpen,close:guildClose,accept:guildAccept,claim:guildClaim,onKill:guildOnKill,onDungeonFloor:guildOnDungeonFloor,
-  saveData:guildSaveData,loadData:guildLoadData,state:()=>JSON.parse(JSON.stringify(guildState)),
+  saveData:guildSaveData,loadData:guildLoadData,refreshTrack:guildTrack,state:()=>JSON.parse(JSON.stringify(guildState)),
   debugComplete(id){const q=guildState.active.find(x=>x.id===id);if(!q)return false;if(q.type==='delivery')return false;q.prog=q.need;guildRender();return true;}
 };
