@@ -440,7 +440,9 @@ function unequip(s){
 window.UI = {
   addPotion(k,n){POT[k]+=n;syncPot();},
   make,add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
-  combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],refresh(){syncHud();if($('char').classList.contains('on'))render();},
+  combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
+  quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
+  refresh(){syncHud();if($('char').classList.contains('on'))render();},
   bagFull:()=>bag.indexOf(null)<0,
   bagItems:()=>bag.map((it,i)=>it?{i,it}:null).filter(Boolean),
   removeBagAt(i){
