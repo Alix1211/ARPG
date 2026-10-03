@@ -327,5 +327,31 @@ window.UI = {
   make, add(it){ const i = bag.indexOf(null); if (i < 0) return false; bag[i] = it; return true; },
   bagFull: () => bag.indexOf(null) < 0, isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };
-syncHud();
+// ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
+const SKEY = 'arpg_save_v1';
+function saveGame(){
+  try {
+    const P = G.P;
+    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
+  } catch (e) {}
+}
+function loadGame(){
+  let d = null; try { d = JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch (e) {}
+  if (!d || d.v !== 1) return null;
+  for (let i = 0; i < BAG; i++) bag[i] = d.bag && d.bag[i] || null;
+  for (const k in eq) eq[k] = d.eq && d.eq[k] || null;
+  cur = d.cur === 'w2' && eq.w2 ? 'w2' : 'w1';
+  if (d.pot){ POT.hp = d.pot.hp | 0; POT.mp = d.pot.mp | 0; }
+  if (d.qs) for (let i = 0; i < 5; i++) QS[i] = d.qs[i] && A.skicon[d.qs[i]] ? d.qs[i] : null;
+  let mx = 0; for (const it of [...bag, ...Object.values(eq)]) if (it && it.id > mx) mx = it.id; seq = mx + 1;
+  const P = G.P; P.lv = d.lv || 1; P.exp = d.exp || 0; G.setGold(d.gold | 0);
+  return d;
+}
+const saved = loadGame();
+syncHud(); syncPot();
+if (saved){ G.P.hp = Math.max(1, Math.min(G.P.maxHp, saved.hp || G.P.maxHp)); G.P.mp = Math.min(G.P.maxMp, saved.mp || 0); G.setMax(G.P.maxHp, G.P.maxMp); G.say('이어서 합니다. 금화 ' + G.P.gold + '닢 그대로!'); }
+setInterval(saveGame, 4000);
+addEventListener('pagehide', saveGame); document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+window.UI.save = saveGame;
+window.UI.reset = () => { try { localStorage.removeItem(SKEY); } catch (e) {} location.reload(); };
 })();

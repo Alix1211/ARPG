@@ -175,7 +175,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1546</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1600</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
@@ -1887,7 +1887,33 @@ window.UI = {
   make, add(it){ const i = bag.indexOf(null); if (i < 0) return false; bag[i] = it; return true; },
   bagFull: () => bag.indexOf(null) < 0, isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };
-syncHud();
+// ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
+const SKEY = 'arpg_save_v1';
+function saveGame(){
+  try {
+    const P = G.P;
+    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
+  } catch (e) {}
+}
+function loadGame(){
+  let d = null; try { d = JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch (e) {}
+  if (!d || d.v !== 1) return null;
+  for (let i = 0; i < BAG; i++) bag[i] = d.bag && d.bag[i] || null;
+  for (const k in eq) eq[k] = d.eq && d.eq[k] || null;
+  cur = d.cur === 'w2' && eq.w2 ? 'w2' : 'w1';
+  if (d.pot){ POT.hp = d.pot.hp | 0; POT.mp = d.pot.mp | 0; }
+  if (d.qs) for (let i = 0; i < 5; i++) QS[i] = d.qs[i] && A.skicon[d.qs[i]] ? d.qs[i] : null;
+  let mx = 0; for (const it of [...bag, ...Object.values(eq)]) if (it && it.id > mx) mx = it.id; seq = mx + 1;
+  const P = G.P; P.lv = d.lv || 1; P.exp = d.exp || 0; G.setGold(d.gold | 0);
+  return d;
+}
+const saved = loadGame();
+syncHud(); syncPot();
+if (saved){ G.P.hp = Math.max(1, Math.min(G.P.maxHp, saved.hp || G.P.maxHp)); G.P.mp = Math.min(G.P.maxMp, saved.mp || 0); G.setMax(G.P.maxHp, G.P.maxMp); G.say('이어서 합니다. 금화 ' + G.P.gold + '닢 그대로!'); }
+setInterval(saveGame, 4000);
+addEventListener('pagehide', saveGame); document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+window.UI.save = saveGame;
+window.UI.reset = () => { try { localStorage.removeItem(SKEY); } catch (e) {} location.reload(); };
 })();
 
 </script>
