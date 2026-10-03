@@ -2,9 +2,14 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
-const M = A.map, TS = M.ts, MWp = M.w * TS, MHp = M.h * TS;
+const TS = A.map.ts; let MWp = 0, MHp = 0;
 function load(s){ const i = new Image(); i.src = s; return i; }
-const G = load(A.ground), MINI = load(A.mini);
+const MAPS = {
+  town: { name: '마을', map: A.map, ground: A.ground, mini: A.mini, blds: A.blds, props: A.props, npcs: A.npcs },
+  out: { ...A.out },
+};
+let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
+for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
 const BI = {}; for (const k in A.b) BI[k] = load(A.b[k]);
 const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
 $('face').src = A.face; $('ringImg').src = A.ui['05'];
@@ -18,9 +23,13 @@ $('tabEq').style.backgroundImage = `url(${A.kit.tab1})`; $('tabSt').style.backgr
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // ======================= 배치 =======================
-const solids = [], spots = [], sprites = [], trees = [];
-const hasNpc = new Set(A.npcs.map(n => n.at).filter(Boolean));
-for (const b of A.blds){
+const solids = [], spots = [], sprites = [], trees = [], npcs = [], dummies = [];
+let lamps = [];
+function buildWorld(id){
+  MAP = id; CUR = MAPS[id]; G = CUR.G; MINI = CUR.MINI; MWp = CUR.map.w * TS; MHp = CUR.map.h * TS;
+  for (const L of [solids, spots, sprites, trees, npcs, dummies]) L.length = 0;
+const hasNpc = new Set(CUR.npcs.map(n => n.at).filter(Boolean));
+for (const b of CUR.blds){
   const gate = b.k === 'gate_twin_tower';
   const fw = b.w * (b.k === 'watchtower' ? 0.5 : 0.8);
   if (gate){ // 성문은 양쪽 탑만 막고 가운데는 문 앞까지 걸어갈 수 있게
@@ -32,18 +41,29 @@ for (const b of A.blds){
   if (b.k === 'watchtower' || hasNpc.has(b.k)) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: b.y - b.h * (gate ? 0.18 : 0.06), r: 46, kind: gate ? 'gate' : 'bld' });
 }
-for (const p of A.props){
+for (const p of CUR.props){
+  if (p.kind === 'gatewall'){ // 성벽: 가운데 문만 비우고 막음
+    solids.push({ x0: p.x - p.w * 0.5, x1: p.x - p.w * 0.1, y0: p.y - p.h * 0.45, y1: p.y - 4 }, { x0: p.x + p.w * 0.1, x1: p.x + p.w * 0.5, y0: p.y - p.h * 0.45, y1: p.y - 4 }, { x0: p.x - p.w * 0.1, x1: p.x + p.w * 0.1, y0: p.y - p.h * 0.45, y1: p.y - p.h * 0.12 });
+    sprites.push({ img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.y - 6 });
+    spots.push({ name: p.name, x: p.x, y: p.y - p.h * 0.08, r: 46, kind: 'exit' });
+    continue;
+  }
   if (p.cw > 0) solids.push({ x0: p.x - p.w * p.cw / 2, x1: p.x + p.w * p.cw / 2, y0: p.y - p.cd, y1: p.y - 2 });
   const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.y - 4, tree: p.tree, ph: Math.random() * 7, pink: p.k === 'tree_blossom' };
   sprites.push(s); if (p.tree) trees.push(s);
-  if (p.name) spots.push({ name: p.name, x: p.x, y: p.y + 16, r: 46, kind: 'prop' });
+  if (p.kind === 'dummy'){ s.dummy = { hp: 0, wob: 0, ph: 0 }; dummies.push(s); }
+  if (p.name) spots.push({ name: p.name, x: p.x, y: p.y + 16, r: 46, kind: p.kind === 'dungeon' ? 'dungeon' : 'prop' });
 }
-const npcs = A.npcs.map(n => ({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y }));
+for (const n of CUR.npcs) npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
 for (const n of npcs){
   solids.push({ x0: n.x - 13, x1: n.x + 13, y0: n.y - 12, y1: n.y - 1 });
   sprites.push(n);
   spots.push({ name: n.name, x: n.x, y: n.y + 6, r: 50, kind: 'npc', npc: n });
 }
+  lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
+  $('place').dataset.map = CUR.name || '마을';
+}
+buildWorld('town');
 
 // ======================= 플레이어 =======================
 const P = { x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0 };
@@ -107,20 +127,38 @@ function act(){
   if (panel) return;
   if (!near) return;
   if (near.kind === 'npc') return openDlg(near.npc);
-  const body = near.kind === 'gate' ? '던전 문은 다음 단계에서 연결합니다.'
-    : near.kind === 'prop' ? PROP_TXT[near.name] || ''
+  if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
+  if (near.kind === 'exit') return travel('town', MAPS.out.back, 'front');
+  const body = near.kind === 'dungeon' ? '던전은 다음 단계에서 연결합니다.'
+    : near.kind === 'prop' ? ((MAP === 'out' && OUT_TXT[near.name]) || PROP_TXT[near.name] || '')
     : '실내는 다음 단계에서 만듭니다.';
   $('msgT').textContent = near.name; $('msgB').textContent = body; show('msg');
+}
+const OUT_TXT = { '이정표': '↑ 마을   ← 필드   → 던전', '연습용 허수아비': '마음껏 때려 보세요. 허수아비는 불평하지 않습니다.' };
+// 장소 이동(어두워졌다 밝아짐)
+let traveling = false;
+function travel(id, pos, dir){
+  if (traveling) return; traveling = true; closeAll();
+  const f = $('fade'); f.classList.add('on');
+  setTimeout(() => {
+    buildWorld(id); P.x = pos[0]; P.y = pos[1]; P.dir = dir || 'front'; P.atk = null;
+    setTimeout(() => { f.classList.remove('on'); traveling = false; }, 120);
+  }, 320);
 }
 function openDlg(n){
   talking = n;
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
-  $('dlgTrade').hidden = !n.shop;
+  $('dlgTrade').hidden = !n.shop && !n.go;
+  $('dlgTrade').textContent = n.go === 'field' ? '지역 고르기' : n.go === 'dungeon' ? '던전으로' : '거래';
   show('dlg');
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
-$('dlgTrade').addEventListener('click', () => openShop(talking));
+$('dlgTrade').addEventListener('click', () => {
+  if (talking.go){ $('msgT').textContent = talking.go === 'field' ? '지역 고르기' : '던전으로';
+    $('msgB').textContent = talking.go === 'field' ? '지역 선택창(봄 초원·여름 숲·…)은 다음 단계에서 붙입니다.' : '던전은 다음 단계에서 연결합니다.'; show('msg'); return; }
+  openShop(talking);
+});
 
 // 가게 물건 (가안 가격)
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
@@ -175,7 +213,7 @@ const WP = [[14.5,14],[18,13.6],[28,13.6],[31.5,14],[14.5,19.9],[20,20.7],[26,20
 const VI = {};
 const vils = A.vils.map((v, i) => {
   VI[v.name] = {}; for (const d in v.fr) VI[v.name][d] = v.fr[d].map(load);
-  const hb = A.blds.find(b => b.k === v.home);
+  const hb = MAPS.town.blds.find(b => b.k === v.home);
   const home = { x: hb.x + hb.door * hb.w + (i % 2 ? 22 : -22), y: hb.y + 10 };
   const st = WP[(i * 5) % WP.length];
   return { ...v, x: st.x, y: st.y, home, tx: st.x, ty: st.y, wait: rand(0, 3), dir: 'front', flip: false, t: 0, moving: false,
@@ -357,7 +395,6 @@ function dayLook(t){
   return { c: [255, 255, 255], lamp: 0 };
 }
 const dayName = t => t < 0.08 ? '아침' : t < 0.45 ? '낮' : t < 0.63 ? '오후' : t < 0.74 ? '저녁' : t < 0.95 ? '밤' : '새벽';
-const lamps = A.props.filter(p => p.k.startsWith('lamp')).map(p => ({ x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 }));
 const PH = [0.03, 0.25, 0.55, 0.68, 0.82];
 $('place').addEventListener('click', () => { const i = PH.findIndex(p => p > DAY.t + 0.005); DAY.t = PH[i < 0 ? 0 : i]; });
 function drawDay(camX, camY){
@@ -388,7 +425,7 @@ function drawDay(camX, camY){
     ctx.fillStyle = gp; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill();
   }
   ctx.globalCompositeOperation = 'source-over';
-  const nm = '마을 · ' + dayName(DAY.t);
+  const nm = ($('place').dataset.map || '마을') + ' · ' + dayName(DAY.t);
   if ($('place').textContent !== nm) $('place').textContent = nm;
 }
 
@@ -407,10 +444,10 @@ function drawMini(camX, camY){
   const sx = mmc.width / MWp, sy = mmc.height / MHp;
   mx.drawImage(MINI, 0, 0, mmc.width, mmc.height);
   mx.fillStyle = '#5a3418';
-  for (const b of A.blds){ const fw = b.w * 0.8; mx.fillRect((b.x - fw / 2) * sx, (b.y - b.h * 0.42) * sy, fw * sx, b.h * 0.34 * sy); }
+  for (const b of CUR.blds){ const fw = b.w * 0.8; mx.fillRect((b.x - fw / 2) * sx, (b.y - b.h * 0.42) * sy, fw * sx, b.h * 0.34 * sy); }
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
-  mx.fillStyle = '#e8f2ff'; for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
+  mx.fillStyle = '#e8f2ff'; if (MAP === 'town') for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
   mx.strokeStyle = '#fff8'; mx.lineWidth = 2;
   mx.strokeRect(camX * sx, camY * sy, VW / Z * sx, VH / Z * sy);
   mx.fillStyle = '#ff3b2f'; mx.strokeStyle = '#fff'; mx.beginPath(); mx.arc(P.x * sx, P.y * sy, 5, 0, 7); mx.fill(); mx.stroke();
@@ -441,7 +478,7 @@ function frame(now){
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
   weather(dt, camX, camY, vw, vh);
   updAtk(dt);
-  updVils(dt, dayLook(DAY.t).lamp > 0.6);
+  if (MAP === 'town') updVils(dt, dayLook(DAY.t).lamp > 0.6);
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
@@ -450,11 +487,16 @@ function frame(now){
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
-  for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
+  if (MAP === 'town') for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.me){ drawMe(); continue; }
     if (s.vil){ drawVil(s.vil); continue; }
+    if (s.dummy){ // 맞으면 흔들림
+      const d = s.dummy; d.wob = Math.max(0, d.wob - dt * 2.2); d.ph += dt * 22;
+      const sk = Math.sin(d.ph) * 0.09 * d.wob * (d.dir || 1);
+      ctx.save(); ctx.translate(s.x, s.y); ctx.transform(1, 0, sk, 1, 0, 0); ctx.drawImage(s.img, -s.w / 2, -s.h, s.w, s.h); ctx.restore(); continue;
+    }
     if (s.tree){ // 바람에 우듬지가 살짝 흔들림
       const sk = Math.sin(T * 1.3 + s.ph) * 0.012 * W.wind;
       ctx.save(); ctx.translate(s.x, s.y); ctx.transform(1, 0, sk, 1, 0, 0);
@@ -490,7 +532,7 @@ function frame(now){
 // 무기 아이콘은 모두 "끝이 위, 손잡이가 아래"로 서 있다. 각도 0 = 끝이 위, 시계 방향이 +.
 const WIMG = {}; for (const k in A.wpn) WIMG[k] = load(A.wpn[k]);
 let WPN = null;
-function setWeapon(it){ WPN = it ? { wt: it.wt, img: WIMG[it.icon] } : null; }
+function setWeapon(it){ WPN = it ? { wt: it.wt, img: WIMG[it.icon], dmg: it.st.atk || it.st.matk || 1 } : null; }
 const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
 const DUR = { sword: 0.32, spear: 0.36, bow: 0.42, staff: 0.46, gauntlet: 0.22 };
@@ -512,6 +554,15 @@ function updAtk(dt){
   if (!P.atk) return;
   const a = P.atk; a.t += dt;
   const k = a.t / DUR[a.wt];
+  if (!a.hit && k > 0.45 && a.wt !== 'bow' && a.wt !== 'staff'){
+    a.hit = true;
+    const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
+    const reach = { sword: 78, spear: 104, gauntlet: 66 }[a.wt];
+    for (const t of dummies){
+      const dx = t.x - P.x, dy = (t.y - 30) - (P.y - 30), along = dx * d[0] + dy * d[1], side = Math.abs(dx * d[1] - dy * d[0]);
+      if (along > -10 && along < reach && side < 46) hitDummy(t, d);
+    }
+  }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
@@ -520,9 +571,27 @@ function updAtk(dt){
   }
   if (k > 1.2) P.atk = null;
 }
+function hitDummy(t, d){
+  const dm = WPN ? WPN.dmg : 1, crit = Math.random() < 0.1, v = crit ? dm * 2 : dm;
+  t.dummy.wob = 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
+  pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });
+}
+const pops = [];
+function drawPops(dt){
+  for (const p of pops){
+    p.t += dt; const k = p.t / 0.9;
+    ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.font = `900 ${p.crit ? 26 : 20}px sans-serif`; ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#2a140a'; ctx.fillStyle = p.crit ? '#ffcf3a' : '#fff4dc';
+    const y = p.y - k * 34; ctx.strokeText(p.txt, p.x, y); ctx.fillText(p.txt, p.x, y);
+  }
+  ctx.globalAlpha = 1;
+  while (pops.length && pops[0].t > 0.9) pops.shift();
+}
 function drawShots(dt){
+  drawPops(dt);
   for (const s of shots){
     s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
+    if (!s.done) for (const t of dummies){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ s.done = true; s.t = 0.5; hitDummy(t, [Math.sign(s.vx), 0]); break; } }
     const al = Math.max(0, 1 - s.t / 0.5); ctx.globalAlpha = al;
     const a = Math.atan2(s.vy, s.vx);
     if (s.kind === 'bow'){
@@ -610,6 +679,6 @@ function drawMe(){
 }
 
 P.hp = P.maxHp; P.mp = P.maxMp;
-window.__P = P; window.__W = W; window.__D = DAY; window.__V = vils;
+window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils;
 requestAnimationFrame(frame);
 })();
