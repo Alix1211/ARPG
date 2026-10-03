@@ -275,18 +275,18 @@ function specialMonsterAI(m,dx,dy,d,dt){
   }
   if(m.skillCd>0)return false;
   if(m.skill==='rock'&&d<225){
-    enemyShot(m,dx,dy,250,'','rock',1.05);m.skillCd=1.7+Math.random()*.5;
+    enemyShot(m,dx,dy,250,'','rock',1.05);if(typeof SFX!=='undefined')SFX.play('rock');m.skillCd=1.7+Math.random()*.5;
     pops.push({x:m.x,y:m.y-m.h,t:0,txt:'돌 던지기!',enemy:true});return true;
   }
   if(m.skill==='pounce'&&d>70&&d<205){
-    const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.24;m.skillCd=2.0+Math.random()*.4;return true;
+    const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.24;if(typeof SFX!=='undefined')SFX.play('charge');m.skillCd=2.0+Math.random()*.4;return true;
   }
   if(m.skill==='dart'&&d<145){
     const q=d||1,mx=-dy/q,my=dx/q,side=Math.random()<.5?-1:1;
     moveMonster(m,mx*side*44,my*side*44);m.skillCd=1.5+Math.random()*.4;return true;
   }
   if(m.skill==='splash'&&d<78){
-    enemyHazards.push({kind:'slime',x:P.x,y:P.y-18,t:0,delay:.24,life:.8,r:48,dmg:Math.max(1,Math.round(m.dmg*.65)),status:'slow',done:false});
+    enemyHazards.push({kind:'slime',x:P.x,y:P.y-18,t:0,delay:.24,life:.8,r:48,dmg:Math.max(1,Math.round(m.dmg*.65)),status:'slow',done:false});if(typeof SFX!=='undefined')SFX.play('slime');
     m.skillCd=2.2;return true;
   }
   if(m.skill==='cleave'&&d<72){
@@ -294,7 +294,7 @@ function specialMonsterAI(m,dx,dy,d,dt){
     m.skillCd=2.1;return true;
   }
   if(m.skill==='charge'&&d<225){const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.42;m.skillCd=3.5;return true;}
-  if(m.skill==='lightning'&&d<270){enemyHazards.push({kind:'lightning',x:P.x,y:P.y-25,t:0,delay:.65,life:1.0,r:38,dmg:Math.round(m.dmg*1.25),done:false});m.skillCd=2.8+Math.random()*.7;return true;}
+  if(m.skill==='lightning'&&d<270){enemyHazards.push({kind:'lightning',x:P.x,y:P.y-25,t:0,delay:.65,life:1.0,r:38,dmg:Math.round(m.dmg*1.25),done:false});if(typeof SFX!=='undefined')SFX.play('lightning');m.skillCd=2.8+Math.random()*.7;return true;}
   if(m.skill==='petrify'&&d<230){enemyShot(m,dx,dy,185,'stone','stone',.75);m.skillCd=3.0;return true;}
   if(m.skill==='radial'&&d<235){
     for(let i=0;i<8;i++){const a=i*Math.PI/4;enemyShots.push({x:m.x,y:m.y-m.h*.5,vx:Math.cos(a)*220,vy:Math.sin(a)*220,t:0,life:1.55,dmg:Math.max(1,Math.round(m.dmg*.8)),kind:'feather',done:false});}
