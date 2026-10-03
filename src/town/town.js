@@ -374,7 +374,7 @@ function goodsCat(it){
   if (it.potion) return 'potion';
   return sellCat(it.spec || {kind:'junk'});
 }
-function buyPrice(it){ return Math.max(1, Math.round(it.price || 1)); }
+function buyPrice(it){const d=1-.02*((P.lifeSkills&&P.lifeSkills.discount)||0);return Math.max(1,Math.round((it.price||1)*Math.max(.90,d)));}
 function baseSellValue(it){
   if (!it) return 1;
   let v = 10;
@@ -401,7 +401,7 @@ function sellRate(it){
   const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general';
   return SHOP_BUY_RATE[shop]?.[cat] || 0.60;
 }
-function sellPrice(it){ return Math.max(1, Math.round(baseSellValue(it) * 0.40 * sellRate(it))); }
+function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0);return Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)));}
 function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
 function shopMarketText(){ return '장비는 지역 시세와 무관 · 사는 값은 비싸고 되파는 값은 헐값입니다.'; }
 function openShop(n){
@@ -757,8 +757,8 @@ function frame(now){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
     P.run = kb ? !keys.shift : mag > 0.82;
-    const statusMul=typeof playerMoveFactor==='function'?playerMoveFactor():1;
-    const sp = (P.run ? 320 : 165 * Math.min(1, mag / 0.82)) * (atkBusy() && !WB[P.atk.wt].noSlow ? 0.7 : 1) * statusMul;   // 공격하면서 움직이면 조금 느려짐
+    const statusMul=typeof playerMoveFactor==='function'?playerMoveFactor():1,moveMul=1+Math.max(0,combatNow().move||0)/100;
+    const sp=(P.run?320:165*Math.min(1,mag/.82))*(atkBusy()&&!WB[P.atk.wt].noSlow?.7:1)*statusMul*moveMul;   // 공격하면서 움직이면 조금 느려짐
     move(dx / mag * sp * dt, dy / mag * sp * dt);
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += dt;
@@ -833,8 +833,18 @@ function frame(now){
 // 몸 그림(무기 없음) 위·아래에 무기 아이콘(5종×10등급)을 따로 그려 얹는다.
 // 무기 아이콘은 모두 "끝이 위, 손잡이가 아래"로 서 있다. 각도 0 = 끝이 위, 시계 방향이 +.
 const WIMG = {}; for (const k in A.wpn) WIMG[k] = load(A.wpn[k]);
-let WPN = null;
-function setWeapon(it){ WPN = it ? { wt: it.wt, img: WIMG[it.icon], dmg: it.st.atk || it.st.matk || 1 } : null; }
+let WPN=null;
+function combatNow(){return window.UI&&UI.combatMods?UI.combatMods():{phys:WPN?WPN.dmg:1,magic:WPN?WPN.dmg:1,as:0,crit:5,critDmg:150,fire:0,ice:0,skill:0,manaReduce:0,move:0};}
+function setWeapon(it){
+  WPN=it?{wt:it.wt,img:WIMG[it.icon],dmg:it.st.atk||it.st.matk||1,item:it}:null;
+  const cm=combatNow();
+  for(const k in WB)DUR[k]=WB[k].dur/(1+Math.max(0,cm.as||0)/100);
+}
+function basicDamage(){const cm=combatNow();return Math.max(1,WPN&&WPN.wt==='staff'?cm.magic:cm.phys);}
+function rollPlayerDamage(base){
+  const cm=combatNow(),crit=Math.random()<Math.max(0,cm.crit||0)/100;
+  return {v:Math.max(1,Math.round(base*(crit?(cm.critDmg||150)/100:1))),crit};
+}
 const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
 // 무기별 기준(같은 단계·같은 옵션일 때). 아이템 옵션이 이 값을 올리거나 내린다. docs/weapons.md
@@ -856,16 +866,16 @@ const shots = [];
 function attack(){
   if (typeof playerControlLocked === 'function' && playerControlLocked()) return;
   if (!WPN){ say('맨손입니다'); return; }
-  if (P.atk && P.atk.t < DUR[P.atk.wt] * 0.75) return;
-  if (typeof autoAimMonster === 'function') autoAimMonster();
-  P.atk = { t: 0, wt: WPN.wt, dir: P.dir, flip: P.flip, n: P.atk ? P.atk.n + 1 : 0, shot: false };
+  if(P.atk&&P.atk.t<(P.atk.dur||DUR[P.atk.wt])*.75)return;
+  if(typeof autoAimMonster==='function')autoAimMonster();
+  P.atk={t:0,wt:WPN.wt,dir:P.dir,flip:P.flip,n:P.atk?P.atk.n+1:0,shot:false,dur:DUR[WPN.wt]};
 }
 function swing(){ attack(); }
-const atkBusy = () => !!P.atk && P.atk.t < DUR[P.atk.wt];
+const atkBusy=()=>!!P.atk&&P.atk.t<(P.atk.dur||DUR[P.atk.wt]);
 function updAtk(dt){
   if (!P.atk) return;
-  const a = P.atk; a.t += dt;
-  const k = a.t / DUR[a.wt];
+  const a=P.atk;a.t+=dt;
+  const k=a.t/(a.dur||DUR[a.wt]);
   if (!a.hit && k > 0.45 && a.wt !== 'bow' && a.wt !== 'staff'){
     a.hit = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
@@ -881,18 +891,18 @@ function updAtk(dt){
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
-    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0;
-    const aim = a.wt === 'staff' && home>0 ? magicAim(w.speed, 380) : {vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
+    const w=WB[a.wt],home=a.wt==='staff'?((P.passives&&P.passives.magicGuide)||0):0,homeRange=home?260+home*90:0;
+    const aim=a.wt==='staff'&&home>0?magicAim(w.speed,homeRange):{vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
     const ux=aim.vx/w.speed, uy=aim.vy/w.speed;
     const sx=a.wt==='staff'?P.x+ux*24:P.x+(a.dir==='side'?d[0]*30:0);
     const sy=a.wt==='staff'?P.y-44+uy*24:P.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
-    shots.push({ x:sx, y:sy, vx:aim.vx, vy:aim.vy, speed:w.speed, t:0, life:w.life, kind:a.wt, blast:w.blast||0, home, target:aim.target });
+    shots.push({x:sx,y:sy,vx:aim.vx,vy:aim.vy,speed:w.speed,t:0,life:w.life,kind:a.wt,blast:w.blast||0,home,homeRange,target:aim.target});
   }
   if (k > 1.2) P.atk = null;
 }
 function hitTarget(t, d, stagger, dmOver){
   if (t.monster) return hitMonster(t, d, stagger, dmOver);
-  const dm = dmOver || (WPN ? WPN.dmg : 1), crit = Math.random() < 0.1, v = crit ? dm * 2 : dm;
+  const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
   t.dummy.wob = stagger ? 1.4 : 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
   pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });
 }
@@ -994,32 +1004,33 @@ const SK = {
 };
 const CD = {}; const sfx = [];
 function faceVec(){ return P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0]; }
-function cast(id, mod){
+function cast(id,mod){
   if(typeof playerControlLocked==='function'&&playerControlLocked())return false;
-  const k = SK[id]; if (!k) return false; mod = mod || { dmg: 1, mp: 1 };
-  if ((CD[id] || 0) > 0) return false;
-  const cost = Math.round(k.mp * mod.mp);
-  if (P.mp < cost){ say('마나가 부족합니다'); return false; }
-  P.mp -= cost; CD[id] = k.cd; syncBars();
-  const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
-  const home = (P.passives && P.passives.magicGuide) || 0;
-  if (id === 'fire1'){
-    const aim=home>0?magicAim(520,460):{vx:d[0]*520,vy:d[1]*520,target:null}, ux=aim.vx/520, uy=aim.vy/520;
-    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, homeRange:460, target:aim.target });
-  } else if (id === 'ice1'){
-    const aim=home>0?magicAim(720,500):{vx:d[0]*720,vy:d[1]*720,target:null}, ux=aim.vx/720, uy=aim.vy/720;
-    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, homeRange:500, target:aim.target });
-  }
-  else if (id === 'holy1_heal'){
-    const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
-    pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: true }); sfx.push({ type: 'heal', t: 0 });
-  } else if (id === 'sword1' || id === 'sword2'){
-    const spin = id === 'sword2', reach = spin ? 96 : 104, dm = Math.round(base * (spin ? 1.3 : 1.5));
-    for (const t of combatTargets()){
-      const dx = t.x - P.x, dy = t.y - P.y, dist = Math.hypot(dx, dy);
-      if (dist < reach && (spin || dist < 20 || (dx * d[0] + dy * d[1]) / dist > Math.cos(80 * PI / 180))) hitTarget(t, d, false, dm);
+  const k=SK[id],rank=(P.skillLv&&P.skillLv[id])||0;if(!k||rank<1)return false;mod=mod||{dmg:1,mp:1};
+  if((CD[id]||0)>0)return false;
+  const cm=combatNow(),cost=Math.max(1,Math.round(k.mp*mod.mp*(1-(cm.manaReduce||0)/100)));
+  if(P.mp<cost){say('마나가 부족합니다');return false;}
+  P.mp-=cost;CD[id]=k.cd;syncBars();
+  const d=faceVec(),home=(P.passives&&P.passives.magicGuide)||0;
+  const skillMul=(1+(rank-1)*.12)*(1+(cm.skill||0)/100);
+  if(id==='fire1'){
+    const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.fire||0)/100);
+    const range=home?300+home*80:0,aim=home>0?magicAim(520,range):{vx:d[0]*520,vy:d[1]*520,target:null},ux=aim.vx/520,uy=aim.vy/520;
+    shots.push({x:P.x+ux*24,y:P.y-44+uy*24,vx:aim.vx,vy:aim.vy,speed:520,t:0,life:1.0,kind:'fire',blast:46,dmg:Math.round(base*1.55),home,homeRange:range,target:aim.target});
+  }else if(id==='ice1'){
+    const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
+    const range=home?330+home*85:0,aim=home>0?magicAim(720,range):{vx:d[0]*720,vy:d[1]*720,target:null},ux=aim.vx/720,uy=aim.vy/720;
+    shots.push({x:P.x+ux*24,y:P.y-44+uy*24,vx:aim.vx,vy:aim.vy,speed:720,t:0,life:.8,kind:'ice',blast:0,dmg:Math.round(base*1.18),home,homeRange:range,target:aim.target});
+  }else if(id==='holy1_heal'){
+    const v=Math.round(P.maxHp*(.24+rank*.05));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
+    pops.push({x:P.x,y:P.y-100,t:0,txt:'+'+v,heal:true});sfx.push({type:'heal',t:0});
+  }else if(id==='sword1'||id==='sword2'){
+    const spin=id==='sword2',reach=spin?96:104,base=Math.max(1,cm.phys)*mod.dmg*skillMul,dm=Math.round(base*(spin?1.25:1.45));
+    for(const t of combatTargets()){
+      const dx=t.x-P.x,dy=t.y-P.y,dist=Math.hypot(dx,dy);
+      if(dist<reach&&(spin||dist<20||(dx*d[0]+dy*d[1])/dist>Math.cos(80*PI/180)))hitTarget(t,d,false,dm);
     }
-    sfx.push({ type: spin ? 'spin' : 'slash', t: 0, a: Math.atan2(d[1], d[0]) });
+    sfx.push({type:spin?'spin':'slash',t:0,a:Math.atan2(d[1],d[0])});
   }
   return true;
 }
