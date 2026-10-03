@@ -132,6 +132,7 @@ const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 }, stick = $('stick'), knob =
 function placeStick(x, y){ stick.style.left = (x - 64) + 'px'; stick.style.top = (y - 64) + 'px'; stick.style.bottom = 'auto'; }
 function homeStick(){ stick.style.left = stick.style.top = stick.style.bottom = ''; stick.classList.remove('act'); }
 $('joy').addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') return; // Android touch는 아래 touch 전용 경로에서 처리
   if (panel) return;
   e.preventDefault();
   if (joy.id != null && joy.id !== e.pointerId) return;
@@ -157,8 +158,32 @@ function joyMove(e){
 function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); } }
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
 $('joy').addEventListener('lostpointercapture', endJoy);
+
+// 모바일은 PointerEvent 취소에 흔들리지 않도록 Touch 식별자를 직접 추적한다.
+let joyTouch = null;
+function touchPoint(list, id){ for (const t of list) if (t.identifier === id) return t; return null; }
+$('joy').addEventListener('touchstart', e => {
+  if (panel || joyTouch != null) return;
+  const t = e.changedTouches[0]; if (!t) return;
+  e.preventDefault(); joyTouch = t.identifier; joy.id = null; joy.dx = joy.dy = 0;
+  joy.ox = Math.max(70, Math.min(innerWidth - 70, t.clientX)); joy.oy = Math.max(70, Math.min(innerHeight - 70, t.clientY));
+  placeStick(joy.ox, joy.oy); stick.classList.add('act'); knob.style.transform = '';
+  joyMove(t);
+}, { passive:false });
+document.addEventListener('touchmove', e => {
+  if (joyTouch == null) return;
+  const t = touchPoint(e.touches, joyTouch); if (!t) return;
+  e.preventDefault(); joyMove(t);
+}, { passive:false });
+function endJoyTouch(e){
+  if (joyTouch == null) return;
+  const t = touchPoint(e.changedTouches, joyTouch); if (!t) return;
+  e.preventDefault(); joyTouch = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick();
+}
+document.addEventListener('touchend', endJoyTouch, { passive:false });
+document.addEventListener('touchcancel', endJoyTouch, { passive:false });
 // 창 밖으로 나가거나 다른 창을 보면 조이스틱·키 입력을 모두 풀어 줌
-function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); for (const k in keys) keys[k] = false; }
+function releaseAll(){ joy.id = null; joyTouch = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); for (const k in keys) keys[k] = false; }
 addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
 $('fs').addEventListener('click', () => {
   const d = document.documentElement;
@@ -783,7 +808,9 @@ function updAtk(dt){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
-    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, speed: w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0, home });
+    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0;
+    const aim = a.wt === 'staff' ? magicAim(w.speed, 720) : {vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
+    shots.push({ x: P.x + ox, y: P.y + oy, vx: aim.vx, vy: aim.vy, speed: w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0, home, target:aim.target });
   }
   if (k > 1.2) P.atk = null;
 }
@@ -812,6 +839,17 @@ function nearestShotTarget(x, y, lim = 720){
     if (d < bd){ bd = d; best = t; }
   }
   return best;
+}
+function magicAim(speed, lim = 720){
+  const t = nearestShotTarget(P.x, P.y - 44, lim);
+  if (!t){
+    const d = P.dir === 'front' ? [0,1] : P.dir === 'back' ? [0,-1] : [P.flip ? -1 : 1,0];
+    return { vx:d[0]*speed, vy:d[1]*speed, target:null };
+  }
+  const tx=t.x, ty=t.y-(t.h||60)*0.45, dx=tx-P.x, dy=ty-(P.y-44), d=Math.hypot(dx,dy)||1;
+  // 캐릭터 모션 방향도 타깃의 주축 방향에 맞춘다. 투사체 자체는 실제 좌표로 발사.
+  if (Math.abs(dx) > Math.abs(dy)){ P.dir='side'; P.flip=dx<0; } else { P.dir=dy<0?'back':'front'; P.flip=false; }
+  return { vx:dx/d*speed, vy:dy/d*speed, target:t };
 }
 function guideShot(s, dt){
   if (!s.home || s.done) return;
@@ -885,8 +923,11 @@ function cast(id, mod){
   const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
   const ox = P.dir === 'side' ? d[0] * 30 : 0, oy = P.dir === 'front' ? -34 : P.dir === 'back' ? -80 : -44;
   const home = (P.passives && P.passives.magicGuide) || 0;
-  if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, speed: 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6), home });
-  else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, speed: 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2), home });
+  if (id === 'fire1'){
+    const aim=magicAim(520,720); shots.push({ x:P.x+ox, y:P.y+oy, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, target:aim.target });
+  } else if (id === 'ice1'){
+    const aim=magicAim(720,720); shots.push({ x:P.x+ox, y:P.y+oy, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, target:aim.target });
+  }
   else if (id === 'holy1_heal'){
     const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
     pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: true }); sfx.push({ type: 'heal', t: 0 });
@@ -1005,6 +1046,6 @@ function drawMe(){
 /*FIELD_DUNGEON*/
 
 P.hp = P.maxHp; P.mp = P.maxMp;
-window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils;
+window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils; window.__CTRL = { joy:()=>({dx:joy.dx,dy:joy.dy,touch:joyTouch,id:joy.id}), shots:()=>shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,kind:s.kind,done:!!s.done})) };
 requestAnimationFrame(frame);
 })();
