@@ -40,7 +40,7 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if (b.k === 'watchtower' || hasNpc.has(b.k)) continue;
-  spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: gate ? 'gate' : 'bld' });
+  spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
 for (const p of CUR.props){
   if (p.kind === 'gatewall'){ // 성벽: 가운데 문만 비우고 막음
@@ -201,7 +201,7 @@ const PROP_TXT = {
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
-function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (typeof closeRegionSelect === 'function') closeRegionSelect(true); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
+function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (typeof closeRegionSelect === 'function') closeRegionSelect(true); if (window.TRADE) TRADE.close(true); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
@@ -210,6 +210,7 @@ function act(){
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
+  if (near.kind === 'trade' && window.TRADE) return TRADE.open(near.market || (CUR && CUR.market) || 'town');
   if (near.kind === 'dungeon') return enterDungeonFromHere();
   if (near.kind === 'stairs_down') return nextDungeonFloor();
   if (near.kind === 'stairs_up') return previousDungeonFloor();
@@ -235,13 +236,14 @@ function openDlg(n){
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
   $('dlgTrade').hidden = !n.shop && !n.go;
-  $('dlgTrade').textContent = n.go === 'field' ? '지역 고르기' : n.go === 'dungeon' ? '던전으로' : '거래';
+  $('dlgTrade').textContent = n.go === 'field' ? '지역 고르기' : n.go === 'dungeon' ? '던전으로' : n.shop === 'trade' ? '교역하기' : '거래';
   show('dlg');
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 $('dlgTrade').addEventListener('click', () => {
   if (talking.go === 'field'){ openRegionSelect(); return; }
   if (talking.go === 'dungeon'){ enterDungeonFromOut(); return; }
+  if (talking.shop === 'trade' && window.TRADE){ TRADE.open(talking.market || 'town'); return; }
   openShop(talking);
 });
 
@@ -297,10 +299,7 @@ function goodsCat(it){
   if (it.potion) return 'potion';
   return sellCat(it.spec || {kind:'junk'});
 }
-function buyPrice(it){
-  const r = REGION_MARKET[marketRegion()] || REGION_MARKET.town;
-  return Math.max(1, Math.round(it.price * (r[goodsCat(it)] || 1)));
-}
+function buyPrice(it){ return Math.max(1, Math.round(it.price || 1)); }
 function baseSellValue(it){
   if (!it) return 1;
   let v = 10;
@@ -324,16 +323,12 @@ function sellPressure(shop, cat){
   return Math.max(0.80, 1 - n * 0.02); // 케인: 너무 심한 폭락 금지
 }
 function sellRate(it){
-  const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general', region = marketRegion();
-  return (SHOP_BUY_RATE[shop]?.[cat] || 0.60) * (REGION_MARKET[region]?.[cat] || 1) * sellPressure(shop, cat);
+  const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general';
+  return SHOP_BUY_RATE[shop]?.[cat] || 0.60;
 }
 function sellPrice(it){ return Math.max(1, Math.round(baseSellValue(it) * 0.40 * sellRate(it))); }
 function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
-function shopMarketText(){
-  const region = marketRegion(), r = REGION_MARKET[region];
-  const word = v => v >= 1.18 ? '▲ 높음' : v <= 0.88 ? '▼ 낮음' : '보통';
-  return (MARKET_NAME[region] || region) + ' 시세 · 무기 ' + word(r.weapon) + ' · 방어구 ' + word(r.armor) + ' · 장신구 ' + word(r.accessory);
-}
+function shopMarketText(){ return '장비는 지역 시세와 무관 · 사는 값은 비싸고 되파는 값은 헐값입니다.'; }
 function openShop(n){
   shopNpc = n; shopMode = 'buy'; sel = null;
   $('shopName').textContent = n.title.replace(' 주인', '');
@@ -382,9 +377,8 @@ function pickBuy(it, c, price){
   price = price || buyPrice(it); sel = { mode:'buy', it, price };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
   $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
-  const rr = REGION_MARKET[marketRegion()]?.[goodsCat(it)] || 1;
-  $('infoSlot').textContent = it.slot + ' · 일반 · 지역시세' + rateMark(rr);
-  $('infoPrice').textContent = '금화 ' + price + rateMark(rr);
+  $('infoSlot').textContent = it.slot + ' · 일반';
+  $('infoPrice').textContent = '금화 ' + price;
   $('buy').textContent = '사기'; $('buy').disabled = P.gold < price; $('shopSay').textContent = '';
 }
 function pickSell(idx, it, c){
@@ -405,9 +399,8 @@ $('buy').addEventListener('click', () => {
   if (sel.mode === 'sell'){
     const cur = UI.bagItems().find(x => x.i === sel.idx);
     if (!cur || cur.it.id !== sel.it.id){ renderShop(); return; }
-    const price = sellPrice(cur.it), rate = sellRate(cur.it), cat = sellCat(cur.it), shop = shopNpc.shop;
+    const price = sellPrice(cur.it), rate = sellRate(cur.it);
     const removed = UI.removeBagAt(sel.idx); if (!removed) return;
-    const key = marketRegion() + ':' + shop + ':' + cat; sellFlow.sold[key] = (sellFlow.sold[key] || 0) + 1;
     setGold(P.gold + price); if (UI.save) UI.save();
     $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
     renderShop(); $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
@@ -421,7 +414,7 @@ $('buy').addEventListener('click', () => {
   $('shopSay').textContent = it.name + '을(를) 가방에 넣었습니다. 루크레아가 지갑을 오래 쳐다봅니다.';
   $('buy').disabled = P.gold < price;
 });
-window.__SHOP = { open: openShop, mode: setShopMode, price: sellPrice, buyPrice, rate: sellRate, state: () => ({mode:shopMode, region:marketRegion(), sold:{...sellFlow.sold}, gold:P.gold}) };
+window.__SHOP = { open: openShop, mode: setShopMode, price: sellPrice, buyPrice, rate: sellRate, state: () => ({mode:shopMode, gold:P.gold}) };
 
 
 // ======================= 행인 =======================
