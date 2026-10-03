@@ -485,7 +485,7 @@ function saveGame(){
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,eq,cur,pot:POT,qs:QS,
-      trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
+      location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}
 }
 function loadGame(){
@@ -503,7 +503,12 @@ function loadGame(){
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
 const saved=loadGame();syncHud();syncPot();
-if(saved){G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);G.say('이어서 합니다. 금화 '+G.P.gold+'닢 그대로!');}
+if(saved){
+  G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);
+  Promise.resolve(G.resumeLocation?G.resumeLocation(saved.location):false).then(()=>{
+    G.say('이어서 합니다. 금화 '+G.P.gold+'닢 그대로!');
+  });
+}
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
 window.UI.save=saveGame;window.UI.reset=()=>{try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
 })();
