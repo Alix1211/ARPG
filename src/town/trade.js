@@ -165,5 +165,6 @@ window.TRADE={
   open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,
   cargo:()=>JSON.parse(JSON.stringify(tradeState.cargo)),goods:TRADE_GOODS,regions:TRADE_REGIONS,
   saveData:tradeSaveData,loadData:tradeLoadData,renderSummary:renderTradeSummary,renderCargo:renderTradeCargo,
+  state:()=>({region:tradeRegion,slots:cargoSlots(),cargo:JSON.parse(JSON.stringify(tradeState.cargo)),resetAt:tradeState.resetAt}),
   debugRegion:r=>{tradeRegion=TRADE_REGIONS[r]?r:'town';return tradeRegion;}
 };
