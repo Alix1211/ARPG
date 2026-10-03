@@ -405,16 +405,36 @@ function tapEq(s){
   if (!eq[s]){ pickSel = null; $('iinfo').classList.remove('on'); render(); return; }
   pickSel = { from: 'eq', slot: s }; render(); showInfo(eq[s], 'eq');
 }
-function cmpLine(it, other){
+function r2(x){ return Math.round(x * 100) / 100; }
+// 새 장비(it)와 낀 장비(o)의 수치를 한 줄씩. 숫자는 낀 장비 값, ▲▼는 "새 장비가 이만큼 더 좋다/나쁘다"
+function cmpLine(o, it){
   const out = [];
-  const keys = new Set([...Object.keys(it.st), ...Object.keys(other ? other.st : {})]);
+  const keys = new Set([...Object.keys(o ? o.st : {}), ...Object.keys(it ? it.st : {})]);
   for (const k of keys){
-    const a = it.st[k] || 0, b = other ? (other.st[k] || 0) : 0;
+    const a = o ? (o.st[k] || 0) : 0, b = it ? (it.st[k] || 0) : 0;
     const li = el('li', '', `${STN[k]} ${a}`);
-    if (other && a !== b){ const sp = el('span', a > b ? 'up' : 'dn', a > b ? ` ▲${a - b}` : ` ▼${b - a}`); li.append(sp); }
+    if (it && o !== it && a !== b){ const d = r2(Math.abs(b - a)); li.append(el('span', b > a ? 'up' : 'dn', b > a ? ` ▲${d}` : ` ▼${d}`)); }
     out.push(li);
   }
   return out;
+}
+const CMPN = { w1: '무기1', w2: '무기2', ring1: '왼손 반지', ring2: '오른손 반지' };
+// 가방 장비를 고르면 정보창 왼쪽에 "지금 낀 장비" 카드를 붙인다. 무기·반지는 두 장, 나머지는 한 장.
+function cmpCards(it){
+  const slots = it.kind === 'weapon' ? ['w1', 'w2'] : it.kind === 'ring' ? ['ring1', 'ring2'] : [it.kind];
+  const box = el('div', 'icmp');
+  for (const s of slots){
+    const o = eq[s], c = el('div', 'ccard'), held = (s === 'w1' || s === 'w2') && s === cur && !!o;
+    c.append(el('div', 'ctag' + (held ? ' held' : ''), (CMPN[s] || SLOTN[s]) + (held ? ' · 손에 듦' : '')));
+    if (o){
+      const nm = el('div', 'cname', o.name); nm.style.color = RART[o.rar]; c.append(nm);
+      if (o.kind === 'weapon') c.append(el('div', 'isub', WN[o.wt]));
+    } else c.append(el('div', 'cempty', '비어 있음'));
+    const ul = el('ul', 'ist'); cmpLine(o, it).forEach(li => ul.append(li)); c.append(ul);
+    box.append(c);
+  }
+  box.append(el('div', 'cnote', '▲▼ = 새 장비 기준 차이'));
+  return box;
 }
 function targetSlot(it){
   if (it.kind === 'weapon') return eq.w1 ? (eq.w2 ? cur : 'w2') : 'w1';
@@ -428,9 +448,8 @@ function showInfo(it, from){
   if (it.kind === 'weapon') I.append(el('div', 'isub', WINFO[it.wt]));
   const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
   const ul = el('ul', 'ist');
-  const other = from === 'bag' ? eq[targetSlot(it)] : null;
-  cmpLine(it, other).forEach(li => ul.append(li)); I.append(ul);
-  if (from === 'bag' && other) I.append(el('div', 'icmp', `▲▼ 지금 낀 ${other.name}과 비교`));
+  cmpLine(it, null).forEach(li => ul.append(li)); I.append(ul);
+  if (from === 'bag') I.append(cmpCards(it));
   const row = el('div', 'ibtns');
   if (from === 'bag'){
     if (it.kind === 'weapon'){
