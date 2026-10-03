@@ -258,7 +258,7 @@ NPC = [
  (42, '그레타', '대장간 주인', 'smithy', 1, '망치 소리 시끄럽지? 볼일 있으면 크게 말해!', None),
  (12, '핀', '교역소 직원', 'shop_tools', -1, '오늘 시세부터 보시겠어요? 멀리 갈수록 남는 장사가 있습니다.', 'trade'),
  (40, '브란', '술집 주인', 'tavern', 1, '한잔하고 가. 외상은 안 되고.', None),
- (39, '하르트', '길드장', 'guild_hall', -1, '의뢰는 게시판에 붙여 두었네.', None),
+ (39, '하르트', '길드장', 'guild_hall', -1, '의뢰는 게시판에 붙여 두었네.', 'guild'),
  (29, '에드먼', '학자', 'scholar_dome', 1, '아, 손님인가? 책 좀 치우고…', None),
  (43, '페닉스', '금고 관리인', 'manor_vault', -1, '맡기실 돈이 있으신가요?', None),
  (28, '고르던', '전당포 주인', 'townhouse_pawn', -1, '물건을 보여 주게. 값은 내가 매기지.', 'pawn'),
@@ -408,7 +408,7 @@ for f in sorted(glob.glob(R + 'sfx/*.mp3')) if 'glob' in dir() else []:
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF)
 js = open(os.path.join(HERE, 'town.js')).read()
-js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read())
+js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'field_dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'dungeon.js')).read() + '\n' + open(os.path.join(HERE, 'sound.js')).read() + '\n' + open(os.path.join(HERE, 'trade.js')).read() + '\n' + open(os.path.join(HERE, 'guild.js')).read())
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t
