@@ -1096,19 +1096,27 @@ function drawShots(dt){
   ctx.globalAlpha = 1;
   while (shots.length && shots[0].done && (!shots[0].blast || shots[0].bt > 0.3)) shots.shift();
 }
-function boom(s, t){
-  const vx = s.vx, vy = s.vy; s.done = true; s.vx = s.vy = 0;
-  if (s.blast){ for (const u of combatTargets()) if (Math.hypot(u.x - s.x, (u.y - 30) - s.y) < s.blast + 16) hitTarget(u, [Math.sign(u.x - s.x) || 1, 0], false, s.dmg); }
-  else if (t) hitTarget(t, [Math.sign(vx) || Math.sign(vy) || 1, 0], false, s.dmg);
+function boom(s,t){
+  const vx=s.vx,vy=s.vy;s.done=true;s.vx=s.vy=0;
+  const hit=(u)=>{
+    hitTarget(u,[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0],!!s.stagger,s.dmg);
+    if(s.status&&typeof applyMonsterStatus==='function')applyMonsterStatus(u,s.status,s.statusDur||2.5);
+  };
+  if(s.blast){
+    for(const u of combatTargets())if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);
+    sfx.push({type:s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact',t:0,x:s.x,y:s.y,r:s.blast});
+  }else if(t){
+    hit(t);sfx.push({type:s.kind==='ice'?'icehit':'impact',t:0,x:s.x,y:s.y,r:34});
+  }
 }
 
-// ======================= 스킬 (시험용 5개: 실제 스킬 체계 전까지) =======================
-const SK = {
-  fire1:      { mp: 4, cd: 1.2 },  // 불덩이: 날아가 터짐
-  ice1:       { mp: 3, cd: 0.9 },  // 얼음 화살: 빠르고 곧게
-  holy1_heal: { mp: 6, cd: 4.0 },  // 치유
-  sword1:     { mp: 2, cd: 0.8 },  // 강하게 베기: 넓고 센 부채꼴
-  sword2:     { mp: 5, cd: 2.0 },  // 회전 베기: 몸 둘레 전부
+// ======================= 1차 전투 스킬 =======================
+const SK={
+  fire1:{mp:5,cd:1.35},      // 화염구: 강한 광역 + 화상
+  ice1:{mp:4,cd:1.0},        // 빙결창: 빠른 일격 + 둔화/빙결
+  holy1_heal:{mp:7,cd:4.5},  // 치유: 큰 즉시 회복
+  sword1:{mp:3,cd:.95},      // 강베기: 강한 전방 부채꼴 + 경직
+  sword2:{mp:6,cd:2.2},      // 회전베기: 넓은 전방위 + 밀치기
 };
 const CD = {}; const sfx = [];
 function faceVec(){ return P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0]; }
@@ -1120,25 +1128,32 @@ function cast(id,mod){
   if(P.mp<cost){say('마나가 부족합니다');return false;}
   P.mp-=cost;CD[id]=k.cd;syncBars();
   const d=faceVec(),home=(P.passives&&P.passives.magicGuide)||0;
-  const skillMul=(1+(rank-1)*.12)*(1+(cm.skill||0)/100);
+  const skillMul=(1+(rank-1)*.18)*(1+(cm.skill||0)/100);
   if(id==='fire1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.fire||0)/100);
-    const range=home?300+home*80:0,aim=home>0?magicAim(520,range):{vx:d[0]*520,vy:d[1]*520,target:null},ux=aim.vx/520,uy=aim.vy/520;
-    shots.push({x:P.x+ux*24,y:P.y-44+uy*24,vx:aim.vx,vy:aim.vy,speed:520,t:0,life:1.0,kind:'fire',blast:46,dmg:Math.round(base*1.55),home,homeRange:range,target:aim.target});
+    const range=home?330+home*90:0,aim=home>0?magicAim(500,range):{vx:d[0]*500,vy:d[1]*500,target:null},ux=aim.vx/500,uy=aim.vy/500;
+    const blast=78+(rank>=3?14:0)+(rank>=5?18:0);
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:500,t:0,life:1.15,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
+    sfx.push({type:'castfire',t:0,x:P.x,y:P.y-36,r:40});
   }else if(id==='ice1'){
     const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?330+home*85:0,aim=home>0?magicAim(720,range):{vx:d[0]*720,vy:d[1]*720,target:null},ux=aim.vx/720,uy=aim.vy/720;
-    shots.push({x:P.x+ux*24,y:P.y-44+uy*24,vx:aim.vx,vy:aim.vy,speed:720,t:0,life:.8,kind:'ice',blast:0,dmg:Math.round(base*1.18),home,homeRange:range,target:aim.target});
+    const range=home?360+home*95:0,aim=home>0?magicAim(760,range):{vx:d[0]*760,vy:d[1]*760,target:null},ux=aim.vx/760,uy=aim.vy/760;
+    shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:760,t:0,life:.95,kind:'ice',blast:34+(rank>=3?12:0),dmg:Math.round(base*(1.75+rank*.06)),status:rank>=3?'freeze':'slow',statusDur:rank>=3?.85+rank*.08:2.4+rank*.2,stagger:rank>=5,home,homeRange:range,target:aim.target});
+    sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
   }else if(id==='holy1_heal'){
-    const v=Math.round(P.maxHp*(.24+rank*.05));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
-    pops.push({x:P.x,y:P.y-100,t:0,txt:'+'+v,heal:true});sfx.push({type:'heal',t:0});
+    const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
+    pops.push({x:P.x,y:P.y-100,t:0,txt:'+'+v,heal:true});sfx.push({type:'heal',t:0,x:P.x,y:P.y-20,r:72});
   }else if(id==='sword1'||id==='sword2'){
-    const spin=id==='sword2',reach=spin?96:104,base=Math.max(1,cm.phys)*mod.dmg*skillMul,dm=Math.round(base*(spin?1.25:1.45));
+    const spin=id==='sword2',reach=spin?128:132,base=Math.max(1,cm.phys)*mod.dmg*skillMul,dm=Math.round(base*(spin?1.72:2.15));
+    let hitN=0;
     for(const t of combatTargets()){
       const dx=t.x-P.x,dy=t.y-P.y,dist=Math.hypot(dx,dy);
-      if(dist<reach&&(spin||dist<20||(dx*d[0]+dy*d[1])/dist>Math.cos(80*PI/180)))hitTarget(t,d,false,dm);
+      if(dist<reach&&(spin||dist<20||(dx*d[0]+dy*d[1])/dist>Math.cos(95*PI/180))){
+        hitTarget(t,d,true,dm);hitN++;
+      }
     }
-    sfx.push({type:spin?'spin':'slash',t:0,a:Math.atan2(d[1],d[0])});
+    sfx.push({type:spin?'spinpower':'slashpower',t:0,a:Math.atan2(d[1],d[0]),x:P.x,y:P.y-30,r:reach});
+    if(hitN)pops.push({x:P.x,y:P.y-115,t:0,txt:spin?'회전 베기!':'강베기!',crit:true});
   }
   return true;
 }
@@ -1157,22 +1172,35 @@ function updSkills(dt){
   if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
 }
 function drawSkillFx(dt){
-  for (const f of sfx){
-    f.t += dt; const k = f.t / 0.35; if (k > 1) continue;
-    ctx.save(); ctx.globalAlpha = 1 - k; ctx.lineCap = 'round';
-    if (f.type === 'heal'){
-      ctx.strokeStyle = '#8dffb0'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(P.x, P.y, 24 + k * 30, 9 + k * 11, 0, 0, 7); ctx.stroke();
-    } else if (f.type === 'spin'){
-      ctx.strokeStyle = '#fff6dc'; ctx.lineWidth = 9 * (1 - k) + 2;
-      ctx.beginPath(); ctx.ellipse(P.x, P.y - 34, 70 + k * 18, 44 + k * 10, 0, k * 6, k * 6 + 5.2); ctx.stroke();
-    } else {
-      ctx.strokeStyle = '#ffe9b0'; ctx.lineWidth = 11 * (1 - k) + 2;
-      ctx.beginPath(); ctx.arc(P.x, P.y - 34, 66 + k * 14, f.a - 1.3, f.a - 1.3 + 2.6 * Math.min(1, k * 3)); ctx.stroke();
+  for(const f of sfx){
+    f.t+=dt;const dur=(f.type==='fireburst'||f.type==='iceburst')?.48:.38,k=f.t/dur;if(k>1)continue;
+    const x=f.x??P.x,y=f.y??P.y-30,r=f.r||72;
+    ctx.save();ctx.globalAlpha=Math.max(0,1-k);ctx.lineCap='round';
+    if(f.type==='heal'){
+      ctx.strokeStyle='#8dffb0';ctx.lineWidth=5*(1-k)+2;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(x,y+14,r*(.35+k*.65)-i*8,12+k*20-i*2,0,0,7);ctx.stroke();}
+      ctx.strokeStyle='#fffbd0';ctx.beginPath();ctx.moveTo(x,y-r*.65);ctx.lineTo(x,y+r*.15);ctx.stroke();
+    }else if(f.type==='fireburst'){
+      const R=r*(.25+k*.8);ctx.strokeStyle='#ff9d35';ctx.lineWidth=10*(1-k)+2;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.stroke();
+      ctx.strokeStyle='#fff0a0';ctx.lineWidth=4;for(let i=0;i<10;i++){const a=i*PI/5+.25;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*R*.35,y+Math.sin(a)*R*.35);ctx.lineTo(x+Math.cos(a)*R*1.15,y+Math.sin(a)*R*1.15);ctx.stroke();}
+    }else if(f.type==='iceburst'||f.type==='icehit'){
+      const R=r*(.3+k*.8);ctx.strokeStyle='#8de4ff';ctx.lineWidth=6*(1-k)+2;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.stroke();
+      ctx.fillStyle='#dff8ff';for(let i=0;i<8;i++){const a=i*PI/4+.2,rr=R*(.55+.35*(i%2));ctx.save();ctx.translate(x+Math.cos(a)*rr,y+Math.sin(a)*rr);ctx.rotate(a);ctx.fillRect(-2,-10*(1-k),4,20*(1-k));ctx.restore();}
+    }else if(f.type==='spinpower'){
+      ctx.strokeStyle='#fff1a8';ctx.lineWidth=16*(1-k)+3;ctx.beginPath();ctx.ellipse(x,y,r*(.6+k*.35),r*(.38+k*.18),0,k*5.5,k*5.5+5.8);ctx.stroke();
+      ctx.strokeStyle='#ff8e35';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(x,y,r*(.48+k*.28),r*(.3+k*.12),0,k*5.5+1,k*5.5+5.2);ctx.stroke();
+    }else if(f.type==='slashpower'){
+      ctx.strokeStyle='#fff1a8';ctx.lineWidth=18*(1-k)+3;ctx.beginPath();ctx.arc(x,y,r*(.55+k*.22),f.a-1.55,f.a+1.55);ctx.stroke();
+      ctx.strokeStyle='#ff9d35';ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y,r*(.42+k*.18),f.a-1.35,f.a+1.35);ctx.stroke();
+    }else if(f.type==='castfire'||f.type==='castice'){
+      ctx.strokeStyle=f.type==='castfire'?'#ff8a2a':'#7ddcff';ctx.lineWidth=4*(1-k)+1;ctx.beginPath();ctx.arc(x,y,r*(.7+k*.55),0,7);ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,r*(.45+k*.35),k*4,k*4+4.8);ctx.stroke();
+    }else{
+      ctx.strokeStyle='#ffe9b0';ctx.lineWidth=10*(1-k)+2;ctx.beginPath();ctx.arc(x,y,r*(.4+k*.6),0,7);ctx.stroke();
     }
     ctx.restore();
   }
-  while (sfx.length && sfx[0].t > 0.35) sfx.shift();
+  while(sfx.length&&sfx[0].t>.5)sfx.shift();
 }
 
 // 휘두름 궤적(초승달)
