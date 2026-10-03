@@ -267,34 +267,60 @@ function specialMonsterAI(m,dx,dy,d,dt){
   return false;
 }
 function updEncounters(dt){
-  playerInv=Math.max(0,playerInv-dt);
+  playerInv=Math.max(0,playerInv-dt); updatePlayerStatus(dt);
   if(!combatMap()) return;
+
+  for(const h of enemyHazards){
+    h.t+=dt;
+    if(!h.done&&h.t>=h.delay){h.done=true;if(Math.hypot(P.x-h.x,(P.y-30)-h.y)<h.r)hurtPlayer(h.dmg,P.x-h.x,P.y-h.y);}
+  }
+  for(let i=enemyHazards.length-1;i>=0;i--) if(enemyHazards[i].t>enemyHazards[i].life)enemyHazards.splice(i,1);
+
   for(const s of enemyShots){
     s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
-    if(!s.done&&Math.hypot(s.x-P.x,s.y-(P.y-35))<18){ s.done=true; hurtPlayer(s.dmg,s.vx,s.vy); }
+    if(!s.done&&blocked(s.x,s.y)){s.done=true;continue;}
+    if(!s.done&&Math.hypot(s.x-P.x,s.y-(P.y-35))<18){
+      s.done=true; hurtPlayer(s.dmg,s.vx,s.vy,s.status,s.statusDur);
+    }
     if(s.t>s.life) s.done=true;
   }
   for(let i=enemyShots.length-1;i>=0;i--) if(enemyShots[i].done) enemyShots.splice(i,1);
+
   for(const m of monsters){
     if(m.removed) continue;
-    if(m.dead){ m.death+=dt; if(m.death>1)m.removed=true; continue; }
-    m.hurt=Math.max(0,m.hurt-dt); m.stun=Math.max(0,m.stun-dt); m.cd=Math.max(0,m.cd-dt); if(m.stun>0) continue;
+    if(m.dead){
+      if(m.reviveT>0){
+        m.reviveT-=dt;
+        if(m.reviveT<=0){m.dead=false;m.hp=Math.max(1,Math.round(m.maxHp*.38));m.death=0;m.stun=.45;pops.push({x:m.x,y:m.y-m.h,t:0,txt:'다시 일어남!',enemy:true});}
+      } else {m.death+=dt;if(m.death>1)m.removed=true;}
+      continue;
+    }
+    m.hurt=Math.max(0,m.hurt-dt); m.stun=Math.max(0,m.stun-dt); m.cd=Math.max(0,(m.cd||0)-dt); m.skillCd=Math.max(0,(m.skillCd||0)-dt);
+    if(m.stun>0) continue;
     const dx=P.x-m.x,dy=P.y-m.y,d=Math.hypot(dx,dy);
-    if(d<260){ m.state='chase'; faceMonster(m,dx,dy);
-      if(m.ranged&&d<m.range){ if(m.cd<=0){ const q=d||1; enemyShots.push({x:m.x,y:m.y-m.h*.55,vx:dx/q*270,vy:dy/q*270,t:0,life:1.2,dmg:m.dmg,done:false}); m.cd=1.5+Math.random()*.6; } }
-      else if(!m.ranged&&d<42){ if(m.cd<=0){ hurtPlayer(m.dmg,dx,dy); m.cd=.9+Math.random()*.35; } }
-      else if(d>30){ moveMonster(m,dx/d*m.sp*dt,dy/d*m.sp*dt); }
+    if(d<280){
+      m.state='chase'; faceMonster(m,dx,dy);
+      if(specialMonsterAI(m,dx,dy,d,dt)) continue;
+      if(m.ranged&&d<m.range){
+        if(m.cd<=0){enemyShot(m,dx,dy,270,m.shotStatus,m.shotStatus||'bolt',1);m.cd=1.45+Math.random()*.65;}
+      } else if(!m.ranged&&d<42){
+        if(m.cd<=0){hurtPlayer(m.dmg,dx,dy,m.touchStatus,m.touchStatus==='slow'?2.4:0);m.cd=.9+Math.random()*.35;}
+      } else if(d>30){
+        moveMonster(m,dx/d*m.sp*dt,dy/d*m.sp*dt);
+      }
     } else {
       m.state='wander'; m.wait-=dt;
       const wx=m.tx-m.x,wy=m.ty-m.y,wd=Math.hypot(wx,wy);
-      if(m.wait<=0||wd<8){ m.tx=m.x+(Math.random()*2-1)*180; m.ty=m.y+(Math.random()*2-1)*140; m.tx=Math.max(40,Math.min(MWp-40,m.tx));m.ty=Math.max(55,Math.min(MHp-20,m.ty));m.wait=1.5+Math.random()*3; }
-      else { faceMonster(m,wx,wy); moveMonster(m,wx/wd*m.sp*.28*dt,wy/wd*m.sp*.28*dt); }
+      if(m.wait<=0||wd<8){m.tx=m.x+(Math.random()*2-1)*180;m.ty=m.y+(Math.random()*2-1)*140;m.tx=Math.max(40,Math.min(MWp-40,m.tx));m.ty=Math.max(55,Math.min(MHp-20,m.ty));m.wait=1.5+Math.random()*3;}
+      else{faceMonster(m,wx,wy);moveMonster(m,wx/wd*m.sp*.28*dt,wy/wd*m.sp*.28*dt);}
     }
   }
+
   for(const d of dropsLoot){
-    if(d.picked) continue; if(Math.hypot(d.x-P.x,d.y-P.y)<28){
-      if(d.kind==='gold'){ setGold(P.gold+d.amount); d.picked=true; }
-      else if(window.UI&&UI.add(d.item)){ d.picked=true; say(d.item.name+' 획득'); }
+    if(d.picked) continue;
+    if(Math.hypot(d.x-P.x,d.y-P.y)<28){
+      if(d.kind==='gold'){setGold(P.gold+d.amount);d.picked=true;}
+      else if(window.UI&&UI.add(d.item)){d.picked=true;say(d.item.name+' 획득');}
     }
   }
 }
