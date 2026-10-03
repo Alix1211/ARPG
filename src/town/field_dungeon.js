@@ -266,7 +266,8 @@ function autoAimMonster(){
   const lim=WPN&&(WPN.wt==='bow'||WPN.wt==='staff')?620:190; let best=null,bd=lim;
   for(const m of monsters){if(m.dead||m.removed)continue;const d=Math.hypot(m.x-P.x,m.y-P.y);if(d<bd){bd=d;best=m;}}
   if(!best)return;const dx=best.x-P.x,dy=best.y-P.y;
-  if(Math.abs(dx)>Math.abs(dy)*.72||(dy>0&&Math.abs(dx)>16)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
+  // 가장 가까운 적의 주축 방향. 아래/위 적이 조금 옆에 있어도 세로 방향을 유지한다.
+  if(Math.abs(dx)>Math.abs(dy)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
 }
 
 window.__FD_READY=true;
