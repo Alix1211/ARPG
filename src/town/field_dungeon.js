@@ -155,11 +155,11 @@ async function selectRegion(theme, btn){
 function returnFromField(){ travel('out',[2.2*TS,11.4*TS],'side'); }
 
 const MOBDEF = {
-  wolf:{hp:38,sp:92,dmg:5}, rabbit:{hp:18,sp:108,dmg:3}, bear:{hp:76,sp:58,dmg:9,skill:'charge'}, orc:{hp:58,sp:64,dmg:7},
+  wolf:{hp:38,sp:92,dmg:5,skill:'pounce'}, rabbit:{hp:18,sp:108,dmg:3,skill:'dart'}, bear:{hp:76,sp:58,dmg:9,skill:'charge'}, orc:{hp:58,sp:64,dmg:7,skill:'cleave'},
   harpy:{hp:44,sp:78,dmg:6,ranged:1,range:185,skill:'radial'}, rogue:{hp:42,sp:82,dmg:6,ranged:1,range:170,skill:'blink',shotStatus:'bleed'},
   darkmage:{hp:48,sp:54,dmg:8,ranged:1,range:230,skill:'lightning'},
   gargoyle:{hp:68,sp:48,dmg:8,ranged:1,range:195,skill:'petrify'},
-  demon:{hp:80,sp:62,dmg:10,skill:'berserk'}, slime:{hp:24,sp:45,dmg:4,touchStatus:'slow'}, goblin:{hp:32,sp:70,dmg:5}, skeleton:{hp:36,sp:62,dmg:5,skill:'revive'},
+  demon:{hp:80,sp:62,dmg:10,skill:'berserk'}, slime:{hp:24,sp:45,dmg:4,touchStatus:'slow',skill:'splash'}, goblin:{hp:32,sp:70,dmg:5,ranged:1,range:185,skill:'rock'}, skeleton:{hp:36,sp:62,dmg:5,skill:'revive'},
   spider:{hp:26,sp:90,dmg:4,skill:'web'}, mushroom:{hp:30,sp:40,dmg:5}, elem_fire:{hp:46,sp:58,dmg:7,ranged:1,range:175,shotStatus:'burn'},
   elem_ice:{hp:46,sp:58,dmg:7,ranged:1,range:175,shotStatus:'slow'}
 };
@@ -175,7 +175,8 @@ function pointInSolid(px, py, pad=0){
 function spawnFieldMonsters(theme){
   monsters.length=0; dropsLoot.length=0; enemyShots.length=0; enemyHazards.length=0;
   const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16, tier=FIELD_TIER[theme]||1;
-  const hpMul=1+(tier-1)*.55, dmgMul=1+(tier-1)*.34, spMul=1+(tier-1)*.035;
+  const tmin=(tier-1)*10+1,within=Math.max(0,Math.min(9,(P.lv||tmin)-tmin));
+  const hpMul=(1+(tier-1)*.55)*(1+within*.055),dmgMul=(1+(tier-1)*.34)*(1+within*.027),spMul=(1+(tier-1)*.035)*(1+within*.004);
   for(let i=0;i<count;i++){
     let x=0,y=0,t=0;
     do{ x=7+Math.random()*48; y=3+Math.random()*34; t++; }
@@ -184,7 +185,7 @@ function spawnFieldMonsters(theme){
     const sc=type==='bear'||type==='demon'||type==='gargoyle'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
     const hp=Math.round(d.hp*hpMul), dmg=Math.max(1,Math.round(d.dmg*dmgMul));
     monsters.push({monster:1,type,tier,x:x*TS,y:y*TS,w,h,hp,maxHp:hp,sp:d.sp*spMul,dmg,ranged:d.ranged||0,range:d.range||42,
-      skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:1.0+Math.random()*2.2,
+      skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:.7+Math.random()*1.5,mobLv:tmin+within,
       imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   }
 }
@@ -273,6 +274,25 @@ function specialMonsterAI(m,dx,dy,d,dt){
     return true;
   }
   if(m.skillCd>0)return false;
+  if(m.skill==='rock'&&d<225){
+    enemyShot(m,dx,dy,250,'','rock',1.05);m.skillCd=1.7+Math.random()*.5;
+    pops.push({x:m.x,y:m.y-m.h,t:0,txt:'돌 던지기!',enemy:true});return true;
+  }
+  if(m.skill==='pounce'&&d>70&&d<205){
+    const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.24;m.skillCd=2.0+Math.random()*.4;return true;
+  }
+  if(m.skill==='dart'&&d<145){
+    const q=d||1,mx=-dy/q,my=dx/q,side=Math.random()<.5?-1:1;
+    moveMonster(m,mx*side*44,my*side*44);m.skillCd=1.5+Math.random()*.4;return true;
+  }
+  if(m.skill==='splash'&&d<78){
+    enemyHazards.push({kind:'slime',x:P.x,y:P.y-18,t:0,delay:.24,life:.8,r:48,dmg:Math.max(1,Math.round(m.dmg*.65)),status:'slow',done:false});
+    m.skillCd=2.2;return true;
+  }
+  if(m.skill==='cleave'&&d<72){
+    enemyHazards.push({kind:'cleave',x:P.x,y:P.y-20,t:0,delay:.32,life:.7,r:58,dmg:Math.max(1,Math.round(m.dmg*1.25)),done:false});
+    m.skillCd=2.1;return true;
+  }
   if(m.skill==='charge'&&d<225){const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.42;m.skillCd=3.5;return true;}
   if(m.skill==='lightning'&&d<270){enemyHazards.push({kind:'lightning',x:P.x,y:P.y-25,t:0,delay:.65,life:1.0,r:38,dmg:Math.round(m.dmg*1.25),done:false});m.skillCd=2.8+Math.random()*.7;return true;}
   if(m.skill==='petrify'&&d<230){enemyShot(m,dx,dy,185,'stone','stone',.75);m.skillCd=3.0;return true;}
@@ -290,7 +310,7 @@ function updEncounters(dt){
 
   for(const h of enemyHazards){
     h.t+=dt;
-    if(!h.done&&h.t>=h.delay){h.done=true;if(Math.hypot(P.x-h.x,(P.y-30)-h.y)<h.r)hurtPlayer(h.dmg,P.x-h.x,P.y-h.y);}
+    if(!h.done&&h.t>=h.delay){h.done=true;if(Math.hypot(P.x-h.x,(P.y-30)-h.y)<h.r)hurtPlayer(h.dmg,P.x-h.x,P.y-h.y,h.status||'',h.status==='slow'?2.5:0);}
   }
   for(let i=enemyHazards.length-1;i>=0;i--) if(enemyHazards[i].t>enemyHazards[i].life)enemyHazards.splice(i,1);
 
@@ -396,7 +416,23 @@ function killMonster(m){
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
   if(window.GUILD)GUILD.onKill(m);
 }
-function appendEncounterSprites(list){ if(!combatMap())return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
+function appendEncounterSprites(list){if(!combatMap())return;drawEnemySkillFx();for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y});}
+function drawEnemySkillFx(){
+  ctx.save();
+  for(const s of enemyShots){
+    if(s.kind==='rock'){
+      ctx.fillStyle='#7b6248';ctx.strokeStyle='#c1a27d';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(s.x,s.y,8,0,7);ctx.fill();ctx.stroke();
+    }
+  }
+  for(const h of enemyHazards){
+    const p=Math.max(0,Math.min(1,h.t/Math.max(.01,h.delay))),r=(h.r||40)*(0.35+p*.65);
+    ctx.globalAlpha=.25+.5*(1-p);
+    ctx.strokeStyle=h.kind==='slime'?'#8cff38':'#ff9b42';ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(h.x,h.y,r,r*.45,0,0,7);ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawMonster(m){
   const baseA=m.dead?Math.max(0,1-m.death):1, a=m.vanishT>0?.10:baseA, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
   ctx.save();ctx.globalAlpha=a;
