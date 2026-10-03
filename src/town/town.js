@@ -70,7 +70,7 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
-const P = { name: '루크레아', x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0, statPts: 0, skillPts: 0, passives: { magicGuide: 1 }, lifeSkills: {} };
+const P = { name: '루크레아', x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0, statPts: 0, skillPts: 0, passives: { magicGuide: 0 }, lifeSkills: {} };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
   if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
@@ -672,13 +672,15 @@ function frame(now){
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
-  P.moving = !panel && mag > 0.15;
+  const locked=typeof playerControlLocked==='function'&&playerControlLocked();
+  P.moving = !panel && !locked && mag > 0.15;
   if (P.hold && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
   if (P.moving){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
     P.run = kb ? !keys.shift : mag > 0.82;
-    const sp = (P.run ? 320 : 165 * Math.min(1, mag / 0.82)) * (atkBusy() && !WB[P.atk.wt].noSlow ? 0.7 : 1);   // 공격하면서 움직이면 조금 느려짐
+    const statusMul=typeof playerMoveFactor==='function'?playerMoveFactor():1;
+    const sp = (P.run ? 320 : 165 * Math.min(1, mag / 0.82)) * (atkBusy() && !WB[P.atk.wt].noSlow ? 0.7 : 1) * statusMul;   // 공격하면서 움직이면 조금 느려짐
     move(dx / mag * sp * dt, dy / mag * sp * dt);
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += dt;
@@ -774,6 +776,7 @@ function wDraw(x, y, ang, sc = 1, mir = false){
 }
 const shots = [];
 function attack(){
+  if (typeof playerControlLocked === 'function' && playerControlLocked()) return;
   if (!WPN){ say('맨손입니다'); return; }
   if (P.atk && P.atk.t < DUR[P.atk.wt] * 0.75) return;
   if (typeof autoAimMonster === 'function') autoAimMonster();
@@ -801,7 +804,7 @@ function updAtk(dt){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0;
-    const aim = a.wt === 'staff' ? magicAim(w.speed, 720) : {vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
+    const aim = a.wt === 'staff' && home>0 ? magicAim(w.speed, 380) : {vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
     const ux=aim.vx/w.speed, uy=aim.vy/w.speed;
     const sx=a.wt==='staff'?P.x+ux*24:P.x+(a.dir==='side'?d[0]*30:0);
     const sy=a.wt==='staff'?P.y-44+uy*24:P.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
@@ -848,7 +851,8 @@ function magicAim(speed, lim = 720){
 }
 function guideShot(s, dt){
   if (!s.home || s.done) return;
-  if (!s.target || s.target.dead || s.target.removed) s.target = nearestShotTarget(s.x, s.y, 720);
+  const lim=s.homeRange||420;
+  if (!s.target || s.target.dead || s.target.removed) s.target = nearestShotTarget(s.x, s.y, lim);
   const t = s.target; if (!t) return;
   const tx = t.x, ty = t.y - (t.h || 60) * 0.45, dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy) || 1;
   const speed = s.speed || Math.hypot(s.vx, s.vy) || 300;
@@ -860,7 +864,10 @@ function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
     if (!s.done) guideShot(s, dt);
-    s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
+    s.t += dt;
+    const nx=s.x+s.vx*dt, ny=s.y+s.vy*dt;
+    if(!s.done && blocked(nx,ny)){s.x=nx;s.y=ny;boom(s,null);}
+    else{s.x=nx;s.y=ny;}
     if (!s.done){
       for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
       if (!s.done && s.t > s.life) boom(s, null);
@@ -910,6 +917,7 @@ const SK = {
 const CD = {}; const sfx = [];
 function faceVec(){ return P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0]; }
 function cast(id, mod){
+  if(typeof playerControlLocked==='function'&&playerControlLocked())return false;
   const k = SK[id]; if (!k) return false; mod = mod || { dmg: 1, mp: 1 };
   if ((CD[id] || 0) > 0) return false;
   const cost = Math.round(k.mp * mod.mp);
@@ -918,11 +926,11 @@ function cast(id, mod){
   const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
   const home = (P.passives && P.passives.magicGuide) || 0;
   if (id === 'fire1'){
-    const aim=magicAim(520,720), ux=aim.vx/520, uy=aim.vy/520;
-    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, target:aim.target });
+    const aim=home>0?magicAim(520,460):{vx:d[0]*520,vy:d[1]*520,target:null}, ux=aim.vx/520, uy=aim.vy/520;
+    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, homeRange:460, target:aim.target });
   } else if (id === 'ice1'){
-    const aim=magicAim(720,720), ux=aim.vx/720, uy=aim.vy/720;
-    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, target:aim.target });
+    const aim=home>0?magicAim(720,500):{vx:d[0]*720,vy:d[1]*720,target:null}, ux=aim.vx/720, uy=aim.vy/720;
+    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, homeRange:500, target:aim.target });
   }
   else if (id === 'holy1_heal'){
     const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
