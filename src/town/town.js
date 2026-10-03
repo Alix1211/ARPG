@@ -19,7 +19,7 @@ document.documentElement.style.setProperty('--slot', `url(${A.ui['14']})`);
 document.documentElement.style.setProperty('--slotOn', `url(${A.ui['15']})`);
 document.documentElement.style.setProperty('--banner', `url(${A.ui['06']})`);
 for (const [v, k] of [['--oct', '18'], ['--x', 'h_close'], ['--tab0', 'h_bag'], ['--swapI', 'h_swap'], ['--hpbar', 'hpbar'], ['--mpbar', 'mpbar'], ['--ring', 'ring']]) document.documentElement.style.setProperty(v, `url(${A.kit[k]})`);
-$('tabEq').style.backgroundImage = `url(${A.kit.tab1})`; $('tabSt').style.backgroundImage = `url(${A.kit.tab4})`; $('tabSk').style.backgroundImage = `url(${A.kit.tab3})`;
+$('tabEq').style.backgroundImage = `url(${A.kit.tab1})`; $('tabSt').style.backgroundImage = `url(${A.kit.tab4})`; $('tabSk').style.backgroundImage = `url(${A.kit.tab3})`; $('tabTr').style.backgroundImage = `url(${A.kit.tab2})`;
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // ======================= 배치 =======================
