@@ -123,6 +123,14 @@ html.app #fs{display:none}
 .bar span{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
 .coin{color:#ffe08a;font-weight:800;font-size:13px;text-shadow:0 1px 2px #000,0 0 3px #000;margin-left:30px}
 #bagBtn{position:relative;flex:none;margin-top:16px;width:50px;height:50px;border:0;padding:0;border-radius:50%;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 2px 3px #0009)}
+#questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:4px;pointer-events:none}
+#questTrack.on{display:flex}
+.qtrack{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:24px;padding:3px 7px;border-radius:7px;background:#171008b8;border:1px solid #8f6a37aa;color:#f6e7c8;font:800 11px/1.2 sans-serif;text-shadow:0 1px 2px #000;box-shadow:0 2px 5px #0005}
+.qtrack.done{border-color:#d7b65a;color:#fff0ad}
+.qcheck{width:13px;height:13px;border:2px solid #d1a85b;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#26180c}
+.qtrack.done .qcheck::after{content:'✓';color:#ffe26f;font-weight:900}
+.qtitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qprog{font-size:10px;color:#ffd978;white-space:nowrap}
 #mm{right:max(10px,env(safe-area-inset-right));top:8px;width:176px;height:150px;border-radius:50%;border:4px solid #c9923e;box-shadow:0 0 0 3px #4a2a12,inset 0 0 0 2px #e3b35f,0 3px 8px #0009;overflow:hidden;background:#000}
 #mm canvas{position:static;width:100%;height:100%}
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
@@ -191,6 +199,7 @@ html.app #fs{display:none}
 <canvas id="cv"></canvas>
 <div class="hud" id="me"><div class="ring" role="button" tabindex="0" aria-label="능력치 열기"><img class="face" id="face" alt=""><img id="ringImg" alt=""><div id="lvOrb"><b id="lvTxt">1</b><small>Lv</small></div></div>
   <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
+<div class="hud" id="questTrack" aria-label="진행 중 의뢰"></div>
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
 <div class="hud" id="place">마을</div>
 <button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="snd" type="button">소리 켬</button><button class="hud" id="panic" type="button" hidden>비상탈출</button>
@@ -215,7 +224,7 @@ html.app #fs{display:none}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1217</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1227</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -456,17 +465,30 @@ function useTownPortal(){
   if(MAP==='town'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r]*60000;
   if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
-  townPortalReturn={map:MAP,pos:[P.x,P.y],dir:P.dir||'front'};
+  townPortalReturn={
+    map:MAP,pos:[P.x,P.y],dir:P.dir||'front',
+    runtime:typeof snapshotDynamicWorld==='function'?snapshotDynamicWorld():null,
+    dungeon:MAP==='dungeon'&&window.__DUN&&__DUN.snapshotPortal?__DUN.snapshotPortal():null
+  };
   P.portalReadyAt=now+cd;
   const ok=portalTransition('town',[23*TS,22.2*TS],'front',()=>{portalArrivalUntil=performance.now()+1700;});
   if(window.UI&&UI.save)UI.save();return ok;
 }
 function returnTownPortal(){
   if(MAP!=='town'||!townPortalReturn)return false;
-  const q=townPortalReturn;townPortalReturn=null;
-  return portalTransition(q.map,q.pos,q.dir,()=>{portalArrivalUntil=performance.now()+1200;});
+  const q=townPortalReturn;
+  if(q.map==='dungeon'&&q.dungeon&&window.__DUN&&__DUN.preparePortalRestore)__DUN.preparePortalRestore(q.dungeon);
+  window.__PORTAL_RUNTIME_RESTORE=true;
+  townPortalReturn=null;
+  const ok=portalTransition(q.map,q.pos,q.dir,()=>{
+    if(q.runtime&&typeof restoreDynamicWorld==='function')restoreDynamicWorld(q.runtime);
+    window.__PORTAL_RUNTIME_RESTORE=false;
+    portalArrivalUntil=performance.now()+1200;
+  });
+  if(!ok){window.__PORTAL_RUNTIME_RESTORE=false;townPortalReturn=q;}
+  return ok;
 }
-function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
+function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,returnFloor:townPortalReturn&&townPortalReturn.dungeon?townPortalReturn.dungeon.floor:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
 function gainExp(amount){
   amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
   P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
@@ -1662,8 +1684,25 @@ function spawnFieldMonsters(theme){
       imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   }
 }
+function snapshotDynamicWorld(){
+  return {
+    monsters:monsters.slice(),dropsLoot:dropsLoot.slice(),enemyShots:enemyShots.slice(),enemyHazards:enemyHazards.slice(),
+    solids:solids.slice(),spots:spots.slice(),sprites:sprites.slice(),trees:trees.slice(),npcs:npcs.slice(),dummies:dummies.slice(),exits:exits.slice(),
+    lamps:lamps.slice()
+  };
+}
+function restoreDynamicWorld(s){
+  if(!s)return;
+  const put=(dst,src)=>{dst.splice(0,dst.length,...(src||[]));};
+  put(monsters,s.monsters);put(dropsLoot,s.dropsLoot);put(enemyShots,s.enemyShots);put(enemyHazards,s.enemyHazards);
+  put(solids,s.solids);put(spots,s.spots);put(sprites,s.sprites);put(trees,s.trees);put(npcs,s.npcs);put(dummies,s.dummies);put(exits,s.exits);
+  lamps=(s.lamps||[]).slice();
+}
 function afterDynamicBuild(id){
-  if(id==='field') spawnFieldMonsters(fieldTheme); else if(id==='dungeon') spawnDungeonMonsters(); else { dunGrid=null; monsters.length=0; dropsLoot.length=0; enemyShots.length=0; }
+  if(window.__PORTAL_RUNTIME_RESTORE)return;
+  if(id==='field')spawnFieldMonsters(fieldTheme);
+  else if(id==='dungeon')spawnDungeonMonsters();
+  else {dunGrid=null;monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;}
 }
 function monsterBlocked(x,y){ return blocked(x,y); }
 function moveMonster(m,dx,dy){
@@ -2124,6 +2163,8 @@ function drawDungeonShade(camX, camY){
 
 window.__DUN={
   go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
+  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor}),
+  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
   state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
     blocked:blocked(P.x,P.y),moves:[[16,0],[-16,0],[0,16],[0,-16]].filter(([dx,dy])=>!blocked(P.x+dx,P.y+dy)).length}),
   spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)])
@@ -2287,7 +2328,7 @@ function tradeBuy(id,n){
   if(!n){ tradeMsg('금화가 부족합니다.'); return false; }
   const next=cur.qty+n, avg=(cur.avg*cur.qty+q.buy*n)/next;
   tradeState.cargo[id]={qty:next,avg:avg};
-  setGold(P.gold-q.buy*n); if(window.UI&&UI.save)UI.save();
+  setGold(P.gold-q.buy*n);if(window.GUILD)GUILD.refreshTrack();if(window.UI&&UI.save)UI.save();
   tradeMsg(g.name+' '+n+'개 매입. 금화 '+(q.buy*n)+'닢… 남는 장사여야 할 텐데요.');
   renderTrade(); return true;
 }
@@ -2297,7 +2338,7 @@ function tradeSell(id,n){
   const q=tradeQuote(tradeRegion,id), revenue=q.sell*n, cost=cur.avg*n, profit=Math.round(revenue-cost);
   cur.qty-=n; if(cur.qty<=0) delete tradeState.cargo[id]; else tradeState.cargo[id]=cur;
   const key=tradeRegion+':'+id; tradeState.pressure[key]=(tradeState.pressure[key]||0)+n;
-  setGold(P.gold+revenue); if(window.UI&&UI.save)UI.save();
+  setGold(P.gold+revenue);if(window.GUILD)GUILD.refreshTrack();if(window.UI&&UI.save)UI.save();
   tradeMsg((profit>=0?'좋습니다. ':'아깝군요. ')+g.name+' '+n+'개, '+(profit>=0?'+':'')+profit+'골드.');
   renderTrade(); return true;
 }
@@ -2377,6 +2418,7 @@ function tradeConsume(id,qty){
   qty=Math.max(1,qty|0);const c=cargoEntry(id);
   if(c.qty<qty)return false;
   c.qty-=qty;if(c.qty<=0)delete tradeState.cargo[id];
+  if(window.GUILD)GUILD.refreshTrack();
   if($('trade').classList.contains('on'))renderTrade();
   return true;
 }
@@ -2457,10 +2499,24 @@ function guildProgressText(q){
   }
   return Math.min(q.need,q.prog||0)+' / '+q.need;
 }
+function guildTrack(){
+  const host=$('questTrack');if(!host)return;
+  host.innerHTML='';
+  if(!guildState.active.length){host.classList.remove('on');return;}
+  host.classList.add('on');
+  for(const q of guildState.active.slice(0,3)){
+    const done=guildDone(q),row=document.createElement('div');
+    row.className='qtrack'+(done?' done':'');
+    const hasNum=Number.isFinite(q.need)&&q.need>0;
+    const prog=hasNum?guildProgressText(q):'';
+    row.innerHTML='<span class="qcheck"></span><span class="qtitle">'+q.title+'</span><span class="qprog">'+prog+'</span>';
+    host.append(row);
+  }
+}
 function guildAccept(id){
   if(guildState.active.length>=3){say('진행 중 의뢰는 최대 3개입니다.');return false;}
   const i=guildState.board.findIndex(q=>q.id===id);if(i<0)return false;
-  const q=guildState.board.splice(i,1)[0];q.accepted=true;guildState.active.push(q);guildRender();
+  const q=guildState.board.splice(i,1)[0];q.accepted=true;guildState.active.push(q);guildRender();guildTrack();
   if(window.UI&&UI.save)UI.save();return true;
 }
 function guildRandomGear(tier){
@@ -2483,7 +2539,7 @@ function guildClaim(id){
   guildState.active.splice(i,1);guildState.completed++;
   say('의뢰 완료! EXP '+q.exp+' · '+q.gold+'G'+extra);
   if(!guildState.board.length&&!guildState.active.length)guildGenerate();
-  guildRender();if(window.UI&&UI.save)UI.save();return true;
+  guildRender();guildTrack();if(window.UI&&UI.save)UI.save();return true;
 }
 function guildOnKill(m){
   if(!m||m.dead===false)return;
@@ -2492,7 +2548,7 @@ function guildOnKill(m){
     if(q.type==='kill_any'){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
     else if(q.type==='kill_type'&&m.type===q.target){q.prog=Math.min(q.need,(q.prog||0)+1);changed=true;}
   }
-  if(changed&&$('guild').classList.contains('on'))guildRender();
+  if(changed&&$('guild').classList.contains('on'))guildRender();if(changed)guildTrack();if(changed)guildTrack();
 }
 function guildOnDungeonFloor(floor){
   let changed=false;
@@ -2509,7 +2565,7 @@ function guildCard(q,active){
   d.append(btn);return d;
 }
 function guildRender(){
-  guildGenerate();$('guildRank').textContent='견습 · 완료 '+guildState.completed+'건';
+  guildGenerate();guildTrack();$('guildRank').textContent='견습 · 완료 '+guildState.completed+'건';
   const a=$('gActive'),b=$('gBoard');a.innerHTML='';b.innerHTML='';
   if(!guildState.active.length)a.innerHTML='<div class="gq"><small>진행 중인 의뢰가 없습니다.</small></div>';
   for(const q of guildState.active)a.append(guildCard(q,true));
@@ -2521,11 +2577,11 @@ function guildOpen(){
 function guildClose(){ $('guild').classList.remove('on');if(panel==='guild')panel=null; }
 function guildSaveData(){return JSON.parse(JSON.stringify(guildState));}
 function guildLoadData(d){
-  if(!d)return;guildState={seq:+d.seq||1,board:Array.isArray(d.board)?d.board:[],active:Array.isArray(d.active)?d.active:[],completed:d.completed|0};
+  if(!d){guildTrack();return;}guildState={seq:+d.seq||1,board:Array.isArray(d.board)?d.board:[],active:Array.isArray(d.active)?d.active:[],completed:d.completed|0};guildTrack();
 }
 window.GUILD={
   open:guildOpen,close:guildClose,accept:guildAccept,claim:guildClaim,onKill:guildOnKill,onDungeonFloor:guildOnDungeonFloor,
-  saveData:guildSaveData,loadData:guildLoadData,state:()=>JSON.parse(JSON.stringify(guildState)),
+  saveData:guildSaveData,loadData:guildLoadData,refreshTrack:guildTrack,state:()=>JSON.parse(JSON.stringify(guildState)),
   debugComplete(id){const q=guildState.active.find(x=>x.id===id);if(!q)return false;if(q.type==='delivery')return false;q.prog=q.need;guildRender();return true;}
 };
 
