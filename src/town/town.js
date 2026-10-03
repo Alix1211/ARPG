@@ -71,11 +71,12 @@ buildWorld('town');
 
 // ======================= 플레이어 =======================
 const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
-  hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0,
+  hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
-  skillLv:{fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,magicGuide:0},
-  passives:{magicGuide:0}, lifeSkills:{} };
+  skillLv:{fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0},
+  passives:{magicGuide:0,precision:0,rapid:0,manaFlow:0,survival:0,greed:0},
+  lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
   if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
@@ -92,43 +93,105 @@ function move(dx, dy){
 function setGold(v){ P.gold = v; $('gold').textContent = '금화 ' + v; $('shopGold').textContent = v; }
 setGold(P.gold);
 
-const LIFE_UNLOCK = [
-  [2, 'townPortal', '타운 포탈'], [4, 'identify', '감정'], [6, 'discount', '디스카운트'],
-  [8, 'overcount', '오버카운트'], [10, 'enchant', '마법부여'], [12, 'moneyScent', '돈 냄새']
-];
+const LEVEL_CAP=70;
+const TIER_LEVELS=[[1,10],[11,20],[21,30],[31,40],[41,50],[51,60],[61,70]];
+const PASSIVE_DEF={
+  magicGuide:{name:'마력 유도',max:3,desc:'마법 투사체 유도 거리·회전력 증가'},
+  precision:{name:'정밀 타격',max:5,desc:'치명타 확률 +2%/Lv'},
+  rapid:{name:'연속 동작',max:5,desc:'공격 속도 +3%/Lv'},
+  manaFlow:{name:'마력 순환',max:5,desc:'스킬 마나 소모 -4%/Lv'},
+  survival:{name:'생존 본능',max:5,desc:'받는 피해 -3%/Lv'},
+  greed:{name:'탐욕의 눈',max:5,desc:'아이템 발견 +5%, 골드 +3%/Lv'}
+};
+const LIFE_DEF={
+  townPortal:{name:'타운 포탈',unlock:3,max:3,desc:['15분 재사용','8분 재사용','3분 재사용']},
+  identify:{name:'감정',unlock:7,max:3,desc:['마법 장비 감정','희귀 장비 감정','전설 장비 감정']},
+  discount:{name:'디스카운트',unlock:12,max:5,desc:['구매가 -2%','구매가 -4%','구매가 -6%','구매가 -8%','구매가 -10%']},
+  overcount:{name:'오버카운트',unlock:18,max:5,desc:['판매가 +2%','판매가 +4%','판매가 +6%','판매가 +8%','판매가 +10%']},
+  enchant:{name:'마법부여',unlock:25,max:5,desc:['기본 마법부여','비용 -8%','비용 -16%','비용 -24%','비용 -32%']},
+  moneyScent:{name:'돈 냄새',unlock:35,max:5,desc:['희귀품 탐지 +5%','+10%','+15%','+20%','+25%']}
+};
+const LIFE_UNLOCK=Object.entries(LIFE_DEF).map(([k,v])=>[v.unlock,k,v.name]);
+function levelTier(lv=P.lv){return Math.max(1,Math.min(7,Math.floor((Math.max(1,lv)-1)/10)+1));}
+function tierMinLevel(t){return Math.max(1,(Math.max(1,t)-1)*10+1);}
+function tierMaxLevel(t){return Math.min(LEVEL_CAP,Math.max(1,t)*10);}
 function syncLifeUnlocks(silent=false){
-  P.lifeSkills = P.lifeSkills || {};
-  const got = [];
-  for (const [lv, key, name] of LIFE_UNLOCK){
-    if (P.lv >= lv && !P.lifeSkills[key]){ P.lifeSkills[key] = 1; got.push(name); }
+  P.lifeSkills=P.lifeSkills||{};const got=[];
+  for(const [lv,key,name] of LIFE_UNLOCK){
+    if(P.lv>=lv && !P.lifeSkills[key]){P.lifeSkills[key]=1;got.push(name);}
   }
-  if (!silent && got.length) say('생활스킬 해금: ' + got.join(', '));
+  if(!silent&&got.length)say('생활스킬 해금: '+got.join(', '));
   return got;
 }
-function expNeed(lv){ return 100 + Math.max(0,(lv||1)-1)*25; }
-function masteryNeed(lv){ return 8 + Math.max(0,lv||0)*5; }
+function lifeRank(k){return (P.lifeSkills&&P.lifeSkills[k])||0;}
+function expNeed(lv){
+  lv=Math.max(1,Math.min(LEVEL_CAP,lv||1));
+  return Math.round(120+18*(lv-1)+2.2*Math.pow(lv-1,1.55));
+}
+function targetKillsForLevel(lv){
+  return Math.min(240,90+Math.floor(Math.max(1,lv)*2.2));
+}
+function questExp(kind,lv=P.lv){
+  const frac={guild:.08,side:.18,main:.32,boss:.12,explore:.05}[kind]||0;
+  return Math.max(1,Math.round(expNeed(lv)*frac));
+}
+function gainQuestExp(kind){return gainExp(questExp(kind));}
+function masteryNeed(lv){
+  lv=Math.max(0,Math.min(49,lv||0));
+  return Math.round(25+12*lv+1.2*lv*lv);
+}
+function masteryBonus(wt){
+  const lv=(P.mastery&&P.mastery[wt]?P.mastery[wt].lv:0)||0;
+  return {lv,dmg:lv*.5,as:lv*.15};
+}
 function gainMastery(wt,amount=1){
-  const m=P.mastery&&P.mastery[wt]; if(!m)return false;
-  m.xp=(m.xp||0)+amount; let up=0;
-  while(m.lv<20 && m.xp>=masteryNeed(m.lv)){m.xp-=masteryNeed(m.lv);m.lv++;up++;}
-  if(up) say((WN&&WN[wt]?WN[wt]:wt)+' 숙련 '+m.lv+'!');
+  const m=P.mastery&&P.mastery[wt];if(!m)return false;
+  m.xp=(m.xp||0)+Math.max(0,amount);let up=0;
+  while(m.lv<50&&m.xp>=masteryNeed(m.lv)){m.xp-=masteryNeed(m.lv);m.lv++;up++;}
+  if(up)say((typeof WN!=='undefined'&&WN[wt]?WN[wt]:wt)+' 숙련 '+m.lv+'!');
   if(window.UI&&UI.save)UI.save();
   return true;
 }
+function investStat(key){
+  if(!['str','vit','int','mag','dex'].includes(key)||P.statPts<1)return false;
+  P.stats[key]=(P.stats[key]||0)+1;P.statPts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
+}
+function investSkill(id){
+  if(!P.skillLv||!(id in P.skillLv)||P.skillPts<1)return false;
+  const cur=P.skillLv[id]||0;if(cur>=5)return false;
+  P.skillLv[id]=cur+1;P.skillPts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
+}
+function investPassive(key){
+  const d=PASSIVE_DEF[key];if(!d||P.skillPts<1)return false;
+  const cur=(P.passives&&P.passives[key])||0;if(cur>=d.max)return false;
+  P.passives[key]=cur+1;P.skillPts--;
+  if(key==='magicGuide')P.passives.magicGuide=P.passives[key];
+  if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
+}
+function investLife(key){
+  const d=LIFE_DEF[key],cur=lifeRank(key);if(!d||P.lv<d.unlock||cur<1||cur>=d.max||P.lifePts<1)return false;
+  P.lifeSkills[key]=cur+1;P.lifePts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
+}
+function useTownPortal(){
+  const r=lifeRank('townPortal');if(!r){say('타운 포탈을 아직 배우지 못했습니다.');return false;}
+  const now=Date.now(),cd=[0,15,8,3][r]*60000;
+  if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
+  P.portalReadyAt=now+cd;travel('town',[23*TS,22.2*TS],'front');if(window.UI&&UI.save)UI.save();return true;
+}
 function gainExp(amount){
-  amount=Math.max(0,Math.round(amount||0)); if(!amount)return false;
-  P.exp=(P.exp||0)+amount;
-  let ups=0,addStat=0,addSkill=0;
-  while(P.exp>=expNeed(P.lv)){
-    P.exp-=expNeed(P.lv);P.lv=(P.lv||1)+1;ups++;
-    const sp=P.lv%10===0?10:5;
-    P.statPts=(P.statPts||0)+sp;addStat+=sp;
-    P.skillPts=(P.skillPts||0)+1;addSkill++;
+  amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
+  P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
+  while(P.lv<LEVEL_CAP&&P.exp>=expNeed(P.lv)){
+    P.exp-=expNeed(P.lv);P.lv++;ups++;
+    const sp=P.lv%10===0?10:5;P.statPts+=sp;addStat+=sp;
+    P.skillPts++;addSkill++;
+    if(P.lv%5===0){P.lifePts++;addLife++;}
+    if(P.lv%5===0)P.stats.luck=(P.stats.luck||0)+1;
   }
+  if(P.lv>=LEVEL_CAP)P.exp=0;
   const lv=$('lvTxt');if(lv)lv.textContent=P.lv;
-  if(ups){syncLifeUnlocks(false);say('레벨 '+P.lv+'! 능력치 +'+addStat+'P · 스킬 +'+addSkill+'P');}
-  if(window.UI&&UI.save)UI.save();
-  return true;
+  if(ups){syncLifeUnlocks(false);say('레벨 '+P.lv+'! 능력치 +'+addStat+'P · 스킬 +'+addSkill+'P'+(addLife?' · 생활 +'+addLife+'P':''));}
+  if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
 
 // ======================= 입력 =======================
@@ -506,7 +569,10 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, drink, cast, gainExp, expNeed, gainMastery, masteryNeed, syncLifeUnlocks, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1), setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, isOpen:()=>!!panel, setOpen:v=>{panel=v;}, swing, say, setMax };
+window.GAME = { P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
+  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal,
+  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1),
+  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, isOpen:()=>!!panel, setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
