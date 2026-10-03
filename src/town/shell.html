@@ -177,13 +177,13 @@ html.app #fs{display:none}
 #cluster.drop{z-index:12}
 #cluster.drop .sk{outline:2px dashed #ffe08a;outline-offset:2px}
 #ghost{position:fixed;width:58px;height:58px;margin:-29px 0 0 -29px;pointer-events:none;display:none;z-index:13;filter:drop-shadow(0 4px 6px #000a)}
-.skpane{position:absolute;inset:0;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);overflow:auto;padding-right:4px}
+.skpane{position:absolute;inset:0;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);overflow-y:auto;overflow-x:hidden;padding-right:4px;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .skhead{font-weight:900;font-size:16px;margin:-8px 0 2px;text-align:center}
 .sknote{font-size:11px;color:#6b5b45;text-align:center;margin-bottom:4px}
 .skrow{display:flex;align-items:center;gap:6px;min-height:56px}
 .skrow>b{width:58px;font-size:13px;flex:none}
 .skcwrap{display:flex;align-items:center;gap:2px;position:relative}
-.skc{width:46px;height:46px;border:0;padding:0;border-radius:50%;background:center/100% 100% no-repeat;touch-action:none;cursor:grab}
+.skc{width:46px;height:46px;border:0;padding:0;border-radius:50%;background:center/100% 100% no-repeat;touch-action:pan-y;cursor:grab}
 .skc.lock{filter:grayscale(1) brightness(.55);cursor:default}
 .skrank{font-size:10px;font-weight:900;min-width:26px;text-align:center;color:#6b3d18}
 .growplus{width:25px;height:25px;border:1px solid #9b6d35;background:#6d421d;color:#ffe9b5;border-radius:6px;font-weight:900;padding:0;line-height:22px}

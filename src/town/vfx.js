@@ -51,7 +51,7 @@ function vfxSkill(f, k, x, y, r){
     case 'fireburst': return vfxPlay('burst_fire_' + vfxPick(f, [0, 1, 2]), x, y + 14, Math.max(96, r * 1.9), k, { base: true, s0: .45 });
     case 'iceburst':  return vfxPlay('burst_ice_' + vfxPick(f, [0, 2, 4]), x, y + 14, Math.max(90, r * 1.9), k, { base: true, s0: .45 });
     case 'icehit':    return vfxPlay('burst_ice_2', x, y + 10, Math.max(70, r * 2.3), k, { base: true, s0: .5 });
-    case 'heal':      return vfxPlay('heal_green', P.x, P.y,  r * 2.4, k, { s0: .75 });
+    case 'heal':      return true;   // 치유 마법진은 vfxGroundPass가 캐릭터 발밑(아래 층)에 그린다
     case 'castfire': case 'castice': case 'castdark': case 'castbolt': return true;
     case 'firestorm':{
       const e = 1 - Math.pow(1 - Math.min(1, k * 1.6), 3);
@@ -158,6 +158,7 @@ function vfxGroundPass(){
     else if (f.type === 'castice') vfxCastCircle(k, P.x, P.y + 4, r, '#5fcfff', '#e8fbff', 'ring_blue');
     else if (f.type === 'castdark') vfxCastCircle(k, P.x, P.y + 4, r, '#a050ff', '#ecd9ff', 'ring_blue');
     else if (f.type === 'castbolt') vfxCastCircle(k, P.x, P.y + 4, r, '#ffe45c', '#fffbd0', 'ring_gold');
+    else if (f.type === 'heal') vfxPlay('heal_green', P.x, P.y + 10, r * 2.2, k, { s0: .75, base: true, sy: .78 });
     else if (f.type === 'firestorm') vfxGroundBurst(k, x, y + 14, r, '#ff8a2a', true);
     else if (f.type === 'frostwave') vfxGroundBurst(k, x + Math.cos(f.a || 0) * r * .5, y + 14 + Math.sin(f.a || 0) * r * .5, r * .7, '#8de4ff', false);
     else if (f.type === 'fireburst') vfxGroundBurst(k, x, y + 14, r, '#ff8a2a', true);
