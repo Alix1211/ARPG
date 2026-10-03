@@ -51,6 +51,7 @@ for style in ['knight', 'mage']:
 for t in range(1, 6):
     ic['ring_%d' % t] = icon(p('assets', 'accessories', 'acc_0_%02d.png' % t))
     ic['neck_%d' % t] = icon(p('assets', 'accessories', 'acc_1_%02d.png' % t))
+ic['bag'] = icon(p('assets', 'ui', 'icon_bag.png'), 96)
 A['icons'] = ic
 
 # 마을 건물

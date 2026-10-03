@@ -618,7 +618,7 @@ function skill(){
 }
 function syncWeapon(){
   const w = S.eq.weapon;
-  $('iWpn').src = A.weapons[wpnKey()]; $('wLv').textContent = w ? 'T' + w.tier : '-'; $('wName').textContent = '가방';
+  $('iWpn').src = A.icons.bag; $('wLv').textContent = w ? 'T' + w.tier : '-'; $('wName').textContent = '가방';
 }
 function explode(s, rad, dmg, col){
   s.life = 0; poof(s.x, s.y, col, 14); shake = Math.max(shake, 0.1);
@@ -962,7 +962,7 @@ function enterFloor(n){
 }
 function startGame(first){
   P.hp = maxHp(); P.mp = maxMp(); syncWeapon(); $('veil').hidden = true; paused = false; enterTown();
-  if (first) showHint('왼쪽 화면을 누르고 끌면 걸어요<br>던전에서 떨어진 장비는 가까이 가면 저절로 주워져요<br>무기 버튼(PC: I)으로 가방을 열어 장비를 끼세요<br>PC: WASD 이동 · 스페이스 공격 · Shift 대시 · E 불덩이 · F 대화');
+  if (first) showHint('왼쪽 화면을 누르고 끌면 걸어요<br>던전에서 떨어진 장비는 가까이 가면 저절로 주워져요<br>가방 버튼(PC: I)으로 가방을 열어 장비를 끼세요<br>PC: WASD 이동 · 스페이스 공격 · Shift 대시 · E 불덩이 · F 대화');
 }
 
 // ======================= 상호작용 =======================
