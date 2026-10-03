@@ -326,6 +326,38 @@ for f in sorted(_g.glob(R + 'ui/hud_icons/*.png')):
 ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())
 ELF_FRONT = enc(ef, 90)
 
+# ---- 필드 7테마 · 몬스터 (런타임 생성용) ----
+FIELD_THEMES = ['spring','summer','autumn','winter','ice','volcano','swamp']
+FIELD_TILES, FIELD_PROPS = {}, {}
+for th in FIELD_THEMES:
+    FIELD_TILES[th] = {}
+    for nm in ['grass','grass_flower','dirt','path','sand','water']:
+        p = R + f'tiles/{th}/{nm}.png'
+        if os.path.exists(p):
+            im = Image.open(p).convert('RGB').resize((96,96), Image.LANCZOS)
+            FIELD_TILES[th][nm] = enc(im, 84)
+    FIELD_PROPS[th] = []
+    for f in sorted(_g.glob(R + f'field_props/{th}/*.png')):
+        stem = os.path.basename(f)[:-4]
+        key = 'f_' + th + '_' + stem
+        im = Image.open(f).convert('RGBA'); im.thumbnail((360,360), Image.LANCZOS)
+        assets[key] = enc(im, 86)
+        FIELD_PROPS[th].append(dict(key=key, name=stem))
+
+MON3 = {}
+for name in ['bear','darkmage','demon','dragon','harpy','lich','orc','rabbit','rogue','succubus','wolf']:
+    d = {}
+    for dr in ['front','left','right']:
+        p = R + f'monsters_3dir/{name}_{dr}.png'
+        if os.path.exists(p):
+            im = Image.open(p).convert('RGBA'); im.thumbnail((240,240), Image.LANCZOS); d[dr] = enc(im, 86)
+    if d: MON3[name] = d
+MON1 = {}
+for name in ['goblin_01','slime_01','skeleton_01','spider_01','mushroom_01','gargoyle_01','elem_fire_01','elem_ice_01']:
+    p = R + f'monsters/{name}.png'
+    if os.path.exists(p):
+        im = Image.open(p).convert('RGBA'); im.thumbnail((200,200), Image.LANCZOS); MON1[name.rsplit('_',1)[0]] = enc(im, 86)
+
 # ---- 성 밖 갈림길 들판 ----
 import outmap
 og = outmap.gen_ground(R, outmap.OUT_W, outmap.OUT_H, PX, outmap.OUT_DIRT, 11, os.path.join(HERE, '.ground_out_cache.png'))
@@ -348,8 +380,9 @@ OUT = dict(map=dict(w=outmap.OUT_W, h=outmap.OUT_H, ts=TS, px=PX), ground=enc(og
            blds=[], props=oprops, npcs=onpcs, name='성 밖 갈림길', spawn=[15.0 * TS, 5.7 * TS], back=[23.0 * TS, 27.9 * TS])
 
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1)
 js = open(os.path.join(HERE, 'town.js')).read()
+js = js.replace('/*FIELD_DUNGEON*/', open(os.path.join(HERE, 'field_dungeon.js')).read())
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 import time as _t

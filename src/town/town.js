@@ -51,10 +51,10 @@ for (const p of CUR.props){
     continue;
   }
   if (p.cw > 0) solids.push({ x0: p.x - p.w * p.cw / 2, x1: p.x + p.w * p.cw / 2, y0: p.y - p.cd, y1: p.y - 2 });
-  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.y - 4, tree: p.tree, ph: Math.random() * 7, pink: p.k === 'tree_blossom' };
+  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom' };
   sprites.push(s); if (p.tree) trees.push(s);
   if (p.kind === 'dummy'){ s.dummy = { hp: 0, wob: 0, ph: 0 }; dummies.push(s); }
-  if (p.name) spots.push({ name: p.name, x: p.x, y: p.y + 16, r: 46, kind: p.kind === 'dungeon' ? 'dungeon' : 'prop' });
+  if (p.name) spots.push({ name: p.name, x: p.x, y: p.y + 16, r: p.r || 46, kind: p.kind || 'prop', data: p });
 }
 for (const n of CUR.npcs) npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
 for (const n of npcs){
@@ -62,8 +62,10 @@ for (const n of npcs){
   sprites.push(n);
   spots.push({ name: n.name, x: n.x, y: n.y + 6, r: 50, kind: 'npc', npc: n });
 }
+  if (CUR.exits) exits.push(...CUR.exits);
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
+  if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
 }
 buildWorld('town');
 
@@ -133,7 +135,7 @@ const PROP_TXT = {
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; }
-function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
+function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (typeof closeRegionSelect === 'function') closeRegionSelect(true); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
@@ -141,6 +143,11 @@ function act(){
   if (near.kind === 'npc') return openDlg(near.npc);
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
+  if (near.kind === 'field_exit') return returnFromField();
+  if (near.kind === 'dungeon') return enterDungeonFromHere();
+  if (near.kind === 'stairs_down') return nextDungeonFloor();
+  if (near.kind === 'stairs_up') return previousDungeonFloor();
+  if (near.kind === 'chest') return openDungeonChest(near);
   const body = near.kind === 'dungeon' ? '던전은 다음 단계에서 연결합니다.'
     : near.kind === 'prop' ? ((MAP === 'out' && OUT_TXT[near.name]) || PROP_TXT[near.name] || '')
     : '실내는 다음 단계에서 만듭니다.';
@@ -167,8 +174,8 @@ function openDlg(n){
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 $('dlgTrade').addEventListener('click', () => {
-  if (talking.go){ $('msgT').textContent = talking.go === 'field' ? '지역 고르기' : '던전으로';
-    $('msgB').textContent = talking.go === 'field' ? '지역 선택창(봄 초원·여름 숲·…)은 다음 단계에서 붙입니다.' : '던전은 다음 단계에서 연결합니다.'; show('msg'); return; }
+  if (talking.go === 'field'){ openRegionSelect(); return; }
+  if (talking.go === 'dungeon'){ enterDungeonFromOut(); return; }
   openShop(talking);
 });
 
@@ -463,6 +470,7 @@ function drawMini(camX, camY){
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
   mx.fillStyle = '#e8f2ff'; if (MAP === 'town') for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
+  if (typeof drawEncounterMini === 'function') drawEncounterMini(mx, sx, sy);
   mx.strokeStyle = '#fff8'; mx.lineWidth = 2;
   mx.strokeRect(camX * sx, camY * sy, VW / Z * sx, VH / Z * sy);
   mx.fillStyle = '#ff3b2f'; mx.strokeStyle = '#fff'; mx.beginPath(); mx.arc(P.x * sx, P.y * sy, 5, 0, 7); mx.fill(); mx.stroke();
@@ -486,7 +494,7 @@ function frame(now){
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += dt;
   } else P.t = 0;
-  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ travel(e.to, e.to === 'out' ? MAPS.out.spawn : MAPS.out.back, e.to === 'out' ? 'front' : 'back'); break; }
+  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
 
@@ -495,21 +503,24 @@ function frame(now){
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
   weather(dt, camX, camY, vw, vh);
-  updAtk(dt); updSkills(dt);
+  updAtk(dt); updSkills(dt); if (typeof updEncounters === 'function') updEncounters(dt);
   if (MAP === 'town') updVils(dt, dayLook(DAY.t).lamp > 0.6);
 
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(G, 0, 0, MWp, MHp);
   drawGroundFx();
+  if (typeof drawEncounterGround === 'function') drawEncounterGround(dt);
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
   if (MAP === 'town') for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
+  if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list);
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.me){ drawMe(); continue; }
     if (s.vil){ drawVil(s.vil); continue; }
+    if (s.mon){ drawMonster(s.mon, dt); continue; }
     if (s.dummy){ // 맞으면 흔들림
       const d = s.dummy; d.wob = Math.max(0, d.wob - dt * 2.2); d.ph += dt * 22;
       const sk = Math.sin(d.ph) * 0.09 * d.wob * (d.dir || 1);
@@ -525,13 +536,15 @@ function frame(now){
       const br = 1 + Math.sin(T * 2.2 + s.ph) * 0.014;
       ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br); continue;
     }
+    if (s.shadow){ ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(s.x + s.w * 0.10, s.y + 4, Math.max(8, s.w * 0.28), Math.max(3, s.w * 0.08), 0.22, 0, 7); ctx.fill(); }
     ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
   drawLeaves();
-  drawFx(dt);
+  drawFx(dt); if (typeof drawEncounterFx === 'function') drawEncounterFx(dt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + dt / DAYLEN) % 1;
   drawDay(camX, camY);
+  if (typeof drawDungeonShade === 'function') drawDungeonShade(camX, camY);
   drawRain(VW, VH);
 
   const tag = $('tag');
@@ -572,6 +585,7 @@ const shots = [];
 function attack(){
   if (!WPN){ say('맨손입니다'); return; }
   if (P.atk && P.atk.t < DUR[P.atk.wt] * 0.75) return;
+  if (typeof autoAimMonster === 'function') autoAimMonster();
   P.atk = { t: 0, wt: WPN.wt, dir: P.dir, flip: P.flip, n: P.atk ? P.atk.n + 1 : 0, shot: false };
 }
 function swing(){ attack(); }
@@ -584,13 +598,13 @@ function updAtk(dt){
     a.hit = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const w = WB[a.wt], hits = [];
-    for (const t of dummies){
+    for (const t of combatTargets()){
       const dx = t.x - P.x, dy = t.y - P.y, along = dx * d[0] + dy * d[1], side = Math.abs(dx * d[1] - dy * d[0]), dist = Math.hypot(dx, dy);
       if (w.cone){ if (dist < w.reach && (dist < 20 || along / dist > Math.cos(w.cone * PI / 180))) hits.push([along, t]); }
       else if (along > -10 && along < w.reach && side < w.width) hits.push([along, t]);
     }
     hits.sort((p, q) => p[0] - q[0]);
-    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitDummy(t, d, w.stagger));
+    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger));
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
@@ -600,7 +614,8 @@ function updAtk(dt){
   }
   if (k > 1.2) P.atk = null;
 }
-function hitDummy(t, d, stagger, dmOver){
+function hitTarget(t, d, stagger, dmOver){
+  if (t.monster) return hitMonster(t, d, stagger, dmOver);
   const dm = dmOver || (WPN ? WPN.dmg : 1), crit = Math.random() < 0.1, v = crit ? dm * 2 : dm;
   t.dummy.wob = stagger ? 1.4 : 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
   pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });
@@ -610,7 +625,7 @@ function drawPops(dt){
   for (const p of pops){
     p.t += dt; const k = p.t / 0.9;
     ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.font = `900 ${p.crit ? 26 : 20}px sans-serif`; ctx.textAlign = 'center';
-    ctx.lineWidth = 4; ctx.strokeStyle = '#2a140a'; ctx.fillStyle = p.heal ? '#8dffb0' : p.mana ? '#8fd0ff' : p.crit ? '#ffcf3a' : '#fff4dc';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#2a140a'; ctx.fillStyle = p.heal ? '#8dffb0' : p.mana ? '#8fd0ff' : p.enemy ? '#ff8f82' : p.crit ? '#ffcf3a' : '#fff4dc';
     const y = p.y - k * 34; ctx.strokeText(p.txt, p.x, y); ctx.fillText(p.txt, p.x, y);
   }
   ctx.globalAlpha = 1;
@@ -621,7 +636,7 @@ function drawShots(dt){
   for (const s of shots){
     s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt;
     if (!s.done){
-      for (const t of dummies){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+      for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
       if (!s.done && s.t > s.life) boom(s, null);
     }
     if (s.done){ // 지팡이 폭발 고리
@@ -653,9 +668,9 @@ function drawShots(dt){
   while (shots.length && shots[0].done && (!shots[0].blast || shots[0].bt > 0.3)) shots.shift();
 }
 function boom(s, t){
-  s.done = true; s.vx = s.vy = 0;
-  if (s.blast){ for (const u of dummies) if (Math.hypot(u.x - s.x, (u.y - 30) - s.y) < s.blast + 16) hitDummy(u, [Math.sign(u.x - s.x) || 1, 0], false, s.dmg); }
-  else if (t) hitDummy(t, [Math.sign(s.vx) || 1, 0], false, s.dmg);
+  const vx = s.vx, vy = s.vy; s.done = true; s.vx = s.vy = 0;
+  if (s.blast){ for (const u of combatTargets()) if (Math.hypot(u.x - s.x, (u.y - 30) - s.y) < s.blast + 16) hitTarget(u, [Math.sign(u.x - s.x) || 1, 0], false, s.dmg); }
+  else if (t) hitTarget(t, [Math.sign(vx) || Math.sign(vy) || 1, 0], false, s.dmg);
 }
 
 // ======================= 스킬 (시험용 5개: 실제 스킬 체계 전까지) =======================
@@ -683,9 +698,9 @@ function cast(id, mod){
     pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: true }); sfx.push({ type: 'heal', t: 0 });
   } else if (id === 'sword1' || id === 'sword2'){
     const spin = id === 'sword2', reach = spin ? 96 : 104, dm = Math.round(base * (spin ? 1.3 : 1.5));
-    for (const t of dummies){
+    for (const t of combatTargets()){
       const dx = t.x - P.x, dy = t.y - P.y, dist = Math.hypot(dx, dy);
-      if (dist < reach && (spin || dist < 20 || (dx * d[0] + dy * d[1]) / dist > Math.cos(80 * PI / 180))) hitDummy(t, d, false, dm);
+      if (dist < reach && (spin || dist < 20 || (dx * d[0] + dy * d[1]) / dist > Math.cos(80 * PI / 180))) hitTarget(t, d, false, dm);
     }
     sfx.push({ type: spin ? 'spin' : 'slash', t: 0, a: Math.atan2(d[1], d[0]) });
   }
@@ -792,6 +807,8 @@ function drawMe(){
   if (L.front) L.front();
   ctx.restore();
 }
+
+/*FIELD_DUNGEON*/
 
 P.hp = P.maxHp; P.mp = P.maxMp;
 window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils;

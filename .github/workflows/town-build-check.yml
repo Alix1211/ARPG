@@ -1,0 +1,36 @@
+name: town-build-check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/town/**'
+      - '.github/workflows/town-build-check.yml'
+permissions:
+  contents: write
+jobs:
+  build-check:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow numpy scipy playwright
+      - run: python -m playwright install --with-deps chromium
+      - run: python src/town/build.py
+      - run: python src/town/check.py
+      - run: python src/town/check_walk.py
+      - run: python src/town/check_move_atk.py
+      - run: python src/town/check_skill.py
+      - run: python src/town/check_pot.py
+      - run: python src/town/check_field.py
+      - name: commit built html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game/town.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "빌드: 필드 갱신"
+          git pull --rebase origin main
+          git push

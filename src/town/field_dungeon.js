@@ -1,0 +1,255 @@
+// ======================= 필드 · 몬스터 =======================
+const FIELD_THEMES = [
+  ['spring','봄 초원','견습 · T1'], ['summer','여름 숲','견습 · T1'], ['autumn','가을 들판','동 · T2'],
+  ['winter','겨울 설원','동 · T2'], ['ice','얼음 지대','은 · T3'], ['volcano','화산 지대','금 · T4'], ['swamp','늪지대','백금 · T5']
+];
+const FIELD_INFO = Object.fromEntries(FIELD_THEMES.map(x => [x[0], x]));
+const fieldTiles = {};
+for (const th of FIELD_THEMES.map(x => x[0])){
+  fieldTiles[th] = {};
+  for (const k in (A.field.tiles[th] || {})) fieldTiles[th][k] = load(A.field.tiles[th][k]);
+}
+const mon3 = {}, mon1 = {};
+for (const n in A.monsters3){ mon3[n] = {}; for (const d in A.monsters3[n]) mon3[n][d] = load(A.monsters3[n][d]); }
+for (const n in A.monsters1) mon1[n] = load(A.monsters1[n]);
+const monsters = [], dropsLoot = [], enemyShots = [];
+let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0;
+
+function combatTargets(){ return dummies.concat(monsters.filter(m => !m.dead && !m.removed)); }
+function waitImages(list){ return Promise.all(list.map(im => im.complete && im.naturalWidth ? Promise.resolve() : new Promise(r => { im.onload = im.onerror = r; }))); }
+function fieldPattern(g, im){ try { return g.createPattern(im, 'repeat'); } catch(e){ return '#607d45'; } }
+function fieldPropMeta(theme, prefix){
+  return (A.field.props[theme] || []).find(x => x.name.startsWith(prefix)) || null;
+}
+function fieldPropSize(name){
+  if (name.includes('tree_big')) return 3.8; if (name.includes('tree_mid')) return 3.0; if (name.includes('tree_young')) return 2.3;
+  if (name.includes('cave')) return 3.6; if (name.includes('ruin')) return 2.6; if (name.includes('campfire')) return 1.5;
+  if (name.includes('log')) return 1.9; if (name.includes('rock_big')) return 1.8; if (name.includes('rocks')) return 1.5;
+  if (name.includes('bush')) return 1.4; return 1.15;
+}
+function isTreeName(n){ return n.includes('tree_'); }
+function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
+function pathPointY(x){ const t = Math.max(0, Math.min(1, (x - 3) / 53)); return 20 - 12 * t + Math.sin(t * Math.PI * 2) * 3.1; }
+function nearMainPath(x,y, pad){ return Math.abs(y - pathPointY(x)) < (pad || 2.2); }
+function inTownReserve(x,y){ return x > 8 && x < 17 && y > 4 && y < 12; }
+
+async function makeFieldGround(theme){
+  const w = 60 * TS, h = 40 * TS, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'), t = fieldTiles[theme], ims = Object.values(t);
+  await waitImages(ims);
+  const base = t.grass || ims[0], flower = t.grass_flower || base;
+  for (let y = 0; y < 40; y++) for (let x = 0; x < 60; x++){
+    const im = Math.random() < 0.13 ? flower : base;
+    g.drawImage(im, x * TS, y * TS, TS + 1, TS + 1);
+  }
+  const dirt = t.dirt || t.path || base, path = t.path || dirt;
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(2.5 * TS, 20 * TS); g.bezierCurveTo(18 * TS, 17 * TS, 34 * TS, 27 * TS, 56.5 * TS, 8 * TS);
+  g.strokeStyle = fieldPattern(g, dirt); g.globalAlpha = 0.36; g.lineWidth = 150; g.stroke();
+  g.strokeStyle = fieldPattern(g, path); g.globalAlpha = 0.93; g.lineWidth = 86; g.stroke();
+  g.restore();
+  if (t.water && t.sand){
+    const spots = [[29,8,2.8,1.5],[48,29,2.4,1.3]];
+    for (const q of spots){
+      g.save(); g.beginPath(); g.ellipse(q[0]*TS,q[1]*TS,q[2]*TS,q[3]*TS,0,0,7); g.clip();
+      g.globalAlpha=.72; g.fillStyle=fieldPattern(g,t.sand); g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);
+      g.globalAlpha=.86; g.beginPath(); g.ellipse(q[0]*TS,q[1]*TS,q[2]*.76*TS,q[3]*.72*TS,0,0,7); g.clip();
+      g.fillStyle=fieldPattern(g,t.water); g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS); g.restore();
+    }
+  }
+  const mini = document.createElement('canvas'); mini.width = 360; mini.height = 240; mini.getContext('2d').drawImage(c,0,0,360,240);
+  return { ground:c.toDataURL('image/webp',.78), mini:mini.toDataURL('image/webp',.72) };
+}
+function mkFieldProp(meta, x, y, kind, name){
+  if (!meta) return null; const wt = fieldPropSize(meta.name), w = wt * TS, im = BI[meta.key], ar = im && im.naturalWidth ? im.naturalHeight / im.naturalWidth : 1;
+  const h = Math.max(TS*.8, w * ar);
+  const soft = isSoftName(meta.name), tree = isTreeName(meta.name);
+  return { k:meta.key, name:name || null, x:x*TS, y:y*TS, w, h, cw:soft?0:(tree?.16:.72), cd:soft?0:(tree?.35*TS:.45*TS), tree, shadow:!soft, kind:kind || '', r:kind==='dungeon'?64:46 };
+}
+function randomFieldProps(theme){
+  const all = A.field.props[theme] || [], out = [];
+  const cave = fieldPropMeta(theme,'16_'), camp = fieldPropMeta(theme,'14_'), ruin = fieldPropMeta(theme,'13_'), sign = fieldPropMeta(theme,'15_'), special = fieldPropMeta(theme,'12_');
+  for (const p of [
+    mkFieldProp(sign,4.5,19.4,'','지역 이정표'),
+    mkFieldProp(camp,20,31,'fire','야영지'),
+    mkFieldProp(ruin,38,23,'','무너진 폐허'),
+    mkFieldProp(special,46,31,'','이상한 흔적'),
+    mkFieldProp(cave,56,8,'dungeon','필드 동굴 입구')
+  ]) if (p) out.push(p);
+  const pool = all.filter(x => !/^1[3-6]_/.test(x.name));
+  let tries = 0;
+  while (out.length < 52 && tries++ < 500){
+    const x = 2 + Math.random()*56, y = 2 + Math.random()*36;
+    if (nearMainPath(x,y,2.4) || inTownReserve(x,y) || Math.hypot(x-56,y-8)<4 || Math.hypot(x-3,y-20)<4) continue;
+    const meta = pool[Math.floor(Math.random()*pool.length)]; if (!meta) break;
+    const p = mkFieldProp(meta,x,y,'',null); if (p) out.push(p);
+  }
+  return out;
+}
+async function prepareField(theme){
+  fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
+  const bg = await makeFieldGround(fieldTheme), props = randomFieldProps(fieldTheme);
+  const map = {
+    name:FIELD_INFO[fieldTheme][1], map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini, blds:[], props, npcs:[],
+    spawn:[3.2*TS,20*TS], exits:[{x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'}]
+  };
+  map.G = load(map.ground); map.MINI = load(map.mini); await waitImages([map.G,map.MINI]);
+  MAPS.field = map; return map;
+}
+function ensureRegionUI(){
+  if ($('regionPick')) return;
+  const st = document.createElement('style');
+  st.textContent = '#regionPick{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:#0d1220aa}#regionPick.on{display:flex}#regionPick .rp{width:min(760px,92vw);padding:34px;border:4px solid #8a6b3e;border-radius:20px;background:#201a15f2;color:#fff3d6;box-shadow:0 18px 60px #000a;font-family:sans-serif}#regionPick h2{margin:0 0 8px;text-align:center;font-size:30px}#regionPick p{text-align:center;color:#d8c7a5}#regionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px}#regionGrid button{padding:16px 18px;border:2px solid #80643a;border-radius:14px;background:#352b20;color:#fff3d6;text-align:left;font-weight:800;font-size:18px}#regionGrid button small{display:block;margin-top:4px;color:#c9b891;font-weight:600}#regionGrid button:hover{background:#4a3927}';
+  document.head.append(st);
+  const o = document.createElement('div'); o.id='regionPick'; o.innerHTML='<div class="rp"><h2>어디로 가시겠습니까?</h2><p>시험판에서는 7개 지역을 모두 열어 두었습니다.</p><div id="regionGrid"></div></div>';
+  document.body.append(o);
+  const gr = $('regionGrid');
+  for (const r of FIELD_THEMES){ const b=document.createElement('button'); b.type='button'; b.dataset.theme=r[0]; b.innerHTML=r[1]+'<small>'+r[2]+'</small>'; b.onclick=()=>selectRegion(r[0],b); gr.append(b); }
+  o.addEventListener('click',e=>{ if(e.target===o) closeRegionSelect(); });
+}
+function openRegionSelect(){ closeAll(); ensureRegionUI(); panel='region'; $('regionPick').classList.add('on'); }
+function closeRegionSelect(silent){ const o=$('regionPick'); if(o) o.classList.remove('on'); if(panel==='region') panel=null; }
+async function selectRegion(theme, btn){
+  ensureRegionUI(); const bs=[...$('regionGrid').querySelectorAll('button')]; bs.forEach(x=>x.disabled=true); if(btn) btn.textContent='길을 확인하는 중…';
+  try { const m=await prepareField(theme); closeRegionSelect(); travel('field',m.spawn,'side'); }
+  finally { bs.forEach((x,i)=>{x.disabled=false; x.innerHTML=FIELD_THEMES[i][1]+'<small>'+FIELD_THEMES[i][2]+'</small>';}); }
+}
+function returnFromField(){ travel('out',[2.2*TS,11.4*TS],'side'); }
+
+const MOBDEF = {
+  wolf:{hp:38,sp:92,dmg:5}, rabbit:{hp:18,sp:108,dmg:3}, bear:{hp:76,sp:58,dmg:9}, orc:{hp:58,sp:64,dmg:7},
+  harpy:{hp:44,sp:78,dmg:6,ranged:1,range:185}, rogue:{hp:42,sp:82,dmg:6,ranged:1,range:170}, darkmage:{hp:48,sp:54,dmg:8,ranged:1,range:210},
+  demon:{hp:80,sp:62,dmg:10}, slime:{hp:24,sp:45,dmg:4}, goblin:{hp:32,sp:70,dmg:5}, skeleton:{hp:36,sp:62,dmg:5},
+  spider:{hp:26,sp:90,dmg:4}, mushroom:{hp:30,sp:40,dmg:5}, elem_fire:{hp:46,sp:58,dmg:7,ranged:1,range:175}, elem_ice:{hp:46,sp:58,dmg:7,ranged:1,range:175}
+};
+const THEME_MOBS = {
+  spring:['wolf','rabbit','goblin','slime'], summer:['wolf','bear','spider','goblin'], autumn:['rogue','orc','mushroom','goblin'],
+  winter:['wolf','bear','skeleton','elem_ice'], ice:['elem_ice','darkmage','skeleton'], volcano:['demon','orc','elem_fire'], swamp:['harpy','spider','slime','mushroom']
+};
+function mobImageSet(n){ return mon3[n] || (mon1[n] ? {front:mon1[n],left:mon1[n],right:mon1[n]} : null); }
+function spawnFieldMonsters(theme){
+  monsters.length=0; dropsLoot.length=0; enemyShots.length=0;
+  const pool=THEME_MOBS[theme] || THEME_MOBS.spring, count=16;
+  for(let i=0;i<count;i++){
+    let x=0,y=0,t=0; do{x=7+Math.random()*48;y=3+Math.random()*34;t++;}while(t<80&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5));
+    const type=pool[i%pool.length], d=MOBDEF[type], imgs=mobImageSet(type); if(!imgs) continue;
+    const sc=type==='bear'||type==='demon'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
+    monsters.push({monster:1,type,x:x*TS,y:y*TS,w,h,hp:d.hp,maxHp:d.hp,sp:d.sp,dmg:d.dmg,ranged:d.ranged||0,range:d.range||42,
+      imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
+  }
+}
+function afterDynamicBuild(id){
+  if(id==='field') spawnFieldMonsters(fieldTheme); else { monsters.length=0; dropsLoot.length=0; enemyShots.length=0; }
+}
+function monsterBlocked(x,y){ return blocked(x,y); }
+function moveMonster(m,dx,dy){
+  if(!monsterBlocked(m.x+dx,m.y)) m.x+=dx;
+  if(!monsterBlocked(m.x,m.y+dy)) m.y+=dy;
+}
+function faceMonster(m,dx,dy){
+  if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; } else m.face='front';
+}
+function hurtPlayer(v,dx,dy){
+  if(playerInv>0||traveling) return; playerInv=.55; P.hp=Math.max(0,P.hp-v); syncBars();
+  pops.push({x:P.x,y:P.y-95,t:0,txt:'-'+v,enemy:true});
+  const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
+  if(P.hp<=0){
+    const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
+    say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
+    travel('town',[23*TS,22.2*TS],'front');
+  }
+}
+function updEncounters(dt){
+  playerInv=Math.max(0,playerInv-dt);
+  if(MAP!=='field') return;
+  for(const s of enemyShots){
+    s.t+=dt; s.x+=s.vx*dt; s.y+=s.vy*dt;
+    if(!s.done&&Math.hypot(s.x-P.x,s.y-(P.y-35))<18){ s.done=true; hurtPlayer(s.dmg,s.vx,s.vy); }
+    if(s.t>s.life) s.done=true;
+  }
+  for(let i=enemyShots.length-1;i>=0;i--) if(enemyShots[i].done) enemyShots.splice(i,1);
+  for(const m of monsters){
+    if(m.removed) continue;
+    if(m.dead){ m.death+=dt; if(m.death>1)m.removed=true; continue; }
+    m.hurt=Math.max(0,m.hurt-dt); m.stun=Math.max(0,m.stun-dt); m.cd=Math.max(0,m.cd-dt); if(m.stun>0) continue;
+    const dx=P.x-m.x,dy=P.y-m.y,d=Math.hypot(dx,dy);
+    if(d<260){ m.state='chase'; faceMonster(m,dx,dy);
+      if(m.ranged&&d<m.range){ if(m.cd<=0){ const q=d||1; enemyShots.push({x:m.x,y:m.y-m.h*.55,vx:dx/q*270,vy:dy/q*270,t:0,life:1.2,dmg:m.dmg,done:false}); m.cd=1.5+Math.random()*.6; } }
+      else if(!m.ranged&&d<42){ if(m.cd<=0){ hurtPlayer(m.dmg,dx,dy); m.cd=.9+Math.random()*.35; } }
+      else if(d>30){ moveMonster(m,dx/d*m.sp*dt,dy/d*m.sp*dt); }
+    } else {
+      m.state='wander'; m.wait-=dt;
+      const wx=m.tx-m.x,wy=m.ty-m.y,wd=Math.hypot(wx,wy);
+      if(m.wait<=0||wd<8){ m.tx=m.x+(Math.random()*2-1)*180; m.ty=m.y+(Math.random()*2-1)*140; m.tx=Math.max(40,Math.min(MWp-40,m.tx));m.ty=Math.max(55,Math.min(MHp-20,m.ty));m.wait=1.5+Math.random()*3; }
+      else { faceMonster(m,wx,wy); moveMonster(m,wx/wd*m.sp*.28*dt,wy/wd*m.sp*.28*dt); }
+    }
+  }
+  for(const d of dropsLoot){
+    if(d.picked) continue; if(Math.hypot(d.x-P.x,d.y-P.y)<28){
+      if(d.kind==='gold'){ setGold(P.gold+d.amount); d.picked=true; }
+      else if(window.UI&&UI.add(d.item)){ d.picked=true; say(d.item.name+' 획득'); }
+    }
+  }
+}
+function hitMonster(m,d,stagger,dmOver){
+  if(!m||m.dead) return;
+  const dm=dmOver|| (WPN?WPN.dmg:1), crit=Math.random()<.1, v=Math.max(1,Math.round(crit?dm*2:dm));
+  m.hp-=v; m.hurt=.18; m.stun=stagger?.32:.12;
+  const q=Math.hypot(d[0],d[1])||1, k=stagger?20:12; const nx=m.x+d[0]/q*k, ny=m.y+d[1]/q*k;
+  if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;}
+  pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
+  if(m.hp<=0) killMonster(m);
+}
+function randomDropItem(){
+  if(!window.UI) return null; const r=Math.random();
+  if(r<.62){ const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)]; return UI.make({kind:'weapon',wt,g:Math.random()<.25?2:1}); }
+  const kinds=['head','body','hands','feet']; return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],g:Math.random()<.25?2:1});
+}
+function killMonster(m){
+  m.dead=true;m.death=0;m.hp=0;
+  dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:2+Math.floor(Math.random()*8),ph:Math.random()*7});
+  if(Math.random()<.32){ const it=randomDropItem(); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7}); }
+}
+function appendEncounterSprites(list){ if(MAP!=='field')return; for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y}); }
+function drawMonster(m){
+  const a=m.dead?Math.max(0,1-m.death):1, img=m.imgs[m.face]||m.imgs.front; if(!img)return;
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x,m.y,m.w*.3,5,0,0,7);ctx.fill();
+  const wob=m.hurt>0?Math.sin(T*55)*4:0; ctx.translate(wob,0);ctx.drawImage(img,m.x-m.w/2,m.y-m.h,m.w,m.h);ctx.translate(-wob,0);
+  if(!m.dead&&(m.hurt>0||m.state==='chase')){const bw=48,bx=m.x-bw/2,by=m.y-m.h-10;ctx.fillStyle='#24140f';ctx.fillRect(bx,by,bw,6);ctx.fillStyle='#c63e32';ctx.fillRect(bx+1,by+1,(bw-2)*Math.max(0,m.hp/m.maxHp),4);}
+  ctx.restore();
+}
+function drawEncounterGround(){
+  if(MAP!=='field')return;
+  for(const d of dropsLoot){if(d.picked)continue;const bob=Math.sin(T*4+d.ph)*2;
+    if(d.kind==='gold'){ctx.fillStyle='#ffe06a';ctx.strokeStyle='#8d5d18';ctx.lineWidth=2;ctx.beginPath();ctx.arc(d.x,d.y-8+bob,7,0,7);ctx.fill();ctx.stroke();}
+    else{const im=A.icons[d.item.icon]?load(A.icons[d.item.icon]):null;if(im&&im.complete)ctx.drawImage(im,d.x-14,d.y-30+bob,28,28);}
+  }
+}
+function drawEncounterFx(){
+  if(MAP!=='field')return;
+  for(const s of enemyShots){const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,10);g.addColorStop(0,'#fff');g.addColorStop(.35,'#d9a4ff');g.addColorStop(1,'rgba(125,60,200,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(s.x,s.y,11,0,7);ctx.fill();}
+}
+function drawEncounterMini(mx,sx,sy){
+  if(MAP!=='field')return;mx.fillStyle='#e3483c';for(const m of monsters)if(!m.dead&&!m.removed){mx.beginPath();mx.arc(m.x*sx,m.y*sy,2.2,0,7);mx.fill();}
+}
+function autoAimMonster(){
+  if(MAP!=='field'||!monsters.length)return;
+  const lim=WPN&&(WPN.wt==='bow'||WPN.wt==='staff')?620:190; let best=null,bd=lim;
+  for(const m of monsters){if(m.dead||m.removed)continue;const d=Math.hypot(m.x-P.x,m.y-P.y);if(d<bd){bd=d;best=m;}}
+  if(!best)return;const dx=best.x-P.x,dy=best.y-P.y;
+  if(Math.abs(dx)>Math.abs(dy)*.72||(dy>0&&Math.abs(dx)>16)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
+}
+function drawDungeonShade(){}
+function enterDungeonFromOut(){ say('던전 연결은 다음 작업에서 이어집니다.'); }
+function enterDungeonFromHere(){ say('던전 연결은 다음 작업에서 이어집니다.'); }
+function nextDungeonFloor(){ say('아래층은 다음 작업에서 이어집니다.'); }
+function previousDungeonFloor(){ say('윗층은 다음 작업에서 이어집니다.'); }
+function openDungeonChest(){ say('상자는 던전 작업에서 이어집니다.'); }
+
+window.__FD_READY=true;
+window.__FD={
+  async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
+  state(){return {map:MAP,theme:fieldTheme,serial:fieldSerial,monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold};},
+  hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
+  prepareField, openRegionSelect
+};
