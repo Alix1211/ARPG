@@ -61,6 +61,11 @@ class Sheet:
             box = np.zeros_like(halo); box[y0:y1, x0 + 9:x1 - 9] = True; halo &= box
         out = self.arr.copy()
         out[..., 3] = np.where(halo, out[..., 3], 0)
+        if clip:   # 칸 경계로 자른 좌우 가장자리가 칼날처럼 보이지 않게 서서히 투명하게
+            fade = 36
+            xs = np.arange(self.width)
+            ramp = np.clip(np.minimum(xs - (x0 + 9), (x1 - 9) - 1 - xs) / fade, 0, 1)
+            out[..., 3] = (out[..., 3] * ramp[None, :]).astype(np.uint8)
         ys, xs = np.where(out[..., 3] > 20)
         return Image.fromarray(out).crop((int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1))
 

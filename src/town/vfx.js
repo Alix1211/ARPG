@@ -124,3 +124,13 @@ function vfxPlayerStatus(){
     ctx.fillStyle = '#ffd36a'; ctx.fillRect(x - 11, y + 17, 22 * Math.min(1, PLAYER_STATUS[k] / 3), 2);
   });
 }
+// 검사·디버그용: 그림이 모두 불러와졌는지 보고, 원하는 이펙트를 플레이어 앞에 띄운다.
+window.__VFX = {
+  names(){ return Object.keys(VFXI); },
+  loaded(){ return Object.keys(VFXI).filter(vfxReady).length; },
+  spawn(type, dx, dy, r, extra){ sfx.push(Object.assign({ type, t: 0, x: P.x + (dx || 0), y: P.y + (dy || 0), r: r || 50 }, extra || {})); },
+  shot(kind, dx, dy, ang){ enemyShots.push({ x: P.x + dx, y: P.y + dy, vx: Math.cos(ang) * 1, vy: Math.sin(ang) * 1, t: 0, life: 5, dmg: 0, kind, done: false }); },
+  hazard(kind, dx, dy, r){ enemyHazards.push({ kind, x: P.x + dx, y: P.y + dy, t: 0, delay: .5, life: 3, r: r || 48, dmg: 0, done: true }); },
+  status(k, sec){ PLAYER_STATUS[k] = sec; },
+  monStatus(burn, slow, freeze){ const m = monsters.find(x => !x.dead && !x.removed); if (!m) return false; m.burnT = burn; m.slowT = slow; m.freezeT = freeze; return true; }
+};
