@@ -70,7 +70,12 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
-const P = { name: '루크레아', x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0, statPts: 0, skillPts: 0, passives: { magicGuide: 0 }, lifeSkills: {} };
+const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
+  hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0,
+  stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
+  mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
+  skillLv:{fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,magicGuide:0},
+  passives:{magicGuide:0}, lifeSkills:{} };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
   if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
@@ -100,22 +105,29 @@ function syncLifeUnlocks(silent=false){
   if (!silent && got.length) say('생활스킬 해금: ' + got.join(', '));
   return got;
 }
+function expNeed(lv){ return 100 + Math.max(0,(lv||1)-1)*25; }
+function masteryNeed(lv){ return 8 + Math.max(0,lv||0)*5; }
+function gainMastery(wt,amount=1){
+  const m=P.mastery&&P.mastery[wt]; if(!m)return false;
+  m.xp=(m.xp||0)+amount; let up=0;
+  while(m.lv<20 && m.xp>=masteryNeed(m.lv)){m.xp-=masteryNeed(m.lv);m.lv++;up++;}
+  if(up) say((WN&&WN[wt]?WN[wt]:wt)+' 숙련 '+m.lv+'!');
+  if(window.UI&&UI.save)UI.save();
+  return true;
+}
 function gainExp(amount){
-  amount = Math.max(0, Math.round(amount || 0)); if (!amount) return false;
-  P.exp = (P.exp || 0) + amount;
-  let ups = 0, addStat = 0, addSkill = 0;
-  while (P.exp >= 100){
-    P.exp -= 100; P.lv = (P.lv || 1) + 1; ups++;
-    const sp = P.lv % 10 === 0 ? 10 : 5;
-    P.statPts = (P.statPts || 0) + sp; addStat += sp;
-    P.skillPts = (P.skillPts || 0) + 1; addSkill++;
+  amount=Math.max(0,Math.round(amount||0)); if(!amount)return false;
+  P.exp=(P.exp||0)+amount;
+  let ups=0,addStat=0,addSkill=0;
+  while(P.exp>=expNeed(P.lv)){
+    P.exp-=expNeed(P.lv);P.lv=(P.lv||1)+1;ups++;
+    const sp=P.lv%10===0?10:5;
+    P.statPts=(P.statPts||0)+sp;addStat+=sp;
+    P.skillPts=(P.skillPts||0)+1;addSkill++;
   }
-  const lv = $('lvTxt'); if (lv) lv.textContent = P.lv;
-  if (ups){
-    syncLifeUnlocks(false);
-    say('레벨 ' + P.lv + '! 능력치 +' + addStat + 'P · 스킬 +' + addSkill + 'P');
-  }
-  if (window.UI && UI.save) UI.save();
+  const lv=$('lvTxt');if(lv)lv.textContent=P.lv;
+  if(ups){syncLifeUnlocks(false);say('레벨 '+P.lv+'! 능력치 +'+addStat+'P · 스킬 +'+addSkill+'P');}
+  if(window.UI&&UI.save)UI.save();
   return true;
 }
 
@@ -494,7 +506,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { P, drink, cast, gainExp, syncLifeUnlocks, cdLeft: id => (CD[id] || 0) / (SK[id] ? SK[id].cd : 1), setHold: v => { P.hold = v; }, setWeapon, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
+window.GAME = { P, drink, cast, gainExp, expNeed, gainMastery, masteryNeed, syncLifeUnlocks, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1), setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, isOpen:()=>!!panel, setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
