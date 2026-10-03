@@ -23,11 +23,11 @@ $('tabEq').style.backgroundImage = `url(${A.kit.tab1})`; $('tabSt').style.backgr
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // ======================= 배치 =======================
-const solids = [], spots = [], sprites = [], trees = [], npcs = [], dummies = [];
+const solids = [], spots = [], sprites = [], trees = [], npcs = [], dummies = [], exits = [];
 let lamps = [];
 function buildWorld(id){
   MAP = id; CUR = MAPS[id]; G = CUR.G; MINI = CUR.MINI; MWp = CUR.map.w * TS; MHp = CUR.map.h * TS;
-  for (const L of [solids, spots, sprites, trees, npcs, dummies]) L.length = 0;
+  for (const L of [solids, spots, sprites, trees, npcs, dummies, exits]) L.length = 0;
 const hasNpc = new Set(CUR.npcs.map(n => n.at).filter(Boolean));
 for (const b of CUR.blds){
   const gate = b.k === 'gate_twin_tower';
@@ -36,16 +36,18 @@ for (const b of CUR.blds){
     solids.push({ x0: b.x - b.w * 0.48, x1: b.x - b.w * 0.17, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.05 });
     solids.push({ x0: b.x + b.w * 0.17, x1: b.x + b.w * 0.48, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.05 });
     solids.push({ x0: b.x - b.w * 0.17, x1: b.x + b.w * 0.17, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.2 });
+    exits.push({ x0: b.x - b.w * 0.15, x1: b.x + b.w * 0.15, y0: b.y - b.h * 0.42 - 22, y1: b.y - b.h * 0.42 + 2, to: 'out' });
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if (b.k === 'watchtower' || hasNpc.has(b.k)) continue;
-  spots.push({ name: b.name, x: b.x + b.door * b.w, y: b.y - b.h * (gate ? 0.18 : 0.06), r: 46, kind: gate ? 'gate' : 'bld' });
+  spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: gate ? 'gate' : 'bld' });
 }
 for (const p of CUR.props){
   if (p.kind === 'gatewall'){ // 성벽: 가운데 문만 비우고 막음
     solids.push({ x0: p.x - p.w * 0.5, x1: p.x - p.w * 0.1, y0: p.y - p.h * 0.45, y1: p.y - 4 }, { x0: p.x + p.w * 0.1, x1: p.x + p.w * 0.5, y0: p.y - p.h * 0.45, y1: p.y - 4 }, { x0: p.x - p.w * 0.1, x1: p.x + p.w * 0.1, y0: p.y - p.h * 0.45, y1: p.y - p.h * 0.12 });
     sprites.push({ img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.y - 6 });
-    spots.push({ name: p.name, x: p.x, y: p.y - p.h * 0.08, r: 46, kind: 'exit' });
+    spots.push({ name: p.name, x: p.x, y: p.y - p.h * 0.08, r: 56, kind: 'exit' });
+    exits.push({ x0: p.x - p.w * 0.1, x1: p.x + p.w * 0.1, y0: p.y - p.h * 0.12 - 2, y1: p.y - p.h * 0.12 + 20, to: 'town' });
     continue;
   }
   if (p.cw > 0) solids.push({ x0: p.x - p.w * p.cw / 2, x1: p.x + p.w * p.cw / 2, y0: p.y - p.cd, y1: p.y - 2 });
@@ -134,7 +136,7 @@ function act(){
   if (!near) return;
   if (near.kind === 'npc') return openDlg(near.npc);
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
-  if (near.kind === 'exit') return travel('town', MAPS.out.back, 'front');
+  if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   const body = near.kind === 'dungeon' ? '던전은 다음 단계에서 연결합니다.'
     : near.kind === 'prop' ? ((MAP === 'out' && OUT_TXT[near.name]) || PROP_TXT[near.name] || '')
     : '실내는 다음 단계에서 만듭니다.';
@@ -476,6 +478,7 @@ function frame(now){
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += dt;
   } else P.t = 0;
+  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ travel(e.to, e.to === 'out' ? MAPS.out.spawn : MAPS.out.back, e.to === 'out' ? 'front' : 'back'); break; }
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
 
