@@ -13,54 +13,107 @@ const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staf
 const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 2.0 };
 const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '조금 느림 0.5초 · 김 · 두 마리 관통', gauntlet: '아주 빠름 0.22초 · 아주 짧음 · 움찔', bow: '빠름 0.35초 · 아주 멂 · 걸어도 안 느려짐', staff: '느림 0.75초 · 중간 · 맞은 자리 폭발' };
 
-// ---- 아이템 ----
+// ---- 아이템 파밍 ----
 let seq = 1;
+const GRADE_NAME = ['나무','낡은','철','강철','기사의','서리','왕실','암흑','번개','태양의'];
+const GRADE_MUL = [1.00,1.35,1.75,2.25,2.90,3.70,4.70,6.00,7.60,9.60];
+const ALL_GEAR = ['weapon','head','body','hands','feet','ring','neck'];
+// 일부러 무기/직업별로 과하게 제한하지 않는다.
+// 검에 화염 마법, 지팡이에 공격 속도 같은 '이상하지만 가끔 대박인' 조합이 파밍의 핵심.
+const AFFIX = [
+  {id:'mighty', k:'P', nm:'강력한', st:'atkPct',  lo:6, hi:24, pct:1, slots:ALL_GEAR},
+  {id:'arcane', k:'P', nm:'마력의', st:'matkPct', lo:6, hi:26, pct:1, slots:ALL_GEAR},
+  {id:'swift',  k:'P', nm:'재빠른', st:'as',      lo:5, hi:22, pct:1, slots:ALL_GEAR},
+  {id:'sharp',  k:'P', nm:'날카로운',st:'crit',   lo:3, hi:14, pct:1, slots:ALL_GEAR},
+  {id:'fierce', k:'P', nm:'흉포한', st:'critDmg', lo:10,hi:48, pct:1, slots:ALL_GEAR},
+  {id:'fire',   k:'P', nm:'화염의', st:'fire',    lo:8, hi:38, pct:1, slots:ALL_GEAR},
+  {id:'ice',    k:'P', nm:'서리의', st:'ice',     lo:8, hi:38, pct:1, slots:ALL_GEAR},
+  {id:'skill',  k:'P', nm:'비전의', st:'skill',   lo:6, hi:30, pct:1, slots:ALL_GEAR},
+  {id:'sturdy', k:'S', nm:'견고한', st:'def',     lo:1, hi:7,  pct:0, slots:ALL_GEAR},
+  {id:'bear',   k:'S', nm:'곰의',   st:'hp',      lo:3, hi:24, pct:0, slots:ALL_GEAR},
+  {id:'sage',   k:'S', nm:'현자의', st:'mp',      lo:2, hi:18, pct:0, slots:ALL_GEAR},
+  {id:'fox',    k:'S', nm:'여우의', st:'ms',      lo:3, hi:15, pct:1, slots:ALL_GEAR},
+  {id:'gold',   k:'S', nm:'황금의', st:'coin',    lo:5, hi:30, pct:1, slots:ALL_GEAR},
+  {id:'seek',   k:'S', nm:'보물꾼의',st:'find',   lo:4, hi:25, pct:1, slots:ALL_GEAR},
+  {id:'lucky',  k:'S', nm:'행운의', st:'luck',    lo:1, hi:6,  pct:0, slots:ALL_GEAR},
+];
+const AFFIX_BY=Object.fromEntries(AFFIX.map(a=>[a.id,a]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function rarityForTier(tier){
+  const w = tier===1?[58,32,10,0]:tier===2?[50,34,16,0]:tier===3?[43,36,20,1]:tier===4?[38,36,23,3]:[32,36,27,5];
+  let r=Math.random()*w.reduce((a,b)=>a+b,0); for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i;} return 0;
+}
+function rollAffix(it, used){
+  const pool=AFFIX.filter(a=>a.slots.includes(it.kind)&&!used.has(a.id)); if(!pool.length)return;
+  const a=pool[Math.floor(Math.random()*pool.length)]; used.add(a.id);
+  const tier=it.tier||1, q=.25+Math.random()*.75, scale=(tier-1)/4;
+  const v=a.pct?Math.round((a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)))):Math.max(1,Math.round((a.lo+(a.hi-a.lo)*(scale*.55+q*(.45+.55*scale)))));
+  it.aff.push({id:a.id,k:a.k,nm:a.nm,st:a.st,v,pct:a.pct});
+  it.st[a.st]=(it.st[a.st]||0)+v;
+}
+function finalizeName(it){
+  const base = it.kind==='weapon' ? GRADE_NAME[it.g-1]+' '+WN[it.wt]
+    : it.kind==='ring' ? ['구리','은','금','보석','별빛'][it.tier-1]+' 반지'
+    : it.kind==='neck' ? ['구리','은','금','보석','별빛'][it.tier-1]+' 목걸이'
+    : GRADE_NAME[it.g-1]+' '+({head:'투구',body:'갑옷',hands:'장갑',feet:'신발'}[it.kind]);
+  const pf=(it.aff||[]).find(a=>a.k==='P'), sf=(it.aff||[]).find(a=>a.k==='S');
+  it.name=(sf?sf.nm+' ':'')+(pf?pf.nm+' ':'')+base;
+}
 function make(spec){
-  // spec: { kind:'weapon', wt:'sword', g:1|2 } | { kind:'head'|'body'|'hands'|'feet', g } | { kind:'ring'|'neck', g }
-  const it = { id: seq++, kind: spec.kind, rar: spec.rar || 0, g: spec.g || 1, st: {} };
-  const gn = it.g === 1 ? '나무' : '낡은';
-  if (spec.kind === 'weapon'){
-    it.wt = spec.wt; it.icon = `${spec.wt}_${String(it.g).padStart(2, '0')}`;
-    it.name = (it.g === 1 ? '나무 ' : '낡은 ') + WN[spec.wt];
-    it.st[spec.wt === 'staff' ? 'matk' : 'atk'] = Math.max(1, Math.round(10 * WMULT[spec.wt] * (it.g === 1 ? 1 : 1.6)));   // 기준 10 × 무기 배율 × 등급
-  } else if (spec.kind === 'ring' || spec.kind === 'neck'){
-    it.icon = spec.kind; it.name = spec.kind === 'ring' ? '구리 반지' : '구리 목걸이';
-    if (spec.kind === 'ring') it.st.luck = 1; else { it.st.hp = 3; it.st.mp = 2; }
+  const roll=!!spec.roll, tier=clamp(spec.tier||Math.ceil((spec.g||1)/2),1,5);
+  const g=clamp(spec.g || ((tier-1)*2 + (Math.random()<.48?1:2)),1,10);
+  const it={id:seq++,kind:spec.kind,rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier):0),tier,g,st:{},aff:[]};
+  const mul=GRADE_MUL[g-1];
+  if(spec.kind==='weapon'){
+    it.wt=spec.wt; it.icon=`${spec.wt}_${String(g).padStart(2,'0')}`;
+    const k=spec.wt==='staff'?'matk':'atk'; it.st[k]=Math.max(1,Math.round(10*WMULT[spec.wt]*mul));
+  } else if(spec.kind==='ring'||spec.kind==='neck'){
+    it.icon=spec.kind+'_'+tier;
+    if(spec.kind==='ring') it.st.luck=Math.max(1,tier); else {it.st.hp=3*tier;it.st.mp=2*tier;}
   } else {
-    const r = { head: 0, body: 1, hands: 2, feet: 3 }[spec.kind];
-    it.icon = 'armor_' + r; it.name = '낡은 ' + { head: '투구', body: '갑옷', hands: '장갑', feet: '신발' }[spec.kind];
-    it.st.def = [2, 4, 1, 1][r]; if (spec.kind === 'body') it.st.hp = 4;
+    const style=spec.style|| (Math.random()<.5?'knight':'mage'); it.style=style;
+    it.icon=`${style}_${spec.kind}_${String(g).padStart(2,'0')}`;
+    const base={head:[2,1,1],body:[4,4,0],hands:[1,1,0],feet:[1,2,0]}[spec.kind];
+    it.st.def=Math.max(1,Math.round(base[0]*mul)); if(base[1])it.st.hp=Math.max(1,Math.round(base[1]*mul)); if(base[2])it.st.mp=Math.max(1,Math.round(base[2]*mul));
   }
-  it.price = spec.price || 10;
+  if(roll && it.rar>0){
+    const used=new Set(), n=it.rar===1?1:it.rar===2?(2+Math.floor(Math.random()*3)):4;
+    while(it.aff.length<n) rollAffix(it,used);
+  }
+  finalizeName(it);
+  it.price=spec.price||Math.max(10,Math.round(16*mul*[1,2.2,5,12][it.rar]));
   return it;
 }
-const STN = { atk: '공격력', matk: '마법 공격력', def: '방어력', hp: '최대 체력', mp: '최대 마나', luck: '운' };
-const slotOk = (it, s) => it.kind === 'weapon' ? (s === 'w1' || s === 'w2') : it.kind === 'ring' ? (s === 'ring1' || s === 'ring2') : it.kind === s;
+const STN = { atk:'공격력',matk:'마법 공격력',atkPct:'물리 공격',matkPct:'마법 공격',as:'공격 속도',crit:'치명타 확률',critDmg:'치명타 피해',fire:'화염마법',ice:'냉기마법',skill:'스킬 피해',def:'방어력',hp:'최대 체력',mp:'최대 마나',ms:'이동 속도',coin:'금화 획득',find:'아이템 발견',luck:'운' };
+const PCTSTAT=new Set(['atkPct','matkPct','as','crit','critDmg','fire','ice','skill','ms','coin','find']);
+const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
-const BAG = 42, bag = new Array(BAG).fill(null);
-const eq = { w1: null, w2: null, head: null, body: null, hands: null, feet: null, neck: null, ring1: null, ring2: null };
-let cur = 'w1';                    // 지금 든 무기 칸
-eq.w1 = make({ kind: 'weapon', wt: 'bow', g: 1 });
-// 시험용: 다른 무기 4종을 가방에 넣고 시작 (모션 확인용)
-['sword', 'spear', 'gauntlet', 'staff'].forEach((wt, i) => { bag[i] = make({ kind: 'weapon', wt, g: 1, price: 30 }); });
+const BAG=42,bag=new Array(BAG).fill(null);
+const eq={w1:null,w2:null,head:null,body:null,hands:null,feet:null,neck:null,ring1:null,ring2:null};
+let cur='w1';
+// 새 성장판: 시험용 4무기는 제거. 시작 무기 하나만 들고 나머지는 직접 파밍.
+eq.w1=make({kind:'weapon',wt:'bow',g:1,rar:0});
 
-const BASE = { str: 5, vit: 5, int: 5, mag: 6, dex: 8, luck: 3 };
+const BASE={str:5,vit:5,int:5,mag:6,dex:8,luck:3};
 function totals(){
-  const t = { atk: 0, matk: 0, def: 0, hp: 0, mp: 0, luck: 0 };
-  for (const s in eq){
-    const it = eq[s]; if (!it) continue;
-    if ((s === 'w1' || s === 'w2') && s !== cur) continue;   // 들고 있는 무기만 계산
-    for (const k in it.st) t[k] = (t[k] || 0) + it.st[k];
+  const t={atk:0,matk:0,atkPct:0,matkPct:0,as:0,crit:0,critDmg:0,fire:0,ice:0,skill:0,def:0,hp:0,mp:0,ms:0,coin:0,find:0,luck:0};
+  for(const s in eq){
+    const it=eq[s]; if(!it)continue;
+    if((s==='w1'||s==='w2')&&s!==cur)continue;
+    for(const k in it.st)t[k]=(t[k]||0)+it.st[k];
   }
   return t;
 }
 function derived(){
-  const t = totals(), b = BASE;
+  const t=totals(),b=BASE;
+  const phys=Math.round((t.atk+Math.floor(b.str/2))*(1+t.atkPct/100));
+  const magic=Math.round((t.matk+Math.floor(b.int/2))*(1+t.matkPct/100));
   return {
-    maxHp: 20 + b.vit * 4 + t.hp, maxMp: 10 + b.mag * 3 + t.mp,
-    rows: [['힘', b.str, `공격력 ${t.atk + Math.floor(b.str / 2)}`], ['방어', t.def, '받는 피해 감소'], ['체력', b.vit, `최대 체력 ${20 + b.vit * 4 + t.hp}`],
-           ['지능', b.int, `마법 공격력 ${t.matk + Math.floor(b.int / 2)}`], ['마력', b.mag, `최대 마나 ${10 + b.mag * 3 + t.mp}`],
-           ['민첩', b.dex, `공격 속도 +${b.dex}%`], ['운', b.luck + t.luck, `금화 획득 +${(b.luck + t.luck) * 2}%`]],
+    t, phys, magic,
+    maxHp:20+b.vit*4+t.hp,maxMp:10+b.mag*3+t.mp,
+    rows:[['힘',b.str,`공격력 ${phys}`],['방어',t.def,'받는 피해 감소'],['체력',b.vit,`최대 체력 ${20+b.vit*4+t.hp}`],
+          ['지능',b.int,`마법 공격력 ${magic}`],['마력',b.mag,`최대 마나 ${10+b.mag*3+t.mp}`],
+          ['민첩',b.dex,`공격 속도 +${b.dex+t.as}%`],['운',b.luck+t.luck,`금화 +${(b.luck+t.luck)*2+t.coin}% · 발견 +${t.find}%`]],
   };
 }
 
