@@ -382,3 +382,7 @@
 - 수치 100배(NUM) 1차 적용: 플레이어 체력/마나/공격/방어, 장비 고정 수치와 옵션, 몬스터 체력/공격, 경험치 곡선(몬스터·퀘스트 경험치는 파생이라 자동), 스킬 마나 소비/회복을 100배. 기준표는 기준 단위 유지(곱하는 곳: cast 비용, 마나 회복, 몬스터 생성, make/rollAffix, derived). 방어 피해감소율은 def/NUM 보정으로 동일. 검사의 마나 999는 99999로. 로컬은 combat·control·skills만 돌림, 전체는 CI.
 
 - 던전 그림 두 모습으로 분리. 케인의 새 동굴 시트를 `tools/cave_slice.py`로 잘라 `assets/dungeon_cave`에 저장(타일 21·소품 19), 옛 석조 던전은 `assets/dungeon` 그대로. build.py는 두 세트를 `A.dtiles/dprops[ruins|cave]`로 담고, dungeon.js가 입구(enterDungeonFromOut=ruins, enterDungeonFromHere=cave)에 따라 고른다. 처음에 두 입구가 같은 던전임을 모르고 통째로 교체했다가 케인 지적으로 분리함. 테스트용 `__DUN.setTheme/theme/rooms` 추가.
+
+## 2026-10-04 (작성: Claude)
+- 케인 플레이 피드백 2건 확인. ① 늑대가 엉덩이로 덤비던 문제: 코드가 아니라 그림 파일 이름 문제였다. `assets/monsters_3dir`의 `_left`/`_right`가 늑대·곰·어둠마법사·악마·용·리치·도적은 실제 보는 방향과 반대(토끼·하피·오크는 정상). build.py에서 이 7종만 담을 때 left/right를 맞바꿔 해결(그림 파일은 그대로). 새 몬스터 그림을 추가하면 방향을 확인할 것.
+- ② 사운드: `assets/sfx`에 파일이 없어 지금 소리는 전부 코드 합성음(오락실 소리)이 정상 동작. 다만 build.py의 효과음 파일 담기 루프가 `'glob' in dir()` 오류로 항상 비어 있던 버그를 고침(파일을 넣어도 안 들어갔을 것). 이제 `assets/sfx/<이름>.mp3`를 넣으면 자동 교체(이름 목록은 docs/sound_list.md). 진짜 효과음 파일은 케인이 만들거나 받아야 함.

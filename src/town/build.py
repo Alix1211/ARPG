@@ -360,6 +360,9 @@ for name in ['bear','darkmage','demon','dragon','harpy','lich','orc','rabbit','r
         p = R + f'monsters_3dir/{name}_{dr}.png'
         if os.path.exists(p):
             im = Image.open(p).convert('RGBA'); im.thumbnail((240,240), Image.LANCZOS); d[dr] = enc(im, 86)
+    # 그림 파일의 left/right 이름이 실제 보는 방향과 반대인 몬스터는 여기서 바꿔 담는다(늑대가 엉덩이로 덤비던 문제)
+    if name in ('wolf','bear','darkmage','demon','dragon','lich','rogue') and 'left' in d and 'right' in d:
+        d['left'], d['right'] = d['right'], d['left']
     if d: MON3[name] = d
 MON1 = {}
 for name in ['goblin_01','slime_01','skeleton_01','spider_01','mushroom_01','gargoyle_01','elem_fire_01','elem_ice_01','mimic_01']:
@@ -410,7 +413,7 @@ for th, folder, pre, plist in [('ruins', 'dungeon', 'd_', RUINS_PROPS), ('cave',
 
 # 효과음 파일이 있으면 합성음 대신 씀: assets/sfx/<이름>.mp3 (docs/sound_list.md)
 SFXF = {}
-for f in sorted(glob.glob(R + 'sfx/*.mp3')) if 'glob' in dir() else []:
+for f in sorted(_g.glob(R + 'sfx/*.mp3')):
     SFXF[os.path.basename(f)[:-4]] = 'data:audio/mpeg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
 # 전투 이펙트 그림(assets/vfx, tools/vfx_slice.py로 시트에서 자른 것). 쓰는 종류만, 종류별 최대 크기로 줄여 담는다.
 VFXA = {}
