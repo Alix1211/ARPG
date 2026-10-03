@@ -180,7 +180,7 @@ function spawnFieldMonsters(theme){
   for(let i=0;i<count;i++){
     let x=0,y=0,t=0;
     do{ x=7+Math.random()*48; y=3+Math.random()*34; t++; }
-    while(t<140&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||pointInSolid(x*TS,y*TS,24)));
+    while(t<140&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||Math.hypot(x-20,y-31)<5||pointInSolid(x*TS,y*TS,24)));
     const type=pool[i%pool.length], d=MOBDEF[type], imgs=mobImageSet(type); if(!imgs) continue;
     const sc=type==='bear'||type==='demon'||type==='gargoyle'?1.15:type==='rabbit'?.72:1, h=82*sc, w=82*sc;
     const hp=Math.round(d.hp*hpMul), dmg=Math.max(1,Math.round(d.dmg*dmgMul));
@@ -188,6 +188,22 @@ function spawnFieldMonsters(theme){
       skill:d.skill||'',shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:.7+Math.random()*1.5,mobLv:tmin+within,
       imgs,face:'front',flip:false,state:'wander',tx:x*TS,ty:y*TS,wait:Math.random()*2,cd:Math.random(),hurt:0,stun:0,dead:false,death:0});
   }
+}
+function restAtCamp(){
+  if(MAP!=='field'||traveling)return false;
+  traveling=true;closeAll();
+  const f=$('fade');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
+  setTimeout(()=>{
+    P.hp=P.maxHp;P.mp=P.maxMp;P.mpAcc=0;
+    for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
+    spawnFieldMonsters(fieldTheme);syncBars();
+    if(typeof SFX!=='undefined')SFX.play('heal');
+    setTimeout(()=>{
+      f.classList.remove('on');
+      setTimeout(()=>{f.classList.remove('slow');traveling=false;say('푹 쉬었습니다. 주변의 기척이 다시 느껴집니다.');},560);
+    },220);
+  },560);
+  return true;
 }
 function snapshotDynamicWorld(){
   return {
@@ -511,5 +527,5 @@ window.__FD={
   },
   debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
   debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
-  prepareField,openRegionSelect
+  rest:restAtCamp,prepareField,openRegionSelect
 };
