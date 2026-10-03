@@ -151,7 +151,7 @@ function renderTradeSummary(L){
   L.append(d);
 }
 function renderTradeCargo(R){
-  R.innerHTML='';R.style.backgroundImage=`url(${K['01']})`;
+  R.innerHTML='';R.style.backgroundImage=`url(${A.kit['01']})`;
   const d=document.createElement('div');d.className='tradeCargo';d.innerHTML='<h3>무역품 · 화물칸</h3>';
   const ids=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
   for(let i=0;i<TRADE_SLOT_MAX;i++){
