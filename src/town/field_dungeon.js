@@ -360,19 +360,21 @@ function monsterExp(m){
   let mult=1;
   if(lv>cap) mult=Math.max(.035,1-(lv-cap)*.13);   // 저티어 학살은 빠르게 의미가 사라짐
   else if(lv<min) mult=Math.min(1.12,1+(min-lv)*.01); // 위험한 상위티어 도전 보너스는 작게
-  return Math.max(1,Math.round(need/targetKills*mult*(.92+Math.random()*.16)));
+  const special=m&&m.boss?8:(m&&m.type==='mimic'?2:1);
+  return Math.max(1,Math.round(need/targetKills*mult*special*(.92+Math.random()*.16)));
 }
 function killMonster(m){
   if(m.type==='skeleton'&&!m.revived&&Math.random()<.48){
     m.revived=true;m.dead=true;m.death=0;m.hp=0;m.reviveT=1.5;return;
   }
   m.dead=true;m.death=0;m.hp=0;
-  const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0;
-  const coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55)*(1+coinBonus/100));
+  const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.boss?6:(m.type==='mimic'?2:1);
+  const coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55)*(1+coinBonus/100)*rewardMul);
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
-  const find=(window.UI&&UI.findBonus)?UI.findBonus():0;
-  if(Math.random()<Math.min(.62,.30+find/250)){
-    const it=randomDropItem(m); if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
+  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,dropChance=m.boss?1:Math.min(.68,.30+find/250+(m.type==='mimic'?.18:0));
+  if(Math.random()<dropChance){
+    const it=randomDropItem(m);if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
+    if(m.boss&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
   }
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
 }
@@ -433,7 +435,7 @@ function autoAimMonster(){
 window.__FD_READY=true;
 window.__FD={
   async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
-  state(){return {map:MAP,theme:fieldTheme,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
+  state(){return {map:MAP,theme:fieldTheme,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
   debugTarget(dx,dy){
     const m=monsters.find(x=>!x.dead&&!x.removed); if(!m)return false;
