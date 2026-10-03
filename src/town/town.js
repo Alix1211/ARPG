@@ -807,10 +807,12 @@ function updAtk(dt){
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
-    const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
     const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0;
     const aim = a.wt === 'staff' ? magicAim(w.speed, 720) : {vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
-    shots.push({ x: P.x + ox, y: P.y + oy, vx: aim.vx, vy: aim.vy, speed: w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0, home, target:aim.target });
+    const ux=aim.vx/w.speed, uy=aim.vy/w.speed;
+    const sx=a.wt==='staff'?P.x+ux*24:P.x+(a.dir==='side'?d[0]*30:0);
+    const sy=a.wt==='staff'?P.y-44+uy*24:P.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
+    shots.push({ x:sx, y:sy, vx:aim.vx, vy:aim.vy, speed:w.speed, t:0, life:w.life, kind:a.wt, blast:w.blast||0, home, target:aim.target });
   }
   if (k > 1.2) P.atk = null;
 }
@@ -921,12 +923,13 @@ function cast(id, mod){
   if (P.mp < cost){ say('마나가 부족합니다'); return false; }
   P.mp -= cost; CD[id] = k.cd; syncBars();
   const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
-  const ox = P.dir === 'side' ? d[0] * 30 : 0, oy = P.dir === 'front' ? -34 : P.dir === 'back' ? -80 : -44;
   const home = (P.passives && P.passives.magicGuide) || 0;
   if (id === 'fire1'){
-    const aim=magicAim(520,720); shots.push({ x:P.x+ox, y:P.y+oy, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, target:aim.target });
+    const aim=magicAim(520,720), ux=aim.vx/520, uy=aim.vy/520;
+    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, target:aim.target });
   } else if (id === 'ice1'){
-    const aim=magicAim(720,720); shots.push({ x:P.x+ox, y:P.y+oy, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, target:aim.target });
+    const aim=magicAim(720,720), ux=aim.vx/720, uy=aim.vy/720;
+    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, target:aim.target });
   }
   else if (id === 'holy1_heal'){
     const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
