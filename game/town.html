@@ -114,7 +114,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
 #fs{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:10px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
 #snd{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:44px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
-#joy{left:0;bottom:0;width:46%;height:72%;pointer-events:auto}
+#joy{left:0;bottom:0;width:46%;height:72%;pointer-events:auto;touch-action:none;overscroll-behavior:none}
 #stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none;opacity:.45;transition:opacity .15s}
 #stick.act{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff70,#ffffff35);box-shadow:0 2px 6px #0005}
@@ -181,7 +181,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <img id="ghost" alt="">
 <div id="fade"></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-0802</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-0821</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
@@ -324,19 +324,23 @@ const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 }, stick = $('stick'), knob =
 function placeStick(x, y){ stick.style.left = (x - 64) + 'px'; stick.style.top = (y - 64) + 'px'; stick.style.bottom = 'auto'; }
 function homeStick(){ stick.style.left = stick.style.top = stick.style.bottom = ''; stick.classList.remove('act'); }
 $('joy').addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') return; // Android touch는 아래 touch 전용 경로에서 처리
   if (panel) return;
+  e.preventDefault();
+  if (joy.id != null && joy.id !== e.pointerId) return;
   joy.id = e.pointerId; joy.dx = joy.dy = 0;
   joy.ox = Math.max(70, Math.min(innerWidth - 70, e.clientX)); joy.oy = Math.max(70, Math.min(innerHeight - 70, e.clientY));
   placeStick(joy.ox, joy.oy); stick.classList.add('act');
-  try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
+  try { $('joy').setPointerCapture(e.pointerId); } catch (er) {}
   knob.style.transform = '';
   joyMove(e);
 });
 addEventListener('pointermove', e => {
   if (e.pointerId !== joy.id) return;
+  if (e.cancelable) e.preventDefault();
   if (e.pointerType === 'mouse' && e.buttons === 0){ endJoy(e); return; } // 마우스 버튼을 이미 뗐는데 놓친 경우
   joyMove(e);
-});
+}, { passive:false });
 function joyMove(e){
   let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), m = 44;
   if (d > m * 1.6){ const k = (d - m * 1.6) / d; joy.ox += dx * k; joy.oy += dy * k; dx -= dx * k; dy -= dy * k; placeStick(joy.ox, joy.oy); }   // 받침이 손가락을 따라옴
@@ -346,9 +350,33 @@ function joyMove(e){
 function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); } }
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
 $('joy').addEventListener('lostpointercapture', endJoy);
+
+// 모바일은 PointerEvent 취소에 흔들리지 않도록 Touch 식별자를 직접 추적한다.
+let joyTouch = null;
+function touchPoint(list, id){ for (const t of list) if (t.identifier === id) return t; return null; }
+$('joy').addEventListener('touchstart', e => {
+  if (panel || joyTouch != null) return;
+  const t = e.changedTouches[0]; if (!t) return;
+  e.preventDefault(); joyTouch = t.identifier; joy.id = null; joy.dx = joy.dy = 0;
+  joy.ox = Math.max(70, Math.min(innerWidth - 70, t.clientX)); joy.oy = Math.max(70, Math.min(innerHeight - 70, t.clientY));
+  placeStick(joy.ox, joy.oy); stick.classList.add('act'); knob.style.transform = '';
+  joyMove(t);
+}, { passive:false });
+document.addEventListener('touchmove', e => {
+  if (joyTouch == null) return;
+  const t = touchPoint(e.touches, joyTouch); if (!t) return;
+  e.preventDefault(); joyMove(t);
+}, { passive:false });
+function endJoyTouch(e){
+  if (joyTouch == null) return;
+  const t = touchPoint(e.changedTouches, joyTouch); if (!t) return;
+  e.preventDefault(); joyTouch = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick();
+}
+document.addEventListener('touchend', endJoyTouch, { passive:false });
+document.addEventListener('touchcancel', endJoyTouch, { passive:false });
 // 창 밖으로 나가거나 다른 창을 보면 조이스틱·키 입력을 모두 풀어 줌
-function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); for (const k in keys) keys[k] = false; }
-addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', releaseAll); document.addEventListener('pointerleave', releaseAll);
+function releaseAll(){ joy.id = null; joyTouch = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); for (const k in keys) keys[k] = false; }
+addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
 $('fs').addEventListener('click', () => {
   const d = document.documentElement;
   if (!document.fullscreenElement){ (d.requestFullscreen || d.webkitRequestFullscreen || (() => {})).call(d); try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
@@ -971,8 +999,12 @@ function updAtk(dt){
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
-    const ox = a.dir === 'side' ? d[0] * 30 : 0, oy = a.dir === 'front' ? -34 : a.dir === 'back' ? -80 : -44;
-    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0; shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * w.speed, vy: d[1] * w.speed, speed: w.speed, t: 0, life: w.life, kind: a.wt, blast: w.blast || 0, home });
+    const w = WB[a.wt], home = a.wt === 'staff' ? ((P.passives && P.passives.magicGuide) || 0) : 0;
+    const aim = a.wt === 'staff' ? magicAim(w.speed, 720) : {vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
+    const ux=aim.vx/w.speed, uy=aim.vy/w.speed;
+    const sx=a.wt==='staff'?P.x+ux*24:P.x+(a.dir==='side'?d[0]*30:0);
+    const sy=a.wt==='staff'?P.y-44+uy*24:P.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
+    shots.push({ x:sx, y:sy, vx:aim.vx, vy:aim.vy, speed:w.speed, t:0, life:w.life, kind:a.wt, blast:w.blast||0, home, target:aim.target });
   }
   if (k > 1.2) P.atk = null;
 }
@@ -1001,6 +1033,17 @@ function nearestShotTarget(x, y, lim = 720){
     if (d < bd){ bd = d; best = t; }
   }
   return best;
+}
+function magicAim(speed, lim = 720){
+  const t = nearestShotTarget(P.x, P.y - 44, lim);
+  if (!t){
+    const d = P.dir === 'front' ? [0,1] : P.dir === 'back' ? [0,-1] : [P.flip ? -1 : 1,0];
+    return { vx:d[0]*speed, vy:d[1]*speed, target:null };
+  }
+  const tx=t.x, ty=t.y-(t.h||60)*0.45, dx=tx-P.x, dy=ty-(P.y-44), d=Math.hypot(dx,dy)||1;
+  // 캐릭터 모션 방향도 타깃의 주축 방향에 맞춘다. 투사체 자체는 실제 좌표로 발사.
+  if (Math.abs(dx) > Math.abs(dy)){ P.dir='side'; P.flip=dx<0; } else { P.dir=dy<0?'back':'front'; P.flip=false; }
+  return { vx:dx/d*speed, vy:dy/d*speed, target:t };
 }
 function guideShot(s, dt){
   if (!s.home || s.done) return;
@@ -1072,10 +1115,14 @@ function cast(id, mod){
   if (P.mp < cost){ say('마나가 부족합니다'); return false; }
   P.mp -= cost; CD[id] = k.cd; syncBars();
   const d = faceVec(), base = Math.max(8, WPN ? WPN.dmg : 8) * mod.dmg;
-  const ox = P.dir === 'side' ? d[0] * 30 : 0, oy = P.dir === 'front' ? -34 : P.dir === 'back' ? -80 : -44;
   const home = (P.passives && P.passives.magicGuide) || 0;
-  if (id === 'fire1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 520, vy: d[1] * 520, speed: 520, t: 0, life: 1.0, kind: 'fire', blast: 46, dmg: Math.round(base * 1.6), home });
-  else if (id === 'ice1') shots.push({ x: P.x + ox, y: P.y + oy, vx: d[0] * 720, vy: d[1] * 720, speed: 720, t: 0, life: 0.8, kind: 'ice', blast: 0, dmg: Math.round(base * 1.2), home });
+  if (id === 'fire1'){
+    const aim=magicAim(520,720), ux=aim.vx/520, uy=aim.vy/520;
+    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:520, t:0, life:1.0, kind:'fire', blast:46, dmg:Math.round(base*1.6), home, target:aim.target });
+  } else if (id === 'ice1'){
+    const aim=magicAim(720,720), ux=aim.vx/720, uy=aim.vy/720;
+    shots.push({ x:P.x+ux*24, y:P.y-44+uy*24, vx:aim.vx, vy:aim.vy, speed:720, t:0, life:0.8, kind:'ice', blast:0, dmg:Math.round(base*1.2), home, target:aim.target });
+  }
   else if (id === 'holy1_heal'){
     const v = Math.round(P.maxHp * 0.3); P.hp = Math.min(P.maxHp, P.hp + v); syncBars();
     pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: true }); sfx.push({ type: 'heal', t: 0 });
@@ -1459,7 +1506,8 @@ function autoAimMonster(){
   const lim=WPN&&(WPN.wt==='bow'||WPN.wt==='staff')?620:190; let best=null,bd=lim;
   for(const m of monsters){if(m.dead||m.removed)continue;const d=Math.hypot(m.x-P.x,m.y-P.y);if(d<bd){bd=d;best=m;}}
   if(!best)return;const dx=best.x-P.x,dy=best.y-P.y;
-  if(Math.abs(dx)>Math.abs(dy)*.72||(dy>0&&Math.abs(dx)>16)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
+  // 가장 가까운 적의 주축 방향. 아래/위 적이 조금 옆에 있어도 세로 방향을 유지한다.
+  if(Math.abs(dx)>Math.abs(dy)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
 }
 
 window.__FD_READY=true;
@@ -1467,6 +1515,11 @@ window.__FD={
   async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
   state(){return {map:MAP,theme:fieldTheme,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
+  debugTarget(dx,dy){
+    const m=monsters.find(x=>!x.dead&&!x.removed); if(!m)return false;
+    for(const x of monsters) if(x!==m) x.removed=true;
+    m.x=P.x+dx; m.y=P.y+dy; m.vx=m.vy=0; return {x:m.x,y:m.y};
+  },
   prepareField, openRegionSelect
 };
 
@@ -1753,7 +1806,7 @@ const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.v
 
 
 P.hp = P.maxHp; P.mp = P.maxMp;
-window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils;
+window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils; window.__CTRL = { joy:()=>({dx:joy.dx,dy:joy.dy,touch:joyTouch,id:joy.id}), shots:()=>shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,kind:s.kind,done:!!s.done})) };
 requestAnimationFrame(frame);
 })();
 
