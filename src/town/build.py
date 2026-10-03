@@ -283,14 +283,22 @@ for no, name, title, where, side, line, shop in NPC:
         b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
 
-# 가게 물건 아이콘
+# 장비/가게 아이콘 — 파밍 등급 1~10, 장신구 T1~T5
 ICON = {}
 def icon(path):
     im = Image.open(path).convert('RGBA'); im.thumbnail((96, 96), Image.LANCZOS); return enc(im, 88)
 for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
-    for g in (1, 2): ICON[f'{t}_{g:02d}'] = icon(R + f'weapons/{t}_{g:02d}.png')
-for r in range(4): ICON[f'armor_{r}'] = icon(R + f'armor/tier_knight_{r}_01.png')
-ICON['ring'] = icon(R + 'accessories/acc_0_01.png'); ICON['neck'] = icon(R + 'accessories/acc_1_01.png')
+    for g in range(1, 11): ICON[f'{t}_{g:02d}'] = icon(R + f'weapons/{t}_{g:02d}.png')
+for style in ['knight', 'mage']:
+    for kind in ['head', 'body', 'hands', 'feet']:
+        for g in range(1, 11):
+            ICON[f'{style}_{kind}_{g:02d}'] = icon(R + f'armor/{style}_{kind}_{g:02d}.png')
+for tier in range(1, 6):
+    ICON[f'ring_{tier}'] = icon(R + f'accessories/acc_0_{tier:02d}.png')
+    ICON[f'neck_{tier}'] = icon(R + f'accessories/acc_1_{tier:02d}.png')
+# 기존 상점 키 호환
+for r, kind in enumerate(['head', 'body', 'hands', 'feet']): ICON[f'armor_{r}'] = ICON[f'knight_{kind}_02']
+ICON['ring'] = ICON['ring_1']; ICON['neck'] = ICON['neck_1']
 
 
 SH = [dict(path=R + f"buildings/{b['k']}.png", x=b['x'], y=b['y'], w=b['w'], h=b['h'], sq=0.5 if b['k'] in ('watchtower','gate_twin_tower') else 0.42) for b in blds]
