@@ -247,7 +247,7 @@ function render(){
       const r = el('div', 'srow'); r.style.top = (232 + i * 47.7) + 'px';
       r.append(el('b', '', n), el('em', '', v), el('small', '', sub)); L.append(r);
     });
-    const lv = el('div', 'slv', `Lv ${Pp.lv} · 견습 모험가`); L.append(lv);
+    const lv = el('div', 'slv', `${Pp.name || '루크레아'} · Lv ${Pp.lv} · 견습 모험가`); L.append(lv);
   }
   // 가방
   const R = $('bagPane'); R.innerHTML = '';
@@ -332,7 +332,7 @@ const SKEY = 'arpg_save_v1';
 function saveGame(){
   try {
     const P = G.P;
-    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
+    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), name: P.name, passives: P.passives, gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
   } catch (e) {}
 }
 function loadGame(){
@@ -344,7 +344,7 @@ function loadGame(){
   if (d.pot){ POT.hp = d.pot.hp | 0; POT.mp = d.pot.mp | 0; }
   if (d.qs) for (let i = 0; i < 5; i++) QS[i] = d.qs[i] && A.skicon[d.qs[i]] ? d.qs[i] : null;
   let mx = 0; for (const it of [...bag, ...Object.values(eq)]) if (it && it.id > mx) mx = it.id; seq = mx + 1;
-  const P = G.P; P.lv = d.lv || 1; P.exp = d.exp || 0; G.setGold(d.gold | 0);
+  const P = G.P; P.name = d.name || P.name || '루크레아'; P.lv = d.lv || 1; P.exp = d.exp || 0; P.passives = Object.assign({ magicGuide: 1 }, P.passives || {}, d.passives || {}); G.setGold(d.gold | 0);
   return d;
 }
 const saved = loadGame();
