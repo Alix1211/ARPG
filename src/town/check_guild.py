@@ -101,7 +101,7 @@ async def main():
         # 필드 -> 느린 페이드 -> 마을. 도착 오라와 분수 옆 귀환 포탈이 열린다.
         await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(900)
         assert await ev("() => document.getElementById('place').dataset.map!=='마을'")
-        await pg.click('.sk[data-i="0"]');await pg.wait_for_timeout(1300)
+        await pg.click('.sk[data-i="0"]');await pg.wait_for_function("() => !document.getElementById('fade').classList.contains('slow')")
         assert await ev("() => document.getElementById('place').dataset.map")=='마을'
         ps=await ev("() => GAME.portalState()")
         assert ps['open'] and ps['returnTo']=='field',ps
@@ -112,7 +112,7 @@ async def main():
           const s=GAME.portalState();GAME.P.x=s.x;GAME.P.y=s.y;
         }""")
         await pg.wait_for_timeout(100)
-        await ev("() => GAME.act()");await pg.wait_for_timeout(1300)
+        await ev("() => GAME.act()");await pg.wait_for_function("() => !document.getElementById('fade').classList.contains('slow')")
         assert await ev("() => document.getElementById('place').dataset.map")!='마을'
         assert not await ev("() => GAME.portalState().open")
 
@@ -123,11 +123,11 @@ async def main():
         dbefore=await ev("() => ({s:__DUN.state(),x:GAME.P.x,y:GAME.P.y})")
         assert dbefore['s']['floor']==3
         assert await ev("() => GAME.useTownPortal()")
-        await pg.wait_for_timeout(1300)
+        await pg.wait_for_function("() => !document.getElementById('fade').classList.contains('slow')")
         ps=await ev("() => GAME.portalState()")
         assert ps['open'] and ps['returnTo']=='dungeon' and ps['returnFloor']==3,ps
         await ev("() => { const s=GAME.portalState();GAME.P.x=s.x;GAME.P.y=s.y; }")
-        await pg.wait_for_timeout(80);await ev("() => GAME.act()");await pg.wait_for_timeout(1300)
+        await pg.wait_for_timeout(80);await ev("() => GAME.act()");await pg.wait_for_function("() => !document.getElementById('fade').classList.contains('slow')")
         dafter=await ev("() => ({s:__DUN.state(),x:GAME.P.x,y:GAME.P.y})")
         assert dafter['s']['floor']==3,(dbefore,dafter)
         assert dafter['s']['monsters']==dbefore['s']['monsters'],(dbefore,dafter)
