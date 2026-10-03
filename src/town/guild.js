@@ -50,6 +50,8 @@ function guildProgressText(q){
 }
 function guildTrack(){
   const host=$('questTrack');if(!host)return;
+  host.onclick=()=>guildOpen();
+  host.title='의뢰창 열기';
   host.innerHTML='';
   if(!guildState.active.length){host.classList.remove('on');return;}
   host.classList.add('on');
