@@ -49,6 +49,15 @@ async function makeFieldGround(theme){
   g.strokeStyle = fieldPattern(g, dirt); g.globalAlpha = 0.36; g.lineWidth = 150; g.stroke();
   g.strokeStyle = fieldPattern(g, path); g.globalAlpha = 0.93; g.lineWidth = 86; g.stroke();
   g.restore();
+
+  // 작은 마을 예약 구역으로 들어가는 샛길 + 마을 앞 작은 흙광장
+  g.save(); g.lineCap='round'; g.lineJoin='round';
+  g.beginPath(); g.moveTo(13.2*TS,19.7*TS); g.bezierCurveTo(13.0*TS,16.5*TS,12.7*TS,14.0*TS,12.4*TS,11.3*TS);
+  g.strokeStyle=fieldPattern(g,dirt); g.globalAlpha=.42; g.lineWidth=92; g.stroke();
+  g.strokeStyle=fieldPattern(g,path); g.globalAlpha=.92; g.lineWidth=54; g.stroke();
+  g.globalAlpha=.78; g.fillStyle=fieldPattern(g,dirt);
+  g.beginPath(); g.ellipse(12.7*TS,8.9*TS,4.2*TS,2.7*TS,0,0,7); g.fill();
+  g.restore();
   if (t.water && t.sand){
     const spots = [[29,8,2.8,1.5],[48,29,2.4,1.3]];
     for (const q of spots){
@@ -98,12 +107,26 @@ function randomFieldProps(theme){
   }
   return out;
 }
+function fieldBuilding(k,name,x,y,wt,kind,market){
+  const im=BI[k], ar=im&&im.naturalWidth?im.naturalHeight/im.naturalWidth:.82;
+  const w=wt*TS, h=w*ar;
+  return {k,name,x:x*TS,y:y*TS,w,h,door:0,kind:kind||'bld',market:market||null};
+}
+function makeFieldVillage(theme){
+  // 예약 구역 x 8~17, y 4~12. 기존 정제 건물 에셋을 작게 재사용한다.
+  return [
+    fieldBuilding('shop_tools','상인협회',10.9,8.9,3.7,'trade',theme),
+    fieldBuilding('house_blue','여관',14.7,11.2,3.5,'bld',theme),
+  ];
+}
+
 async function prepareField(theme){
   const t0 = performance.now();
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
   const bg = await makeFieldGround(fieldTheme), props = randomFieldProps(fieldTheme);
   const map = {
-    name:FIELD_INFO[fieldTheme][1], map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini, blds:[], props, npcs:[],
+    name:FIELD_INFO[fieldTheme][1], market:fieldTheme, map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini,
+    blds:makeFieldVillage(fieldTheme), props, npcs:[],
     spawn:[3.2*TS,20*TS], exits:[{x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'}]
   };
   map.G = bg.ground; map.MINI = bg.mini;
