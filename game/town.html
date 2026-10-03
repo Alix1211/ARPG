@@ -235,7 +235,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1758</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1003-1804</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -3442,10 +3442,10 @@ function rarityForTier(tier, rank='normal'){
   const w=table[tier-1].slice();
   const shift=rank==='elite'?10:(rank==='boss'?20:0);
   const legend=tier<4?0:(rank==='boss'?5:rank==='elite'?2:0);
-  w[0]-=shift;w[2]+=shift-legend;w[3]+=legend;
   const scent=(G.P.lifeSkills&&G.P.lifeSkills.moneyScent)||0, greed=(G.P.passives&&G.P.passives.greed)||0;
   const bonus=scent*1.2+greed*.6;
   if(bonus>0){const shift=Math.min(w[0]-20,bonus);w[0]-=shift;w[2]+=shift*.75;w[3]+=shift*.25;}
+  w[0]-=shift;w[2]+=shift-legend;w[3]+=legend;
   let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i;}return 0;
 }
 function rollAffix(it, used){
