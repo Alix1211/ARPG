@@ -330,7 +330,9 @@ function render(){
     for(const [key,dv] of Object.entries(G.LIFE_DEF||{})){
       const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,row=el('div','liferow');
       row.append(el('b','',dv.name),el('span','',locked?`Lv${dv.unlock} 해금`:`Lv${rank}/${dv.max}`),el('small','',locked?'아직 잠김':(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1])));
-      const plus=el('button','growplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=()=>G.investLife(key);row.append(plus);pane.append(row);
+      const ctl=el('span','');ctl.style.cssText='display:flex;gap:2px;align-items:center';
+      if(key==='townPortal'&&!locked&&rank>0){const use=el('button','growplus','↩');use.type='button';use.title='타운 포탈 사용';use.onclick=()=>{closeChar();G.useTownPortal();};ctl.append(use);}
+      const plus=el('button','growplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=()=>G.investLife(key);ctl.append(plus);row.append(ctl);pane.append(row);
     }
     pane.append(el('div','sectionhead','무기 숙련도 · 적중할 때 자동 상승'));
     for(const wt of ['sword','spear','gauntlet','bow','staff']){
