@@ -40,6 +40,7 @@ AI는 읽고 게임에 반영(건물 역할, NPC 이름·직업, 의뢰 사슬)�
 | 5 | `docs/hud_controls.md` | 가로 HUD 배치·조작(무기1/무기2, 스킬 5칸, 미니맵) |
 | 6 | `docs/progression.md`, `docs/guild_system.md`, `docs/stats_skills.md` | 진행도·티어, 길드 등급·의뢰, 능력치·스킬 |
 | 7 | `README.md` | 에셋 폴더 목록 |
+| ★ | `docs/tasks/` | 지금 맡은 작업 지시서(예: field_dungeon.md) |
 | - | 파밍 시스템 정리(Claude Docs) | https://claude.ai/code/artifact/7667c312-3148-40e3-b7f7-e2f191ec2915 (Claude 계정에서만 열림. 내용 요지는 docs/progression.md 등에 있음) |
 
 ## 5. 폴더 구조
