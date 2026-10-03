@@ -325,7 +325,16 @@ function unequip(s){
 window.UI = {
   addPotion(k, n){ POT[k] += n; syncPot(); },
   make, add(it){ const i = bag.indexOf(null); if (i < 0) return false; bag[i] = it; return true; },
-  bagFull: () => bag.indexOf(null) < 0, isOpen: () => $('char').classList.contains('on'), close: closeChar,
+  bagFull: () => bag.indexOf(null) < 0,
+  bagItems: () => bag.map((it, i) => it ? { i, it } : null).filter(Boolean),
+  removeBagAt(i){
+    if (i < 0 || i >= BAG || !bag[i]) return null;
+    const it = bag[i]; bag[i] = null; pickSel = null; $('iinfo').classList.remove('on');
+    if ($('char').classList.contains('on')) render();
+    if (typeof saveGame === 'function') saveGame();
+    return it;
+  },
+  isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };
 // ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
 const SKEY = 'arpg_save_v1';
