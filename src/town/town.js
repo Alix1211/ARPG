@@ -479,6 +479,7 @@ function frame(now){
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
 
+  if (!isFinite(P.x) || !isFinite(P.y)){ P.x = (CUR.spawn ? CUR.spawn[0] : 23 * TS); P.y = (CUR.spawn ? CUR.spawn[1] : 22.2 * TS); P.atk = null; }
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));

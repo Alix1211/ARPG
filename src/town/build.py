@@ -343,6 +343,8 @@ A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=asset
 js = open(os.path.join(HERE, 'town.js')).read()
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
+import time as _t
+html = html.replace('/*VER*/', _t.strftime('%m%d-%H%M'))
 html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)
 open(os.path.join(ROOT, 'game', 'town.html'), 'w').write(html)
 print('ok', len(html) // 1024, 'KB')
