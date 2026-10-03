@@ -21,6 +21,9 @@ async def main():
         await pg.wait_for_timeout(120)
         await ev("() => GAME.act()");await pg.wait_for_timeout(80)
         assert await ev("() => document.getElementById('guild').classList.contains('on')")
+        assert await pg.locator('#guildClose').count()==1
+        await pg.click('#guildClose');await pg.wait_for_timeout(80)
+        assert not await ev("() => document.getElementById('guild').classList.contains('on')")
         st=await ev("() => GUILD.state()")
         assert len(st['board'])==6,st
 
@@ -61,16 +64,40 @@ async def main():
         await pg.reload();await pg.wait_for_timeout(1000)
         assert await ev("(id)=>GUILD.state().active.some(q=>q.id===id)",active_id)
 
-        # Lv3 타운포탈: 퀵슬롯 등록 후 필드에서 눌러 즉시 마을 복귀.
+        # Lv3 타운포탈: 생활스킬 아이콘을 실제 드래그해서 퀵슬롯에 등록.
         await ev("""() => {
           GAME.P.lv=3;GAME.P.portalReadyAt=0;GAME.syncLifeUnlocks(true);
-          UI.assignQuick(0,'townPortal');
         }""")
+        await pg.click('#bagBtn');await pg.wait_for_timeout(120)
+        await pg.click('#tabSk');await pg.wait_for_timeout(120)
+        portal=pg.locator('.lifegrid .skc.drag')
+        assert await portal.count()==1
+        pbox=await portal.bounding_box(); qbox=await pg.locator('.sk[data-i="0"]').bounding_box()
+        assert pbox and qbox
+        await pg.mouse.move(pbox['x']+pbox['width']/2,pbox['y']+pbox['height']/2)
+        await pg.mouse.down()
+        await pg.mouse.move(qbox['x']+qbox['width']/2,qbox['y']+qbox['height']/2,steps=8)
+        await pg.mouse.up();await pg.wait_for_timeout(120)
         assert await ev("() => UI.quickSlots()[0]==='townPortal'")
-        await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(850)
+        await pg.click('#charClose');await pg.wait_for_timeout(80)
+
+        # 필드 -> 느린 페이드 -> 마을. 도착 오라와 분수 옆 귀환 포탈이 열린다.
+        await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(900)
         assert await ev("() => document.getElementById('place').dataset.map!=='마을'")
-        await pg.click('.sk[data-i="0"]');await pg.wait_for_timeout(850)
+        await pg.click('.sk[data-i="0"]');await pg.wait_for_timeout(1300)
         assert await ev("() => document.getElementById('place').dataset.map")=='마을'
+        ps=await ev("() => GAME.portalState()")
+        assert ps['open'] and ps['returnTo']=='field',ps
+        assert await ev("() => GAME.portalState().aura")
+
+        # 분수 옆 귀환 포탈로 들어가면 원래 필드 위치로 돌아간다.
+        await ev("""() => {
+          const s=GAME.portalState();GAME.P.x=s.x;GAME.P.y=s.y;
+        }""")
+        await pg.wait_for_timeout(100)
+        await ev("() => GAME.act()");await pg.wait_for_timeout(1300)
+        assert await ev("() => document.getElementById('place').dataset.map")!='마을'
+        assert not await ev("() => GAME.portalState().open")
 
         assert not errs,errs
         print('guild + portal quick ok',{'gold':(g0,g1),'delivery':(c0,c1),'saved':active_id})
