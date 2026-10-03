@@ -50,6 +50,17 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #infoPrice{font-weight:900;color:#8a5a0a}
 #shopSay{font-size:12px;color:#7a3b1a;min-height:32px;line-height:1.35}
 
+#guild{left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,94vw);max-height:86vh;display:none;overflow:auto}
+#guild.on{display:block}
+#guildHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#guildHead b{font-size:20px}#guildHead small{color:#8a5a2a;font-weight:800}
+#gActive,#gBoard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:6px 0 12px}
+.gq{border:2px solid #b69055;background:#f3e5c8cc;border-radius:10px;padding:9px;color:var(--ink);min-height:98px}
+.gq.done{box-shadow:inset 0 0 0 2px #d39b24}
+.gq b{display:block;font-size:14px;margin-bottom:3px}.gq small{display:block;color:#745a38;line-height:1.35}
+.gprog{font-size:12px;font-weight:900;color:#7a3b1a;margin:6px 0}
+.gq .btn{font-size:12px;padding:4px 10px}
+.gsect{font-size:13px;font-weight:900;color:#6b3d18;margin-top:4px}
 #bubble{position:fixed;transform:translate(-50%,-100%);display:none;pointer-events:none;background:#fff8e6;color:var(--ink);border:2px solid #b07a35;border-radius:12px;padding:4px 10px;font-size:13px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px #0006}
 #char{position:fixed;inset:0;background:#120b06b0;display:none;z-index:8}
 #char.on{display:block}
@@ -142,7 +153,7 @@ html.app #fs{display:none}
 #lvOrb b{font-size:14px;line-height:13px;color:#ffe08a;text-shadow:0 1px 2px #000}
 #lvOrb small{font-size:8px;line-height:8px;color:#f3e6c8;font-weight:800}
 .sk.empty{opacity:.75}
-.sk[data-pen]:not([data-pen=''])::after{content:attr(data-pen);position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-size:10px;font-weight:900;color:#fff;background:#2a160bdd;border-radius:6px;padding:0 4px;white-space:nowrap}
+.sk[data-pen]:not([data-pen=''])::after{content:attr(data-pen);position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-size:10px;font-weight:900;color:#fff;background:#2a160bdd;border-radius:6px;padding:0 4px;white-space:nowrap}.sk[data-glyph]:not([data-glyph=''])::before{content:attr(data-glyph);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:29px;font-weight:900;color:#ffe9b8;text-shadow:0 2px 3px #000;z-index:2}
 #cluster.drop{z-index:12}
 #cluster.drop .sk{outline:2px dashed #ffe08a;outline-offset:2px}
 #ghost{position:fixed;width:58px;height:58px;margin:-29px 0 0 -29px;pointer-events:none;display:none;z-index:13;filter:drop-shadow(0 4px 6px #000a)}
@@ -157,7 +168,7 @@ html.app #fs{display:none}
 .skrank{font-size:10px;font-weight:900;min-width:26px;text-align:center;color:#6b3d18}
 .growplus{width:25px;height:25px;border:1px solid #9b6d35;background:#6d421d;color:#ffe9b5;border-radius:6px;font-weight:900;padding:0;line-height:22px}
 .growplus:disabled{opacity:.3}
-.passrow,.liferow,.masterrow{display:grid;grid-template-columns:92px 52px 1fr 30px;gap:5px;align-items:center;min-height:34px;border-top:1px solid #9b7d5533;font-size:11px}
+.passrow,.liferow,.masterrow{display:grid;grid-template-columns:92px 52px 1fr 82px;gap:5px;align-items:center;min-height:34px;border-top:1px solid #9b7d5533;font-size:11px}
 .passrow b,.liferow b,.masterrow b{font-size:12px}.passrow small,.liferow small,.masterrow small{color:#6b5b45}
 .sectionhead{font-size:13px;font-weight:900;margin:8px 0 3px;color:#7a3b1a}
 .statplus{margin-left:auto;width:24px;height:24px;border:1px solid #8d6332;background:#6c421f;color:#ffe8b8;border-radius:50%;font-weight:900}
@@ -179,6 +190,7 @@ html.app #fs{display:none}
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
   <div class="row"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn ghost" type="button" data-close>닫기</button></div></div></div>
+<div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small></div><div class="gsect">진행 중 의뢰</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
 <div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><div id="shopTabs"><button class="btn on" id="tabBuy" type="button">사기</button><button class="btn" id="tabSell" type="button">팔기</button></div><small>내 금화 <b id="shopGold">0</b></small></div>
   <div id="shopMarket"></div>
   <div id="grid"></div>
