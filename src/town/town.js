@@ -94,17 +94,23 @@ const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 }, stick = $('stick'), knob =
 $('joy').addEventListener('pointerdown', e => {
   if (panel) return;
   joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; joy.dx = joy.dy = 0;
+  try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
   stick.style.display = 'block'; stick.style.left = (e.clientX - 55) + 'px'; stick.style.top = (e.clientY - 55) + 'px';
   knob.style.transform = '';
 });
 addEventListener('pointermove', e => {
   if (e.pointerId !== joy.id) return;
+  if (e.pointerType === 'mouse' && e.buttons === 0){ endJoy(e); return; } // 마우스 버튼을 이미 뗐는데 놓친 경우
   let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), m = 44;
   if (d > m){ dx *= m / d; dy *= m / d; }
   joy.dx = dx / m; joy.dy = dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`;
 });
-const endJoy = e => { if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; stick.style.display = 'none'; } };
+function endJoy(e){ if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; stick.style.display = 'none'; } }
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
+$('joy').addEventListener('lostpointercapture', endJoy);
+// 창 밖으로 나가거나 다른 창을 보면 조이스틱·키 입력을 모두 풀어 줌
+function releaseAll(){ joy.id = null; joy.dx = joy.dy = 0; stick.style.display = 'none'; for (const k in keys) keys[k] = false; }
+addEventListener('blur', releaseAll); document.addEventListener('visibilitychange', releaseAll); document.addEventListener('pointerleave', releaseAll);
 $('fs').addEventListener('click', () => {
   const d = document.documentElement;
   if (!document.fullscreenElement){ (d.requestFullscreen || d.webkitRequestFullscreen || (() => {})).call(d); try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
