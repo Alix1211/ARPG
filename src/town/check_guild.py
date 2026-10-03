@@ -35,6 +35,11 @@ async def main():
         assert await ev("() => document.querySelectorAll('#questTrack .qtrack').length===1")
         assert await ev("(t)=>document.getElementById('questTrack').innerText.includes(t)",q['title'])
         assert await ev("(n)=>document.getElementById('questTrack').innerText.includes('0 / '+n)",q['need'])
+        bg=await ev("() => getComputedStyle(document.querySelector('#questTrack .qtrack')).backgroundColor")
+        assert bg in ('rgba(0, 0, 0, 0)','transparent'),bg
+        await pg.click('#questTrack');await pg.wait_for_timeout(80)
+        assert await ev("() => document.getElementById('guild').classList.contains('on')")
+        await pg.click('#guildClose');await pg.wait_for_timeout(80)
         g0=await ev("() => GAME.P.gold"); e0=await ev("() => GAME.P.exp")
         await ev("() => GUILD.onKill({dead:true,type:'wolf'})")
         assert await ev("(n)=>document.getElementById('questTrack').innerText.includes('1 / '+n)",q['need'])
