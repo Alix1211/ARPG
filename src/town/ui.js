@@ -204,8 +204,12 @@ const IMPLEMENTED = new Set(['fire1','ice1','holy1_heal','sword1','sword2']);
 const SKN = { fire1:'불덩이', ice1:'얼음 화살', holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
+const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};
+const LIFE_ICON={townPortal:'holy3_revive',identify:'bolt3',discount:'bow3',overcount:'sword3',enchant:'fire3',moneyScent:'dark3'};
+const passiveIcon=id=>A.skicon[PASSIVE_ICON[id]]||K.ring;
+const lifeIcon=id=>A.skicon[LIFE_ICON[id]]||K.ring;
 const quickLearned=id=>id==='townPortal'?((G.P.lifeSkills&&G.P.lifeSkills.townPortal)||0)>0:skillLearned(id);
-const quickIcon=id=>id==='townPortal'?K.ring:A.skicon[id];
+const quickIcon=id=>id==='townPortal'?lifeIcon('townPortal'):A.skicon[id];
 const skBtns = [...document.querySelectorAll('.sk')];
 const C0 = 62;
 skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
@@ -251,7 +255,7 @@ function startDrag(e, id, from){
   $('cluster').classList.add('drop'); try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
 }
 function moveGhost(e){ ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
-addEventListener('pointermove', e => { if (drag) moveGhost(e); });
+addEventListener('pointermove', e => { if(drag){if(e.cancelable)e.preventDefault();moveGhost(e);} },{passive:false});
 addEventListener('pointerup', e => {
   if (!drag) return;
   ghost.style.display = 'none';
@@ -262,7 +266,7 @@ addEventListener('pointerup', e => {
     if (drag.from != null){ const tmp = QS[i]; QS[i] = drag.id; QS[drag.from] = tmp; }       // 칸끼리 맞바꾸기
     else { const old = QS.indexOf(drag.id); if (old >= 0) QS[old] = null; QS[i] = drag.id; }
   } else if (drag.from != null) QS[drag.from] = null;                                          // 칸 밖에 놓으면 빼기
-  drag = null; syncQS();
+  drag = null; syncQS(); saveGame();
 });
 
 // ---- 캐릭터 창 ----
@@ -328,21 +332,27 @@ function render(){
       pane.append(row);
     }
     pane.append(el('div','sectionhead',`패시브 · 같은 스킬포인트 사용`));
+    const pg=el('div','passgrid');pane.append(pg);
     for(const [key,dv] of Object.entries(G.PASSIVE_DEF||{})){
-      const rank=(Pp.passives&&Pp.passives[key])||0,row=el('div','passrow');
-      row.append(el('b','',dv.name),el('span','',`Lv${rank}/${dv.max}`),el('small','',dv.desc));
-      const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=dv.max;plus.onclick=()=>G.investPassive(key);row.append(plus);pane.append(row);
+      const rank=(Pp.passives&&Pp.passives[key])||0,tile=el('div','skilltile');
+      const ic=el('button','skc');ic.type='button';ic.title=dv.name;ic.style.backgroundImage=`url(${passiveIcon(key)})`;ic.tabIndex=-1;
+      const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=dv.max;plus.onclick=e=>{e.stopPropagation();G.investPassive(key);};
+      tile.append(ic,el('b','stname',dv.name),el('small','stdesc',dv.desc),plus,el('span','strank',`Lv${rank}/${dv.max}`));pg.append(tile);
     }
     pane.append(el('div','sectionhead',`생활스킬 · 보유 ${Pp.lifePts||0}P`));
+    const lg=el('div','lifegrid');pane.append(lg);
     for(const [key,dv] of Object.entries(G.LIFE_DEF||{})){
-      const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,row=el('div','liferow');
-      row.append(el('b','',dv.name),el('span','',locked?`Lv${dv.unlock} 해금`:`Lv${rank}/${dv.max}`),el('small','',locked?'아직 잠김':(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1])));
-      const ctl=el('span','');ctl.style.cssText='display:flex;gap:2px;align-items:center';
+      const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,tile=el('div','skilltile'+(locked?' lock':''));
+      const ic=el('button','skc life'+(key==='townPortal'&&!locked&&rank>0?' drag':''));ic.type='button';ic.style.backgroundImage=`url(${lifeIcon(key)})`;ic.title=key==='townPortal'&&!locked&&rank>0?'길게 눌러 퀵슬롯에 등록 / 탭하여 사용':dv.name;
       if(key==='townPortal'&&!locked&&rank>0){
-        const q=el('button','growplus','Q');q.type='button';q.title='퀵슬롯에 등록';q.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,'townPortal',null);});ctl.append(q);
-        const use=el('button','growplus','↩');use.type='button';use.title='타운 포탈 바로 사용';use.onclick=()=>{closeChar();G.useTownPortal();};ctl.append(use);
+        let moved=false,sx=0,sy=0;
+        ic.addEventListener('pointerdown',e=>{e.preventDefault();sx=e.clientX;sy=e.clientY;moved=false;startDrag(e,'townPortal',null);});
+        ic.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>10)moved=true;});
+        ic.addEventListener('click',e=>{if(moved)return;e.preventDefault();closeChar();G.useTownPortal();});
       }
-      const plus=el('button','growplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=()=>G.investLife(key);ctl.append(plus);row.append(ctl);pane.append(row);
+      const desc=locked?`Lv${dv.unlock} 해금`:(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1]);
+      const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=e=>{e.stopPropagation();G.investLife(key);};
+      tile.append(ic,el('b','stname',dv.name),el('small','stdesc',desc),plus,el('span','strank',locked?`Lv${dv.unlock}`:`Lv${rank}/${dv.max}`));lg.append(tile);
     }
     pane.append(el('div','sectionhead','무기 숙련도 · 적중할 때 자동 상승'));
     for(const wt of ['sword','spear','gauntlet','bow','staff']){
