@@ -202,6 +202,8 @@ function drawDungeonShade(camX, camY){
 
 window.__DUN={
   go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
+  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor}),
+  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
   state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
     blocked:blocked(P.x,P.y),moves:[[16,0],[-16,0],[0,16],[0,-16]].filter(([dx,dy])=>!blocked(P.x+dx,P.y+dy)).length}),
   spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)])
