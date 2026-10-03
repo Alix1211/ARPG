@@ -206,9 +206,10 @@ function defeatPlayer(){
   travel('town',[23*TS,22.2*TS],'front');
 }
 function rawPlayerDamage(v,label){
-  v=Math.max(1,Math.round(v)); P.hp=Math.max(0,P.hp-v); syncBars();
+  const cm=window.UI&&UI.combatMods?UI.combatMods():{damageReduce:0};
+  v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));P.hp=Math.max(0,P.hp-v);syncBars();
   pops.push({x:P.x,y:P.y-95,t:0,txt:(label?label+' ':'')+'-'+v,enemy:true});
-  if(P.hp<=0) defeatPlayer();
+  if(P.hp<=0)defeatPlayer();
 }
 function applyPlayerStatus(kind,dur){
   if(!kind)return; PLAYER_STATUS[kind]=Math.max(PLAYER_STATUS[kind]||0,dur||2);
@@ -325,13 +326,14 @@ function updEncounters(dt){
   }
 }
 function hitMonster(m,d,stagger,dmOver){
-  if(!m||m.dead) return;
-  const dm=dmOver|| (WPN?WPN.dmg:1), crit=Math.random()<.1, v=Math.max(1,Math.round(crit?dm*2:dm));
-  m.hp-=v; m.hurt=.18; m.stun=stagger?.32:.12;
-  const q=Math.hypot(d[0],d[1])||1, k=stagger?20:12; const nx=m.x+d[0]/q*k, ny=m.y+d[1]/q*k;
+  if(!m||m.dead)return;
+  const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
+  m.hp-=v;m.hurt=.18;m.stun=stagger?.32:.12;
+  if(!dmOver&&WPN&&window.GAME&&GAME.gainMastery)GAME.gainMastery(WPN.wt,1);
+  const q=Math.hypot(d[0],d[1])||1,k=stagger?20:12,nx=m.x+d[0]/q*k,ny=m.y+d[1]/q*k;
   if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;}
   pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
-  if(m.hp<=0) killMonster(m);
+  if(m.hp<=0)killMonster(m);
 }
 function monsterTier(m){
   if(m&&m.tier)return m.tier;
@@ -365,7 +367,8 @@ function killMonster(m){
     m.revived=true;m.dead=true;m.death=0;m.hp=0;m.reviveT=1.5;return;
   }
   m.dead=true;m.death=0;m.hp=0;
-  const tier=monsterTier(m),coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55));
+  const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0;
+  const coin=Math.round((2+Math.floor(Math.random()*8))*(1+(tier-1)*.55)*(1+coinBonus/100));
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
   const find=(window.UI&&UI.findBonus)?UI.findBonus():0;
   if(Math.random()<Math.min(.62,.30+find/250)){
