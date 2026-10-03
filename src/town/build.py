@@ -314,6 +314,15 @@ for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
     for g in range(1, 11):
         im = Image.open(R + f'weapons/{t}_{g:02d}.png').convert('RGBA'); im = im.crop(im.getbbox())
         im.thumbnail((200, 200), Image.LANCZOS); WPNI[f'{t}_{g:02d}'] = enc(im, 88)
+s2b = Image.open(R + 'ui/kit_c/kit_c_02b.png').convert('RGBA')
+KIT['hpbar'] = enc(s2b.crop((148, 97, 344, 129)), 90); KIT['mpbar'] = enc(s2b.crop((148, 132, 344, 164)), 90)
+rg = Image.open(R + 'ui/hud_icons/ring_empty.png').convert('RGBA'); rg.thumbnail((200, 200), Image.LANCZOS); KIT['ring'] = enc(rg, 90)
+SKI = {}
+import glob as _g
+for f in sorted(_g.glob(R + 'ui/hud_icons/*.png')):
+    n = os.path.basename(f)[:-4]
+    if not n[:2].isdigit() or int(n[:2]) > 27: continue
+    im = Image.open(f).convert('RGBA'); im.thumbnail((112, 112), Image.LANCZOS); SKI[n.split('_', 1)[1]] = enc(im, 88)
 ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())
 ELF_FRONT = enc(ef, 90)
 
@@ -339,7 +348,7 @@ OUT = dict(map=dict(w=outmap.OUT_W, h=outmap.OUT_H, ts=TS, px=PX), ground=enc(og
            blds=[], props=oprops, npcs=onpcs, name='성 밖 갈림길', spawn=[15.0 * TS, 5.7 * TS], back=[23.0 * TS, 27.9 * TS])
 
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI)
 js = open(os.path.join(HERE, 'town.js')).read()
 html = open(os.path.join(HERE, 'shell.html')).read()
 js += '\n' + open(os.path.join(HERE, 'ui.js')).read()

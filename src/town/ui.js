@@ -72,6 +72,8 @@ function syncHud(){
   G.setWeapon(w);
   atkIc.style.visibility = w ? 'visible' : 'hidden';
   $('swapNo').textContent = cur === 'w1' ? '1' : '2';
+  if (typeof syncQS === 'function') syncQS();
+  $('lvTxt').textContent = G.P.lv;
   const d = derived();
   G.setMax(d.maxHp, d.maxMp);
 }
@@ -105,6 +107,59 @@ function frame(){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+
+// ---- 퀵슬롯 5칸 (케인 시안 위치). 비워 두고, 스킬 탭에서 끌어다 놓아 채움 ----
+const QPOS = [[-49, -88], [27, -102], [-99, -39], [-95, 32], [-47, 85]];   // 큰 버튼 가운데 기준
+const SWAPPOS = [30, 88];
+const QS = [null, null, null, null, null];
+const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
+  ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
+const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬은 그 무기를 들어야 씀 (마법은 아무 무기나)
+const LEARNED = new Set(['fire1', 'ice1', 'holy1_heal', 'sword1', 'sword2']);   // 시험용: 스킬 체계 전까지 배운 상태
+const SKN = { fire1: '불덩이', ice1: '얼음 화살', holy1_heal: '치유', sword1: '강하게 베기', sword2: '회전 베기' };
+const skBtns = [...document.querySelectorAll('.sk')];
+const C0 = 62;
+skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
+$('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWAPPOS[1]) + 'px';
+function needWeapon(id){ const w = SKW[id.replace(/[0-9].*$/, '')]; return w || null; }
+function syncQS(){
+  skBtns.forEach((b, i) => {
+    const id = QS[i];
+    b.style.backgroundImage = `url(${id ? A.skicon[id] : K.ring})`;
+    b.classList.toggle('empty', !id);
+    const nw = id && needWeapon(id); b.style.filter = nw && (!eq[cur] || eq[cur].wt !== nw) ? 'grayscale(1) brightness(.6) drop-shadow(0 3px 4px #0009)' : '';
+  });
+}
+skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if ($('char').classList.contains('on')){ if (QS[i]) startDrag(e, QS[i], i); return; }   // 창이 열려 있으면 빼거나 옮기기
+  if (G.isOpen()) return;
+  const id = QS[i]; if (!id) return;
+  const nw = needWeapon(id);
+  if (nw && (!eq[cur] || eq[cur].wt !== nw)){ G.say(`${WN[nw]}을(를) 들어야 쓸 수 있습니다`); return; }
+  G.cast(id);
+}));
+(function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
+// 끌어다 놓기 (손가락·마우스 모두)
+let drag = null; const ghost = $('ghost');
+function startDrag(e, id, from){
+  drag = { id, from }; ghost.src = A.skicon[id]; ghost.style.display = 'block'; moveGhost(e);
+  $('cluster').classList.add('drop'); try { e.target.setPointerCapture(e.pointerId); } catch (er) {}
+}
+function moveGhost(e){ ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
+addEventListener('pointermove', e => { if (drag) moveGhost(e); });
+addEventListener('pointerup', e => {
+  if (!drag) return;
+  ghost.style.display = 'none'; $('cluster').classList.remove('drop');
+  const t = document.elementFromPoint(e.clientX, e.clientY), slot = t && t.closest && t.closest('.sk');
+  if (slot){
+    const i = +slot.dataset.i;
+    if (drag.from != null){ const tmp = QS[i]; QS[i] = drag.id; QS[drag.from] = tmp; }       // 칸끼리 맞바꾸기
+    else { const old = QS.indexOf(drag.id); if (old >= 0) QS[old] = null; QS[i] = drag.id; }
+  } else if (drag.from != null) QS[drag.from] = null;                                          // 칸 밖에 놓으면 빼기
+  drag = null; syncQS();
+});
 
 // ---- 캐릭터 창 ----
 // 키트 그림 좌표(원본 픽셀): 장비창 kit_c_02, 가방 kit_c_01, 능력치 kit_c_02b
@@ -152,6 +207,20 @@ function render(){
       L.append(b);
     }
     for (const [x, y] of EQ_OFF){ const o = el('div', 'off'); o.style.cssText = `left:${x}px;top:${y}px;width:74px;height:78px`; L.append(o); }
+  } else if (tab === 'skill'){
+    L.style.backgroundImage = 'none'; L.style.width = '458px'; L.style.height = '595px';
+    const pane = el('div', 'skpane'); L.append(pane);
+    pane.append(el('div', 'skhead', '스킬'), el('div', 'sknote', '배운 스킬을 오른쪽 아래 빈 칸으로 끌어다 놓으세요 · 칸 밖에 놓으면 빠짐'));
+    for (const [gname, ids] of SKG){
+      const row = el('div', 'skrow'); row.append(el('b', '', gname));
+      for (const id of ids){
+        const c = el('button', 'skc' + (LEARNED.has(id) ? '' : ' lock')); c.type = 'button'; c.title = SKN[id] || '아직 못 배움';
+        c.style.backgroundImage = `url(${A.skicon[id]})`;
+        if (LEARNED.has(id)) c.addEventListener('pointerdown', e => { e.preventDefault(); startDrag(e, id, null); });
+        row.append(c);
+      }
+      pane.append(row);
+    }
   } else {
     L.style.backgroundImage = `url(${K['02b']})`; L.style.width = '381px'; L.style.height = '610px';
     const face = el('img', 'sface'); face.src = A.face; L.append(face);
