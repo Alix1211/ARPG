@@ -175,6 +175,8 @@ $('swap').addEventListener('pointerdown', e => {
   cur = o; syncHud(); G.say(`${eq[cur].name}(으)로 바꿔 들었습니다`);
 });
 $('bagBtn').addEventListener('click', () => openChar('equip'));
+$('me').querySelector('.ring').addEventListener('click', () => openChar('stat'));
+$('me').querySelector('.ring').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openChar('stat'); } });
 addEventListener('keyup', e => { if (e.key.toLowerCase() === 'j') G.setHold(false); });
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
