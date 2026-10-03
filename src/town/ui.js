@@ -234,6 +234,8 @@ function render(){
       }
       pane.append(row);
     }
+  } else if (tab === 'trade' && window.TRADE){
+    TRADE.renderSummary(L);
   } else {
     L.style.backgroundImage = `url(${K['02b']})`; L.style.width = '381px'; L.style.height = '610px';
     const face = el('img', 'sface'); face.src = A.face; L.append(face);
@@ -249,16 +251,20 @@ function render(){
     });
     const lv = el('div', 'slv', `${Pp.name || '루크레아'} · Lv ${Pp.lv} · 견습 모험가 · 능력치 ${Pp.statPts || 0}P · 스킬 ${Pp.skillPts || 0}P`); L.append(lv);
   }
-  // 가방
+  // 오른쪽: 일반 가방 / 무역품 화물칸
   const R = $('bagPane'); R.innerHTML = '';
-  R.style.backgroundImage = `url(${K['01']})`;
-  R.append(el('div', 'btitle', '가방'));
-  bag.forEach((it, i) => {
-    const x = INV.x + (i % 7) * INV.px, y = INV.y + Math.floor(i / 7) * INV.py;
-    R.append(slotEl(it, x, y, INV.w, INV.h, () => tapBag(i), pickSel && pickSel.from === 'bag' && pickSel.i === i));
-  });
-  const gl = el('div', 'bgold', `금화 ${Pp.gold}`); R.append(gl);
-  const cnt = el('div', 'bcnt', `${bag.filter(Boolean).length} / ${BAG}`); R.append(cnt);
+  if (tab === 'trade' && window.TRADE){
+    TRADE.renderCargo(R);
+  } else {
+    R.style.backgroundImage = `url(${K['01']})`;
+    R.append(el('div', 'btitle', '가방'));
+    bag.forEach((it, i) => {
+      const x = INV.x + (i % 7) * INV.px, y = INV.y + Math.floor(i / 7) * INV.py;
+      R.append(slotEl(it, x, y, INV.w, INV.h, () => tapBag(i), pickSel && pickSel.from === 'bag' && pickSel.i === i));
+    });
+    const gl = el('div', 'bgold', `금화 ${Pp.gold}`); R.append(gl);
+    const cnt = el('div', 'bcnt', `${bag.filter(Boolean).length} / ${BAG}`); R.append(cnt);
+  }
 }
 function tapBag(i){
   if (!bag[i]){ pickSel = null; $('iinfo').classList.remove('on'); render(); return; }
@@ -341,7 +347,7 @@ const SKEY = 'arpg_save_v1';
 function saveGame(){
   try {
     const P = G.P;
-    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), name: P.name, passives: P.passives, lifeSkills: P.lifeSkills, statPts: P.statPts, skillPts: P.skillPts, gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS }));
+    localStorage.setItem(SKEY, JSON.stringify({ v: 1, t: Date.now(), name: P.name, passives: P.passives, lifeSkills: P.lifeSkills, statPts: P.statPts, skillPts: P.skillPts, gold: P.gold, hp: P.hp, mp: P.mp, lv: P.lv, exp: P.exp, bag, eq, cur, pot: POT, qs: QS, trade: window.TRADE ? TRADE.saveData() : null }));
   } catch (e) {}
 }
 function loadGame(){
@@ -354,6 +360,7 @@ function loadGame(){
   if (d.qs) for (let i = 0; i < 5; i++) QS[i] = d.qs[i] && A.skicon[d.qs[i]] ? d.qs[i] : null;
   let mx = 0; for (const it of [...bag, ...Object.values(eq)]) if (it && it.id > mx) mx = it.id; seq = mx + 1;
   const P = G.P; P.name = d.name || P.name || '루크레아'; P.lv = d.lv || 1; P.exp = d.exp || 0; P.statPts = d.statPts | 0; P.skillPts = d.skillPts | 0; P.lifeSkills = Object.assign({}, P.lifeSkills || {}, d.lifeSkills || {}); P.passives = Object.assign({ magicGuide: 1 }, P.passives || {}, d.passives || {}); if (G.syncLifeUnlocks) G.syncLifeUnlocks(true); G.setGold(d.gold | 0);
+  if (window.TRADE) TRADE.loadData(d.trade);
   return d;
 }
 const saved = loadGame();
