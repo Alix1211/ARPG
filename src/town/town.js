@@ -13,7 +13,7 @@ document.documentElement.style.setProperty('--panel', `url(${A.ui['04']})`);
 document.documentElement.style.setProperty('--slot', `url(${A.ui['14']})`);
 document.documentElement.style.setProperty('--slotOn', `url(${A.ui['15']})`);
 document.documentElement.style.setProperty('--banner', `url(${A.ui['06']})`);
-for (const [v, k] of [['--oct', '18'], ['--x', '21'], ['--tab0', 'tab0']]) document.documentElement.style.setProperty(v, `url(${A.kit[k]})`);
+for (const [v, k] of [['--oct', '18'], ['--x', 'h_close'], ['--tab0', 'h_bag'], ['--swapI', 'h_swap']]) document.documentElement.style.setProperty(v, `url(${A.kit[k]})`);
 $('tabEq').style.backgroundImage = `url(${A.kit.tab1})`; $('tabSt').style.backgroundImage = `url(${A.kit.tab4})`;
 const rand = (a, b) => a + Math.random() * (b - a);
 

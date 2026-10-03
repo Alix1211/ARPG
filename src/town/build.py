@@ -297,6 +297,8 @@ for k in ['01', '02', '02b', '18', '21', '14']:
 tabs = Image.open(R + 'ui/kit_c/kit_c_11.png').convert('RGBA')
 for i, (x, y, w, h) in enumerate([(6, 4, 79, 72), (89, 4, 81, 72), (175, 5, 80, 71), (260, 4, 79, 72), (346, 3, 77, 73)]):
     KIT[f'tab{i}'] = enc(tabs.crop((max(0, x - 5), 0, min(tabs.width, x + w + 5), tabs.height)), 90)
+for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close')]:
+    im = Image.open(R + f'ui/hud_icons/{f}.png').convert('RGBA'); im.thumbnail((128, 128), Image.LANCZOS); KIT['h_' + k] = enc(im, 90)
 ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())
 ELF_FRONT = enc(ef, 90)
 

@@ -70,9 +70,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #atkIc{position:absolute;left:24%;top:22%;width:52%;height:52%;object-fit:contain;filter:drop-shadow(0 2px 2px #0008)}
 #atkCap{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-size:13px;font-weight:900;color:#fff4d8;text-shadow:0 1px 2px #000,0 0 3px #000}
 #atk.talk #atkIc{opacity:.35}
-#swap{position:fixed;right:calc(max(18px,env(safe-area-inset-right)) + 118px);bottom:12px;width:58px;height:58px;border:0;padding:0;background:var(--slot) center/100% 100% no-repeat;color:#ffe9b8;font-size:24px;font-weight:900;pointer-events:auto;text-shadow:0 1px 2px #000;filter:drop-shadow(0 3px 4px #0009)}
-#swap small{position:absolute;right:6px;bottom:3px;font-size:12px}
-#bagBtn{position:fixed;right:calc(max(18px,env(safe-area-inset-right)) + 128px);bottom:84px;width:62px;height:58px;border:0;padding:0;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 3px 4px #0009)}
+#swap{position:fixed;right:calc(max(18px,env(safe-area-inset-right)) + 112px);bottom:14px;width:60px;height:60px;border:0;padding:0;border-radius:50%;background:var(--swapI) center/100% 100% no-repeat;color:#ffe9b8;font-weight:900;pointer-events:auto;text-shadow:0 1px 2px #000;filter:drop-shadow(0 3px 4px #0009)}
+#swap small{position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:#9e2a22;border:2px solid #e3b35f;font-size:12px;line-height:17px;text-align:center}
+#bagBtn{position:fixed;right:calc(max(18px,env(safe-area-inset-right)) + 130px);bottom:86px;width:62px;height:62px;border-radius:50%;border:0;padding:0;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 3px 4px #0009)}
 #bubble{position:fixed;transform:translate(-50%,-100%);display:none;pointer-events:none;background:#fff8e6;color:var(--ink);border:2px solid #b07a35;border-radius:12px;padding:4px 10px;font-size:13px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px #0006}
 #char{position:fixed;inset:0;background:#120b06b0;display:none;z-index:8}
 #char.on{display:block}
@@ -127,7 +127,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <button class="hud" id="fs" type="button">전체화면</button>
 <div class="hud" id="joy"></div><div id="stick"><div id="knob"></div></div>
 <div id="atkBox"><button id="atk" type="button" aria-label="공격"><img id="atkIc" alt=""><span id="atkCap"></span></button></div>
-<button class="hud" id="swap" type="button" aria-label="무기 교체">⇄<small id="swapNo">1</small></button>
+<button class="hud" id="swap" type="button" aria-label="무기 교체"><small id="swapNo">1</small></button>
 <button class="hud" id="bagBtn" type="button" aria-label="가방"></button>
 <div id="bubble"></div>
 <div id="tag"></div>
