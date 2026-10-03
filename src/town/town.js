@@ -1275,6 +1275,9 @@ function drawMe(){
 /*FIELD_DUNGEON*/
 
 P.hp = P.maxHp; P.mp = P.maxMp;
-window.__P = P; window.__T = dummies; window.__W = W; window.__D = DAY; window.__V = vils; window.__CTRL = { joy:()=>({dx:joy.dx,dy:joy.dy,touch:joyTouch,id:joy.id}), shots:()=>shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,kind:s.kind,done:!!s.done})) };
+window.__P=P;window.__T=dummies;window.__W=W;window.__D=DAY;window.__V=vils;window.__CTRL={
+  joy:()=>({dx:joy.dx,dy:joy.dy,touch:joyTouch,id:joy.id}),
+  shots:()=>shots.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,kind:s.kind,done:!!s.done,dmg:s.dmg||0,blast:s.blast||0,status:s.status||'',statusDur:s.statusDur||0,stagger:!!s.stagger}))
+};
 requestAnimationFrame(frame);
 })();
