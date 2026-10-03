@@ -35,6 +35,7 @@ jobs:
       - run: python src/town/check_walk.py
       - run: python src/town/check_move_atk.py
       - run: python src/town/check_control.py
+      - run: python src/town/check_pause.py
       - run: python src/town/check_skill.py
       - run: python src/town/check_growth.py
       - run: python src/town/check_pot.py
