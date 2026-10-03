@@ -242,9 +242,12 @@ NPC = [
  (6,  '미나', '꽃장수', ('free', 19.0, 18.6), 1, '꽃 한 송이 어때요?', None),
 ]
 bpos = {b['k']: b for b in blds}
+PORT = {}
 npcs = []
 for no, name, title, where, side, line, shop in NPC:
-    im = Image.open(R + f'npc/npc_{no:02d}.png').convert('RGBA')
+    hd = R + f'npc_hd/npc_{no:02d}.png'
+    im = Image.open(hd if os.path.exists(hd) else R + f'npc/npc_{no:02d}.png').convert('RGBA')
+    pt = im.copy(); pt.thumbnail((520, 560), Image.LANCZOS); PORT[f'npc_{no:02d}'] = enc(pt, 88)
     h = 100; w = h * im.width / im.height
     key = f'npc_{no:02d}'
     assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 88)
@@ -269,7 +272,7 @@ SH += [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p['w'], h=p['h'],
 ground = bake_shadows(ground, SH)
 mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT)
 js = open('/home/claude/arpg/src/town/town.js').read()
 html = open('/home/claude/arpg/src/town/shell.html').read()
 html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)

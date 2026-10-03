@@ -113,7 +113,7 @@ function act(){
 }
 function openDlg(n){
   talking = n;
-  $('dlgImg').src = A.b[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
+  $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
   $('dlgTrade').hidden = !n.shop;
   show('dlg');
@@ -136,7 +136,7 @@ let sel = null;
 function openShop(n){
   const list = GOODS[n.shop] || [];
   $('shopName').textContent = n.title.replace(' 주인', '');
-  $('shopImg').src = A.b[n.k];
+  $('shopImg').src = A.port[n.k];
   const g = $('grid'); g.innerHTML = '';
   list.forEach((it, i) => {
     const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
@@ -256,6 +256,58 @@ function drawRain(vw, vh){
   ctx.stroke();
 }
 
+
+// ======================= 하루 (아침·낮·오후·저녁·밤) =======================
+const DAYLEN = 480;  // 하루 8분
+const DAY = { t: 0.18 };
+const KEYS = [ // 시각, 곱하기 색, 등불 세기
+  [0.00, [255, 226, 205], 0.35], [0.08, [255, 246, 236], 0], [0.30, [255, 255, 255], 0], [0.52, [255, 240, 212], 0],
+  [0.63, [248, 196, 150], 0.25], [0.71, [150, 130, 190], 0.75], [0.78, [92, 104, 168], 1], [0.92, [86, 96, 160], 1], [1.00, [255, 226, 205], 0.35]];
+function dayLook(t){
+  for (let i = 0; i < KEYS.length - 1; i++){
+    const a = KEYS[i], b = KEYS[i + 1];
+    if (t >= a[0] && t <= b[0]){
+      const k = (t - a[0]) / (b[0] - a[0]), s = k * k * (3 - 2 * k);
+      return { c: a[1].map((v, j) => Math.round(v + (b[1][j] - v) * s)), lamp: a[2] + (b[2] - a[2]) * s };
+    }
+  }
+  return { c: [255, 255, 255], lamp: 0 };
+}
+const dayName = t => t < 0.08 ? '아침' : t < 0.45 ? '낮' : t < 0.63 ? '오후' : t < 0.74 ? '저녁' : t < 0.95 ? '밤' : '새벽';
+const lamps = A.props.filter(p => p.k.startsWith('lamp')).map(p => ({ x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 }));
+$('place').addEventListener('click', () => { DAY.t = (Math.floor(DAY.t * 5 + 1) % 5) / 5 + 0.02; });
+function drawDay(camX, camY){
+  const L = dayLook(DAY.t);
+  const [r, g, b] = L.c;
+  if (r < 255 || g < 255 || b < 255){
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fillRect(0, 0, VW, VH);
+  }
+  if (L.lamp > 0.01){
+    ctx.globalCompositeOperation = 'lighter';
+    const fl = 0.92 + Math.sin(T * 9) * 0.04 + Math.sin(T * 23) * 0.03;
+    for (const l of lamps){
+      const x = (l.x - camX) * Z, y = (l.y - camY) * Z, rr = l.r * Z * fl;
+      if (x < -rr || x > VW + rr || y < -rr || y > VH + rr * 2) continue;
+      const gr = ctx.createRadialGradient(x, y, 0, x, y, rr);
+      gr.addColorStop(0, `rgba(255,190,90,${0.55 * L.lamp})`); gr.addColorStop(0.35, `rgba(255,150,60,${0.22 * L.lamp})`); gr.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fill();
+      // 땅에 떨어지는 빛
+      const gy = y + l.r * 0.75 * Z, gr2 = ctx.createRadialGradient(x, gy, 0, x, gy, rr * 0.9);
+      gr2.addColorStop(0, `rgba(255,170,80,${0.28 * L.lamp})`); gr2.addColorStop(1, 'rgba(255,170,80,0)');
+      ctx.fillStyle = gr2; ctx.beginPath(); ctx.ellipse(x, gy, rr * 0.9, rr * 0.45, 0, 0, 7); ctx.fill();
+    }
+    // 엘프 둘레의 은은한 빛 (밤에 길을 잃지 않게)
+    const px = (P.x - camX) * Z, py = (P.y - 40 - camY) * Z, pr = 150 * Z;
+    const gp = ctx.createRadialGradient(px, py, 0, px, py, pr);
+    gp.addColorStop(0, `rgba(120,130,170,${0.22 * L.lamp})`); gp.addColorStop(1, 'rgba(120,130,170,0)');
+    ctx.fillStyle = gp; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  const nm = '마을 · ' + dayName(DAY.t);
+  if ($('place').textContent !== nm) $('place').textContent = nm;
+}
+
 // ======================= 화면 =======================
 let VW = 0, VH = 0, Z = 1, dpr = 1;
 function resize(){
@@ -330,6 +382,8 @@ function frame(now){
   }
   drawLeaves();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  DAY.t = (DAY.t + dt / DAYLEN) % 1;
+  drawDay(camX, camY);
   drawRain(VW, VH);
 
   const tag = $('tag');
@@ -351,6 +405,6 @@ function drawMe(){
   ctx.drawImage(fr, P.x - w / 2, by - h, w, h);
   ctx.restore();
 }
-window.__P = P; window.__W = W;
+window.__P = P; window.__W = W; window.__D = DAY;
 requestAnimationFrame(frame);
 })();
