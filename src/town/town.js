@@ -25,6 +25,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 // ======================= 배치 =======================
 const solids = [], spots = [], sprites = [], trees = [], npcs = [], dummies = [], exits = [];
 let lamps = [];
+let townPortalReturn=null,portalArrivalUntil=0;
+const TOWN_PORTAL_X=26.15*TS,TOWN_PORTAL_Y=19.15*TS;
 function buildWorld(id){
   MAP = id; CUR = MAPS[id]; G = CUR.G; MINI = CUR.MINI; MWp = CUR.map.w * TS; MHp = CUR.map.h * TS;
   for (const L of [solids, spots, sprites, trees, npcs, dummies, exits]) L.length = 0;
@@ -75,8 +77,6 @@ for (const n of npcs){
 buildWorld('town');
 
 // ======================= 플레이어 =======================
-let townPortalReturn=null,portalArrivalUntil=0;
-const TOWN_PORTAL_X=26.15*TS,TOWN_PORTAL_Y=19.15*TS;
 const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
   hp:40, mp:28, maxHp:40, maxMp:28, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
