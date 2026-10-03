@@ -352,7 +352,7 @@ function act(){
   if (near.kind === 'trade' && window.TRADE) return TRADE.open(near.market || (CUR && CUR.market) || 'town');
   if(near.kind==='town_portal')return returnTownPortal();
   if(MAP==='field'&&near.name==='야영지'&&typeof restAtCamp==='function')return restAtCamp();
-  if(near.kind==='dungeon')return enterDungeonFromHere();
+  if(near.kind==='dungeon')return MAP==='out'?enterDungeonFromOut():enterDungeonFromHere();
   if (near.kind === 'stairs_down') return nextDungeonFloor();
   if (near.kind === 'stairs_up') return previousDungeonFloor();
   if (near.kind === 'chest') return openDungeonChest(near);

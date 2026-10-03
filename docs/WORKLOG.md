@@ -390,3 +390,6 @@
 ## 2026-10-04 (작성: Claude)
 - 케인이 보낸 야영지 낮/밤 일러스트를 `assets/illustrations/camp_day.png`, `camp_night.png`로 저장. build.py가 가로 1100으로 줄여 `A.camp.{day,night}`에 담고, shell.html에 `#campArt` 덮개, `restAtCamp()`(field_dungeon.js)가 검은 화면 뒤 회복 시점에 그림을 서서히 보여 준다(약 2.6초, 문구 "모닥불 곁에서 푹 쉬는 중…"). 낮/밤은 `dayLook(DAY.t).lamp>.5`(저녁 이후)로 고름. 회복 시점(0.56초)은 그대로라 check_camp 통과. 밤 장면 화면 확인함.
 - 케인 지적: 효과음 파일이 실제로는 없음(전부 합성음). 위 항목대로 파일 넣는 길은 고쳐 둠. 앞으로 "효과음 완료"라고 쓰지 말고 "합성음"이라고 쓸 것.
+
+## 2026-10-04 (작성: Claude)
+- 케인 지적("마을입구에서 바로 가는 던전이 동굴 모습")의 원인: 성 밖 지도에는 경비병 말고도 '던전 입구'(outmap.py, kind 'dungeon') 그림이 있어서, 그걸 눌러 들어가면 `enterDungeonFromHere`(cave)로 갔다. town.js 상호작용에서 `MAP==='out'`이면 `enterDungeonFromOut`(ruins)로 가게 고침. 성 밖의 입구는 경비병·입구 그림 둘 다 석조 던전, 필드 동굴 입구만 새 동굴.
