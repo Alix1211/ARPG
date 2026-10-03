@@ -353,11 +353,14 @@ function randomDropItem(m){
 }
 function monsterExp(m){
   const tier=monsterTier(m), min=[0,1,8,18,30,45][tier]||1, cap=[0,8,18,30,45,99][tier]||8;
-  const need=window.GAME&&GAME.expNeed?GAME.expNeed(P.lv):100;
+  const lv=P.lv||1, need=window.GAME&&GAME.expNeed?GAME.expNeed(lv):100;
+  // 레벨당 적정 티어 몬스터 처치 목표: 초반 약 40마리 -> 중후반 50~80마리.
+  // 전투 시간이 길어지는 고티어에서는 실제 시간 기준 레벨업이 더 느려진다.
+  const targetKills=Math.min(85,38+Math.floor(lv*.9));
   let mult=1;
-  if((P.lv||1)>cap) mult=Math.max(.12,1-((P.lv||1)-cap)*.10);
-  else if((P.lv||1)<min) mult=1.15;
-  return Math.max(3,Math.round(need/6*mult*(.92+Math.random()*.16)));
+  if(lv>cap) mult=Math.max(.08,1-(lv-cap)*.11);   // 저티어 학살 경험치 급감
+  else if(lv<min) mult=1.05;                      // 상위 티어 도전 보너스는 아주 작게
+  return Math.max(1,Math.round(need/targetKills*mult*(.92+Math.random()*.16)));
 }
 function killMonster(m){
   if(m.type==='skeleton'&&!m.revived&&Math.random()<.48){
