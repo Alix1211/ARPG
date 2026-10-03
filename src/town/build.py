@@ -289,10 +289,22 @@ SH = [dict(path=R + f"buildings/{b['k']}.png", x=b['x'], y=b['y'], w=b['w'], h=b
 SH += [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p['w'], h=p['h'], sq=0.55 if p['tree'] else 0.5, foot=0.03) for p in props]
 ground = bake_shadows(ground, SH)
 mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)
+
+# 인터페이스용 키트 그림
+KIT = {}
+for k in ['01', '02', '02b', '18', '21', '14']:
+    KIT[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
+tabs = Image.open(R + 'ui/kit_c/kit_c_11.png').convert('RGBA')
+for i, (x, y, w, h) in enumerate([(6, 4, 79, 72), (89, 4, 81, 72), (175, 5, 80, 71), (260, 4, 79, 72), (346, 3, 77, 73)]):
+    KIT[f'tab{i}'] = enc(tabs.crop((max(0, x - 5), 0, min(tabs.width, x + w + 5), tabs.height)), 90)
+ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())
+ELF_FRONT = enc(ef, 90)
+
 A = dict(ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT)
 js = open(os.path.join(HERE, 'town.js')).read()
 html = open(os.path.join(HERE, 'shell.html')).read()
+js += '\n' + open(os.path.join(HERE, 'ui.js')).read()
 html = html.replace('/*ASSETS*/', 'const A=' + json.dumps(A, ensure_ascii=False) + ';').replace('/*GAME*/', js)
 open(os.path.join(ROOT, 'game', 'town.html'), 'w').write(html)
 print('ok', len(html) // 1024, 'KB')

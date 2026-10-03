@@ -13,6 +13,8 @@ document.documentElement.style.setProperty('--panel', `url(${A.ui['04']})`);
 document.documentElement.style.setProperty('--slot', `url(${A.ui['14']})`);
 document.documentElement.style.setProperty('--slotOn', `url(${A.ui['15']})`);
 document.documentElement.style.setProperty('--banner', `url(${A.ui['06']})`);
+for (const [v, k] of [['--oct', '18'], ['--x', '21'], ['--tab0', 'tab0']]) document.documentElement.style.setProperty(v, `url(${A.kit[k]})`);
+$('tabEq').style.backgroundImage = `url(${A.kit.tab1})`; $('tabSt').style.backgroundImage = `url(${A.kit.tab4})`;
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // ======================= 배치 =======================
@@ -44,7 +46,7 @@ for (const n of npcs){
 }
 
 // ======================= 플레이어 =======================
-const P = { x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300 };
+const P = { x: 23 * TS, y: 22.2 * TS, r: 11, dir: 'back', flip: false, moving: false, t: 0, gold: 300, hp: 40, mp: 28, maxHp: 40, maxMp: 28, lv: 1, exp: 0 };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
   for (const s of solids){
@@ -83,7 +85,6 @@ addEventListener('pointermove', e => {
 });
 const endJoy = e => { if (e.pointerId === joy.id){ joy.id = null; joy.dx = joy.dy = 0; stick.style.display = 'none'; } };
 addEventListener('pointerup', endJoy); addEventListener('pointercancel', endJoy);
-$('act').addEventListener('pointerdown', e => { e.preventDefault(); act(); });
 $('fs').addEventListener('click', () => {
   const d = document.documentElement;
   if (!document.fullscreenElement){ (d.requestFullscreen || d.webkitRequestFullscreen || (() => {})).call(d); try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
@@ -100,7 +101,7 @@ const PROP_TXT = {
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; stick.style.display = 'none'; }
-function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); panel = null; }
+function closeAll(){ for (const id of ['msg', 'dlg', 'shop']) $(id).classList.remove('on'); if (window.UI && UI.isOpen()) UI.close(); panel = null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
@@ -126,11 +127,11 @@ const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staf
 const GOODS = {
   arms: [].concat(
     ...['sword', 'spear', 'gauntlet', 'bow', 'staff'].map(t => [
-      { ic: t + '_01', name: '나무 ' + WN[t], slot: '무기', price: 30 },
-      { ic: t + '_02', name: '낡은 ' + WN[t], slot: '무기', price: 75 }]),
-    [{ ic: 'armor_0', name: '낡은 투구', slot: '투구', price: 40 }, { ic: 'armor_1', name: '낡은 갑옷', slot: '갑옷', price: 70 },
-     { ic: 'armor_2', name: '낡은 장갑', slot: '장갑', price: 30 }, { ic: 'armor_3', name: '낡은 신발', slot: '신발', price: 30 }]),
-  pawn: [{ ic: 'ring', name: '구리 반지', slot: '반지', price: 120 }, { ic: 'neck', name: '구리 목걸이', slot: '목걸이', price: 150 }],
+      { ic: t + '_01', name: '나무 ' + WN[t], slot: '무기', price: 30, spec: { kind: 'weapon', wt: t, g: 1 } },
+      { ic: t + '_02', name: '낡은 ' + WN[t], slot: '무기', price: 75, spec: { kind: 'weapon', wt: t, g: 2 } }]),
+    [{ ic: 'armor_0', name: '낡은 투구', slot: '투구', price: 40, spec: { kind: 'head', g: 2 } }, { ic: 'armor_1', name: '낡은 갑옷', slot: '갑옷', price: 70, spec: { kind: 'body', g: 2 } },
+     { ic: 'armor_2', name: '낡은 장갑', slot: '장갑', price: 30, spec: { kind: 'hands', g: 2 } }, { ic: 'armor_3', name: '낡은 신발', slot: '신발', price: 30, spec: { kind: 'feet', g: 2 } }]),
+  pawn: [{ ic: 'ring', name: '구리 반지', slot: '반지', price: 120, spec: { kind: 'ring' } }, { ic: 'neck', name: '구리 목걸이', slot: '목걸이', price: 150, spec: { kind: 'neck' } }],
 };
 let sel = null;
 function openShop(n){
@@ -159,8 +160,10 @@ function pick(it, c){
 }
 $('buy').addEventListener('click', () => {
   if (!sel || P.gold < sel.price) return;
+  if (UI.bagFull()){ $('shopSay').textContent = '가방이 가득 찼습니다.'; return; }
   setGold(P.gold - sel.price);
-  $('shopSay').textContent = `${sel.name}을(를) 샀습니다. 금화가 ${sel.price}닢 줄었습니다… (엘프가 지갑을 오래 쳐다봅니다)`;
+  UI.add(UI.make({ ...sel.spec, price: sel.price }));
+  $('shopSay').textContent = `${sel.name}을(를) 가방에 넣었습니다. 금화가 ${sel.price}닢 줄었습니다… (엘프가 지갑을 오래 쳐다봅니다)`;
   $('buy').disabled = P.gold < sel.price;
 });
 
@@ -223,6 +226,48 @@ function drawVil(v){
   ctx.drawImage(fr, v.x - v.w / 2, v.y - v.h + 4, v.w, v.h);
   ctx.restore();
 }
+
+
+// ======================= 휘두르기 · 말풍선 · 인터페이스 연결 =======================
+const slashes = []; let bubble = null;
+function swing(wt){
+  if (!wt){ say('맨손입니다'); return; }
+  const v = P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0];
+  slashes.push({ x: P.x + v[0] * 34, y: P.y - 34 + v[1] * 26, a: Math.atan2(v[1], v[0]), t: 0, wt });
+}
+function say(txt){ bubble = { txt, t: 0 }; }
+function drawFx(dt){
+  for (const s of slashes){
+    s.t += dt; const k = s.t / 0.22; if (k > 1) continue;
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.a);
+    ctx.globalAlpha = 1 - k; ctx.lineCap = 'round';
+    if (s.wt === 'bow' || s.wt === 'staff'){
+      ctx.strokeStyle = s.wt === 'staff' ? '#a9d8ff' : '#fff2c8'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(k * 40, 0); ctx.lineTo(k * 40 + 26, 0); ctx.stroke();
+    } else if (s.wt === 'spear'){
+      ctx.strokeStyle = '#fff6dc'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(18 + k * 22, 0); ctx.stroke();
+    } else {
+      ctx.strokeStyle = '#fff6dc'; ctx.lineWidth = 5 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(0, 0, 30, -1.1 + k * 0.4, 1.1 * (k * 2 - 1) + 0.2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  while (slashes.length && slashes[0].t > 0.3) slashes.shift();
+}
+function drawBubble(dt, camX, camY){
+  const b = $('bubble');
+  if (!bubble){ b.style.display = 'none'; return; }
+  bubble.t += dt; if (bubble.t > 1.8){ bubble = null; b.style.display = 'none'; return; }
+  b.style.display = 'block'; b.textContent = bubble.txt;
+  b.style.left = ((P.x - camX) * Z) + 'px'; b.style.top = ((P.y - 112 - camY) * Z) + 'px';
+}
+function setMax(h, m){ P.maxHp = h; P.maxMp = m; P.hp = Math.min(P.hp, h); P.mp = Math.min(P.mp, m); if (P.hp < 1) P.hp = h; syncBars(); }
+function syncBars(){
+  document.querySelector('.bar.hp i').style.width = (P.hp / P.maxHp * 100) + '%';
+  document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
+  $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
+}
+window.GAME = { P, setGold, near: () => (panel ? null : near), act, closeAll, isOpen: () => !!panel, setOpen: v => { panel = v; }, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -412,8 +457,6 @@ function frame(now){
   } else P.t = 0;
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
-  $('act').classList.toggle('on', !!near && !panel);
-  $('act').textContent = near && near.kind === 'npc' ? '말 걸기' : '살펴보기';
 
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
@@ -446,6 +489,7 @@ function frame(now){
     ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
   drawLeaves();
+  drawFx(dt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + dt / DAYLEN) % 1;
   drawDay(camX, camY);
@@ -459,6 +503,7 @@ function frame(now){
     tag.style.left = ((tx - camX) * Z) + 'px'; tag.style.top = ((ty - camY) * Z) + 'px';
   } else tag.style.display = 'none';
   drawMini(camX, camY);
+  drawBubble(dt, camX, camY);
   requestAnimationFrame(frame);
 }
 function drawMe(){
@@ -470,6 +515,7 @@ function drawMe(){
   ctx.drawImage(fr, P.x - w / 2, by - h, w, h);
   ctx.restore();
 }
+P.hp = P.maxHp; P.mp = P.maxMp;
 window.__P = P; window.__W = W; window.__D = DAY; window.__V = vils;
 requestAnimationFrame(frame);
 })();

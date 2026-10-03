@@ -25,8 +25,6 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #joy{left:0;bottom:0;width:45%;height:60%;pointer-events:auto}
 #stick{position:fixed;width:110px;height:110px;border-radius:50%;border:3px solid #f3e6c855;background:#0003;display:none;pointer-events:none}
 #knob{position:absolute;left:30px;top:30px;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#f8e9c4,#b07a35);box-shadow:0 2px 6px #0008}
-#act{right:max(24px,env(safe-area-inset-right));bottom:24px;width:96px;height:96px;border-radius:50%;border:4px solid #c9923e;background:radial-gradient(circle at 40% 35%,#6b3a1c,#2c160a);color:#f3e6c8;font-weight:800;font-size:16px;pointer-events:auto;box-shadow:0 0 0 3px #4a2a12,0 4px 10px #000a;opacity:.45;transition:opacity .2s}
-#act.on{opacity:1}
 #fs{right:max(206px,calc(env(safe-area-inset-right) + 206px));top:10px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:6px 9px}
 #tag{position:fixed;transform:translate(-50%,-100%);pointer-events:none;display:none;min-width:150px;height:46px;padding:0 26px;background:center/100% 100% no-repeat;color:#fff4d8;font-weight:800;font-size:15px;line-height:44px;text-align:center;white-space:nowrap;text-shadow:0 1px 2px #000}
 
@@ -63,6 +61,59 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #infoSlot{font-size:12px;color:#6b5b45}
 #infoPrice{font-weight:900;color:#8a5a0a}
 #shopSay{font-size:12px;color:#7a3b1a;min-height:32px;line-height:1.35}
+
+.bar{position:relative}
+.bar span{position:absolute;inset:0;font-size:10px;line-height:13px;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
+#atkBox{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:30px;width:118px;height:132px;pointer-events:none}
+#atk{position:absolute;inset:0;border:0;padding:0;background:var(--oct) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 4px 6px #000a);transition:transform .08s}
+#atk:active{transform:scale(.94)}
+#atkIc{position:absolute;left:24%;top:22%;width:52%;height:52%;object-fit:contain;filter:drop-shadow(0 2px 2px #0008)}
+#atkCap{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-size:13px;font-weight:900;color:#fff4d8;text-shadow:0 1px 2px #000,0 0 3px #000}
+#atk.talk #atkIc{opacity:.35}
+#swap{position:fixed;right:calc(max(18px,env(safe-area-inset-right)) + 118px);bottom:12px;width:58px;height:58px;border:0;padding:0;background:var(--slot) center/100% 100% no-repeat;color:#ffe9b8;font-size:24px;font-weight:900;pointer-events:auto;text-shadow:0 1px 2px #000;filter:drop-shadow(0 3px 4px #0009)}
+#swap small{position:absolute;right:6px;bottom:3px;font-size:12px}
+#bagBtn{position:fixed;right:calc(max(18px,env(safe-area-inset-right)) + 128px);bottom:84px;width:62px;height:58px;border:0;padding:0;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 3px 4px #0009)}
+#bubble{position:fixed;transform:translate(-50%,-100%);display:none;pointer-events:none;background:#fff8e6;color:var(--ink);border:2px solid #b07a35;border-radius:12px;padding:4px 10px;font-size:13px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px #0006}
+#char{position:fixed;inset:0;background:#120b06b0;display:none;z-index:8}
+#char.on{display:block}
+#charWrap{position:absolute;left:50%;top:50%;width:1078px;height:659px;transform-origin:center}
+#tabs{position:absolute;left:0;top:0;display:flex;gap:6px}
+#tabs button{width:76px;height:62px;border:0;padding:0;background:center/100% 100% no-repeat;opacity:.55;filter:drop-shadow(0 2px 3px #0008)}
+#tabs button.on{opacity:1;transform:translateY(2px)}
+#tabs b{position:absolute;margin-top:62px;width:76px;text-align:center;color:#f3e6c8;font-size:15px;font-weight:900;text-shadow:0 1px 2px #000}
+#charClose{position:absolute;right:-6px;top:0;width:58px;height:58px;border:0;padding:0;background:var(--x) center/100% 100% no-repeat;filter:drop-shadow(0 2px 3px #0008)}
+#leftPane,#bagPane{position:absolute;top:64px;background:center/100% 100% no-repeat}
+#leftPane{left:0}
+#bagPane{right:0;width:608px;height:595px}
+.slot{position:absolute;border:0;padding:6px;background:transparent;border-radius:10px}
+.slot img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 2px #0008)}
+.slot.has{box-shadow:inset 0 0 0 2px var(--rc),0 0 8px -2px var(--rc)}
+.slot.sel{box-shadow:inset 0 0 0 3px #ffe08a,0 0 12px #ffd34d}
+.slab{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);white-space:nowrap;font-size:12px;font-weight:900;color:#f6e7c6;background:#2a160bcc;border-radius:6px;padding:0 5px}
+.slab.hide{display:none}
+.held{position:absolute;left:50%;top:-11px;transform:translateX(-50%);background:#9e2a22;color:#fff;font-size:11px;font-weight:900;border-radius:7px;padding:0 6px;white-space:nowrap}
+.off{position:absolute;background:#1a0f08a0;border-radius:10px}
+.fig{position:absolute;left:176px;top:118px;width:134px;height:322px;object-fit:contain;filter:drop-shadow(0 4px 4px #0006)}
+.sface{position:absolute;left:52px;top:110px;width:80px;height:80px;border-radius:50%;object-fit:cover;background:#e8d6b0}
+.sbar{position:absolute;left:176px;width:156px;height:17px;border-radius:8px;background:#3a2614;overflow:hidden}
+.sbar i{display:block;height:100%}
+.sbar .b0{background:linear-gradient(#ff6a5a,#c0221c)} .sbar .b1{background:linear-gradient(#6ab8ff,#1f5fc4)} .sbar .b2{background:linear-gradient(#ffd56a,#e09a12)}
+.sbar span{position:absolute;inset:0;text-align:center;font-size:11px;line-height:17px;font-weight:900;color:#fff;text-shadow:0 1px 1px #000}
+.srow{position:absolute;left:92px;width:236px;height:36px;display:flex;align-items:center;gap:8px;color:var(--ink)}
+.srow b{width:36px;font-size:15px} .srow em{font-style:normal;font-weight:900;font-size:17px;width:28px;text-align:right;color:#7a3b1a} .srow small{font-size:12px;color:#6b5b45;font-weight:700}
+.slv{position:absolute;left:0;right:0;top:572px;text-align:center;font-size:13px;font-weight:900;color:#7a3b1a}
+.btitle{position:absolute;left:0;right:0;top:40px;text-align:center;color:#fff4d8;font-weight:900;font-size:20px;text-shadow:0 1px 2px #000}
+.bgold{position:absolute;left:96px;top:528px;font-weight:900;font-size:15px;color:#7a4a0a}
+.bcnt{position:absolute;right:96px;top:528px;font-weight:800;font-size:13px;color:#6b5b45}
+#info{position:fixed;display:none;z-index:9;right:max(10px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);width:230px;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);text-align:center}
+#info.on{display:block}
+.iname{font-weight:900;font-size:17px}
+.isub{font-size:12px;color:#6b5b45;margin:2px 0 4px}
+.iic{width:72px;height:72px;object-fit:contain}
+.ist{list-style:none;padding:0;margin:4px 0;font-size:14px;font-weight:700}
+.ist .up{color:#2a8a2a} .ist .dn{color:#c0221c}
+.icmp{font-size:11px;color:#6b5b45}
+.ibtns{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 #rot{position:fixed;inset:0;background:#1d1510;color:#f3e6c8;display:none;align-items:center;justify-content:center;font-size:18px;font-weight:800;text-align:center}
 @media (orientation:portrait){#rot{display:flex}}
 </style>
@@ -70,12 +121,15 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <body>
 <canvas id="cv"></canvas>
 <div class="hud" id="me"><div class="ring"><img class="face" id="face" alt=""><img id="ringImg" alt=""></div>
-  <div class="bars"><div class="bar hp"><i></i></div><div class="bar mp"><i></i></div><div class="coin" id="gold">금화 0</div></div></div>
+  <div class="bars"><div class="bar hp"><i></i><span id="hpTxt"></span></div><div class="bar mp"><i></i><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div></div>
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
 <div class="hud" id="place">마을</div>
 <button class="hud" id="fs" type="button">전체화면</button>
 <div class="hud" id="joy"></div><div id="stick"><div id="knob"></div></div>
-<button class="hud" id="act" type="button">살펴보기</button>
+<div id="atkBox"><button id="atk" type="button" aria-label="공격"><img id="atkIc" alt=""><span id="atkCap"></span></button></div>
+<button class="hud" id="swap" type="button" aria-label="무기 교체">⇄<small id="swapNo">1</small></button>
+<button class="hud" id="bagBtn" type="button" aria-label="가방"></button>
+<div id="bubble"></div>
 <div id="tag"></div>
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
@@ -84,6 +138,11 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   <div id="grid"></div>
   <div id="info"><img id="infoIc" alt=""><div id="infoName"></div><div id="infoSlot"></div><div id="infoPrice"></div>
     <button class="btn" id="buy" type="button">사기</button><div id="shopSay"></div><button class="btn ghost" type="button" data-close>나가기</button></div></div></div>
+<div id="char"><div id="charWrap">
+  <div id="tabs"><button type="button" data-tab="equip" id="tabEq"><b>장비</b></button><button type="button" data-tab="stat" id="tabSt"><b>능력치</b></button></div>
+  <button id="charClose" type="button" aria-label="닫기"></button>
+  <div id="leftPane"></div><div id="bagPane"></div></div></div>
+<div id="info"></div>
 <div id="rot">가로로 돌려 주세요</div>
 <script>
 /*ASSETS*/
