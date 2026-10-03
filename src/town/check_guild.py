@@ -32,6 +32,7 @@ async def main():
         assert q
         assert await ev("(id)=>GUILD.accept(id)",q['id'])
         assert await ev("() => document.getElementById('questTrack').classList.contains('on')")
+        assert await ev("() => document.querySelectorAll('#questTrack .qtrack').length===1")
         assert await ev("(t)=>document.getElementById('questTrack').innerText.includes(t)",q['title'])
         assert await ev("(n)=>document.getElementById('questTrack').innerText.includes('0 / '+n)",q['need'])
         g0=await ev("() => GAME.P.gold"); e0=await ev("() => GAME.P.exp")
