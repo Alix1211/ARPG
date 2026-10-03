@@ -123,6 +123,14 @@ html.app #fs{display:none}
 .bar span{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
 .coin{color:#ffe08a;font-weight:800;font-size:13px;text-shadow:0 1px 2px #000,0 0 3px #000;margin-left:30px}
 #bagBtn{position:relative;flex:none;margin-top:16px;width:50px;height:50px;border:0;padding:0;border-radius:50%;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 2px 3px #0009)}
+#questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:4px;pointer-events:none}
+#questTrack.on{display:flex}
+.qtrack{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:24px;padding:3px 7px;border-radius:7px;background:#171008b8;border:1px solid #8f6a37aa;color:#f6e7c8;font:800 11px/1.2 sans-serif;text-shadow:0 1px 2px #000;box-shadow:0 2px 5px #0005}
+.qtrack.done{border-color:#d7b65a;color:#fff0ad}
+.qcheck{width:13px;height:13px;border:2px solid #d1a85b;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#26180c}
+.qtrack.done .qcheck::after{content:'✓';color:#ffe26f;font-weight:900}
+.qtitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qprog{font-size:10px;color:#ffd978;white-space:nowrap}
 #mm{right:max(10px,env(safe-area-inset-right));top:8px;width:176px;height:150px;border-radius:50%;border:4px solid #c9923e;box-shadow:0 0 0 3px #4a2a12,inset 0 0 0 2px #e3b35f,0 3px 8px #0009;overflow:hidden;background:#000}
 #mm canvas{position:static;width:100%;height:100%}
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
@@ -191,6 +199,7 @@ html.app #fs{display:none}
 <canvas id="cv"></canvas>
 <div class="hud" id="me"><div class="ring" role="button" tabindex="0" aria-label="능력치 열기"><img class="face" id="face" alt=""><img id="ringImg" alt=""><div id="lvOrb"><b id="lvTxt">1</b><small>Lv</small></div></div>
   <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
+<div class="hud" id="questTrack" aria-label="진행 중 의뢰"></div>
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
 <div class="hud" id="place">마을</div>
 <button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="snd" type="button">소리 켬</button><button class="hud" id="panic" type="button" hidden>비상탈출</button>
