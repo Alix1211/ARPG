@@ -20,7 +20,7 @@ async def main():
         assert fs['map']=='field' and fs['theme']=='summer',fs
         assert abs(fs['x']-pos[0])<180 and abs(fs['y']-pos[1])<180,(pos,fs)
 
-        # 던전은 최소 같은 층에서 재개. 랜덤 지형이면 좌표는 nearestSafePosition으로 보정될 수 있다.
+        # 던전은 최소 같은 층에서 재개. 랜덤 지형이면 저장 좌표를 nearestSafePosition으로 안전 보정한다.
         assert await ev("() => __DUN.go(3)")
         await pg.wait_for_timeout(900)
         await ev("() => { UI.save(); }")
