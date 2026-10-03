@@ -123,11 +123,11 @@ html.app #fs{display:none}
 .bar span{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
 .coin{color:#ffe08a;font-weight:800;font-size:13px;text-shadow:0 1px 2px #000,0 0 3px #000;margin-left:30px}
 #bagBtn{position:relative;flex:none;margin-top:16px;width:50px;height:50px;border:0;padding:0;border-radius:50%;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 2px 3px #0009)}
-#questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:4px;pointer-events:none}
+#questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:2px;pointer-events:auto;cursor:pointer}
 #questTrack.on{display:flex}
-.qtrack{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:24px;padding:3px 7px;border-radius:7px;background:#171008b8;border:1px solid #8f6a37aa;color:#f6e7c8;font:800 11px/1.2 sans-serif;text-shadow:0 1px 2px #000;box-shadow:0 2px 5px #0005}
-.qtrack.done{border-color:#d7b65a;color:#fff0ad}
-.qcheck{width:13px;height:13px;border:2px solid #d1a85b;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#26180c}
+.qtrack{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:22px;padding:1px 4px;color:#f6e7c8;font:800 11px/1.2 sans-serif;text-shadow:0 2px 3px #000,0 0 5px #000;pointer-events:none}
+.qtrack.done{color:#fff0ad}
+.qcheck{width:13px;height:13px;border:2px solid #d1a85b;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;background:#26180ccc;box-shadow:0 1px 2px #000}
 .qtrack.done .qcheck::after{content:'✓';color:#ffe26f;font-weight:900}
 .qtitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .qprog{font-size:10px;color:#ffd978;white-space:nowrap}
