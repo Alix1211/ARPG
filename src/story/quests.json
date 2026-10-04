@@ -560,6 +560,637 @@
         "gold": 180,
         "expRatio": 0.32
       }
+    },
+    {
+      "id": "MAIN_011",
+      "kind": "main",
+      "title": "봉인-11",
+      "start": {
+        "npc": 12,
+        "level": 11,
+        "map": "town",
+        "previous": "MAIN_010"
+      },
+      "intro": [
+        "핀: 여름 숲 쪽 거래길이 갑자기 끊겼어요.",
+        "루크레아: 거래가 끊기면 가격이 오르죠. 원인은 돈 냄새보다 빨리 찾아야겠네요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "summer",
+          "objective": "여름 숲 거래길 확인"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "need": 6,
+          "objective": "길을 막는 몬스터 정리"
+        },
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "summer"
+          },
+          "need": 1,
+          "objective": "여름 마을에서 무역품 매입"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 길이 다시 열렸어요.",
+            "루크레아: 통행료가 몬스터 목숨값이었다고 생각하죠."
+          ],
+          "objective": "교역소에 결과 보고"
+        }
+      ],
+      "reward": {
+        "gold": 190,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_012",
+      "kind": "main",
+      "title": "봉인-12",
+      "start": {
+        "npc": 15,
+        "level": 12,
+        "map": "town",
+        "previous": "MAIN_011"
+      },
+      "intro": [
+        "오토: 여름 쪽 특산품이 이상하게 헐값이라더군.",
+        "루크레아: 헐값은 좋은 소식 아닌가요?",
+        "오토: 생산지가 망하면 다음 달엔 두 배가 될 걸세.",
+        "루크레아: ...당장 가보죠."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "summer",
+          "objective": "생산지 주변 조사"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_012_sample",
+          "itemName": "상한 수액 표본",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "spawnOffset": [
+              520,
+              260
+            ]
+          },
+          "objective": "이상한 표본 확보"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "need": 8,
+          "objective": "생산지를 뒤덮은 몬스터 제거"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_012_sample",
+          "need": 1,
+          "lines": [
+            "에드먼: 병해라기보다 주변 마력이 흐트러진 흔적이군.",
+            "루크레아: 치료비보다 가격 회복이 빠르면 좋겠습니다."
+          ],
+          "objective": "학자에게 표본 전달"
+        }
+      ],
+      "reward": {
+        "gold": 200,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_013",
+      "kind": "main",
+      "title": "봉인-13",
+      "start": {
+        "npc": 29,
+        "level": 13,
+        "map": "town",
+        "previous": "MAIN_012"
+      },
+      "intro": [
+        "에드먼: 자네가 가져온 표본과 함께 오래된 물건이 하나 들어왔네.",
+        "루크레아: 오래됐다는 말은 희귀하다는 말과 비슷하죠.",
+        "에드먼: 자네에게만은 그렇게 들리는 모양이군."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_013_token",
+          "itemName": "장부 밖의 금속패",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "spawnOffset": [
+              380,
+              500
+            ]
+          },
+          "objective": "오래된 금속패 회수"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_013_token",
+          "need": 1,
+          "lines": [
+            "에드먼: 이건 물건표가 아니라 길 표식에 가깝네.",
+            "루크레아: 길을 표시하는 금속패라... 누가 돈을 많이 썼군요.",
+            "에드먼: 아주 오래전에 말이지."
+          ],
+          "objective": "학자에게 금속패 전달"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 옛 교역로 표시라면 협회 기록에도 없어요.",
+            "루크레아: 기록에 없는 길이면 통행료도 없겠네요.",
+            "핀: 그쪽으로 생각하시는군요."
+          ],
+          "objective": "교역소 기록 대조"
+        }
+      ],
+      "reward": {
+        "gold": 210,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_014",
+      "kind": "main",
+      "title": "봉인-14",
+      "start": {
+        "npc": 39,
+        "level": 14,
+        "map": "town",
+        "previous": "MAIN_013"
+      },
+      "intro": [
+        "하르트: 여름 숲으로 운송 하나가 급히 나가야 하네. 경호원을 붙일까?",
+        "루크레아: 경호비가 얼마죠?",
+        "하르트: ...자네 표정 보니 혼자 가겠군.",
+        "루크레아: 정답입니다."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "town"
+          },
+          "need": 1,
+          "objective": "운송품 준비"
+        },
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "summer",
+          "objective": "여름 숲 운송로 진입"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "need": 10,
+          "objective": "운송로 습격자 정리"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "field",
+          "market": "summer",
+          "lines": [
+            "???: 뒤쪽은 내가 맡지.",
+            "루크레아: 고용한 적 없는데요.",
+            "???: 나도 돈 달라고 한 적 없다.",
+            "루크레아: ...좋은 분이네요."
+          ],
+          "objective": "뜻밖의 조력자와 마주치기"
+        },
+        {
+          "type": "event",
+          "event": "trade_sell",
+          "filter": {
+            "region": "summer"
+          },
+          "need": 1,
+          "objective": "운송품 넘기기"
+        }
+      ],
+      "reward": {
+        "gold": 230,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_015",
+      "kind": "main",
+      "title": "봉인-15",
+      "start": {
+        "npc": 39,
+        "level": 15,
+        "map": "town",
+        "previous": "MAIN_014"
+      },
+      "intro": [
+        "하르트: 어제 숲에서 자네를 도운 검사가 길드에 들렀네.",
+        "루크레아: 무료 경호원이 제 발로요?",
+        "하르트: 그 표현은 본인 앞에선 하지 말게."
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "town",
+          "lines": [
+            "카르도: 어제 건은 빚으로 치지 마라.",
+            "루크레아: 그럼 다음에도 무료라는 뜻인가요?",
+            "카르도: ...그 입부터 닫게 해주고 싶군.",
+            "루크레아: 성함은 기억해 두겠습니다. 카르도 씨."
+          ],
+          "objective": "검사와 정식으로 인사"
+        },
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 5,
+          "objective": "카르도와 던전 5층 진입"
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 5,
+          "need": 8,
+          "objective": "위험 구역 정리"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "dungeon",
+          "floor": 5,
+          "lines": [
+            "카르도: 움직임은 나쁘지 않군.",
+            "루크레아: 제 몫의 전리품은 건드리지 마세요.",
+            "카르도: 칭찬을 취소하지."
+          ],
+          "objective": "던전에서 대화"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 둘이 꽤 잘 맞는 것 같던데?",
+            "루크레아: 계산 방식은 전혀 안 맞습니다."
+          ],
+          "objective": "길드에 귀환 보고"
+        }
+      ],
+      "reward": {
+        "gold": 250,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_016",
+      "kind": "main",
+      "title": "봉인-16",
+      "start": {
+        "npc": 12,
+        "level": 16,
+        "map": "town",
+        "previous": "MAIN_015"
+      },
+      "intro": [
+        "핀: 여름 숲 안쪽의 짐꾼들이 연락이 끊겼어요.",
+        "루크레아: 물건이 같이 사라졌나요?",
+        "핀: ...사람부터 물으셔야 하는 거 아닌가요?",
+        "루크레아: 둘 다 찾으면 되잖아요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "summer",
+          "objective": "짐꾼 실종 지점 조사"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "field",
+          "market": "summer",
+          "lines": [
+            "카르도: 또 자네인가.",
+            "루크레아: 이번에도 우연이면 운명보다는 인건비 절감 쪽이군요.",
+            "카르도: 말은 됐고 흔적을 찾지."
+          ],
+          "objective": "카르도와 합류"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_016_bundle",
+          "itemName": "찢어진 운송꾸러미",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "spawnOffset": [
+              640,
+              340
+            ]
+          },
+          "objective": "운송꾸러미 흔적 찾기"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "need": 9,
+          "objective": "주변 몬스터 몰아내기"
+        },
+        {
+          "type": "deliver",
+          "npc": 12,
+          "item": "MAIN_016_bundle",
+          "need": 1,
+          "lines": [
+            "핀: 짐꾼들은 다른 길로 빠져나왔다고 연락 왔어요.",
+            "루크레아: 물건도 일부 건졌으니 손실은 제한적이군요."
+          ],
+          "objective": "교역소에 회수품 전달"
+        }
+      ],
+      "reward": {
+        "gold": 260,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_017",
+      "kind": "main",
+      "title": "봉인-17",
+      "start": {
+        "npc": 5,
+        "level": 17,
+        "map": "town",
+        "previous": "MAIN_016"
+      },
+      "intro": [
+        "토비: 여름 길에 발이 묶인 손님들이 있다네요~ 도와주실 수 있죠?",
+        "루크레아: 보수는요?",
+        "토비: 그분들 짐에 당신 거래품도 섞여 있다던데요~",
+        "루크레아: 출발하죠."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "summer",
+          "objective": "고립된 상단 찾기"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "need": 10,
+          "objective": "상단 주변 확보"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_017_crate",
+          "itemName": "루크레아의 거래상자",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "spawnOffset": [
+              460,
+              420
+            ]
+          },
+          "objective": "자기 거래상자 회수"
+        },
+        {
+          "type": "talk",
+          "npc": 5,
+          "lines": [
+            "토비: 손님들도 무사히 돌아왔어요~",
+            "루크레아: 제 상자도요.",
+            "토비: 그 말이 먼저네요~"
+          ],
+          "objective": "여관에 소식 전하기"
+        }
+      ],
+      "reward": {
+        "gold": 270,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_018",
+      "kind": "main",
+      "title": "봉인-18",
+      "start": {
+        "npc": 29,
+        "level": 18,
+        "map": "town",
+        "previous": "MAIN_017"
+      },
+      "intro": [
+        "에드먼: 옛길 표식 하나가 통째로 사라졌다는군.",
+        "루크레아: 금속이면 누가 팔아먹었겠죠.",
+        "에드먼: 자네라면 범인의 마음을 잘 알겠군.",
+        "루크레아: 이해와 동의는 다릅니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "summer",
+          "objective": "사라진 표지석 자리 확인"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_018_marker",
+          "itemName": "뜯겨나간 옛 표지석",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "spawnOffset": [
+              720,
+              240
+            ]
+          },
+          "objective": "표지석 회수"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "need": 7,
+          "objective": "표지석 주변 몬스터 정리"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_018_marker",
+          "need": 1,
+          "lines": [
+            "에드먼: 제자리에 세우면 될 걸세. 생각보다 단순하군.",
+            "루크레아: 단순한 수리비가 제일 반갑습니다."
+          ],
+          "objective": "표지석 상태 확인"
+        }
+      ],
+      "reward": {
+        "gold": 280,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_019",
+      "kind": "main",
+      "title": "봉인-19",
+      "start": {
+        "npc": 12,
+        "level": 19,
+        "map": "town",
+        "previous": "MAIN_018"
+      },
+      "intro": [
+        "핀: 여름 길의 물류가 정상으로 돌아왔어요.",
+        "루크레아: 시세표를 보여주세요.",
+        "핀: 사람들 고생보다 그게 먼저예요?",
+        "루크레아: 회복됐다는 건 숫자로 확인해야죠."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "summer"
+          },
+          "need": 1,
+          "objective": "여름 마을에서 거래 확인"
+        },
+        {
+          "type": "event",
+          "event": "trade_sell",
+          "filter": {
+            "region": "town",
+            "profitPositive": true
+          },
+          "need": 1,
+          "objective": "큰 마을에서 차익 실현"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "town",
+          "lines": [
+            "카르도: 난 다른 의뢰로 떠난다.",
+            "루크레아: 다음 일정은요?",
+            "카르도: 없다.",
+            "루크레아: 무료 인력 일정 관리가 제일 어렵네요.",
+            "카르도: 다시는 그렇게 부르지 마라."
+          ],
+          "objective": "카르도의 출발"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 다음은 가을 들판 쪽이 좋아요. 물량이 크게 움직여요.",
+            "루크레아: 물량이 크면 마진도 크겠죠."
+          ],
+          "objective": "다음 거래권역 확인"
+        }
+      ],
+      "reward": {
+        "gold": 300,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_020",
+      "kind": "main",
+      "title": "봉인-20",
+      "start": {
+        "npc": 5,
+        "level": 20,
+        "map": "town",
+        "previous": "MAIN_019"
+      },
+      "intro": [
+        "토비: 여관에 특이한 손님이 한 분 눌러앉았어요~",
+        "루크레아: 장기숙박이면 좋은 손님 아닌가요?",
+        "토비: 돈이 없어서 문제죠~",
+        "루크레아: ...노동력은 있습니까?"
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "inn",
+          "lines": [
+            "???: 나는... 용병. 일 필요하다.",
+            "루크레아: 숙식비가 밀렸죠? 제가 아주 합리적인 단가를 제안하겠습니다.",
+            "???: 합리적?",
+            "루크레아: 제 기준으로요.",
+            "펙스: 나는 펙스. 그럼... 일 한다."
+          ],
+          "objective": "낯선 용병과 계약"
+        },
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "autumn",
+          "objective": "펙스와 가을 들판 시험 이동"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "autumn",
+          "need": 7,
+          "objective": "첫 공동 전투"
+        },
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "field",
+          "market": "autumn",
+          "lines": [
+            "펙스: 계약 단가... 너무 낮다.",
+            "루크레아: 첫날은 수습기간입니다.",
+            "펙스: 그 말, 위험하다.",
+            "루크레아: 이해가 빠르시네요."
+          ],
+          "objective": "첫 고용 결과 확인"
+        }
+      ],
+      "reward": {
+        "gold": 320,
+        "expRatio": 0.32
+      }
     }
   ],
   "sideQuests": [
