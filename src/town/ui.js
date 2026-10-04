@@ -489,8 +489,8 @@ function targetSlot(it){
 function identifyItem(it,via='self'){
   if(!it||!it.unid)return false;
   if(via==='vendor'){
-    const loc=G.locationState&&G.locationState();
-    if(!identifyVendor||!loc||loc.map!=='inn'){G.say('여관 감정사를 이용해 주세요.');return false;}
+    const inInn=window.__INN&&__INN.state&&__INN.state().map==='inn';
+    if(!identifyVendor||!inInn){G.say('여관 감정사를 이용해 주세요.');return false;}
     const cost=identifyCost(it);if(G.P.gold<cost){G.say('금화가 부족합니다.');return false;}G.setGold(G.P.gold-cost);
   }else{
     const need=identifyNeedRank(it),rank=(G.P.lifeSkills&&G.P.lifeSkills.identify)||0;
