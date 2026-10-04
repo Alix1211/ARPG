@@ -2,7 +2,7 @@
 const MAIN_QUESTS=A.mainQuests.quests||[];
 const SIDE_QUESTS=A.mainQuests.sideQuests||[];
 const ALL_QUESTS=[...MAIN_QUESTS,...SIDE_QUESTS];
-let mainQuestState={active:{},completed:[],items:{},visited:[]};
+let mainQuestState={active:{},completed:[],items:{},visited:[],flags:{}};
 let questDialog=null,questWorldKey='',questUiDirty=true;
 const questDef=id=>ALL_QUESTS.find(q=>q.id===id);
 const questKind=q=>(q&&q.kind)||((q&&String(q.id).startsWith('MAIN_'))?'main':'side');
@@ -22,6 +22,7 @@ function questMapMatches(s){
     const m=CUR&&CUR.market?CUR.market:(MAP==='town'?'town':null);
     if(m!==s.market)return false;
   }
+  if(s.leg&&!(MAP==='field'&&window.__FD&&__FD.state().leg===s.leg))return false;
   return true;
 }
 function questNpcAction(n){
@@ -52,6 +53,7 @@ function questAdvance(q){
 function questComplete(q){
   const a=mainQuestState.active[q.id];if(!a||a.step<q.steps.length||mainQuestState.completed.includes(q.id))return false;
   const r=a.reward;delete mainQuestState.active[q.id];mainQuestState.completed.push(q.id);
+  if(q.effects&&q.effects.flags)for(const [k,v] of Object.entries(q.effects.flags))mainQuestState.flags[k]=v;
   setGold(P.gold+(r.gold||0));gainExp(r.exp||0);
   if(window.UI){
     for(const [k,n] of Object.entries(r.potions||{}))UI.addPotion(k,n);
@@ -100,8 +102,11 @@ function questNextDialog(){
 function questOnKill(m){
   if(!m||m.dead!==true)return;
   for(const q of ALL_QUESTS){const s=questStep(q),a=mainQuestState.active[q.id];
-    if(s&&s.type==='kill'&&questMapMatches(s)&&(!s.target||s.target===m.type||s.target===m.family)){
+    if(!s||!a||!questMapMatches(s))continue;
+    if(s.type==='kill'&&(!s.target||s.target===m.type||s.target===m.family)){
       a.progress=Math.min(s.need||1,a.progress+1);if(a.progress>=(s.need||1))questAdvance(q);else questSave();
+    }else if(s.type==='boss'&&m.boss){
+      a.progress=1;questAdvance(q);
     }
   }
 }
@@ -139,18 +144,59 @@ function questPoint(s){
   if(!s.point||!questMapMatches(s.point))return null;
   const p=s.point,n=p.nearNpc&&questNpc(p.nearNpc);
   if(p.nearNpc&&!n)return null;
-  const base=n?[n.x,n.y]:(CUR.spawn||[P.x,P.y]),off=p.offset||p.spawnOffset||[0,0];
-  const xy=nearestSafePosition(base[0]+off[0],base[1]+off[1]);return {x:xy[0],y:xy[1]};
+  let base=null;
+  if(n)base=[n.x,n.y];
+  else if(p.tile)base=[p.tile[0]*TS,p.tile[1]*TS];
+  else if(p.world)base=[p.world[0],p.world[1]];
+  else if(p.nearSpot){
+    const z=spots.find(x=>x.kind!=='questclue'&&x.name===p.nearSpot);if(!z)return null;base=[z.x,z.y];
+  }else if(p.spotPrefix){
+    const z=spots.find(x=>x.kind!=='questclue'&&x.name&&x.name.startsWith(p.spotPrefix));if(!z)return null;base=[z.x,z.y];
+  }else base=CUR.spawn||[P.x,P.y];
+  const off=p.offset||p.spawnOffset||[0,0],xy=nearestSafePosition(base[0]+off[0],base[1]+off[1]);
+  return {x:xy[0],y:xy[1]};
 }
 function questRefreshWorld(){
   for(let i=spots.length-1;i>=0;i--)if(spots[i].kind==='questclue')spots.splice(i,1);
-  for(const q of ALL_QUESTS){const s=questStep(q),p=s&&s.type==='collect'&&questPoint(s);
-    if(p)spots.push({name:s.itemName,kind:'questclue',r:42,...p,questId:q.id});
+  for(const q of ALL_QUESTS){
+    const s=questStep(q),p=s&&['collect','inspect','scene'].includes(s.type)&&s.point&&questPoint(s);
+    if(p)spots.push({name:s.itemName||s.name||'조사 지점',kind:'questclue',r:46,...p,questId:q.id,questType:s.type});
   }
+}
+function questPortrait(s){
+  if(s.char&&A.storyChars&&A.storyChars[s.char]){
+    const ch=A.storyChars[s.char];
+    return {name:s.speaker||ch.name,title:s.title!=null?s.title:(ch.title||''),port:ch.port||A.face};
+  }
+  if(s.portraitNpc){
+    const key='npc_'+String(s.portraitNpc).padStart(2,'0'),n=A.npcs.find(x=>x.no===s.portraitNpc);
+    return {name:s.speaker||(n&&n.name)||'???',title:s.title!=null?s.title:((n&&n.title)||''),port:A.port[key]||A.face};
+  }
+  return {name:s.speaker||'루크레아',title:s.title||'',port:A.face};
+}
+function questOpenSpecial(q,s){
+  const a=q&&mainQuestState.active[q.id];if(!a||!s)return false;
+  if(!(s.lines||[]).length)return questAdvance(q);
+  const ch=questPortrait(s);
+  questDialog={id:q.id,special:true,step:a.step,index:0,lines:s.lines||[]};
+  talking=null;show('dlg');$('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
+  $('dlgImg').src=ch.port;$('dlgName').textContent=ch.name;$('dlgTitle').textContent=ch.title||'';
+  $('dlgTrade').hidden=true;$('dlgTalk').hidden=true;$('dlgQuest').hidden=false;
+  $('dlgLine').textContent=questDialog.lines[0]||'';$('dlgQuest').textContent='다음';$('dlgQuest').onclick=questNextSpecial;
+  return true;
+}
+function questNextSpecial(){
+  const d=questDialog,q=d&&questDef(d.id);
+  if(!d||!d.special||!q)return false;
+  if(++d.index<d.lines.length){$('dlgLine').textContent=d.lines[d.index];return true;}
+  const a=mainQuestState.active[q.id],step=d.step;questDialog=null;closeAll();
+  if(a&&a.step===step)return questAdvance(q);
+  return false;
 }
 function questCollect(id){
   const q=questDef(id),s=questStep(q),p=s&&questPoint(s);
-  if(!s||s.type!=='collect'||!p||Math.hypot(P.x-p.x,P.y-p.y)>65)return false;
+  if(!s||!['collect','inspect','scene'].includes(s.type)||!p||Math.hypot(P.x-p.x,P.y-p.y)>70)return false;
+  if(s.type==='inspect'||s.type==='scene')return questOpenSpecial(q,s);
   const a=mainQuestState.active[id];a.progress++;
   mainQuestState.items[s.item]=(mainQuestState.items[s.item]||0)+1;
   if(a.progress>=(s.need||1))questAdvance(q);else questSave();return true;
@@ -161,9 +207,12 @@ function questObjective(q){
   if(s.type==='talk'||s.type==='deliver'){
     const n=A.npcs.find(n=>n.no===s.npc);return (n?n.name:'대상')+(s.type==='talk'?'에게 이야기하기':'에게 전달하기');
   }
-  if(s.type==='kill')return '처치 '+(mainQuestState.active[q.id].progress||0)+' / '+(s.need||1);
-  if(s.type==='event')return '조건 진행 '+(mainQuestState.active[q.id].progress||0)+' / '+(s.need||1);
-  return '방문하기';
+  if(s.type==='kill')return (s.objective||'처치')+' '+(mainQuestState.active[q.id].progress||0)+' / '+(s.need||1);
+  if(s.type==='boss')return s.objective||'우두머리 상대하기';
+  if(s.type==='collect')return s.objective||((s.itemName||'물품')+' 찾기');
+  if(s.type==='inspect'||s.type==='scene')return s.objective||'현장 조사하기';
+  if(s.type==='event')return s.objective||('조건 진행 '+(mainQuestState.active[q.id].progress||0)+' / '+(s.need||1));
+  return s.objective||'방문하기';
 }
 function questCard(q,done){
   const d=document.createElement('div');d.className='gq '+(questKind(q)==='main'?'mainQuestCard':'sideQuestCard');
@@ -198,20 +247,24 @@ function questDraw(){
     const y=n.y-n.h-12+Math.sin(T*3)*3;ctx.strokeText(mark,n.x,y);ctx.fillText(mark,n.x,y);ctx.restore();
   }
   for(const s of spots)if(s.kind==='questclue'){
-    const q=questDef(s.questId),main=questKind(q)==='main';
+    const q=questDef(s.questId),main=questKind(q)==='main',mark=s.questType==='collect'?'◆':'?';
     ctx.save();ctx.translate(s.x,s.y);ctx.fillStyle=main?'#ffe19c':'#e6f2ff';ctx.strokeStyle=main?'#8b5a22':'#4e6c88';ctx.lineWidth=2;
-    ctx.beginPath();ctx.ellipse(0,0,13,7,0,0,7);ctx.fill();ctx.stroke();ctx.font='900 18px sans-serif';ctx.textAlign='center';ctx.fillText('?',0,-13+Math.sin(T*4)*2);ctx.restore();
+    ctx.beginPath();ctx.ellipse(0,0,13,7,0,0,7);ctx.fill();ctx.stroke();ctx.font='900 18px sans-serif';ctx.textAlign='center';ctx.fillText(mark,0,-13+Math.sin(T*4)*2);ctx.restore();
   }
 }
 function questTick(){
   const market=CUR&&CUR.market?':'+CUR.market:'';
-  const key=MAP+':'+(MAP==='dungeon'&&window.__DUN?__DUN.state().floor:0)+market;
+  const leg=MAP==='field'&&window.__FD?':'+(__FD.state().leg||1):'';
+  const key=MAP+':'+(MAP==='dungeon'&&window.__DUN?__DUN.state().floor:0)+market+leg;
   if(key!==questWorldKey&&!traveling){questWorldKey=key;questCheckVisit();questRefreshWorld();}
+  if(!panel&&!traveling){
+    for(const q of ALL_QUESTS){const s=questStep(q);if(s&&s.type==='scene'&&!s.point&&questMapMatches(s)){questOpenSpecial(q,s);break;}}
+  }
   if(questUiDirty)questRender();
 }
 function questLoad(d){
-  mainQuestState={active:{},completed:[],items:{},visited:[]};
-  if(d&&(d.schema===1||d.schema===2)){
+  mainQuestState={active:{},completed:[],items:{},visited:[],flags:{}};
+  if(d&&(d.schema===1||d.schema===2||d.schema===3)){
     mainQuestState.completed=(Array.isArray(d.completed)?d.completed:[]).filter(id=>questDef(id));
     for(const [id,a] of Object.entries(d.active||{})){
       const q=questDef(id);if(!q||mainQuestState.completed.includes(id))continue;
@@ -220,13 +273,14 @@ function questLoad(d){
     }
     for(const [id,n] of Object.entries(d.items||{}))if(Number.isFinite(n)&&n>0)mainQuestState.items[id]=Math.floor(n);
     mainQuestState.visited=(Array.isArray(d.visited)?d.visited:[]).filter(x=>typeof x==='string');
+    mainQuestState.flags=d.flags&&typeof d.flags==='object'?{...d.flags}:{};
   }
   questWorldKey='';questUiDirty=true;questRefreshWorld();questRender();
 }
 window.QUEST={isDialog:()=>panel==='dlg'&&!!questDialog,accept:questAccept,collect:questCollect,onKill:questOnKill,onEvent:questOnEvent,onWorld:()=>{questWorldKey='';questRefreshWorld();},tick:questTick,draw:questDraw,
   decorateDialog:questDecorateDialog,marker:questMarker,openList:()=>{GUILD.open();questRender();},
-  saveData:()=>({schema:2,...JSON.parse(JSON.stringify(mainQuestState))}),loadData:questLoad,
-  state:()=>({active:Object.fromEntries(Object.entries(mainQuestState.active).map(([id,a])=>[id,{step:a.step,progress:a.progress}])),completed:mainQuestState.completed.slice(),items:{...mainQuestState.items}}),
-  points:()=>spots.filter(s=>s.kind==='questclue').map(s=>({id:s.questId,x:s.x,y:s.y})),nextDialog:questNextDialog,
+  saveData:()=>({schema:3,...JSON.parse(JSON.stringify(mainQuestState))}),loadData:questLoad,
+  state:()=>({active:Object.fromEntries(Object.entries(mainQuestState.active).map(([id,a])=>[id,{step:a.step,progress:a.progress}])),completed:mainQuestState.completed.slice(),items:{...mainQuestState.items},flags:{...mainQuestState.flags}}),
+  points:()=>spots.filter(s=>s.kind==='questclue').map(s=>({id:s.questId,x:s.x,y:s.y,type:s.questType})),nextDialog:questNextDialog,nextSpecial:questNextSpecial,
   lists:()=>({main:MAIN_QUESTS.map(q=>q.id),side:SIDE_QUESTS.map(q=>q.id)})};
 $('mainQuestTrack').onclick=()=>QUEST.openList();

@@ -252,6 +252,20 @@ for d in ['front', 'back', 'side']:
     el[d] = fr
 face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((105, 45, 275, 215)).resize((128, 128), Image.LANCZOS)   # 얼굴 중심 정사각
 
+# ---- 본편 반복 등장 캐릭터 초상(기존 사용자 제공 에셋 재사용) ----
+STORY_CHARS={}
+for sid,nm,title,folder in [
+    ('hero','카엘렌','떠돌이 검사','hero'),
+    ('knight','러스티','이계의 용병','knight'),
+]:
+    im=Image.open(R+f'characters/{folder}/front_0.png').convert('RGBA')
+    pt=im.copy(); pt.thumbnail((520,560),Image.LANCZOS)
+    STORY_CHARS[sid]=dict(name=nm,title=title,port=enc(pt,88))
+
+_shadow=Image.open(R+'npc_hd/npc_35.png' if os.path.exists(R+'npc_hd/npc_35.png') else R+'npc/npc_35.png').convert('RGBA')
+_shadow.thumbnail((520,560),Image.LANCZOS)
+STORY_CHARS['shadow']=dict(name='???',title='',port=enc(_shadow,88))
+
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
     ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
@@ -291,6 +305,23 @@ for no, name, title, where, side, line, shop in NPC:
     else:
         b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
+
+# 퀘스트 장면에만 등장하는 NPC 초상도 미리 담는다. 마을 NPC로 배치하지는 않는다.
+_story_portrait_nos=set()
+for _q in MAIN_QUEST_DATA.get('quests',[])+MAIN_QUEST_DATA.get('sideQuests',[]):
+    for _s in _q.get('steps',[]):
+        if _s.get('portraitNpc') is not None:
+            _story_portrait_nos.add(int(_s['portraitNpc']))
+for _no in sorted(_story_portrait_nos):
+    _key=f'npc_{_no:02d}'
+    if _key in PORT: continue
+    _hd=R+f'npc_hd/npc_{_no:02d}.png'
+    _sd=R+f'npc/npc_{_no:02d}.png'
+    _src=_hd if os.path.exists(_hd) else _sd
+    if not os.path.exists(_src):
+        raise FileNotFoundError(f'퀘스트 초상 누락: {_key}')
+    _im=Image.open(_src).convert('RGBA'); _pt=_im.copy(); _pt.thumbnail((520,560),Image.LANCZOS)
+    PORT[_key]=enc(_pt,88)
 
 
 # ---- 큰 마을 여관 실내(1단계) ----
@@ -498,7 +529,7 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
-A = dict(mainQuests=MAIN_QUEST_DATA, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
