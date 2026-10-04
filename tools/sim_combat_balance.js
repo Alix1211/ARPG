@@ -13,7 +13,7 @@ const ctx={P,G:{P,NUM:100},NUM:100,TIER_MATCH:catalog,seq:1,eq:{},cur:'w1',windo
   faceVec:()=>[1,0],combatTargets:()=>[{x:30,y:0}],hitTarget:(t,d,stagger,damage)=>ctx.skillDamage=damage,
   playerControlLocked:()=>false};
 vm.createContext(ctx);
-vm.runInContext([decl(ui,'WMULT'),decl(ui,'GRADE_MUL'),decl(town,'WB'),decl(town,'SK'),fn(town,'masteryBonus'),fn(ui,'make'),fn(ui,'totals'),fn(ui,'derived'),fn(match,'matchedMonsterStats'),fn(town,'basicDamage'),fn(town,'cast')].join('\n'),ctx);
+vm.runInContext([decl(ui,'WMULT'),decl(ui,'GRADE_MUL'),decl(town,'WB'),decl(town,'SK'),fn(town,'masteryBonus'),fn(ui,'make'),fn(ui,'itemStats'),fn(ui,'totals'),fn(ui,'derived'),fn(match,'matchedMonsterStats'),fn(town,'basicDamage'),fn(town,'cast')].join('\n'),ctx);
 ctx.G.masteryBonus=ctx.masteryBonus;ctx.combatNow=ctx.derived;
 const weights=['sword','spear','gauntlet','bow','staff'];
 function setup(lv,wt){
