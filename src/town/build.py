@@ -1,6 +1,6 @@
 import base64, io, json, random
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 from scipy import ndimage as nd
 
 import os
@@ -263,6 +263,15 @@ for sid, nm, title, folder in [
     im = Image.open(R + f'characters/{folder}/front_0.png').convert('RGBA')
     pt = im.copy(); pt.thumbnail((520, 560), Image.LANCZOS)
     STORY_CHARS[sid] = dict(name=nm, title=title, port=enc(pt, 88))
+
+# 최종부 정체는 별도 원화가 생기기 전까지 절차적으로 만든 어두운 실루엣만 사용한다.
+_void = Image.new('RGBA', (360, 440), (0, 0, 0, 0))
+_vd = ImageDraw.Draw(_void)
+_vd.ellipse((78, 34, 282, 238), fill=(24, 18, 42, 245), outline=(118, 82, 168, 210), width=8)
+_vd.polygon([(112,210),(248,210),(315,430),(45,430)], fill=(18,14,30,245))
+_vd.ellipse((132,118,155,137), fill=(205,175,255,235))
+_vd.ellipse((205,118,228,137), fill=(205,175,255,235))
+STORY_CHARS['void'] = dict(name='???', title='', port=enc(_void, 88))
 
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
