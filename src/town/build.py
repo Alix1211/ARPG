@@ -174,6 +174,7 @@ for k, name, cx, by, wt, dxr in B:
 # 소품: key, 이름(살펴보기), x, 바닥y, 폭(칸), 충돌(폭 비율, 깊이 칸) — 충돌 0이면 통과
 TP = 'town_props/'; BP = 'building_parts/'
 P = [
+ (TP+'personal_stash_closed', '개인 창고', 27.8, 25.8, 1.3, (0.8, 0.45)),
  (TP+'fountain', None, 23.0, 18.4, 4.0, (0.86, 1.3)),
  (TP+'lamp_iron', None, 13.7, 13.3, 1.0, (0.5, 0.3)), (TP+'lamp_iron', None, 32.3, 13.3, 1.0, (0.5, 0.3)),
  (TP+'lamp_iron', None, 13.7, 20.8, 1.0, (0.5, 0.3)), (TP+'lamp_iron', None, 32.3, 20.8, 1.0, (0.5, 0.3)),
@@ -218,8 +219,12 @@ for k, name, cx, by, wt, col in P:
     w = wt * TS; h = w * im.height / im.width
     key = k.split('/')[-1]
     if key not in assets: assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
-    props.append(dict(k=key, path=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, cw=col[0], cd=col[1] * TS, tree=key.startswith('tree')))
+    props.append(dict(kind='stash' if key=='personal_stash_closed' else None,k=key, path=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, cw=col[0], cd=col[1] * TS, tree=key.startswith('tree')))
 
+
+_stash_open=Image.open(R+TP+'personal_stash_open.png').convert('RGBA')
+_stash_width=1.3*TS*SCALE
+assets['personal_stash_open']=enc(_stash_open.resize((round(_stash_width),round(_stash_width*_stash_open.height/_stash_open.width)),Image.LANCZOS))
 
 # 행인 걷기 (옆모습은 왼쪽을 봄)
 VIL = [('youth', 1.0, 'house_red'), ('kid', 0.82, 'house_blue'), ('grandpa', 0.95, 'cottage_thatch'), ('maiden', 0.97, 'tavern'), ('auntie', 0.97, 'shop_general')]

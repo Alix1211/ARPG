@@ -17,7 +17,7 @@ async def main():
         print('char open',await ev("char.className"),'slots',await ev("document.querySelectorAll('#bagPane .slot').length"),'filled',await ev("document.querySelectorAll('#bagPane .slot.has').length"))
         await pg.click('#bagPane .slot.has');await pg.wait_for_timeout(100)
         print('info',await ev("iinfo.innerText.replace(/\\n/g,' | ')"))
-        btns=await pg.query_selector_all('#iinfo .btn');await btns[1].click();await pg.wait_for_timeout(100)
+        await ev('__P.lv=6;UI.refresh()');await pg.click('#bagPane .slot.has');btns=await pg.query_selector_all('#iinfo .btn');await btns[1].click();await pg.wait_for_timeout(100)
         print('after equip w2 filled',await ev("document.querySelectorAll('#leftPane .slot.has').length"))
         await pg.click('[data-tab=stat]');await pg.wait_for_timeout(100);print('stat rows',await ev("document.querySelectorAll('.srow').length"))
         await pg.click('#charClose');await pg.wait_for_timeout(100)

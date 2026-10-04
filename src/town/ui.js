@@ -92,6 +92,7 @@ const PCTSTAT=new Set(['atkPct','matkPct','as','crit','critDmg','fire','ice','sk
 const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
 const BAG=42,bag=new Array(BAG).fill(null);
+const STASH=56,stash=new Array(STASH).fill(null);
 const eq={w1:null,w2:null,head:null,body:null,hands:null,feet:null,neck:null,ring1:null,ring2:null};
 let cur='w1';
 // 새 성장판: 시험용 4무기는 제거. 시작 무기 하나만 들고 나머지는 직접 파밍.
@@ -299,8 +300,8 @@ function fit(){
   wrap.style.transform = `translate(-50%,-50%) scale(${s})`;
 }
 addEventListener('resize', fit);
-function openChar(t){ tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); pickSel = null; render(); fit(); }
-function closeChar(){ $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
+function openChar(t){ tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
+function closeChar(){ cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
 for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
@@ -318,9 +319,13 @@ function slotEl(it, x, y, w, h, onTap, selected){
 }
 function render(){
   for (const b of document.querySelectorAll('[data-tab]')) b.classList.toggle('on', b.dataset.tab === tab);
-  const L = $('leftPane'); L.innerHTML = '';
+  const L = $('leftPane'); if(L.contains($('shop')))document.body.append($('shop'));$('shop').classList.toggle('on',tab==='shop'); L.innerHTML = '';
   const d = derived(), Pp = G.P;
-  if (tab === 'equip'){
+  if(tab==='shop'){
+    L.style.cssText='width:458px;height:595px;background:none';L.append($('shop'));$('shop').classList.add('on');
+  } else if(tab==='stash'){
+    L.style.cssText='width:458px;height:595px;background:none';renderStash(L);
+  } else if (tab === 'equip'){
     L.style.backgroundImage = `url(${K['02']})`; L.style.width = '458px'; L.style.height = '595px';
     const fig = el('img', 'fig'); fig.src = A.elfFront; L.append(fig);
     for (const s in EQS){
@@ -328,7 +333,7 @@ function render(){
       const b = slotEl(it, x, y, 76, 77, () => tapEq(s), pickSel && pickSel.from === 'eq' && pickSel.slot === s);
       const lab = el('span', 'slab' + (it ? ' hide' : ''), SLOTN[s]); b.append(lab);
       if ((s === 'w1' || s === 'w2') && s === cur && it) b.append(el('span', 'held', '손에 듦'));
-      L.append(b);
+      bindItemSlot(b,{from:'eq',slot:s});L.append(b);
     }
     for (const [x, y] of EQ_OFF){ const o = el('div', 'off'); o.style.cssText = `left:${x}px;top:${y}px;width:74px;height:78px`; L.append(o); }
   } else if(tab==='skill'){
@@ -395,13 +400,16 @@ function render(){
     R.append(el('div', 'btitle', '가방'));
     bag.forEach((it, i) => {
       const x = INV.x + (i % 7) * INV.px, y = INV.y + Math.floor(i / 7) * INV.py;
-      R.append(slotEl(it, x, y, INV.w, INV.h, () => tapBag(i), pickSel && pickSel.from === 'bag' && pickSel.i === i));
+      const cell=slotEl(it,x,y,INV.w,INV.h,()=>tapBag(i),pickSel&&pickSel.from==='bag'&&pickSel.i===i);bindItemSlot(cell,{from:'bag',i});
+      if(tab==='shop'&&it){const price=el('small','slotprice',__SHOP.price(it)+(__SHOP.rate(it)>1.05?'▲':__SHOP.rate(it)<.95?'▼':''));cell.append(price);}R.append(cell);
     });
     const gl = el('div', 'bgold', `금화 ${Pp.gold}`); R.append(gl);
-    const cnt = el('div', 'bcnt', `${bag.filter(Boolean).length} / ${BAG}`); R.append(cnt);
+    const cnt = el('div', 'bcnt', `${bag.filter(Boolean).length} / ${BAG}`); R.append(cnt);R.append(sortButtons('bag'));
   }
 }
 function tapBag(i){
+  if(tab==='shop'&&bag[i]){pickSel={from:'bag',i};render();__SHOP.selectBag(i);return;}
+  if(tab==='stash'&&bag[i]){stashInfo('bag',i);return;}
   if (!bag[i]){ pickSel = null; $('iinfo').classList.remove('on'); render(); return; }
   pickSel = { from: 'bag', i }; render(); showInfo(bag[i], 'bag');
 }
@@ -476,17 +484,82 @@ function equip(it, s){
   const i = bag.indexOf(it); if (i < 0) return;
   bag[i] = eq[s]; eq[s] = it;
   if ((s === 'w1' || s === 'w2') && !eq[cur]) cur = s;
-  pickSel = { from: 'eq', slot: s }; tab = 'equip'; render(); showInfo(it, 'eq'); syncHud();
+  pickSel = { from: 'eq', slot: s }; tab = 'equip'; render(); showInfo(it, 'eq'); syncHud();saveGame();
 }
 function unequip(s){
   const i = bag.indexOf(null); if (i < 0){ G.say('가방이 가득 찼습니다'); return; }
   bag[i] = eq[s]; eq[s] = null;
   if (s === cur && !eq[cur]){ const o = s === 'w1' ? 'w2' : 'w1'; if (eq[o]) cur = o; }
-  pickSel = { from: 'bag', i }; render(); showInfo(bag[i], 'bag'); syncHud();
+  pickSel = { from: 'bag', i }; render(); showInfo(bag[i], 'bag'); syncHud();saveGame();
 }
+
+// 가방·상점·창고는 같은 Pointer Events 이동 규칙을 사용합니다.
+let itemDrag=null,itemClickUntil=0;
+const kindOrder=it=>{const list=it.kind==='weapon'?['sword','spear','gauntlet','bow','staff']:['head','body','hands','feet','ring','neck','material','potion','junk'],i=list.indexOf(it.kind==='weapon'?it.wt:it.kind);return i<0?99:(it.kind==='weapon'?i:5+i);};
+function sortInventory(where,by){
+  const a=where==='stash'?stash:bag;
+  const tier=(x,y)=>(y.tier||1)-(x.tier||1)||(y.rar||0)-(x.rar||0)||kindOrder(x)-kindOrder(y);
+  const cmp=by==='price'?(x,y)=>__SHOP.baseValue(y)-__SHOP.baseValue(x):by==='kind'?(x,y)=>kindOrder(x)-kindOrder(y)||tier(x,y):tier;
+  const filled=a.filter(Boolean).map((it,i)=>({it,i})).sort((x,y)=>cmp(x.it,y.it)||x.i-y.i).map(x=>x.it);
+  a.splice(0,a.length,...filled,...Array(a.length-filled.length).fill(null));pickSel=null;$('iinfo').classList.remove('on');if(tab==='shop')__SHOP.clearSelection();render();saveGame();
+}
+function sortButtons(where){
+  const bar=el('div','inventorySort');for(const [key,label] of [['tier','티어'],['price','가격'],['kind','종류']]){const b=el('button','btn',label);b.type='button';b.dataset.sort=key;b.onclick=()=>sortInventory(where,key);bar.append(b);}return bar;
+}
+function inventoryItem(ref){return ref.from==='eq'?eq[ref.slot]:ref.from==='goods'?ref.it:(ref.from==='stash'?stash:bag)[ref.i];}
+function inventoryDrop(source,target){
+  if(!source||!target)return false;const it=inventoryItem(source);if(!it)return false;
+  if(source.from==='goods')return target.from==='bag'&&__SHOP.buyAt(source.it,target.i);
+  if(target.from==='merchant'||target.from==='goods')return source.from==='bag'&&__SHOP.sellAt(source.i);
+  if(source.from==='eq'){
+    if(target.from!=='bag'||!eq[source.slot])return false;
+    const other=bag[target.i];if(other&&(!slotOk(other,source.slot)||!canEquip(other)))return false;
+    bag[target.i]=it;eq[source.slot]=other;
+  }else if(target.from==='eq'){
+    if(source.from!=='bag'||!slotOk(it,target.slot)||!canEquip(it)){G.say('이 칸에 착용할 수 없거나 착용 레벨이 부족합니다.');return false;}
+    bag[source.i]=eq[target.slot];eq[target.slot]=it;
+  }else{
+    if(!['bag','stash'].includes(source.from)||!['bag','stash'].includes(target.from))return false;
+    if((source.from==='stash'||target.from==='stash')&&tab!=='stash')return false;
+    const a=source.from==='stash'?stash:bag,b=target.from==='stash'?stash:bag;
+    if(target.i<0||target.i>=b.length)return false;
+    [a[source.i],b[target.i]]=[b[target.i],a[source.i]];
+  }
+  if(!eq[cur])cur=eq.w1?'w1':eq.w2?'w2':'w1';pickSel=null;$('iinfo').classList.remove('on');render();syncHud();saveGame();return true;
+}
+function cancelItemDrag(){if(!itemDrag)return;itemDrag.node.classList.remove('dragging');if(itemDrag.ghost)itemDrag.ghost.remove();itemDrag=null;}
+function bindItemSlot(node,ref){
+  node.dataset.inventory=ref.from;if(ref.i!=null)node.dataset.index=ref.i;if(ref.slot)node.dataset.eq=ref.slot;node._inventoryRef=ref;
+  node.addEventListener('click',e=>{if(performance.now()<itemClickUntil){e.stopImmediatePropagation();e.preventDefault();}},true);
+  node.addEventListener('pointerdown',e=>{
+    if(e.button!==0||!inventoryItem(ref))return;cancelItemDrag();itemDrag={ref,node,pid:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false};node.setPointerCapture(e.pointerId);
+  });
+}
+addEventListener('pointermove',e=>{
+  const d=itemDrag;if(!d||e.pointerId!==d.pid)return;const dist=Math.hypot(e.clientX-d.x,e.clientY-d.y);
+  if(!d.moved&&(dist>=8||(performance.now()-d.t>=200&&dist>=2))){d.moved=true;d.node.classList.add('dragging');const im=el('img','itemGhost');const it=inventoryItem(d.ref);im.src=A.icons[it.icon||it.ic];d.ghost=im;document.body.append(im);$('iinfo').classList.remove('on');}
+  if(d.moved){e.preventDefault();d.ghost.style.left=e.clientX+'px';d.ghost.style.top=e.clientY+'px';}
+},{passive:false});
+addEventListener('pointerup',e=>{
+  const d=itemDrag;if(!d||e.pointerId!==d.pid)return;
+  if(d.moved){const at=document.elementFromPoint(e.clientX,e.clientY),cell=at&&at.closest('[data-inventory]');const target=cell?cell._inventoryRef:at&&at.closest('#shop')?{from:'merchant'}:null;itemClickUntil=performance.now()+500;cancelItemDrag();inventoryDrop(d.ref,target);}else cancelItemDrag();
+});
+addEventListener('pointercancel',cancelItemDrag);addEventListener('blur',cancelItemDrag);
+function openStash(){
+  const loc=G.locationState();if(!loc||!['town','village'].includes(loc.map)){G.say('창고는 마을에서만 이용할 수 있습니다.');return false;}openChar('stash');return true;
+}
+function renderStash(L){
+  const frame=el('div','stashFrame');frame.append(el('h2','','개인 창고'),el('small','',`${stash.filter(Boolean).length} / ${STASH} · 이용료 없음`));
+  const grid=el('div','stashGrid');stash.forEach((it,i)=>{const b=slotEl(it,0,0,46,46,()=>stashInfo('stash',i),false);b.style.cssText='position:relative;width:100%;height:100%';bindItemSlot(b,{from:'stash',i});grid.append(b);});frame.append(grid,sortButtons('stash'));L.append(frame);
+}
+function stashInfo(from,i){
+  const a=from==='stash'?stash:bag,it=a[i];if(!it)return;pickSel={from,i};const I=$('iinfo');I.innerHTML='';I.append(el('div','iname',it.name),el('div','isub',`T${it.tier||1} · ${RARN[it.rar||0]}`));const b=el('button','btn',from==='bag'?'창고에 넣기':'가방으로 꺼내기');b.type='button';b.onclick=()=>{const to=from==='bag'?'stash':'bag',dest=to==='stash'?stash:bag,idx=dest.indexOf(null);if(idx<0){G.say(to==='stash'?'창고가 가득 찼습니다.':'가방이 가득 찼습니다.');return;}inventoryDrop({from,i},{from:to,i:idx});};I.append(b);I.classList.add('on');
+}
+
 window.UI = {
   addPotion(k,n){POT[k]+=n;syncPot();},
-  make,canEquip,equip,add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
+  make,canEquip,equip,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
+  merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=BAG||bag[i])return false;bag[i]=it;return true;},add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
   dragDebug:()=>drag?{id:drag.id,from:drag.from,moved:drag.moved}:null,quickDropIndex,
@@ -511,7 +584,7 @@ function saveGame(){
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
-      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,eq,cur,pot:POT,qs:QS,
+      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,stash,eq,cur,pot:POT,qs:QS,
       location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}
 }
@@ -519,11 +592,12 @@ function loadGame(){
   let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null');}catch(e){}
   if(!d||d.v!==3)return null;
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
+  for(let i=0;i<STASH;i++)stash[i]=d.stash&&d.stash[i]||null;
   for(const k in eq)eq[k]=d.eq&&d.eq[k]||null;
   cur=d.cur==='w2'&&eq.w2?'w2':'w1';
   if(d.pot){POT.hp=d.pot.hp|0;POT.mp=d.pot.mp|0;}
   if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&(d.qs[i]==='townPortal'||A.skicon[d.qs[i]])?d.qs[i]:null;
-  let mx=0;for(const it of [...bag,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
+  let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
   const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;

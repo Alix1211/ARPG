@@ -53,7 +53,7 @@ for (const p of CUR.props){
     continue;
   }
   if (p.cw > 0) solids.push({ x0: p.x - p.w * p.cw / 2, x1: p.x + p.w * p.cw / 2, y0: p.y - p.cd, y1: p.y - 2 });
-  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.flat ? -1e9 : p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom', mimic: p.mimic, flame: p.flame };
+  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.flat ? -1e9 : p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom', mimic:p.mimic,flame:p.flame,stash:p.kind==='stash' };
   sprites.push(s); if (p.tree) trees.push(s);
   if (p.kind === 'dummy'){ s.dummy = { hp: 0, wob: 0, ph: 0 }; dummies.push(s); }
   if (p.name) spots.push({ name: p.name, x: p.x, y: p.flat ? p.y - p.h / 2 : p.y + 16, r: p.r || (p.flat ? 40 : 46), kind: p.kind || 'prop', data: p, prop: s });
@@ -344,6 +344,7 @@ function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
   if (!near) return;
+  if(near.kind==='stash'&&window.UI)return UI.openStash();
   if (near.kind === 'npc') return openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
@@ -517,10 +518,10 @@ function openShop(n){
   shopNpc = n; shopMode = 'buy'; sel = null;
   $('shopName').textContent = n.title.replace(' 주인', '');
   $('shopImg').src = A.port[n.k];
-  show('shop'); renderShop();
+  UI.merchant();renderShop();
 }
 function setShopMode(mode){
-  shopMode = mode === 'sell' ? 'sell' : 'buy'; sel = null; renderShop();
+  shopMode=mode==='sell'?'sell':'buy';sel=null;renderShop();if(mode==='sell'){const row=UI.bagItems()[0];if(row)pickSell(row.i,row.it,null);else clearShopInfo('팔 물건이 없습니다.');}
 }
 function renderShop(){
   $('tabBuy').classList.toggle('on', shopMode === 'buy');
@@ -528,28 +529,17 @@ function renderShop(){
   $('shopMarket').textContent = shopMarketText();
   $('shopSay').textContent = '';
   const g = $('grid'); g.innerHTML = '';
-  if (shopMode === 'buy'){
+  {
     const list = GOODS[shopNpc.shop] || [];
     list.forEach((it, i) => {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
       const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
       const price = buyPrice(it);
       const pr = document.createElement('span'); pr.textContent = price; c.append(pr);
-      c.addEventListener('click', () => pickBuy(it, c, price)); g.append(c);
-      if (i === 0) setTimeout(() => pickBuy(it, c));
+      UI.bindItemSlot(c,{from:'goods',it});c.addEventListener('click', () => {shopMode='buy';pickBuy(it,c,price);});g.append(c);
+      if(i===0&&!sel){shopMode='buy';pickBuy(it,c);}
     });
     if (!list.length) clearShopInfo('살 물건이 없습니다.');
-  } else {
-    const list = window.UI ? UI.bagItems() : [];
-    if (!list.length){ clearShopInfo('팔 물건이 없습니다.'); return; }
-    list.forEach((row, i) => {
-      const it = row.it, price = sellPrice(it), rate = sellRate(it);
-      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
-      const im = document.createElement('img'); im.src = A.icons[it.icon] || ''; im.alt = it.name; c.append(im);
-      const pr = document.createElement('span'); pr.textContent = price + rateMark(rate); c.append(pr);
-      c.addEventListener('click', () => pickSell(row.i, it, c)); g.append(c);
-      if (i === 0) setTimeout(() => pickSell(row.i, it, c));
-    });
   }
 }
 function clearShopInfo(msg){
@@ -558,7 +548,7 @@ function clearShopInfo(msg){
 }
 function pickBuy(it, c, price){
   if (shopMode !== 'buy') return;
-  price = price || buyPrice(it); sel = { mode:'buy', it, price };
+  saleConfirm=null;price = price || buyPrice(it); sel = { mode:'buy', it, price };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
   $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
   $('infoSlot').textContent = it.slot + ' · 일반';
@@ -566,7 +556,7 @@ function pickBuy(it, c, price){
   $('buy').textContent = '사기'; $('buy').disabled = P.gold < price; $('shopSay').textContent = '';
 }
 function pickSell(idx, it, c){
-  if (shopMode !== 'sell') return;
+  shopMode='sell';
   const price = sellPrice(it), rate = sellRate(it);
   sel = { mode:'sell', idx, it, price, rate };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
@@ -578,28 +568,25 @@ function pickSell(idx, it, c){
 }
 $('tabBuy').addEventListener('click', () => setShopMode('buy'));
 $('tabSell').addEventListener('click', () => setShopMode('sell'));
-$('buy').addEventListener('click', () => {
-  if (!sel) return;
-  if (sel.mode === 'sell'){
-    const cur = UI.bagItems().find(x => x.i === sel.idx);
-    if (!cur || cur.it.id !== sel.it.id){ renderShop(); return; }
-    const price = sellPrice(cur.it), rate = sellRate(cur.it);
-    const removed = UI.removeBagAt(sel.idx); if (!removed) return;
-    setGold(P.gold + price); if (UI.save) UI.save();
-    $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
-    renderShop(); $('shopSay').textContent = rate > 1.05 ? '이 맛에 장사하죠! 금화 ' + price + '닢.' : rate < 0.95 ? '금화 ' + price + '닢… 다른 마을이면 더 받았을 텐데요.' : '금화 ' + price + '닢. 나쁘진 않네요.';
-    return;
-  }
-  const it = sel.it, price = sel.price || buyPrice(sel.it); if (!it || P.gold < price) return;
-  if (it.potion){ setGold(P.gold - price); UI.addPotion(it.potion, 1);
-    $('shopSay').textContent = it.name + ' 하나 샀습니다. 금화가 ' + price + '닢 줄었습니다…'; $('buy').disabled = P.gold < price; if (UI.save) UI.save(); return; }
-  if (UI.bagFull()){ $('shopSay').textContent = '가방이 가득 찼습니다.'; return; }
-  setGold(P.gold - price); UI.add(UI.make({ ...it.spec, price })); if (UI.save) UI.save();
-  $('shopSay').textContent = it.name + '을(를) 가방에 넣었습니다. 루크레아가 지갑을 오래 쳐다봅니다.';
-  $('buy').disabled = P.gold < price;
-});
-window.__SHOP = { open: openShop, mode: setShopMode, price: sellPrice, buyPrice, rate: sellRate, state: () => ({mode:shopMode, gold:P.gold}) };
 
+let saleConfirm=null;
+function sellAt(idx){
+  const row=UI.bagItems().find(x=>x.i===idx);if(!row)return false;
+  if((row.it.rar||0)>=2&&saleConfirm!==row.it.id){saleConfirm=row.it.id;pickSell(idx,row.it,null);$('buy').textContent='확인 후 팔기';$('shopSay').textContent='희귀 이상 장비입니다. 한 번 더 눌러 팔아 주세요.';return false;}
+  const price=sellPrice(row.it),rate=sellRate(row.it);saleConfirm=null;
+  UI.removeBagAt(idx);setGold(P.gold+price);sel=null;UI.refresh();renderShop();UI.save();
+  $('shopSay').textContent='금화 '+price+'닢을 받았습니다.';return true;
+}
+function buyAt(it,idx){
+  if(!(GOODS[shopNpc.shop]||[]).includes(it))return false;
+  const price=buyPrice(it);if(P.gold<price){$('shopSay').textContent='금화가 부족합니다.';return false;}
+  if(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx)){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
+  if(it.potion)UI.addPotion(it.potion,1);
+  else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
+  setGold(P.gold-price);UI.refresh();UI.save();$('shopSay').textContent=it.name+'을(를) 샀습니다.';$('buy').disabled=P.gold<price;return true;
+}
+$('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
+window.__SHOP={open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
 
 // ======================= 행인 =======================
 const WP = [[14.5,14],[18,13.6],[28,13.6],[31.5,14],[14.5,19.9],[20,20.7],[26,20.7],[31.5,19.9],[23,13.9],[19.6,16.4],[26.4,16.4],
@@ -947,7 +934,8 @@ function frame(now){
       ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br); continue;
     }
     if (s.shadow){ ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(s.x + s.w * 0.10, s.y + 4, Math.max(8, s.w * 0.28), Math.max(3, s.w * 0.08), 0.22, 0, 7); ctx.fill(); }
-    ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
+    if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
+    else ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
   if (!DUN) drawLeaves();
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
