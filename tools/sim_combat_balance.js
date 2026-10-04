@@ -63,6 +63,22 @@ for(const lv of Array.from({length:70},(_,i)=>i+1)){
     rows.push({lv,tier,wt,grade:ctx.eq.w1.g,maxHp:cm.maxHp,normalDps:ctx.basicDamage()*(1+cm.crit/100*(cm.critDmg/100-1))/(w.dur*.75/(1+cm.as/100)),skill:skill(wt,cm),seconds:average('seconds'),incoming:average('incoming'),hpLoss:average('hpLoss')});
   }
 }
-const output={method:'일반종별1000회, 실제함수/명중100%/75% 재공격/기대DPS/밀착피해상한/1랭크/일반장비/숙련floor((lv-1)/2)/힘 또는 지능50%·체력30%·민첩10%·마력10%',rows};
+const magicFloor=[];
+for(const grade of Array.from({length:10},(_,i)=>i+1))for(const mastery of [0,25,50]){
+  P.stats={str:20,int:20,vit:5,mag:6,dex:8,luck:3};
+  const staff=catalog.gear.find(b=>b.wt==='staff'&&b.powerGrade===grade);if(!staff)continue;
+  P.mastery.staff={lv:mastery};ctx.eq={w1:ctx.make({baseId:staff.id,rar:0})};const ref=ctx.derived().magic;
+  for(const wt of weights.filter(w=>w!=='staff')){
+    const b=catalog.gear.find(b=>b.wt===wt&&b.powerGrade===grade);if(!b)continue;
+    P.mastery[wt]={lv:mastery};ctx.eq={w1:ctx.make({baseId:b.id,rar:0})};
+    const normal=ctx.derived().magic;ctx.eq.w1.st.matk=ref*2;const withFlat=ctx.derived().magic;
+    magicFloor.push({wt,grade,mastery,ratio:normal/ref,flatPreserved:withFlat>=ref*2});
+  }
+}
+const skillRatios=Array.from({length:70},(_,i)=>i+1).map(lv=>{
+  const r=rows.filter(r=>r.lv===lv),melee=r.filter(r=>['sword','spear','gauntlet'].includes(r.wt));
+  return r.find(r=>r.wt==='staff').skill.dps/(melee.reduce((s,r)=>s+r.skill.dps,0)/3);
+});
+const output={magicFloor,staffAverageRatio:skillRatios.reduce((s,r)=>s+r,0)/skillRatios.length,staffRatioRange:[Math.min(...skillRatios),Math.max(...skillRatios)],method:'일반종별1000회, 실제함수/명중100%/75% 재공격/기대DPS/밀착피해상한/1랭크/일반장비/숙련floor((lv-1)/2)/힘 또는 지능50%·체력30%·민첩10%·마력10%',rows};
 const dest=process.argv[2];if(dest)fs.writeFileSync(dest,JSON.stringify(output,null,2)+'\n');
 console.log(rows.filter(x=>x.wt==='sword'&&[1,5,10,11,15,20,21,30,31,40,41,50,51,60,61,70].includes(x.lv)).map(x=>`${x.lv}: ${x.seconds.toFixed(2)}s / ${x.hpLoss.toFixed(1)}%`).join('\n'));

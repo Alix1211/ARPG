@@ -8,7 +8,12 @@ ROOT = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory() as tmp:
     output = Path(tmp) / 'balance.json'
     subprocess.run(['node', str(ROOT / 'tools/sim_combat_balance.js'), str(output)], check=True, capture_output=True)
-    rows = json.loads(output.read_text())['rows']
+    data = json.loads(output.read_text())
+    rows = data['rows']
+assert 1.2 <= data['staffAverageRatio'] <= 1.4, data['staffAverageRatio']
+assert data['magicFloor']
+for pair in data['magicFloor']:
+    assert .699 <= pair['ratio'] <= .701 and pair['flatPreserved'], pair
 for lv in sorted({r['lv'] for r in rows}):
     melee = [r for r in rows if r['lv'] == lv and r['wt'] in ('sword', 'spear', 'gauntlet')]
     seconds = sum(r['seconds'] for r in melee) / 3

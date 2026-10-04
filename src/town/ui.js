@@ -11,7 +11,7 @@ const RART = ['#5b4630', '#2f6fb8', '#a8780a', '#c4580a'];
 const SLOTN = { w1: '무기1', w2: '무기2', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
 // 무기별 한 번 피해 배율(검=100% 기준). docs/weapons.md
-const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 2.0 };
+const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 1.4 };
 const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '조금 느림 0.5초 · 김 · 두 마리 관통', gauntlet: '아주 빠름 0.22초 · 아주 짧음 · 움찔', bow: '빠름 0.35초 · 아주 멂 · 걸어도 안 느려짐', staff: '느림 0.75초 · 중간 · 맞은 자리 폭발' };
 
 // ---- 아이템 파밍 ----
@@ -111,7 +111,14 @@ function derived(){
   const wt=eq[cur]&&eq[cur].wt, mb=wt&&G.masteryBonus?G.masteryBonus(wt):{lv:0,dmg:0,as:0};
   const passive=G.P.passives||{}, life=G.P.lifeSkills||{};
   const phys=Math.max(1,Math.round((t.atk+b.str*.85*NUM)*(1+t.atkPct/100)*(1+mb.dmg/100)));
-  const magic=Math.max(1,Math.round((t.matk+b.int*.85*NUM)*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
+  let magicBase=t.matk+b.int*.85*NUM;
+  if(wt&&wt!=='staff'){
+    // 마법 공용: 같은 단계·지능·숙련의 일반 지팡이 기준 70% 보장.
+    // 물리 공격 옵션은 변환하지 않는다. 직접 얻은 matk가 더 높으면 그대로 사용한다.
+    const staffBase=10*WMULT.staff*GRADE_MUL[eq[cur].g-1]*NUM;
+    magicBase=Math.max(magicBase,(staffBase+b.int*.85*NUM)*(1+mb.dmg/100)*.7);
+  }
+  const magic=Math.max(1,Math.round(magicBase*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
   const maxHp=Math.round((20+b.vit*5)*NUM+t.hp), maxMp=Math.round((10+b.mag*4)*NUM+t.mp);
   const as=b.dex*.45+t.as+mb.as+(passive.rapid||0)*3;
   const crit=Math.min(65,5+b.dex*.08+t.crit+(passive.precision||0)*2);
