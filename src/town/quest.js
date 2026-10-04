@@ -223,7 +223,7 @@ function questLoad(d){
   }
   questWorldKey='';questUiDirty=true;questRefreshWorld();questRender();
 }
-window.QUEST={accept:questAccept,collect:questCollect,onKill:questOnKill,onEvent:questOnEvent,onWorld:()=>{questWorldKey='';questRefreshWorld();},tick:questTick,draw:questDraw,
+window.QUEST={isDialog:()=>panel==='dlg'&&!!questDialog,accept:questAccept,collect:questCollect,onKill:questOnKill,onEvent:questOnEvent,onWorld:()=>{questWorldKey='';questRefreshWorld();},tick:questTick,draw:questDraw,
   decorateDialog:questDecorateDialog,marker:questMarker,openList:()=>{GUILD.open();questRender();},
   saveData:()=>({schema:2,...JSON.parse(JSON.stringify(mainQuestState))}),loadData:questLoad,
   state:()=>({active:Object.fromEntries(Object.entries(mainQuestState.active).map(([id,a])=>[id,{step:a.step,progress:a.progress}])),completed:mainQuestState.completed.slice(),items:{...mainQuestState.items}}),

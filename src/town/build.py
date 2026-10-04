@@ -477,7 +477,7 @@ for f in sorted(_g.glob(R + 'sfx/*.mp3')):
 for f in sorted(_g.glob(R + 'sfx/*.ogg')):
     SFXF[os.path.basename(f)[:-4]] = 'data:audio/ogg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
 BGMF = {}
-for name in ('town', 'field', 'dungeon', 'boss'):
+for name in ('town', 'field', 'dungeon', 'boss', 'event'):
     f = R + 'bgm/' + name + '.mp3'
     if os.path.exists(f):
         BGMF[name] = 'data:audio/mpeg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()

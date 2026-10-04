@@ -75,7 +75,6 @@ for (const n of npcs){
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
-  const panic=$('panic'); if(panic) panic.hidden=(id==='town'||id==='inn');
   if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
   if(window.QUEST)QUEST.onWorld();
 }
@@ -351,7 +350,7 @@ const PROP_TXT = {
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
-function closeAll(){ for (const id of ['msg','dlg','shop','guild']) $(id).classList.remove('on'); if(typeof closeRegionSelect==='function')closeRegionSelect(true); if(window.TRADE)TRADE.close(true); if(window.GUILD)GUILD.close(true); if(window.UI&&UI.isOpen())UI.close(); panel=null; }
+function closeAll(){ for (const id of ['msg','dlg','shop','guild','settings']) $(id).classList.remove('on'); if(typeof closeRegionSelect==='function')closeRegionSelect(true); if(window.TRADE)TRADE.close(true); if(window.GUILD)GUILD.close(true); if(window.UI&&UI.isOpen())UI.close(); panel=null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
@@ -427,11 +426,10 @@ function emergencyEscape(){
   buildWorld('town');P.x=23*TS;P.y=22.2*TS;P.dir='front';
   const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
   const fade=$('fade');if(fade)fade.classList.remove('on');
-  say('테스트 비상탈출: 큰 마을로 복귀했습니다.');
+  say('끼임 탈출: 큰 마을로 복귀했습니다.');
   if(window.UI&&UI.save)UI.save();
   return true;
 }
-$('panic').addEventListener('click',emergencyEscape);
 function openDlg(n){
   talking = n;
   $('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
@@ -694,7 +692,7 @@ window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, ques
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
-  isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
+  isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings', setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -892,7 +890,7 @@ function drawPortalArrivalAura(){
 }
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
-  const simPaused=panel==='char',sdt=simPaused?0:dt;
+  const simPaused=panel==='char'||panel==='settings',sdt=simPaused?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;

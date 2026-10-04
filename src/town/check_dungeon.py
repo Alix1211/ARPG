@@ -40,10 +40,11 @@ async def main():
         assert st['floor']==4 and st['blocked'] is False and st['moves']>=2,st
 
         # 테스트 비상탈출은 전투/층과 무관하게 즉시 큰 마을로 복귀.
-        assert await ev("() => !document.getElementById('panic').hidden")
-        await pg.click('#panic'); await pg.wait_for_timeout(120)
+        await pg.click('#settingsBtn')
+        assert await ev("() => GAME.isPaused()")
+        await pg.click('#escapeStuck'); await pg.wait_for_timeout(120)
         assert await ev("() => document.getElementById('place').dataset.map")=='마을'
-        assert await ev("() => document.getElementById('panic').hidden")
+        assert not await ev("() => GAME.isPaused()")
         assert not errs,errs
         print('dungeon safe spawn ok',[(x['floor'],x['tier'],x['moves']) for x in states])
         await b.close()

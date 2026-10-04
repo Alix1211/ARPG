@@ -1,14 +1,28 @@
 // ======================= 소리와 진동 (Claude, 2026-10-03) =======================
 // 파일 없이 웹 오디오로 합성한 효과음. 옛 오락실 삑삑 소리가 되지 않게: 잡음(바람·마찰)과 부드러운 사인파,
 // 짧은 잔향을 섞는다. 나중에 진짜 효과음 파일이 오면 SFX.files[이름] 에 넣으면 그 파일이 대신 재생된다.
+const AUDIO_SETTINGS = (() => {
+  let saved={};
+  try { saved=JSON.parse(localStorage.getItem('arpg_audio_settings')||'null')||{}; } catch(e){}
+  let legacyOff=false;try{legacyOff=localStorage.getItem('arpg_sound')==='off';}catch(e){}
+  const clamp=(v,f)=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):f;
+  const values={sfx:clamp(saved.sfx,legacyOff?0:1),bgm:clamp(saved.bgm,legacyOff?0:1),vibration:saved.vibration!==false};
+  return {get:()=>({...values}),set(key,value){
+    if(key==='vibration')values[key]=!!value;
+    else if(key==='sfx'||key==='bgm')values[key]=clamp(Number(value),values[key]);else return;
+    try{localStorage.setItem('arpg_audio_settings',JSON.stringify(values));}catch(e){}
+    if(typeof SFX!=='undefined')SFX.syncVolume();
+    if(typeof BGM!=='undefined')BGM.sync();
+    if(key==='vibration'&&!values.vibration)try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}
+  }};
+})();
 const SFX = (() => {
-  let ac = null, out = null, rev = null, on = true, last = {};
+  let ac = null, out = null, rev = null, last = {};
   const fileVoices = {};
-  try { on = localStorage.getItem('arpg_sound') !== 'off'; } catch (e) {}
   function init(){
     if (ac) return;
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-    ac = new C(); out = ac.createGain(); out.gain.value = 0.55; out.connect(ac.destination);
+    ac = new C(); out = ac.createGain(); out.gain.value = 0.55 * AUDIO_SETTINGS.get().sfx; out.connect(ac.destination);
     // 작은 방 잔향(합성 임펄스)
     rev = ac.createConvolver(); const len = ac.sampleRate * 0.6, buf = ac.createBuffer(2, len, ac.sampleRate);
     for (let c = 0; c < 2; c++){ const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
@@ -72,23 +86,21 @@ const SFX = (() => {
   };
   return {
     files: (typeof A !== 'undefined' && A.sfx) || {},
-    get on(){ return on; },
-    toggle(){
-      on = !on;
-      try { localStorage.setItem('arpg_sound', on ? 'on' : 'off'); } catch (e) {}
-      if (!on) for (const voices of Object.values(fileVoices)) for (const a of voices) a.pause();
-      if (typeof BGM !== 'undefined') BGM.sync();
-      return on;
+    get on(){ return AUDIO_SETTINGS.get().sfx>0; },
+    syncVolume(){
+      const volume=AUDIO_SETTINGS.get().sfx;
+      if(out)out.gain.value=.55*volume;
+      for(const voices of Object.values(fileVoices))for(const a of voices){a.volume=.7*volume;if(!volume)a.pause();}
     },
     play(name){
-      if (!on) return; init(); if (!ac || ac.state !== 'running') return;
+      if (!this.on || document.hidden) return; init(); if (!ac || ac.state !== 'running') return;
       const now = ac.currentTime; if (last[name] && now - last[name] < 0.035) return; last[name] = now;   // 같은 소리 겹침 방지
       if (this.files[name]){
         const voices = fileVoices[name] || (fileVoices[name] = []);
         let a = voices.find(v => v.paused || v.ended);
         if (!a && voices.length < 4){ a = new Audio(this.files[name]); a.preload = 'auto'; voices.push(a); }
         if (!a) a = voices[0];
-        a.pause(); a.currentTime = 0; a.volume = 0.7;
+        a.pause(); a.currentTime = 0; a.volume = 0.7 * AUDIO_SETTINGS.get().sfx;
         a.play().catch(() => {});
         return;
       }
@@ -97,7 +109,7 @@ const SFX = (() => {
   };
 })();
 // 진동 (안드로이드 크롬)
-const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+const HAP = (p) => { if (!AUDIO_SETTINGS.get().vibration) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 // ---- 기존 동작에 소리·진동 붙이기 (원래 함수는 그대로 두고 감싼다) ----
 (() => {
   const wrap = (name, before, after) => {
@@ -105,7 +117,8 @@ const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.v
     const g = function(...a){ if (before) before(...a); const r = f.apply(this, a); if (after) after(r, ...a); return r; };
     eval(name + ' = g');
   };
-  wrap('attack', null, () => { if (P.atk && P.atk.t === 0){ const w = P.atk.wt; SFX.play(w === 'bow' ? 'bow' : w === 'staff' ? 'staff' : w === 'spear' ? 'thrust' : w === 'gauntlet' ? 'punch' : 'swing'); } });
+  const originalAttack=attack;
+  attack=function(...args){const previous=P.atk,r=originalAttack.apply(this,args);if(P.atk&&P.atk!==previous){const w=P.atk.wt;SFX.play(w==='bow'?'bow':w==='staff'?'staff':w==='spear'?'thrust':w==='gauntlet'?'punch':'swing');}return r;};
   wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 28 : 12); });   // 허수아비·몬스터 공통 타격
   if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(18); });
   if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(45); } });
@@ -122,7 +135,13 @@ const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.v
   wrap('setGold', (v) => { if (v > lastGold) SFX.play('coin'); else if (v < lastGold) SFX.play('buy'); lastGold = v; });
   // 가방에 물건이 들어오면 (ui.js가 나중에 로드되므로 잠시 뒤 연결)
   setTimeout(() => { if (window.UI && UI.add){ const a = UI.add; UI.add = function(it){ const r = a.call(this, it); if (r) SFX.play('item'); return r; }; } }, 0);
-  // 소리 켜기/끄기 버튼
-  const b = document.getElementById('snd');
-  if (b){ const sync = () => { b.textContent = SFX.on ? '소리 켬' : '소리 끔'; }; sync(); b.addEventListener('click', () => { SFX.toggle(); sync(); SFX.play('tick'); }); }
+  const refresh=()=>{
+    const v=AUDIO_SETTINGS.get();
+    for(const key of ['sfx','bgm']){const value=Math.round(v[key]*100);$('volume_'+key).value=value;$('value_'+key).textContent=value+'%';}
+    $('vibration').checked=v.vibration;
+  };
+  $('settingsBtn').addEventListener('click',()=>{show('settings');P.hold=false;refresh();});
+  for(const key of ['sfx','bgm'])$('volume_'+key).addEventListener('input',e=>{AUDIO_SETTINGS.set(key,Number(e.target.value)/100);refresh();});
+  $('vibration').addEventListener('change',e=>AUDIO_SETTINGS.set('vibration',e.target.checked));
+  $('escapeStuck').addEventListener('click',emergencyEscape);
 })();
