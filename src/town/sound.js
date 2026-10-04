@@ -109,9 +109,12 @@ const HAP = (p) => { if (!SFX.on) return; try { navigator.vibrate && navigator.v
   wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 28 : 12); });   // 허수아비·몬스터 공통 타격
   if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(18); });
   if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(45); } });
-  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',fire2:'fire',fire3:'fire',ice1:'ice',ice2:'ice',bolt1:'lightning',bolt2:'lightning',dark1:'dark',dark3:'dark',holy1_heal:'heal',sword1:'slash',sword2:'spin',sword3:'slash',bow2:'bow',fist2:'punch'}[id]||'staff');HAP(id==='sword2'||id==='fire3'||id==='dark3'?[18,20,28]:id==='fire1'||id==='fire2'?[12,22,34]:id==='sword1'||id==='sword3'?28:18);});
+  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',fire2:'fire',fire3:'fire_big',ice1:'ice',ice2:'ice',ice3:'ice_big',bolt1:'lightning',bolt2:'lightning',bolt3:'lightning',dark1:'dark',dark2:'dark',dark3:'dark_big',holy1_heal:'heal',holy2_shield:'heal',holy3_revive:'heal',sword1:'slash',sword2:'spin',sword3:'slash',spear1:'thrust',spear2:'thrust',spear3:'explosion',bow1:'bow',bow2:'bow',bow3:'bow',fist1:'punch',fist2:'punch',fist3:'explosion'}[id]||'staff');HAP(id==='sword2'||id==='fire3'||id==='dark3'||id==='spear3'||id==='fist3'?[18,20,28]:id==='fire1'||id==='fire2'?[12,22,34]:id==='sword1'||id==='sword3'?28:18);});
   wrap('drink', null, (ok) => { if (ok){ SFX.play('potion'); HAP([10, 40, 10]); } });
   wrap('travel', () => { if (!traveling) SFX.play('travel'); });
+  // 생활스킬 타운 포탈/귀환 포탈은 실제 텔레포트 파일 효과음
+  if (window.GAME && GAME.useTownPortal){ const f=GAME.useTownPortal; GAME.useTownPortal=function(...a){ const r=f.apply(this,a); if(r) SFX.play('teleport'); return r; }; }
+  if (window.GAME && GAME.returnTownPortal){ const f=GAME.returnTownPortal; GAME.returnTownPortal=function(...a){ const r=f.apply(this,a); if(r) SFX.play('teleport'); return r; }; }
   if (typeof openDungeonChest === 'function') wrap('openDungeonChest', (spot) => { const m = spot && spot.data && spot.data.mimic; SFX.play(m ? 'mimic' : 'chest'); HAP(m ? [60, 30, 60] : [15, 40, 15]); });
   if (typeof nextDungeonFloor === 'function') wrap('nextDungeonFloor', () => SFX.play('stairs'));
   if (typeof previousDungeonFloor === 'function') wrap('previousDungeonFloor', () => SFX.play('stairs'));
