@@ -597,6 +597,7 @@ function sellAt(idx){
   if((row.it.rar||0)>=2&&saleConfirm!==row.it.id){saleConfirm=row.it.id;pickSell(idx,row.it,null);$('buy').textContent='확인 후 팔기';$('shopSay').textContent='희귀 이상 장비입니다. 한 번 더 눌러 팔아 주세요.';return false;}
   const price=sellPrice(row.it),rate=sellRate(row.it);saleConfirm=null;
   UI.removeBagAt(idx);setGold(P.gold+price);sel=null;UI.refresh();renderShop();UI.save();
+  if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:row.it.kind,price,count:1});
   $('shopSay').textContent='금화 '+price+'닢을 받았습니다.';return true;
 }
 function buyAt(it,idx){
@@ -607,7 +608,7 @@ function buyAt(it,idx){
   if(it.scroll)UI.addScroll(it.scroll,1);
   else if(it.potion)UI.addPotion(it.potion,1);
   else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
-  setGold(P.gold-price);UI.refresh();UI.save();$('shopSay').textContent=it.name+'을(를) 샀습니다.';$('buy').disabled=P.gold<price;return true;
+  setGold(P.gold-price);UI.refresh();UI.save();if(window.QUEST)QUEST.onEvent('shop_buy',{shop:shopNpc.shop,item:it.potion?'potion:'+it.potion:it.scroll?'scroll:'+it.scroll:(it.spec&&it.spec.kind?it.spec.kind:(it.slot||'item')),name:it.name,count:1});$('shopSay').textContent=it.name+'을(를) 샀습니다.';$('buy').disabled=P.gold<price;return true;
 }
 $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
 window.__SHOP={goods:k=>GOODS[k],open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
