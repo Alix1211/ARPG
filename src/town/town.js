@@ -988,7 +988,7 @@ const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // �
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
 // 무기별 기준(같은 단계·같은 옵션일 때). 아이템 옵션이 이 값을 올리거나 내린다. docs/weapons.md
 const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: 경직(주먹). 케인 확정 2026-10-04: 근접 우대·원거리 감쇠
-  sword:    { dur: 0.80, reach: 80, cone: 75, dmg: 1.9, kb: 28 },                              // 느리고 묵직한 넓은 부채꼴, 약한 넉백
+  sword:    { dur: 0.62, reach: 92, cone: 90, dmg: 1.75, kb: 28 },                             // 묵직하지만 너무 느리지 않은 넓은 부채꼴, 약한 넉백(케인 2026-10-04 보정)
   spear:    { dur: 0.50, reach: 120, width: 20, pierce: 2, kb: 70 },                          // 길고 좁은 일직선, 두 마리 관통, 큰 넉백
   gauntlet: { dur: 0.22, reach: 56, width: 34, pierce: 1, stagger: 1, kb: 8 },                // 아주 짧고 빠름, 경직 + 아주 작은 넉백
   bow:      { dur: 0.35, speed: 820, life: 0.75, noSlow: 1, dmg: 0.85 },                      // 빠르고 아주 멀리, 걸어도 안 느려짐
