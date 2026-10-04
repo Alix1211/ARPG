@@ -208,6 +208,12 @@ html.app #fs{display:none}
 
 /* 창이 열리면 겹치는 HUD를 가리고 장비·가방을 같은 좌표계에 둡니다. */
 .inventory-open .hud,.inventory-open #cluster,.inventory-open #questHud{visibility:hidden}
+.inventory-open #cluster.drop{visibility:visible}
+.skc{touch-action:none}
+.slot.lvlock::after{content:'';position:absolute;inset:0;border-radius:10px;background:rgba(0,0,0,.42);pointer-events:none}
+.cell.lvlock::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.42);pointer-events:none}
+.cell .lvtag{position:absolute;left:3px;top:2px;font:700 10px sans-serif;color:#ffb0a0;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;z-index:1}
+.slot .lvtag{position:absolute;left:3px;bottom:2px;font:700 10px sans-serif;color:#ffb0a0;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;z-index:1}
 #tabs b{margin-top:42px;background:#321b0ee6;border-radius:5px;padding:2px 0;font-size:13px}
 .bgold,.bcnt{top:90px;color:#533315;text-shadow:0 1px #fff4}
 .inventorySort{position:absolute;left:100px;right:95px;top:532px;display:flex;justify-content:center;gap:10px}
@@ -266,7 +272,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1502</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1551</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -857,6 +863,7 @@ function renderShop(){
     list.forEach((it, i) => {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
       const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
+      if (it.requiredLevel && it.requiredLevel > P.lv){ c.classList.add('lvlock'); const lt = document.createElement('span'); lt.className = 'lvtag'; lt.textContent = 'Lv' + it.requiredLevel; c.append(lt); }
       const price = buyPrice(it);
       const pr = document.createElement('span'); pr.textContent = price; c.append(pr);
       UI.bindItemSlot(c,{from:'goods',it});c.addEventListener('click', () => {shopMode='buy';pickBuy(it,c,price);});g.append(c);
@@ -4382,11 +4389,13 @@ function slotEl(it, x, y, w, h, onTap, selected){
   if (it){
     const im = el('img'); im.src = A.icons[it.icon]; im.alt = it.name; s.append(im);
     s.style.setProperty('--rc', RARC[it.rar]); s.classList.add('has');
+    if (it.requiredLevel && G.P && it.requiredLevel > G.P.lv){ s.classList.add('lvlock'); s.append(el('span', 'lvtag', 'Lv' + it.requiredLevel)); }
   }
   if (selected) s.classList.add('sel');
   s.addEventListener('click', onTap);
   return s;
 }
+let skillScroll=0;   // 스킬창 스크롤 위치(스킬을 배울 때 창을 다시 그려도 유지)
 function render(){
   for (const b of document.querySelectorAll('[data-tab]')) b.classList.toggle('on', b.dataset.tab === tab);
   const L = $('leftPane'); if(L.contains($('shop')))document.body.append($('shop'));$('shop').classList.toggle('on',tab==='shop'); L.innerHTML = '';
@@ -4408,7 +4417,7 @@ function render(){
     for (const [x, y] of EQ_OFF){ const o = el('div', 'off'); o.style.cssText = `left:${x}px;top:${y}px;width:74px;height:78px`; L.append(o); }
   } else if(tab==='skill'){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
-    const pane=el('div','skpane');L.append(pane);
+    const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
     pane.append(el('div','skhead',`전투 스킬 · 보유 ${Pp.skillPts||0}P`),el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 배운 액티브는 퀵슬롯으로 끌어 놓을 수 있습니다.'));
     for(const [gname,ids] of SKG){
       const row=el('div','skrow');row.append(el('b','',gname));
