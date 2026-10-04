@@ -164,10 +164,13 @@ function questRefreshWorld(){
   }
 }
 function questPortrait(s){
-  if(s.char&&A.storyChars&&A.storyChars[s.char])return A.storyChars[s.char];
+  if(s.char&&A.storyChars&&A.storyChars[s.char]){
+    const ch=A.storyChars[s.char];
+    return {name:s.speaker||ch.name,title:s.title!=null?s.title:(ch.title||''),port:ch.port||A.face};
+  }
   if(s.portraitNpc){
     const key='npc_'+String(s.portraitNpc).padStart(2,'0'),n=A.npcs.find(x=>x.no===s.portraitNpc);
-    return {name:s.speaker||(n&&n.name)||'???',title:(n&&n.title)||'',port:A.port[key]||A.face};
+    return {name:s.speaker||(n&&n.name)||'???',title:s.title!=null?s.title:((n&&n.title)||''),port:A.port[key]||A.face};
   }
   return {name:s.speaker||'루크레아',title:s.title||'',port:A.face};
 }
