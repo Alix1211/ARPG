@@ -979,7 +979,7 @@ function setWeapon(it){
   const cm=combatNow();
   for(const k in WB)DUR[k]=WB[k].dur/(1+Math.max(0,cm.as||0)/100);
 }
-function basicDamage(){const cm=combatNow();return Math.max(1,WPN&&WPN.wt==='staff'?cm.magic:cm.phys);}
+function basicDamage(){const cm=combatNow(),wm=(WPN&&WB[WPN.wt]&&WB[WPN.wt].dmg)||1;return Math.max(1,Math.round((WPN&&WPN.wt==='staff'?cm.magic:cm.phys)*wm));}
 function rollPlayerDamage(base){
   const cm=combatNow(),crit=Math.random()<Math.max(0,cm.crit||0)/100;
   return {v:Math.max(1,Math.round(base*(crit?(cm.critDmg||150)/100:1))),crit};
@@ -987,12 +987,12 @@ function rollPlayerDamage(base){
 const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
 // 무기별 기준(같은 단계·같은 옵션일 때). 아이템 옵션이 이 값을 올리거나 내린다. docs/weapons.md
-const WB = {
-  sword:    { dur: 0.40, reach: 80, cone: 75 },                         // 넓은 부채꼴, 앞의 여러 마리
-  spear:    { dur: 0.50, reach: 120, width: 20, pierce: 2 },            // 길고 좁은 일직선, 두 마리 관통
-  gauntlet: { dur: 0.22, reach: 56, width: 34, pierce: 1, stagger: 1 }, // 아주 짧고 빠름, 움찔
-  bow:      { dur: 0.35, speed: 820, life: 0.75, noSlow: 1 },           // 빠르고 아주 멀리, 걸어도 안 느려짐
-  staff:    { dur: 0.75, speed: 300, life: 1.2, blast: 52 },            // 느린 구슬, 맞은 자리 폭발
+const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: 경직(주먹). 케인 확정 2026-10-04: 근접 우대·원거리 감쇠
+  sword:    { dur: 0.80, reach: 80, cone: 75, dmg: 1.9, kb: 28 },                              // 느리고 묵직한 넓은 부채꼴, 약한 넉백
+  spear:    { dur: 0.50, reach: 120, width: 20, pierce: 2, kb: 70 },                          // 길고 좁은 일직선, 두 마리 관통, 큰 넉백
+  gauntlet: { dur: 0.22, reach: 56, width: 34, pierce: 1, stagger: 1, kb: 8 },                // 아주 짧고 빠름, 경직 + 아주 작은 넉백
+  bow:      { dur: 0.35, speed: 820, life: 0.75, noSlow: 1, dmg: 0.85 },                      // 빠르고 아주 멀리, 걸어도 안 느려짐
+  staff:    { dur: 0.75, speed: 300, life: 1.2, blast: 52, dmg: 0.8 },                        // 느린 구슬, 맞은 자리 폭발
 };
 const DUR = {}; for (const k in WB) DUR[k] = WB[k].dur;
 const PI = Math.PI;
@@ -1025,7 +1025,7 @@ function updAtk(dt){
       else if (along > -10 && along < w.reach && side < w.width) hits.push([along, t]);
     }
     hits.sort((p, q) => p[0] - q[0]);
-    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger));
+    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger, undefined, w.kb));
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
@@ -1039,8 +1039,8 @@ function updAtk(dt){
   }
   if (k > 1.2) P.atk = null;
 }
-function hitTarget(t, d, stagger, dmOver){
-  if (t.monster) return hitMonster(t, d, stagger, dmOver);
+function hitTarget(t, d, stagger, dmOver, kbOver){
+  if (t.monster) return hitMonster(t, d, stagger, dmOver, kbOver);
   const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
   t.dummy.wob = stagger ? 1.4 : 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
   pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });

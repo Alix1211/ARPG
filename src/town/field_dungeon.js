@@ -441,16 +441,16 @@ function updEncounters(dt){
     }
   }
 }
-function hitMonster(m,d,stagger,dmOver){
+function hitMonster(m,d,stagger,dmOver,kbOver){
   if(!m||m.dead)return;
   const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
   // 정예·우두머리는 경직을 한 번 받으면 잠시 면역(무한 경직 방지)
-  let st=stagger?.32:.12,kb=stagger?20:12;
-  if(m.boss||m.elite){if(m.stunImm>0){st=0;kb*=.3;}else if(stagger)m.stunImm=4;}
+  let st=stagger?.32:.12,kb=kbOver!=null?kbOver:(stagger?20:12);
+  if(m.boss||m.elite){kb*=.4;if(m.stunImm>0){st=0;kb*=.3;}else if(stagger)m.stunImm=4;}
   m.hp-=v;m.hurt=.18;m.stun=st;
   if(!dmOver&&WPN&&window.GAME&&GAME.gainMastery)GAME.gainMastery(WPN.wt,1);
-  const q=Math.hypot(d[0],d[1])||1,nx=m.x+d[0]/q*kb,ny=m.y+d[1]/q*kb;
-  if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;}
+  const q=Math.hypot(d[0],d[1])||1;
+  for(const f of [1,.6,.3]){const nx=m.x+d[0]/q*kb*f,ny=m.y+d[1]/q*kb*f;if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;break;}}   // 벽에 닿으면 갈 수 있는 만큼만
   pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
   sfx.push({type:'hit',t:0,x:m.x,y:m.y-m.h*.55,r:crit?58:40,crit});
   if(m.hp<=0)killMonster(m);
