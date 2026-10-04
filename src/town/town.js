@@ -348,7 +348,7 @@ function act(){
   if (!near) return;
   if(near.kind==='stash'&&window.UI)return UI.openStash();
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
-  if(near.kind==='npc')return near.npc.shop==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
+  if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
@@ -426,11 +426,12 @@ function openDlg(n){
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
   $('dlgTrade').hidden = !n.shop && !n.go;
-  $('dlgTrade').textContent = n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
+  $('dlgTrade').textContent = n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
   show('dlg');
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 $('dlgTrade').addEventListener('click', () => {
+  if (talking.shop==='inn'){ closeAll(); if(typeof enterInn==='function')enterInn(); return; }
   if (talking.go === 'field'){ openRegionSelect(); return; }
   if (talking.go === 'dungeon'){ enterDungeonFromOut(); return; }
   if(talking.shop==='trade'&&window.TRADE){TRADE.open(talking.market||'town');return;}
