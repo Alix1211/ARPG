@@ -3688,6 +3688,656 @@
         "gold": 910,
         "expRatio": 0.32
       }
+    },
+    {
+      "id": "MAIN_061",
+      "kind": "main",
+      "title": "봉인-61",
+      "start": {
+        "npc": 12,
+        "level": 61,
+        "map": "town",
+        "previous": "MAIN_060"
+      },
+      "intro": [
+        "핀: 늪지대 물건이 비정상적으로 비싸게 팔리고 있어요. 공급이 거의 없어서요.",
+        "루크레아: 너무 좋은 시세는 오래 못 갑니다. 공급선이 죽으면 시장도 끝이죠."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "trade_sell",
+          "filter": {
+            "region": "town",
+            "profitPositive": true
+          },
+          "need": 1,
+          "objective": "늪지대 물건으로 차익 확인"
+        },
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "swamp",
+          "objective": "공급 중단 지점 조사"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "swamp",
+          "need": 13,
+          "objective": "공급선 주변 몬스터 정리"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_061_route",
+          "itemName": "침수된 운송표",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "swamp",
+            "spawnOffset": [
+              560,
+              360
+            ]
+          },
+          "objective": "끊긴 운송로 흔적 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 12,
+          "item": "MAIN_061_route",
+          "need": 1,
+          "lines": [
+            "핀: 옛 길목 쪽이 통째로 잠긴 것 같아요.",
+            "루크레아: 좋은 시세의 원인이 최악의 공급망이었군요."
+          ],
+          "objective": "교역소에 원인 보고"
+        }
+      ],
+      "reward": {
+        "gold": 930,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_062",
+      "kind": "main",
+      "title": "봉인-62",
+      "start": {
+        "npc": 29,
+        "level": 62,
+        "map": "town",
+        "previous": "MAIN_061"
+      },
+      "intro": [
+        "에드먼: 마지막 길목 관리소가 늪 아래 가라앉았을 가능성이 높네.",
+        "루크레아: 물 빼는 비용부터 계산해야겠군요.",
+        "에드먼: 들어갈 길은 일부 남아 있어."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "swamp",
+          "objective": "가라앉은 길목 탐색"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_062_plate",
+          "itemName": "침수 관리소 표찰",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "swamp",
+            "spawnOffset": [
+              700,
+              260
+            ]
+          },
+          "objective": "관리소 위치 확인"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "swamp",
+          "need": 12,
+          "objective": "침수 관리소 주변 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_062_plate",
+          "need": 1,
+          "lines": [
+            "에드먼: 마지막 시설이 맞아. 핵심 부품은 더 깊은 곳에 있을 걸세.",
+            "루크레아: 여기까지 왔으니 끝까지 회수하죠."
+          ],
+          "objective": "마지막 관리소 확인"
+        }
+      ],
+      "reward": {
+        "gold": 950,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_063",
+      "kind": "main",
+      "title": "봉인-63",
+      "start": {
+        "npc": 5,
+        "level": 63,
+        "map": "town",
+        "previous": "MAIN_062"
+      },
+      "intro": [
+        "토비: 펙스 씨가 이번엔 먼저 기다리고 있어요~ 장비도 잔뜩 챙겼던데요.",
+        "루크레아: 급료 협상도 준비했겠군요.",
+        "토비: 그쪽 준비가 더 철저해 보였어요~"
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "inn",
+          "lines": [
+            "펙스: 이번엔 위험하다. 탄... 마력탄 비싸다.",
+            "루크레아: 소모품은 실비 정산, 인건비는 지난번과 동일.",
+            "펙스: 인건비도 올려라.",
+            "루크레아: 살아 돌아오면 성과급을 검토하죠.",
+            "펙스: 또 '검토'다."
+          ],
+          "objective": "펙스와 후반 계약"
+        },
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "swamp",
+          "objective": "펙스와 침수 관리소 진입"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "swamp",
+          "need": 13,
+          "objective": "관리소 접근로 돌파"
+        },
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "field",
+          "market": "swamp",
+          "lines": [
+            "펙스: 이곳의 흔들림... 내 고향 장비가 망가질 때와 조금 비슷하다.",
+            "루크레아: 돌아갈 방법을 찾은 겁니까?",
+            "펙스: 아니다. 그냥 비슷하다.",
+            "루크레아: 희망고문은 추가수당 대상이 아닙니다."
+          ],
+          "objective": "펙스의 단서 확인"
+        }
+      ],
+      "reward": {
+        "gold": 970,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_064",
+      "kind": "main",
+      "title": "봉인-64",
+      "start": {
+        "npc": 29,
+        "level": 64,
+        "map": "town",
+        "previous": "MAIN_063"
+      },
+      "intro": [
+        "에드먼: 마지막 핵심 부품의 위치를 좁혔네. 다만 주변 공간이 계속 뒤틀린다고 해.",
+        "루크레아: 물건 위치가 움직이면 재고조사 최악인데요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 16,
+          "objective": "뒤틀린 지하 구역 진입"
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 16,
+          "need": 14,
+          "objective": "변형된 몬스터 무리 돌파"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_064_core",
+          "itemName": "마지막 길목 핵심석",
+          "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 16,
+            "spawnOffset": [
+              200,
+              120
+            ]
+          },
+          "objective": "마지막 핵심석 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_064_core",
+          "need": 1,
+          "lines": [
+            "에드먼: 이걸 설치하면 일곱 길목이 전부 이어질 거야.",
+            "루크레아: 그리고 제 투자도 회수 단계로 넘어가겠죠.",
+            "에드먼: 아직 끝난 게 아닐 가능성이 높네.",
+            "루크레아: 그 말을 제일 싫어합니다."
+          ],
+          "objective": "핵심석 전달"
+        }
+      ],
+      "reward": {
+        "gold": 990,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_065",
+      "kind": "main",
+      "title": "봉인-65",
+      "start": {
+        "npc": 29,
+        "level": 65,
+        "map": "town",
+        "previous": "MAIN_064"
+      },
+      "intro": [
+        "에드먼: 마지막 길목을 복원하자. 준비는 끝났네.",
+        "루크레아: 일곱 번째입니다. 이번엔 진짜 마지막이길 바랍니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "swamp",
+          "objective": "마지막 길목 복구 지점 이동"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "swamp",
+          "need": 14,
+          "objective": "복구 작업 방어"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_065_anchor",
+          "itemName": "길목 고정쇠",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "swamp",
+            "spawnOffset": [
+              740,
+              420
+            ]
+          },
+          "objective": "고정쇠 회수"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_065_anchor",
+          "need": 1,
+          "lines": [
+            "에드먼: 이어졌다... 일곱 곳이 전부 하나의 중심으로 연결돼 있어.",
+            "루크레아: 중심은 어디죠?",
+            "에드먼: 큰 마을 지하. 우리가 처음부터 드나들던 그 던전 아래야."
+          ],
+          "objective": "일곱 길 연결 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 결국 시작한 곳으로 돌아오는군.",
+            "루크레아: 왕복 운송비가 아까운 구조네요."
+          ],
+          "objective": "길드에 중심 위치 보고"
+        }
+      ],
+      "reward": {
+        "gold": 1020,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_066",
+      "kind": "main",
+      "title": "봉인-66",
+      "start": {
+        "npc": 43,
+        "level": 66,
+        "map": "town",
+        "previous": "MAIN_065"
+      },
+      "intro": [
+        "페닉스: 특허장의 진짜 기능을 거의 해독했습니다.",
+        "루크레아: 통행권, 창고권, 세금 우선권 말고 더 있습니까?",
+        "페닉스: 일곱 시설의 관리권 자체입니다. 마법계약으로요.",
+        "루크레아: ...유지보수 의무도요?",
+        "페닉스: 네.",
+        "루크레아: 계약서가 갑자기 두꺼워 보이네요."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 관리자가 정해져야 길목 장치가 완전히 안정되는 구조 같네.",
+            "루크레아: 그럼 특허장은 권리증이면서 열쇠군요.",
+            "에드먼: 동시에 책임 계약이지."
+          ],
+          "objective": "학자에게 마법계약 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 위험을 알고도 특허장을 찾겠나?",
+            "루크레아: 지금 포기하면 지금까지 쓴 시간과 돈이 전부 손실입니다.",
+            "하르트: 역시 영웅다운 대답은 아니군.",
+            "루크레아: 그래도 가겠다는 결론은 같잖아요."
+          ],
+          "objective": "최종 탐색 결심"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_066_contract",
+          "itemName": "관리권 계약 해독본",
+          "need": 1,
+          "point": {
+            "map": "town",
+            "spawnOffset": [
+              120,
+              100
+            ]
+          },
+          "objective": "해독된 계약본 수령"
+        }
+      ],
+      "reward": {
+        "gold": 1040,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_067",
+      "kind": "main",
+      "title": "봉인-67",
+      "start": {
+        "npc": 15,
+        "level": 67,
+        "map": "town",
+        "previous": "MAIN_066"
+      },
+      "intro": [
+        "오토: 마을 곳곳이 흔들리고 우물물도 탁해졌네. 주민들이 불안해해.",
+        "루크레아: 가게들이 문 닫기 시작했습니까?",
+        "오토: 아직은 버티고 있지.",
+        "루크레아: 그럼 닫기 전에 끝내야겠군요."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 21,
+          "lines": [
+            "마르코: 필요한 물약은 최대한 싸게 드릴게요. 예전에 도와주신 것도 있고.",
+            "루크레아: '최대한 싸게'라는 말을 기억하겠습니다.",
+            "마르코: 이럴 때도 가격이 먼저네요."
+          ],
+          "objective": "잡화점 상황 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 23,
+          "lines": [
+            "루나: 장비 손볼 거 있으면 가져와. 지금은 외상도 받아줄게.",
+            "루크레아: 외상이라니... 상황이 정말 심각하군요."
+          ],
+          "objective": "무기점 상황 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 5,
+          "lines": [
+            "토비: 다들 여관에 모여 있어요~ 겁은 나지만 버티고 있죠.",
+            "루크레아: 숙박비는요?",
+            "토비: 오늘은 안 받아요.",
+            "루크레아: ...정말 심각하네요."
+          ],
+          "objective": "여관 상황 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 자네가 해온 일들 덕에 각 지역에서도 물자와 소식이 들어오고 있네.",
+            "루크레아: 거래처 관리는 이럴 때 효과가 나죠.",
+            "하르트: 그래. 그러니 이번에도 부탁하네."
+          ],
+          "objective": "길드에서 최종 상황 공유"
+        }
+      ],
+      "reward": {
+        "gold": 1060,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_068",
+      "kind": "main",
+      "title": "봉인-68",
+      "start": {
+        "npc": 39,
+        "level": 68,
+        "map": "town",
+        "previous": "MAIN_067"
+      },
+      "intro": [
+        "하르트: 중심 던전 아래로 내려갈 준비가 됐네. 자네가 갈 건가?",
+        "루크레아: 제가 안 가면 제 거래망, 재고, 받을 돈이 전부 위험합니다.",
+        "하르트: 다른 이유는 없고?",
+        "루크레아: 충분하지 않습니까?"
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "town",
+          "lines": [
+            "카르도: 아래로 간다며.",
+            "루크레아: 이번엔 무료 경호 요청이 아닙니다.",
+            "카르도: 알아. 그래도 입구까진 같이 간다.",
+            "루크레아: 자발적 서비스는 환불이 안 됩니다.",
+            "카르도: 그만해."
+          ],
+          "objective": "카르도의 지원"
+        },
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "inn",
+          "lines": [
+            "펙스: 나도 간다. 여관 없어지면 잘 곳 없다.",
+            "루크레아: 아주 현실적인 참전 이유네요.",
+            "펙스: 너랑 비슷하다.",
+            "루크레아: 부정하기 어렵군요."
+          ],
+          "objective": "펙스의 지원"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 각 지역 상인들이 보급품을 보내왔어요. 길을 살려둔 덕분이에요.",
+            "루크레아: 거래망은 자산입니다. 이제 증명됐네요."
+          ],
+          "objective": "최종 보급 확인"
+        },
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 18,
+          "objective": "최심부 진입 준비"
+        }
+      ],
+      "reward": {
+        "gold": 1080,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_069",
+      "kind": "main",
+      "title": "봉인-69",
+      "start": {
+        "npc": 39,
+        "level": 69,
+        "map": "town",
+        "previous": "MAIN_068"
+      },
+      "intro": [
+        "하르트: 최심부에서 공간이 계속 흔들리고 있네. 내려가면 돌아오기 어려울 수도 있어.",
+        "루크레아: 돌아와야 정산을 하죠. 반드시 돌아옵니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 20,
+          "objective": "던전 최심부 진입"
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 20,
+          "need": 15,
+          "objective": "최심부 수호 무리 돌파"
+        },
+        {
+          "type": "scene",
+          "char": "void",
+          "map": "dungeon",
+          "floor": 20,
+          "lines": [
+            "네르바인: 이름도 경계도 소유도 결국 사라진다.",
+            "루크레아: 소유가 사라진다고요?",
+            "네르바인: 모든 것은 주인 없는 것이 된다.",
+            "루크레아: ...세상에서 제일 싫은 말을 하시네요."
+          ],
+          "objective": "봉인된 존재와 대면"
+        },
+        {
+          "type": "boss",
+          "boss": "nervein_phase1",
+          "map": "dungeon",
+          "floor": 20,
+          "objective": "최심부의 존재를 밀어내기"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_069_charter",
+          "itemName": "대상단 특허장 원본",
+          "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 20,
+            "spawnOffset": [
+              220,
+              80
+            ]
+          },
+          "objective": "특허장 원본 확보"
+        }
+      ],
+      "reward": {
+        "gold": 1120,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_070",
+      "kind": "main",
+      "title": "봉인-70",
+      "start": {
+        "npc": 43,
+        "level": 70,
+        "map": "town",
+        "previous": "MAIN_069"
+      },
+      "intro": [
+        "페닉스: 원본이 맞습니다. 서명하면 관리권이 확정됩니다.",
+        "루크레아: 통행권도요?",
+        "페닉스: 네.",
+        "루크레아: 창고 우선권도?",
+        "페닉스: 네.",
+        "루크레아: 그럼 서명합니다.",
+        "페닉스: 책임 조항도—",
+        "루크레아: 그건 아까 들었습니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 20,
+          "objective": "특허장을 들고 최심부로 돌아가기"
+        },
+        {
+          "type": "scene",
+          "char": "void",
+          "map": "dungeon",
+          "floor": 20,
+          "lines": [
+            "네르바인: 종이 한 장으로 경계를 세우려 하는가.",
+            "루크레아: 종이가 아니라 계약입니다.",
+            "네르바인: 하찮다.",
+            "루크레아: 계약서를 무시하는 상대와는 거래하지 않습니다."
+          ],
+          "objective": "마지막 대면"
+        },
+        {
+          "type": "boss",
+          "boss": "nervein_final",
+          "map": "dungeon",
+          "floor": 20,
+          "objective": "최종 전투"
+        },
+        {
+          "type": "event",
+          "event": "story_sign",
+          "need": 1,
+          "objective": "대상단 특허장에 서명하기"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "town",
+          "lines": [
+            "카르도: 마을이 널 영웅이라고 부르더군.",
+            "루크레아: 잔치 비용은 누가 내죠?",
+            "카르도: ...역시 그대로군.",
+            "루크레아: 그리고 이 특허권, 양도 가능한지 확인 중입니다."
+          ],
+          "objective": "마을로 돌아가기"
+        }
+      ],
+      "reward": {
+        "gold": 1500,
+        "expRatio": 0.32
+      }
     }
   ],
   "sideQuests": [
