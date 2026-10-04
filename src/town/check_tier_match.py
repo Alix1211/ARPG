@@ -88,7 +88,7 @@ def check_spawn(ms, tier, dungeon=False, floor=0):
         role = m['bossRole'] if m['rank'] == 'boss' else m['rank']
         rank = DATA['ranks'][role]
         part = (floor-1) % 3 if floor else 0
-        expected_hp = math.floor(32*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100
+        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100
         assert m['maxHp'] == expected_hp, (m, expected_hp)
         assert m['exp'] == math.floor(2*DATA['scales']['exp'][tier-1]*rank['exp']+.5)*100, m
         assert m['rank'] == DATA['monsters'][m['type']]['rank'], m

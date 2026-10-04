@@ -38,6 +38,7 @@ jobs:
       - run: python src/town/check_move_atk.py
       - run: python src/town/check_control.py
       - run: python src/town/check_combat.py
+      - run: python src/town/check_combat_balance.py
       - run: python src/town/check_camp.py
       - run: python src/town/check_pause.py
       - run: python src/town/check_vfx.py
