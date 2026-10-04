@@ -5460,5 +5460,986 @@
       }
     }
   ],
-  "sideQuests": []
+  "sideQuests": [
+    {
+      "id": "SIDE_001",
+      "kind": "side",
+      "title": "젖은 밀가루",
+      "start": {
+        "npc": 45,
+        "level": 5,
+        "map": "town",
+        "previous": "MAIN_006"
+      },
+      "intro": [
+        "빈센트: 어제 진흙길에서 건진 자루 하나는 완전히 젖었어. 버릴 수밖에 없겠네.",
+        "루크레아: 새 밀은 어디서 받습니까?",
+        "빈센트: 봄 초원 농가가 다음 수확분을 말리는 중이야. 밭에 몬스터만 안 들어오면 조금 나눠줄 거야."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              29,
+              8
+            ]
+          },
+          "portraitNpc": 45,
+          "name": "봄 밀밭 가장자리",
+          "objective": "밀밭 상태 확인",
+          "lines": [
+            "루크레아: 울타리 한쪽이 물에 떠밀려 열렸네요. 밭 문제보다 입구 문제가 먼저입니다."
+          ]
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "spring",
+          "leg": 1,
+          "need": 3,
+          "objective": "밀밭 안으로 들어온 몬스터 몰아내기"
+        },
+        {
+          "type": "collect",
+          "item": "fresh_flour_sack",
+          "itemName": "농가가 건넨 마른 밀가루",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              31,
+              9
+            ]
+          },
+          "objective": "농가에서 새 밀가루 받기"
+        },
+        {
+          "type": "deliver",
+          "npc": 45,
+          "item": "fresh_flour_sack",
+          "need": 1,
+          "lines": [
+            "빈센트: 이걸로 오늘 반죽은 되겠다. 젖은 자루는 닭 먹이로 써야지.",
+            "루크레아: 버리는 것보다 낫네요."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 120,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_002",
+      "kind": "side",
+      "title": "보니의 토끼 인형",
+      "start": {
+        "npc": 8,
+        "level": 4,
+        "map": "town",
+        "previous": "MAIN_004"
+      },
+      "intro": [
+        "보니: 제 인형이 성문 밖으로 굴러갔어요. 아빠 기다리다가 놓쳤는데 바람이 너무 세서...",
+        "루크레아: 어디까지 따라갔어요?",
+        "보니: 배수로까지만요. 더 나가면 안 된다고 해서 돌아왔어요."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              4.5,
+              19.4
+            ]
+          },
+          "portraitNpc": 8,
+          "name": "작은 방울",
+          "objective": "인형이 굴러간 방향 찾기",
+          "lines": [
+            "루크레아: 방울이 길가 풀에 걸려 있네요. 인형은 더 아래로 굴러간 것 같습니다."
+          ]
+        },
+        {
+          "type": "collect",
+          "item": "bunny_doll",
+          "itemName": "풀숲에 걸린 토끼 인형",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              8,
+              22
+            ]
+          },
+          "objective": "배수로 아래 풀숲에서 인형 찾기"
+        },
+        {
+          "type": "deliver",
+          "npc": 8,
+          "item": "bunny_doll",
+          "need": 1,
+          "lines": [
+            "보니: 맞아요! 고마워요!",
+            "루크레아: 다음엔 목에 끈을 하나 달아두세요. 물건은 잡을 곳이 있어야 덜 잃어버립니다."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 90,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_003",
+      "kind": "side",
+      "title": "마르타의 약초값",
+      "start": {
+        "npc": 16,
+        "level": 3,
+        "map": "town",
+        "previous": "MAIN_003"
+      },
+      "intro": [
+        "마르타: 난 약초값을 오래 안 올렸는데 요즘은 손해가 너무 커. 그렇다고 무작정 비싸게 받고 싶진 않고.",
+        "루크레아: 채집량이 줄었습니까?",
+        "마르타: 개울 그늘 군락만 확인해다오. 어린 싹은 건드리지 말고."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              29,
+              8
+            ]
+          },
+          "portraitNpc": 16,
+          "name": "개울 그늘 약초밭",
+          "objective": "약초 군락 성장 상태 확인",
+          "lines": [
+            "루크레아: 다 자란 건 적고 어린 싹은 많습니다. 올해는 채집량을 줄여야겠네요."
+          ]
+        },
+        {
+          "type": "collect",
+          "item": "mature_herb",
+          "itemName": "다 자란 약초",
+          "need": 2,
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              31,
+              8
+            ]
+          },
+          "objective": "성숙한 약초만 조금 채집"
+        },
+        {
+          "type": "deliver",
+          "npc": 16,
+          "item": "mature_herb",
+          "need": 2,
+          "lines": [
+            "마르타: 그래, 이 정도면 충분해. 어린 것까지 뽑으면 내년이 없어.",
+            "루크레아: 가격은 조금 올리시되 채집량부터 지키세요. 싸게 팔아도 공급자가 사라지면 끝입니다."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 110,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_004",
+      "kind": "side",
+      "title": "밀린 월급 한 장",
+      "start": {
+        "npc": 1,
+        "level": 5,
+        "map": "town",
+        "previous": "MAIN_005"
+      },
+      "intro": [
+        "라이너: 사적인 부탁을 드려도 되겠습니까. 지난달 지급 전표가 처리되지 않았습니다.",
+        "루크레아: 금고에 돈이 없는 겁니까?",
+        "라이너: 모르겠습니다. 규정상 근무 중 자리를 비울 수가 없어서요."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 15,
+          "lines": [
+            "오토: 지급 자체는 승인했네. 전표 한 장에 서명이 빠졌구먼. 페닉스가 보관하고 있을 게야."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 43,
+          "lines": [
+            "페닉스: 맞습니다. 서명이 빠져 지급을 멈췄어요. 돈이 없는 게 아니라 문서가 미완성이었습니다.",
+            "루크레아: 월급 받는 입장에선 둘 다 똑같이 답답했겠네요.",
+            "페닉스: 오늘 바로 처리하겠습니다."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 1,
+          "lines": [
+            "라이너: 확인해 주셔서 감사합니다. 규정 때문에 직접 갈 수가 없었습니다.",
+            "루크레아: 다음엔 전표부터 확인하세요. 칼보다 종이가 사람을 오래 세워두는 경우도 있네요."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 100,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_005",
+      "kind": "side",
+      "title": "한 가지 점괘만 나오는 날",
+      "start": {
+        "npc": 10,
+        "level": 6,
+        "map": "town",
+        "previous": "MAIN_005"
+      },
+      "intro": [
+        "카르멘: 큰일이야! 오늘 손님 셋에게 전부 같은 운세가 나왔어. '큰돈이 들어온다'고!",
+        "루크레아: 그게 틀린 점괁가요?",
+        "카르멘: 세 명 다 빚쟁이야. 수정구가 이상해진 게 분명해."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 수정구 표면이 갈라졌다면 잡음이 생길 수 있지. 던전 1층의 맑은 수정으로 시험해 보게."
+          ]
+        },
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 1,
+          "objective": "던전 1층 수정 광맥 부근 확인"
+        },
+        {
+          "type": "collect",
+          "item": "clear_crystal",
+          "itemName": "맑은 수정 조각",
+          "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 1,
+            "spotPrefix": "아래로",
+            "offset": [
+              -90,
+              30
+            ]
+          },
+          "objective": "갈라지지 않은 수정 조각 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 10,
+          "item": "clear_crystal",
+          "need": 1,
+          "lines": [
+            "카르멘: 이제 서로 다른 점괘가 나와! 고마워!",
+            "루크레아: 혹시 제 점괘도 볼 수 있습니까?",
+            "카르멘: '돈은 들어오지만 바로 나간다.'",
+            "루크레아: ...수정이 아직 완벽하진 않군요."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 130,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_006",
+      "kind": "side",
+      "title": "꽃가판 자리",
+      "start": {
+        "npc": 6,
+        "level": 6,
+        "map": "town",
+        "previous": "MAIN_007"
+      },
+      "intro": [
+        "미나: 리라랑 꽃가판을 어디에 둘지 계속 의견이 달라요. 사람 많은 곳은 햇빛이 너무 세고, 그늘은 잘 안 보이고요.",
+        "루크레아: 세 군데 정도 후보를 보죠. 사람과 꽃 둘 다 버텨야 하니까요."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "town",
+            "tile": [
+              19,
+              18
+            ]
+          },
+          "portraitNpc": 6,
+          "name": "광장 꽃가판 후보",
+          "objective": "첫 번째 자리 살펴보기",
+          "lines": [
+            "루크레아: 사람은 많지만 오후 햇빛이 오래 듭니다. 꽃이 빨리 시들겠네요."
+          ]
+        },
+        {
+          "type": "inspect",
+          "point": {
+            "map": "town",
+            "tile": [
+              15,
+              16
+            ]
+          },
+          "portraitNpc": 6,
+          "name": "그늘진 가판 후보",
+          "objective": "두 번째 자리 살펴보기",
+          "lines": [
+            "루크레아: 꽃엔 좋지만 길에서 잘 안 보입니다."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 15,
+          "lines": [
+            "오토: 분수 옆 나무 그늘은 어떻겠나. 사람도 지나고 오후엔 그늘이 지지.",
+            "루크레아: 절충안이 제일 오래 가는 경우도 있네요."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 6,
+          "lines": [
+            "미나: 거기로 할게요. 리라도 좋대요.",
+            "루크레아: 자리값부터 확인하고 계약하세요.",
+            "미나: 네. 그건 이제 저도 배웠어요."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 90,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_007",
+      "kind": "side",
+      "title": "도련님의 첫 던전",
+      "start": {
+        "npc": 39,
+        "level": 5,
+        "map": "town",
+        "previous": "MAIN_004"
+      },
+      "intro": [
+        "하르트: 귀족집 아들 하나가 던전 1층을 산책하듯 들어갔다네. 레온이라고, 장비만 번쩍이지 경험은 없어.",
+        "루크레아: 구조 의뢰입니까?",
+        "하르트: 죽기 전에 겁먹고 멈춰 있을 가능성이 더 크지. 귀환길만 열어주게."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 1,
+          "objective": "던전 1층에서 레온 찾기"
+        },
+        {
+          "type": "scene",
+          "point": {
+            "map": "dungeon",
+            "floor": 1,
+            "spotPrefix": "아래로",
+            "offset": [
+              -110,
+              0
+            ]
+          },
+          "portraitNpc": 25,
+          "speaker": "레온",
+          "title": "자칭 모험가",
+          "name": "겁먹은 도련님",
+          "objective": "레온 상태 확인",
+          "lines": [
+            "레온: 나는 전혀 겁먹지 않았네! 단지 전략적으로 멈춘 것뿐이지.",
+            "루크레아: 그 전략의 다음 단계는 출구로 돌아가는 겁니다.",
+            "레온: ...앞장서게. 뒤는 내가 지키지."
+          ]
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 1,
+          "need": 4,
+          "objective": "귀환길 몬스터 정리"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 레온은 무사히 집에 갔다네. 본인은 '공동 탐험'이었다고 말하더군.",
+            "루크레아: 구조비가 공동이라면 절반만 받아도 되겠네요."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 140,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_008",
+      "kind": "side",
+      "title": "당근이 멈추는 곳",
+      "start": {
+        "npc": 47,
+        "level": 6,
+        "map": "town",
+        "previous": "MAIN_006"
+      },
+      "intro": [
+        "조: 내 말 '당근'이 빵집 앞만 가면 꼼짝을 안 해. 고삐를 당겨도 버티고.",
+        "루크레아: 사료는 제대로 줍니까?",
+        "조: 싼 걸로 바꾸긴 했는데 배는 채워.",
+        "루크레아: 그 답부터 좀 불안하네요."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 45,
+          "lines": [
+            "빈센트: 당근이? 빵부스러기 냄새 나면 늘 고개를 들이밀어. 배고픈가 싶어서 가끔 줬지."
+          ]
+        },
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "spring",
+            "leg": 1,
+            "tile": [
+              20,
+              31
+            ]
+          },
+          "portraitNpc": 47,
+          "name": "말 사료자루",
+          "objective": "조가 쓰는 새 사료 확인",
+          "lines": [
+            "루크레아: 양은 같은데 영양이 너무 떨어집니다. 싼 이유가 있었네요."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 47,
+          "lines": [
+            "조: 사료값 아끼려다 빵집 앞에서 매번 시간 버린 셈이네.",
+            "루크레아: 절약이 비용을 더 만들면 절약이 아닙니다.",
+            "조: 그 말은 네가 하니까 더 아프다."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 100,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_009",
+      "kind": "side",
+      "title": "매가 물어 온 금속고리",
+      "start": {
+        "npc": 11,
+        "level": 12,
+        "map": "town",
+        "previous": "MAIN_012"
+      },
+      "intro": [
+        "하크: 금화가 숲에서 낡은 금속고리를 물어왔다. 먹을 것도 아닌데 자꾸 같은 쪽으로 날아가.",
+        "루크레아: 매 이름이 금화입니까?",
+        "하크: 반짝이는 걸 좋아해서.",
+        "루크레아: 좋은 이름이네요."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 1,
+            "tile": [
+              38,
+              23
+            ]
+          },
+          "portraitNpc": 11,
+          "name": "매가 내려앉는 바위",
+          "objective": "하크의 매를 따라가기",
+          "lines": [
+            "루크레아: 깃털과 작은 금속 긁힘이 있습니다. 더 안쪽 짐마차 잔해에서 물어온 것 같네요."
+          ]
+        },
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              46,
+              31
+            ]
+          },
+          "portraitNpc": 11,
+          "name": "오래된 짐마차 잔해",
+          "objective": "금속고리 출처 확인",
+          "lines": [
+            "하크: 오래전 사고 난 상단 마차다. 고리는 짐 고정구였군.",
+            "루크레아: 보물은 아니어도 이야기는 남았네요."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 11,
+          "lines": [
+            "하크: 금화는 또 반짝이는 걸 찾으러 갔다.",
+            "루크레아: 다음엔 진짜 금화를 물어오면 좋겠네요.",
+            "하크: 그러면 반은 내 거다."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 150,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_010",
+      "kind": "side",
+      "title": "너무 싼 과일",
+      "start": {
+        "npc": 21,
+        "level": 13,
+        "map": "town",
+        "previous": "MAIN_013"
+      },
+      "intro": [
+        "마르코: 여름 과일이 말도 안 되게 싸게 들어옵니다. 좋은 일 같지만 납품하는 아넬이 계속 손해라더군요.",
+        "루크레아: 상해서 버리기 전에 파는 겁니까?",
+        "마르코: 저장고가 너무 덥대요."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              13,
+              10
+            ]
+          },
+          "portraitNpc": 21,
+          "name": "여름 마을 저장고",
+          "objective": "과일 저장고 상태 확인",
+          "lines": [
+            "루크레아: 환기구가 덩굴에 막혔습니다. 과일 문제보다 공기 문제네요."
+          ]
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "leg": 2,
+          "need": 4,
+          "objective": "저장고 뒤 덩굴 주변 몬스터 정리"
+        },
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              15,
+              12
+            ]
+          },
+          "portraitNpc": 21,
+          "name": "막힌 환기구",
+          "objective": "저장고 환기구 열기",
+          "lines": [
+            "루크레아: 덩굴만 걷어내도 안쪽 열기가 빠집니다."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 21,
+          "lines": [
+            "마르코: 아넬이 정상 가격으로 팔 수 있겠다고 연락 왔어요.",
+            "루크레아: 싸게 파는 게 항상 착한 건 아닙니다. 오래 팔 수 있어야죠."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 160,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_011",
+      "kind": "side",
+      "title": "숲 궁수의 젖은 화살",
+      "start": {
+        "npc": 39,
+        "level": 13,
+        "map": "town",
+        "previous": "MAIN_013"
+      },
+      "intro": [
+        "하르트: 여름 숲 궁수들이 화살깃 문제로 애를 먹는다네. 습기에 젖어 자꾸 휘어진대.",
+        "루크레아: 재료를 바꾸면 됩니까?",
+        "하르트: 시안이 마른 갈대 군락을 알고 있다네. 주변 몬스터 때문에 못 들어간다고 하고."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              48,
+              29
+            ]
+          },
+          "portraitNpc": 39,
+          "name": "마른 갈대 군락",
+          "objective": "화살깃용 마른 갈대 찾기",
+          "lines": [
+            "루크레아: 물가인데 바람이 세서 이 구역만 갈대가 잘 말랐습니다. 위치엔 이유가 있었네요."
+          ]
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "leg": 2,
+          "need": 5,
+          "objective": "갈대 군락 주변 몬스터 정리"
+        },
+        {
+          "type": "collect",
+          "item": "dry_reed",
+          "itemName": "잘 마른 갈대",
+          "need": 2,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              49,
+              29
+            ]
+          },
+          "objective": "마른 갈대 조금 채집"
+        },
+        {
+          "type": "deliver",
+          "npc": 39,
+          "item": "dry_reed",
+          "need": 2,
+          "lines": [
+            "하르트: 궁수들이 잘 쓰겠다네. 다음엔 시안도 직접 인사하러 올 걸세.",
+            "루크레아: 재료 위치를 알고 있으면 다음부턴 스스로 해결할 수 있겠네요."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 170,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_012",
+      "kind": "side",
+      "title": "페리의 새 우회로",
+      "start": {
+        "npc": 16,
+        "level": 14,
+        "map": "town",
+        "previous": "MAIN_013"
+      },
+      "intro": [
+        "마르타: 수로를 복구했더니 약초꾼들이 쓰던 옛 지름길은 물에 잠겼어. 좋은 일이지만 길은 새로 찾아야지.",
+        "루크레아: 안전한 우회로 후보가 있습니까?",
+        "마르타: 폐허 남쪽 둔덕. 직접 걸어봐야 해."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "nearSpot": "무너진 폐허",
+            "offset": [
+              0,
+              90
+            ]
+          },
+          "portraitNpc": 16,
+          "name": "폐허 남쪽 둔덕",
+          "objective": "새 약초길 후보 확인",
+          "lines": [
+            "루크레아: 물은 피하고 경사도 낮습니다. 다만 길목에 몬스터 둥지가 하나 있네요."
+          ]
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "leg": 2,
+          "need": 4,
+          "objective": "우회로의 작은 둥지 정리"
+        },
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              20,
+              31
+            ]
+          },
+          "portraitNpc": 16,
+          "name": "새 길 표식",
+          "objective": "약초꾼용 길 표식 남기기",
+          "lines": [
+            "루크레아: 야영지까지 이어집니다. 이제 물길을 건너지 않아도 되겠네요."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 16,
+          "lines": [
+            "마르타: 사람 발이 다니면 길은 금방 길답게 변해. 잘했어."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 160,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_013",
+      "kind": "side",
+      "title": "노래 속의 보물",
+      "start": {
+        "npc": 30,
+        "level": 15,
+        "map": "town",
+        "previous": "MAIN_014"
+      },
+      "intro": [
+        "루트: 옛 통행소를 보고 노래 하나 썼는데 다들 마지막 구절 때문에 진짜 보물이 있다고 믿어버렸어.",
+        "루크레아: 실제로는 없습니까?",
+        "루트: 나도 확인은 안 했지. 그래서 더 낭만적이잖아.",
+        "루크레아: 낭만 때문에 사람들이 벽을 부수기 전에 확인합시다."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "nearSpot": "무너진 폐허",
+            "offset": [
+              70,
+              -40
+            ]
+          },
+          "portraitNpc": 30,
+          "name": "노래 속 첫 단서",
+          "objective": "루트의 가사대로 통행소 조사",
+          "lines": [
+            "루크레아: '물소리 오른쪽, 세 번째 돌'. 여기군요."
+          ]
+        },
+        {
+          "type": "collect",
+          "item": "merchant_graffiti",
+          "itemName": "옛 상인의 낙서 탁본",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              40,
+              22
+            ]
+          },
+          "objective": "보물 대신 남은 낙서 확인"
+        },
+        {
+          "type": "deliver",
+          "npc": 30,
+          "item": "merchant_graffiti",
+          "need": 1,
+          "lines": [
+            "루트: '외상은 다음 달까지'. 이게 보물 대신 남아 있었어?",
+            "루크레아: 수백 년 지나도 외상 장부는 남는군요.",
+            "루트: 이쪽이 더 좋은 노래가 되겠다!"
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 150,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_014",
+      "kind": "side",
+      "title": "목재 상자 속 벌레",
+      "start": {
+        "npc": 21,
+        "level": 16,
+        "map": "town",
+        "previous": "MAIN_016"
+      },
+      "intro": [
+        "마르코: 여름 목재 상자에 벌레가 섞여 들어왔어요. 상점 재고까지 갉기 시작해서 큰일입니다.",
+        "루크레아: 완제품을 버릴 필요는 없죠. 산란한 목재만 찾으면 됩니다."
+      ],
+      "steps": [
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              13,
+              10
+            ]
+          },
+          "portraitNpc": 21,
+          "name": "목재 야적장",
+          "objective": "벌레가 생긴 목재 묶음 찾기",
+          "lines": [
+            "루크레아: 표면에 작은 구멍이 있는 묶음만 따로 모여 있습니다. 전부 폐기할 필요는 없겠네요."
+          ]
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "summer",
+          "leg": 2,
+          "need": 5,
+          "objective": "목재에 붙은 벌레형 몬스터 제거"
+        },
+        {
+          "type": "talk",
+          "npc": 21,
+          "lines": [
+            "마르코: 상자 공급처에서 산란목만 골라내겠다고 했어요. 재고도 살릴 수 있고요.",
+            "루크레아: 문제 범위보다 해결 범위를 크게 잡으면 돈도 물건도 낭비됩니다."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 170,
+        "expRatio": 0.18
+      }
+    },
+    {
+      "id": "SIDE_015",
+      "kind": "side",
+      "title": "편지 한 장",
+      "start": {
+        "npc": 19,
+        "level": 19,
+        "map": "town",
+        "previous": "MAIN_019"
+      },
+      "intro": [
+        "야닉: 이번엔 제가 부탁 하나 할게요. 여름 마을 가족한테 편지를 보내야 하는데 오늘 제 배달은 반대 방향입니다.",
+        "루크레아: 제가 어차피 거래하러 간다면 같이 가져가죠.",
+        "야닉: 그래서 부탁하는 겁니다. 일부러 가달라는 건 아니고요."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "summer"
+          },
+          "need": 1,
+          "objective": "평소처럼 여름 마을까지 교역하기"
+        },
+        {
+          "type": "inspect",
+          "point": {
+            "map": "field",
+            "market": "summer",
+            "leg": 2,
+            "tile": [
+              13,
+              9
+            ]
+          },
+          "portraitNpc": 19,
+          "name": "여름 마을 우편함",
+          "objective": "야닉의 편지 전달",
+          "lines": [
+            "루크레아: 상인협회 옆 우편함. 주소도 맞습니다. 여기 넣으면 되겠네요."
+          ]
+        },
+        {
+          "type": "talk",
+          "npc": 19,
+          "lines": [
+            "야닉: 벌써 답장이 왔어요. 어머니가 과일까지 보냈네요.",
+            "루크레아: 배송망이 저보다 빠른데요?",
+            "야닉: 그게 제 직업입니다."
+          ]
+        }
+      ],
+      "reward": {
+        "gold": 140,
+        "expRatio": 0.18
+      }
+    }
+  ]
 }
