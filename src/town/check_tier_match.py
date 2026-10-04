@@ -131,8 +131,9 @@ async def runtime_checks():
           for(let tier=1;tier<=7;tier++)for(const kind of ['head','body','hands','feet','ring','neck','weapon']){
             const choices=kind==='weapon'?['sword','spear','gauntlet','bow','staff']:[null];
             for(const wt of choices)for(let n=0;n<8;n++){
-              const it=UI.make({kind,wt,tier,roll:true});
-              if(it.tier!==tier||it.name!==api.fullName(api.base({baseId:it.baseId}),it.aff))failures.push(['random',it]);
+              const it=UI.make({kind,wt,tier,roll:true}),base=api.base({baseId:it.baseId});
+              const expected=it.unid?'미확인 '+base.name:api.fullName(base,it.aff);
+              if(it.tier!==tier||it.name!==expected)failures.push(['random',it]);
             }
           }
           const random=Math.random,life=GAME.P.lifeSkills,passive=GAME.P.passives;
