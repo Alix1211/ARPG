@@ -14,13 +14,13 @@ const TRADE_GOODS = [
 const TRADE_BY_ID = Object.fromEntries(TRADE_GOODS.map(g=>[g.id,g]));
 const TRADE_REGIONS = {
   town:    {name:'큰 마을 교역소', short:'큰 마을', m:{}},
-  spring:  {name:'봄 초원 상인협회', short:'봄', m:{wheat:.68,barley:.72,milk:.70,egg:.72,honey:.75,iron:1.30,pepper:1.25,obsidian:1.35}},
-  summer:  {name:'여름 숲 상인협회', short:'여름', m:{apple:.68,grape:.72,timber:.65,herb:.75,chicken:.82,salt:1.25,iron:1.25,beef:1.15}},
-  autumn:  {name:'가을 들판 상인협회', short:'가을', m:{rice:.68,barley:.78,apple:.75,grape:.70,pork:.72,wine:.68,fish:1.25,herb:1.20}},
-  winter:  {name:'겨울 설원 상인협회', short:'겨울', m:{potato:.65,wool:.65,leather:.72,beef:.80,apple:1.35,grape:1.40,pepper:1.45,chili:1.25}},
-  ice:     {name:'얼음 지대 상인협회', short:'얼음', m:{fish:.62,salt:.65,wool:.75,leather:.78,wheat:1.45,barley:1.40,rice:1.50,pepper:1.55,wine:1.35}},
-  volcano: {name:'화산 지대 상인협회', short:'화산', m:{iron:.60,obsidian:.50,chili:.65,pepper:.78,fish:1.55,milk:1.45,wheat:1.40,rice:1.45,apple:1.35}},
-  swamp:   {name:'늪지대 상인협회', short:'늪', m:{eel:.55,herb:.60,mushroom:.55,pepper:.70,honey:.85,salt:1.35,beef:1.30,iron:1.35,wheat:1.20}},
+  spring:  {name:'봄 초원 상인협회', short:'봄', m:{wheat:0.8,barley:0.8,milk:0.8,egg:0.76,honey:0.79,iron:1.15,pepper:1.15,obsidian:1.15}},
+  summer:  {name:'여름 숲 상인협회', short:'여름', m:{apple:0.8,grape:0.8,timber:0.67,herb:0.78,chicken:0.76,salt:1.19,iron:1.15,beef:1.15}},
+  autumn:  {name:'가을 들판 상인협회', short:'가을', m:{rice:0.8,barley:0.75,apple:0.71,grape:0.75,pork:0.74,wine:0.75,fish:1.27,herb:1.49}},
+  winter:  {name:'겨울 설원 상인협회', short:'겨울', m:{potato:0.75,wool:0.78,leather:0.78,beef:0.8,apple:1.54,grape:1.61,pepper:1.64,chili:1.8}},
+  ice:     {name:'얼음 지대 상인협회', short:'얼음', m:{fish:0.8,salt:0.69,wool:0.75,leather:0.75,wheat:1.61,barley:1.61,rice:1.8,pepper:1.62,wine:1.66}},
+  volcano: {name:'화산 지대 상인협회', short:'화산', m:{iron:0.72,obsidian:0.72,chili:0.66,pepper:0.72,fish:1.61,milk:1.61,wheat:1.61,rice:1.61,apple:1.8}},
+  swamp:   {name:'늪지대 상인협회', short:'늪', m:{eel:0.65,herb:0.65,mushroom:0.65,pepper:0.79,honey:0.52,salt:1.7,beef:1.76,iron:1.8,wheat:1.8}},
 };
 const TRADE_STACK_MAX = 50, TRADE_DAY_MS = 480000;
 // 수레용 탈것(화물칸 확장 전용, 타고 다니지 않음). 칸 수·가격·구매 가능 마을 티어는 초기값(케인 플레이 피드백으로 조정).
