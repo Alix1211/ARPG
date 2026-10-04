@@ -232,6 +232,16 @@ for (const k of ['hp', 'mp']) potEl[k].addEventListener('pointerdown', e => {
 });
 syncPot();
 function needWeapon(id){if(id==='townPortal')return null;const w=SKW[id.replace(/[0-9].*$/,'')];return w||null;}
+// 미니맵 오른쪽 아래 버튼: 지금은 타운 포탈. 나중에 다른 스킬(버프 등)을 이 자리에 쓰려면 MM_BTN만 바꾸면 된다.
+const MM_BTN = 'townPortal', mmBtn = $('mmPortal'), mmCd = $('mmPortalCd');
+function syncMmBtn(){
+  const r = (G.P.lifeSkills && G.P.lifeSkills.townPortal) || 0, left = (G.P.portalReadyAt || 0) - Date.now(), loc = G.locationState && G.locationState();
+  mmBtn.style.backgroundImage = `url(${lifeIcon(MM_BTN)})`;
+  mmBtn.classList.toggle('off', !r || left > 0 || !!(loc && loc.map === 'town'));
+  mmCd.textContent = !r ? '' : left > 0 ? (left > 60000 ? Math.ceil(left / 60000) + '분' : Math.ceil(left / 1000) + '초') : '';
+}
+mmBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (G.isOpen()) return; G.useTownPortal(); setTimeout(syncMmBtn, 50); });
+setInterval(syncMmBtn, 500);
 function syncQS(){
   skBtns.forEach((b,i)=>{
     if(QS[i]&&!quickLearned(QS[i]))QS[i]=null;
