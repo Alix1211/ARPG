@@ -71,6 +71,8 @@ for (const n of npcs){
     spots.push({name:'귀환 포탈',x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,r:58,kind:'town_portal'});
   }
   if (CUR.exits) exits.push(...CUR.exits);
+  if (CUR.solids) solids.push(...CUR.solids);
+  if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
   const panic=$('panic'); if(panic) panic.hidden=(id==='town'||id==='inn');
@@ -355,6 +357,7 @@ function act(){
   if (!near) return;
   if(near.kind==='stash'&&window.UI)return UI.openStash();
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
+  if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
@@ -910,7 +913,7 @@ function frame(now){
   if (!isFinite(P.x) || !isFinite(P.y)){ P.x = (CUR.spawn ? CUR.spawn[0] : 23 * TS); P.y = (CUR.spawn ? CUR.spawn[1] : 22.2 * TS); P.atk = null; }
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
-  camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
+  camX = MWp < vw ? (MWp - vw) / 2 : Math.max(0, Math.min(MWp - vw, camX)); camY = MHp < vh ? (MHp - vh) / 2 : Math.max(0, Math.min(MHp - vh, camY));
   const DUN=MAP==='dungeon', INDOOR=MAP==='inn';
   if(!simPaused){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
@@ -918,6 +921,7 @@ function frame(now){
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
   }
 
+  if (INDOOR){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120a05'; ctx.fillRect(0, 0, cv.width, cv.height); }
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(G, 0, 0, MWp, MHp);

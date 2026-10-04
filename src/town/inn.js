@@ -33,5 +33,5 @@ function restInn(){
 }
 $('dlgRest').addEventListener('click',restInn);
 $('dlgIdentify').addEventListener('click',identifyInn);
-$('dlgLeave').addEventListener('click',()=>closeAll());
+$('dlgLeave').addEventListener('click',()=>{if(MAP==='inn')leaveInn();else closeAll();});
 window.__INN={enter:enterInn,leave:leaveInn,open:()=>{const n=npcs.find(x=>x.shop==='inn');return n?openInnDlg(n):false;},rest:restInn,identify:identifyInn,cost:innCost,state:()=>({map:MAP,x:P.x,y:P.y,gold:P.gold,hp:P.hp,mp:P.mp})};

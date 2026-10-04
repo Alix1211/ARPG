@@ -41,6 +41,19 @@ async def main():
         st=await ev("() => GAME.locationState()")
         assert st['map']=='town',st
 
+        # 출입문: 아래로 걸어 나가기, 대화창 나가기 버튼, 벽 충돌(왼쪽 벽 밖으로 못 나감)
+        assert await ev("() => __INN.enter()")
+        await pg.wait_for_timeout(900)
+        await pg.keyboard.down('ArrowLeft');await pg.wait_for_timeout(2500);await pg.keyboard.up('ArrowLeft')
+        assert await ev("() => __INN.state().map==='inn' && __INN.state().x>=48")
+        await ev("() => { GAME.P.x=7*48;GAME.P.y=8.45*48; }")
+        await pg.keyboard.down('ArrowDown');await pg.wait_for_timeout(2500);await pg.keyboard.up('ArrowDown')
+        assert await ev("() => __INN.state().map==='town'")
+        assert await ev("() => __INN.enter()")
+        await pg.wait_for_timeout(900)
+        await ev("() => __INN.open()");await pg.click('#dlgLeave');await pg.wait_for_timeout(1100)
+        assert await ev("() => __INN.state().map==='town'")
+
         assert not errs,errs
         print('inn ok')
         await b.close()

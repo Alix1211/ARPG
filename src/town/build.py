@@ -297,6 +297,18 @@ inn_ground = Image.new('RGB', (INN_W * TS, INN_H * TS), (70, 47, 30))
 for yy in range(INN_H):
     for xx in range(INN_W): inn_ground.paste(_inn_floor, (xx * TS, yy * TS))
 for xx in range(INN_W): inn_ground.paste(_inn_wall, (xx * TS, 0))
+# 둘레 벽(돌벽) + 아래쪽 가운데 출입문. 문 틈은 x 6.2~7.8칸.
+_inn_stone = Image.open(R + 'interior/int_19.png').convert('RGB').resize((TS, TS), Image.LANCZOS)
+_inn_door = Image.open(R + 'interior/int_20.png').convert('RGB').resize((round(1.6 * TS), TS), Image.LANCZOS)
+for yy in range(1, INN_H):
+    inn_ground.paste(_inn_stone, (0, yy * TS)); inn_ground.paste(_inn_stone, ((INN_W - 1) * TS, yy * TS))
+for xx in range(INN_W): inn_ground.paste(_inn_stone, (xx * TS, (INN_H - 1) * TS))
+inn_ground.paste(_inn_floor, (round(6.2 * TS), (INN_H - 1) * TS))   # 문 틈 바닥
+for xx in (6, 7): inn_ground.paste(_inn_floor, (xx * TS, (INN_H - 1) * TS))
+inn_ground.paste(_inn_door, (round(6.2 * TS), (INN_H - 1) * TS))
+INN_SOLIDS = [dict(x0=0, x1=INN_W * TS, y0=0, y1=.9 * TS),
+              dict(x0=0, x1=TS * .95, y0=0, y1=INN_H * TS), dict(x0=(INN_W - .95) * TS, x1=INN_W * TS, y0=0, y1=INN_H * TS),
+              dict(x0=0, x1=6.2 * TS, y0=(INN_H - .9) * TS, y1=INN_H * TS), dict(x0=7.8 * TS, x1=INN_W * TS, y0=(INN_H - .9) * TS, y1=INN_H * TS)]
 
 def _inn_prop(key, src, cx, by, wt, cw=.8, cd=.45, kind=None):
     im = Image.open(R + f'interior/{src}.png').convert('RGBA')
@@ -324,6 +336,7 @@ INN = dict(
     map=dict(w=INN_W,h=INN_H,ts=TS,px=PX), ground=enc(inn_ground,86),
     mini=enc(inn_ground.resize((INN_W*6,INN_H*6),Image.LANCZOS),86),
     blds=[], props=inn_props, npcs=inn_npcs, name='여관', spawn=[7.0*TS,8.45*TS], back=INN_BACK,
+    solids=INN_SOLIDS,
     exits=[dict(x0=6.15*TS,x1=7.85*TS,y0=9.05*TS,y1=9.85*TS,to='town',pos=INN_BACK,dir='front')]
 )
 
