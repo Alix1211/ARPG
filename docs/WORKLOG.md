@@ -646,3 +646,7 @@
 ## 2026-10-04 (작성: Claude)
 - 수레 탈것 일러스트 5종 연결: 케인이 GPT로 만든 시트(배경 연두 단색)를 연두 키 제거+번짐 제거로 투명 PNG로 잘라 `assets/trade/mount_{pack,donkey,boar,ox,bear}.png`, 원본 시트는 `source_sheets/mounts/mounts_sheet.png`. `build.py`가 520px로 줄여 `A.mounts`에 담고, `trade.js`의 `mountImg()`가 그림을 쓰되 없으면 이모지로 대체. 표시 위치: 무역품 탭 왼쪽 페이지 오른쪽 위(128px), 오른쪽 리본 머리글(28px), 교역소 탈것 블록(44px).
 - 검사: check_trade/mount/guild/save/equipcmp 통과.
+
+## 2026-10-04 (작성: Claude)
+- 케인 요청: 마을마다 '싼 것/귀한 것'이 보이고 수도는 사치품을 비싸게 사 주는 리얼리티. ① 수도 사치품(포도주·후추·꿀·흑요석·화산 고추) 1.22배 추가, 지역 배율은 같은 최적화(스크래치 opt3.py)로 재균형 ② 무역창 머리글에 '싼 것 N개 · 귀한 것 N개' 자동 표시(수도는 '사치품을 비싸게 사 줍니다').
+- 검사: check_trade/mount/guild/save 통과, 실제 가격 왕복 칸당 이익률 대부분 15~26%.
