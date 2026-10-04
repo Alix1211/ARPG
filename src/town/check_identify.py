@@ -29,13 +29,13 @@ async def main():
         # 착용은 가능하되 숨은 옵션은 미적용. 랭크2 희귀 자가 감정 뒤 즉시 옵션 효과가 켜진다.
         r=await ev("""() => {
           const it=UI.bagItems().find(x=>x.i===0).it;GAME.P.lifeSkills.identify=2;
-          const okEq=UI.equip(it,'w1'),before=UI.combatMods().t,vis=UI.itemStats(it);
+          UI.equip(it,'w1');const equipped=UI.currentWeapon()===it,before=UI.combatMods().t,vis=UI.itemStats(it);
           const hiddenBefore=it.aff.every(a=>(before[a.st]||0)===(vis[a.st]||0));
           const ok=UI.identify(it,'self'),after=UI.combatMods().t;
           const on=it.aff.every(a=>(after[a.st]||0)===(it.st[a.st]||0));
-          UI.save();return {okEq,hiddenBefore,ok,on,unid:!!it.unid,name:it.name};
+          UI.save();return {equipped,hiddenBefore,ok,on,unid:!!it.unid,name:it.name};
         }""")
-        assert r['okEq'] and r['hiddenBefore'] and r['ok'] and r['on'] and not r['unid'] and not r['name'].startswith('미확인 '),r
+        assert r['equipped'] and r['hiddenBefore'] and r['ok'] and r['on'] and not r['unid'] and not r['name'].startswith('미확인 '),r
         await pg.reload();await pg.wait_for_timeout(1000)
         assert await ev("() => {const it=UI.currentWeapon();return !!it&&!it.unid&&!it.name.startsWith('미확인 ');}")
 
