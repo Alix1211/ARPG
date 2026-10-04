@@ -361,7 +361,7 @@ function specialMonsterAI(m,dx,dy,d,dt){
   }
   if(m.skillCd>0)return false;
   if(m.skill==='rock'&&d<225){
-    enemyShot(m,dx,dy,250,'','rock',1.05);monAct(m,'shoot',.3,dx,dy);if(typeof SFX!=='undefined')SFX.play('rock');m.skillCd=1.7+Math.random()*.5;
+    enemyShot(m,dx,dy,165,'','rock',1.05);monAct(m,'shoot',.3,dx,dy);if(typeof SFX!=='undefined')SFX.play('rock');m.skillCd=1.7+Math.random()*.5;
     pops.push({x:m.x,y:m.y-m.h,t:0,txt:'돌 던지기!',enemy:true});return true;
   }
   if(m.skill==='pounce'&&d>70&&d<205){
