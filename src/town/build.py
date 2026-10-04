@@ -306,6 +306,23 @@ for no, name, title, where, side, line, shop in NPC:
         b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
 
+# 퀘스트 장면에만 등장하는 NPC 초상도 미리 담는다. 마을 NPC로 배치하지는 않는다.
+_story_portrait_nos=set()
+for _q in MAIN_QUEST_DATA.get('quests',[])+MAIN_QUEST_DATA.get('sideQuests',[]):
+    for _s in _q.get('steps',[]):
+        if _s.get('portraitNpc') is not None:
+            _story_portrait_nos.add(int(_s['portraitNpc']))
+for _no in sorted(_story_portrait_nos):
+    _key=f'npc_{_no:02d}'
+    if _key in PORT: continue
+    _hd=R+f'npc_hd/npc_{_no:02d}.png'
+    _sd=R+f'npc/npc_{_no:02d}.png'
+    _src=_hd if os.path.exists(_hd) else _sd
+    if not os.path.exists(_src):
+        raise FileNotFoundError(f'퀘스트 초상 누락: {_key}')
+    _im=Image.open(_src).convert('RGBA'); _pt=_im.copy(); _pt.thumbnail((520,560),Image.LANCZOS)
+    PORT[_key]=enc(_pt,88)
+
 
 # ---- 큰 마을 여관 실내(1단계) ----
 INN_W, INN_H = 14, 10
