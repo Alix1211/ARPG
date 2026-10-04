@@ -11,6 +11,8 @@ with tempfile.TemporaryDirectory() as tmp:
     data = json.loads(output.read_text())
     rows = data['rows']
 assert 1.2 <= data['staffAverageRatio'] <= 1.4, data['staffAverageRatio']
+for boundary in data['boundaries']:
+    assert boundary['hpRatio'] >= 1.09 and boundary['attackRatio'] >= 1.07, boundary
 assert data['magicFloor']
 for pair in data['magicFloor']:
     assert .699 <= pair['ratio'] <= .701 and pair['flatPreserved'], pair

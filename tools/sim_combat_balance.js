@@ -79,6 +79,13 @@ const skillRatios=Array.from({length:70},(_,i)=>i+1).map(lv=>{
   const r=rows.filter(r=>r.lv===lv),melee=r.filter(r=>['sword','spear','gauntlet'].includes(r.wt));
   return r.find(r=>r.wt==='staff').skill.dps/(melee.reduce((s,r)=>s+r.skill.dps,0)/3);
 });
-const output={magicFloor,staffAverageRatio:skillRatios.reduce((s,r)=>s+r,0)/skillRatios.length,staffRatioRange:[Math.min(...skillRatios),Math.max(...skillRatios)],method:'일반종별1000회, 실제함수/명중100%/75% 재공격/기대DPS/밀착피해상한/1랭크/일반장비/숙련floor((lv-1)/2)/힘 또는 지능50%·체력30%·민첩10%·마력10%',rows};
+const boundaries=[];
+for(let tier=1;tier<7;tier++){
+ const first=t=>Object.entries(catalog.monsters).find(([,d])=>d.tier===t&&d.rank==='normal');
+ const [oldId,oldDef]=first(tier),[newId,newDef]=first(tier+1);
+ const old=ctx.matchedMonsterStats(oldId,tier*10),next=ctx.matchedMonsterStats(newId,tier*10+1);
+ boundaries.push({tier,hpRatio:(next.hp/newDef.speciesHP)/(old.hp/oldDef.speciesHP),attackRatio:(next.dmg/newDef.speciesAttack)/(old.dmg/oldDef.speciesAttack)});
+}
+const output={boundaries,magicFloor,staffAverageRatio:skillRatios.reduce((s,r)=>s+r,0)/skillRatios.length,staffRatioRange:[Math.min(...skillRatios),Math.max(...skillRatios)],method:'일반종별1000회, 실제함수/명중100%/75% 재공격/기대DPS/밀착피해상한/1랭크/일반장비/숙련floor((lv-1)/2)/힘 또는 지능50%·체력30%·민첩10%·마력10%',rows};
 const dest=process.argv[2];if(dest)fs.writeFileSync(dest,JSON.stringify(output,null,2)+'\n');
 console.log(rows.filter(x=>x.wt==='sword'&&[1,5,10,11,15,20,21,30,31,40,41,50,51,60,61,70].includes(x.lv)).map(x=>`${x.lv}: ${x.seconds.toFixed(2)}s / ${x.hpLoss.toFixed(1)}%`).join('\n'));
