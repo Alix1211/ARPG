@@ -52,6 +52,7 @@ jobs:
       - run: python src/town/check_field.py
       - run: python src/town/check_legs.py
       - run: python src/town/check_trade.py
+      - run: python src/town/check_mount.py
       - run: python src/town/check_guild.py
       - run: python src/town/check_dungeon.py
       - run: python src/town/check_chest.py
