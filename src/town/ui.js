@@ -242,7 +242,7 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
   const id=QS[i];if(!id||!quickLearned(id))return;
   if(id==='townPortal'){G.useTownPortal();return;}
   const nw=needWeapon(id),wt=eq[cur]?eq[cur].wt:null;
-  G.cast(id,nw?(wt===nw?{dmg:1,mp:1}:{dmg:.6,mp:1.5}):(wt==='staff'?{dmg:1.25,mp:1}:{dmg:1,mp:1}));
+  G.cast(id,nw?(wt===nw?{dmg:1,mp:1}:{dmg:.6,mp:1.5}):{dmg:1,mp:1});
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
