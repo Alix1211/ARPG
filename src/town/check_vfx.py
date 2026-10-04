@@ -23,7 +23,7 @@ async def main():
         await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(900)
         await ev("() => { GAME.P.hp=GAME.P.maxHp; __FD.debugTarget(400,0); }")
         # 모든 종류의 스킬·타격 이펙트와 몬스터 공격 그림이 오류 없이 그려지는지
-        types=['fireburst','iceburst','icehit','heal','castfire','castice','slashpower','spinpower','hit','hurt','kill','impact']
+        types=['thunderstrike','fireburst','iceburst','icehit','heal','castfire','castice','slashpower','spinpower','hit','hurt','kill','impact']
         for i,t in enumerate(types):
             await ev("([t,i]) => __VFX.spawn(t,-260+i*50,-60,60,{a:i*.5,crit:i%2==0})",[t,i])
         for i,k in enumerate(['rock','burn','slow','web','feather','bolt']):

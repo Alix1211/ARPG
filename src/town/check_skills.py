@@ -5,7 +5,7 @@ URL='file://'+os.path.abspath(os.path.join(os.path.dirname(__file__),'../../game
 SHOT=os.environ.get('SKILL_SHOT','')   # 값이 있으면 이 폴더에 스킬별 확인 화면 저장
 
 # 2차 묶음 스킬 10개: 배울 수 있고, 쓰면 맞은 적이 피해를 받고, 오류 없이 그려지는지
-SKILLS=['fire2','fire3','ice2','bolt1','bolt2','dark1','dark3','sword3','bow2','fist2']
+SKILLS=['ice3','bolt3','dark2','fire2','fire3','ice2','bolt1','bolt2','dark1','dark3','sword3','bow2','fist2']
 
 async def main():
     async with async_playwright() as p:
@@ -18,6 +18,7 @@ async def main():
         for sid in SKILLS:
             ok=await ev("(id) => { GAME.P.skillLv[id]=0; GAME.P.skillPts=3; const r=GAME.investSkill(id); return [r, UI.skillRank(id)]; }",sid)
             assert ok==[True,1],(sid,ok)
+            assert await ev("id => UI.assignQuick(0,id) && UI.quickSlots()[0]===id",sid),sid
         for sid in SKILLS:
             await ev("(id) => { GAME.P.skillLv[id]=1; }",sid)
         # 경직 면역: 우두머리는 첫 경직 뒤 잠시 면역
@@ -34,8 +35,8 @@ async def main():
             before=await ev("() => __FD.debugMonster()")
             assert before,sid
             kind={'bolt1':'bolt','sword3':'blade','fist2':'wave','bow2':'bow'}.get(sid,'')
-            res=await ev("([id,k]) => { const ok=GAME.cast(id,{dmg:1,mp:1}); return [ok, __CTRL.shots().filter(x=>x.kind===k&&!x.done).length]; }",[sid,kind])
-            assert res[0],sid
+            res=await ev("([id,k]) => { const mp=GAME.P.mp; const ok=GAME.cast(id,{dmg:1,mp:1}); return [ok, __CTRL.shots().filter(x=>x.kind===k&&!x.done).length,GAME.P.mp<mp,GAME.cdLeft(id)>0]; }",[sid,kind])
+            assert res[0] and res[2] and res[3],(sid,res)
             if sid=='fire3':
                 assert await ev("() => GAME.P.castRoot>0"),'cast root'
             if kind:

@@ -11,7 +11,7 @@ const VFX_HEAD = { shot_fire:145, shot_rock:155, shot_poison:150, shot_dark:142,
 const VFX_STATUS = { burn:'fire', slow:'slow', freeze:'ice', stone:'stone', bleed:'blood' };
 
 // 효과별 지속 시간(초). town.js의 drawSkillFx와 아래 바닥 층이 같이 쓴다.
-const VFX_DUR = { heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
+const VFX_DUR = { thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
   firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75 };
 
 function vfxReady(n){ const im = VFXI[n]; return !!(im && im.complete && im.naturalWidth > 0); }
@@ -258,6 +258,10 @@ function vfxSkill(f, k, x, y, r){
       }
       return true;
     }
+    case 'thunderstrike':{
+      vfxZig(x-24,y-260,x,y+14,28,Math.floor(k*12),sd,1-k,6,'#9faeff','#ffffff');
+      vfxBlast('volt',sd,x,y+14,r,k);return true;
+    }
     case 'frostwave':{
       const a = f.a || 0, e = 1 - Math.pow(1 - Math.min(1, k * 1.5), 3);
       for (let i = 0; i < 9; i++){
@@ -370,7 +374,11 @@ function vfxGroundPass(){
 // ---- 시간이 걸리는 효과(운석·파멸의 링): 바닥 층 ----
 function vfxZonesGround(){
   for (const z of zones){
-    if (z.type === 'meteor'){
+    if(z.type==='blizzard'||z.type==='swamp'){
+      const ice=z.type==='blizzard',alpha=Math.min(1,z.t*4,(z.dur-z.t)*3);
+      ctx.save();ctx.globalAlpha=Math.max(0,alpha);ctx.fillStyle=ice?'rgba(100,205,255,.2)':'rgba(75,20,110,.5)';
+      ctx.strokeStyle=ice?'#9eeaff':'#b06cde';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(z.x,z.y,z.R,z.R/1.3,0,0,7);ctx.fill();ctx.stroke();ctx.restore();
+    } else if (z.type === 'meteor'){
       if (z.t < z.delay){   // 낙하 예고: 붉은 원이 조여 들어온다
         const k = z.t / z.delay, pulse = .55 + .25 * Math.sin(z.t * 22);
         ctx.save(); ctx.translate(z.x, z.y); ctx.scale(1, .55);
@@ -404,7 +412,14 @@ function vfxZonesGround(){
 // ---- 위 층: 떨어지는 운석, 링을 따라 솟는 어둠 ----
 function vfxZonesTop(){
   for (const z of zones){
-    if (z.type === 'meteor' && z.t < z.delay){
+    if(z.type==='blizzard'||z.type==='swamp'){
+      ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,(z.dur-z.t)*3));
+      for(let i=0;i<24;i++){
+        const a=i*2.4+z.t*(z.type==='blizzard'?2:.3),r=z.R*Math.sqrt((i+.5)/24),x=z.x+Math.cos(a)*r,y=z.y+Math.sin(a)*r/1.3;
+        if(z.type==='blizzard'){ctx.strokeStyle='#dbf7ff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+8,y-35);ctx.lineTo(x,y-19);ctx.stroke();}
+        else {ctx.strokeStyle='#bd80dc';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y-3,3+3*Math.sin(z.t*3+i)**2,3,0,0,7);ctx.stroke();}
+      }ctx.restore();
+    } else if (z.type === 'meteor' && z.t < z.delay){
       const k = z.t / z.delay, e = k * k, sx = z.x + 240, sy = z.y - 560;
       const mx = sx + (z.x - sx) * e, my = sy + (z.y - 14 - sy) * e, ang = Math.atan2(z.y - 14 - sy, z.x - sx);
       ctx.save(); ctx.globalAlpha = .18 + .3 * e; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(z.x, z.y + 2, z.r * .5 * e, z.r * .22 * e, 0, 0, 7); ctx.fill(); ctx.restore();

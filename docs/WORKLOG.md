@@ -724,3 +724,9 @@
 - 교체: fireburst/iceburst/icehit/voltburst/darkburst/firestorm/frostwave/hit/hurt/kill, 연쇄 번개 폭발, 몬스터 번개·슬라임 공격 폭발, 암흑 고리. 새 종류 `poisonburst` 추가. 지속시간(VFX_DUR) 조금 늘림.
 - 그대로: 마법진(시전 고리), 투사체 그림, 베기·파동 그림, 상태이상 표시.
 - 검사: check_vfx/combat/skill/skills/hit 통과.
+
+## 2026-10-04 14:34 (작성: GPT Codex)
+- 케인이 말한 것: skills_remaining 지시서대로 실제 구현 진행. 소리 담당 파일은 수정하지 않음.
+- 한 일: 첫 묶음 ice3·bolt3·dark2를 기존 zones 구조로 구현, 배움/퀵슬롯/마나/재사용 및 실제 피해 검사를 추가. 눈보라·늪은 코드 장판, 뇌우는 코드 낙뢰. 무기 기본 공격·몬스터 수치·시험용 전체 해금(false)은 유지.
+- 검사: 로컬 빌드 후 관련 스킬·전투·VFX·조작 검사, 수치 시뮬레이션으로 확인. 서버 게시 완료를 확인한 후 다음 묶음을 올림.
+- 남은 일: 백마법2개 다음 무기7개 순서로 구현·각각 게시.

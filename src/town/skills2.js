@@ -3,6 +3,9 @@
 // 이 파일은 vfx.js 다음에 town.js 안으로 합쳐지므로 ctx, P, SK, CD, shots, sfx, pops 등을 그대로 쓴다.
 const GCD = .9;   // 스킬을 쓰면 다른 슬롯도 이만큼 잠깐 잠긴다(큰 스킬 연타 방지)
 const SK2 = {
+  ice3:{mp:35,cd:14,root:.35},
+  bolt3:{mp:43,cd:16,root:.4},
+  dark2:{mp:15,cd:7},
   fire2:{mp:14,cd:4.5},                 // 화염 폭풍: 자기 중심 방사
   fire3:{mp:40,cd:15,root:.7},          // 운석 낙하: 지정 지점 유성 + 화염 장판
   ice2:{mp:9,cd:5},                     // 서리 돌풍: 전방 부채꼴 + 둔화(5랭크 빙결 확률)
@@ -28,6 +31,27 @@ function castExtra(id, d, rank, cm, mod, skillMul){
   const ang = Math.atan2(d[1], d[0]), ox = P.x + d[0] * 28, oy = P.y - 44 + d[1] * 28;
   const popName = () => { if (SK2_POP[id]) pops.push({ x:P.x, y:P.y - 115, t:0, txt:SK2_POP[id], crit:true }); };
   switch (id){
+    case 'ice3': {
+      const hits=8+rank-1, dur=4;
+      zones.push({type:'blizzard',map:MAP,x:P.x,y:P.y,t:0,dur,R:180,nextTick:dur/hits,interval:dur/hits,
+        dmg:Math.round(mag*(1+(cm.ice||0)/100)*2.53*4.8/8),freeze:.06+rank*.035});
+      sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:72});
+      return true;
+    }
+    case 'bolt3': {
+      zones.push({type:'thunderstorm',map:MAP,x:P.x,y:P.y,t:0,dur:.95,R:70,d:d.slice(),nextTick:.15,interval:.35,hits:0,
+        dmg:Math.round(mag*2.53*5.8/3),paralyze:rank>=5});
+      sfx.push({type:'castbolt',t:0,x:P.x,y:P.y-34,r:65});
+      return true;
+    }
+    case 'dark2': {
+      const target=nearestShotTarget(P.x,P.y-30,360), dur=4+(rank>=4?1:0);
+      let x=target?target.x:P.x+d[0]*160,y=target?target.y:P.y+d[1]*160;
+      if(blocked(x,y)){x=P.x+d[0]*45;y=P.y+d[1]*45;}
+      zones.push({type:'swamp',map:MAP,x,y,t:0,dur,R:130,nextTick:.5,interval:.5,dmg:Math.round(mag*2.53*2.7/8)});
+      sfx.push({type:'castdark',t:0,x:P.x,y:P.y-34,r:55});
+      return true;
+    }
     case 'fire2': {
       const R = 150 + (rank >= 4 ? 25 : 0), dm = Math.round(mag * (1 + (cm.fire || 0) / 100) * (6.2 + rank * .18));
       let n = 0;
@@ -158,7 +182,21 @@ function updZones(dt){
     const z = zones[i];
     if (typeof MAP !== 'undefined' && z.map !== MAP){ zones.splice(i, 1); continue; }
     z.t += dt;
-    if (z.type === 'meteor'){
+    if (z.type === 'blizzard' || z.type === 'swamp' || z.type === 'thunderstorm'){
+      if(z.type==='blizzard'){z.x=P.x;z.y=P.y;}
+      while(z.nextTick<=z.dur+.001 && z.t>=z.nextTick){
+        z.nextTick+=z.interval;
+        const thunder=z.type==='thunderstorm',center=thunder?{x:z.x+z.d[0]*(95+z.hits*90),y:z.y+z.d[1]*(95+z.hits*90)}:z;
+        for(const target of combatTargets()) if(skGround(target,center)<z.R+14){
+          hitTarget(target,[0,0],false,z.dmg);
+          if(!thunder)applyMonsterStatus(target,'slow',.8);
+          if(z.freeze && Math.random()<z.freeze)applyMonsterStatus(target,'freeze',.6);
+          if(z.paralyze)applyMonsterStatus(target,'freeze',1);
+        }
+        if(thunder){z.hits++;sfx.push({type:'thunderstrike',t:0,x:center.x,y:center.y-14,r:z.R});}
+      }
+      if(z.t>z.dur+.05)zones.splice(i,1);
+    } else if (z.type === 'meteor'){
       if (!z.hit && z.t >= z.delay){
         z.hit = true;
         for (const t of combatTargets()) if (skGround(t, z) < z.r){ hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], true, z.dmg); applyMonsterStatus(t, 'burn', 3.5); }
