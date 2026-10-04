@@ -34,6 +34,10 @@ async def main():
         assert not await ev("id=>GUILD.accept(id)",ids[5])
         assert await pg.locator('#questTrack .qtrack').count()==5
         assert await pg.locator('#gBoard button:disabled').count()==1
+        last=await pg.locator('#questTrack .qtrack').nth(4).bounding_box()
+        await pg.mouse.click(last['x']+20,last['y']+last['height']/2)
+        assert await ev("() => document.getElementById('guild').classList.contains('on')"),'fifth HUD click'
+        await pg.click('#guildClose')
         await ev("() => UI.save()")
         await pg.reload();await pg.wait_for_timeout(1000)
         assert await ev("() => GUILD.state().active.length")==5

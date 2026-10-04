@@ -252,6 +252,7 @@ html.app #fs{display:none}
 .stashFrame .inventorySort{top:540px;left:20px;right:20px}
 
 #mainQuestTrack{left:max(12px,env(safe-area-inset-left));top:244px;width:286px;display:none;pointer-events:auto;cursor:pointer;color:#ffe083;font:800 11px/1.35 sans-serif;text-shadow:0 2px 3px #000,0 0 5px #000}
+#questTrack,#mainQuestTrack{z-index:2}
 #mainQuestTrack.on{display:block}.mainQtrack{padding:3px 4px}.mainQuestCard{border-color:#bc8c37}
 .inventory-open #mainQuestTrack{visibility:hidden}#dlgQuest[hidden]{display:none}#dlgMainRow{flex-wrap:wrap}
 @media(max-height:480px){#questTrack{gap:0}.qtrack{min-height:18px;font-size:10px}#mainQuestTrack{top:216px;font-size:10px}}

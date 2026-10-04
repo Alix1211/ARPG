@@ -34,6 +34,15 @@ async def main():
         assert await pg.locator('#mainQuestTrack .mainQtrack').count()==1
         bounds=await ev("() => ['questTrack','mainQuestTrack'].map(id=>{const r=document.getElementById(id).getBoundingClientRect();return [r.top,r.bottom]})")
         assert bounds[0][1]<=bounds[1][0], 'separate HUD rows'
+        await pg.click('#mainQuestTrack')
+        assert await ev("() => document.getElementById('guild').classList.contains('on')"),'main HUD click'
+        await pg.click('#guildClose')
+        await pg.set_viewport_size({'width':844,'height':390})
+        assert await ev('''() => ['questTrack','mainQuestTrack'].every(id=>{
+          const r=document.getElementById(id).getBoundingClientRect(),at=document.elementFromPoint(r.left+10,r.bottom-5);
+          return !!at&&!!at.closest('#'+id);
+        })'''),'mobile HUD input layer'
+        await pg.set_viewport_size({'width':1280,'height':720})
         await ev('() => UI.save()')
         await pg.reload();await pg.wait_for_timeout(1200)
         assert await ev("() => QUEST.state().active.M01.step")==0,'saved progress'
