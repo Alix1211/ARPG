@@ -235,7 +235,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-0853</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-0940</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1270,7 +1270,7 @@ function setWeapon(it){
   const cm=combatNow();
   for(const k in WB)DUR[k]=WB[k].dur/(1+Math.max(0,cm.as||0)/100);
 }
-function basicDamage(){const cm=combatNow();return Math.max(1,WPN&&WPN.wt==='staff'?cm.magic:cm.phys);}
+function basicDamage(){const cm=combatNow(),wm=(WPN&&WB[WPN.wt]&&WB[WPN.wt].dmg)||1;return Math.max(1,Math.round((WPN&&WPN.wt==='staff'?cm.magic:cm.phys)*wm));}
 function rollPlayerDamage(base){
   const cm=combatNow(),crit=Math.random()<Math.max(0,cm.crit||0)/100;
   return {v:Math.max(1,Math.round(base*(crit?(cm.critDmg||150)/100:1))),crit};
@@ -1278,12 +1278,12 @@ function rollPlayerDamage(base){
 const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
 // 무기별 기준(같은 단계·같은 옵션일 때). 아이템 옵션이 이 값을 올리거나 내린다. docs/weapons.md
-const WB = {
-  sword:    { dur: 0.40, reach: 80, cone: 75 },                         // 넓은 부채꼴, 앞의 여러 마리
-  spear:    { dur: 0.50, reach: 120, width: 20, pierce: 2 },            // 길고 좁은 일직선, 두 마리 관통
-  gauntlet: { dur: 0.22, reach: 56, width: 34, pierce: 1, stagger: 1 }, // 아주 짧고 빠름, 움찔
-  bow:      { dur: 0.35, speed: 820, life: 0.75, noSlow: 1 },           // 빠르고 아주 멀리, 걸어도 안 느려짐
-  staff:    { dur: 0.75, speed: 300, life: 1.2, blast: 52 },            // 느린 구슬, 맞은 자리 폭발
+const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: 경직(주먹). 케인 확정 2026-10-04: 근접 우대·원거리 감쇠
+  sword:    { dur: 0.80, reach: 80, cone: 75, dmg: 1.9, kb: 28 },                              // 느리고 묵직한 넓은 부채꼴, 약한 넉백
+  spear:    { dur: 0.50, reach: 120, width: 20, pierce: 2, kb: 70 },                          // 길고 좁은 일직선, 두 마리 관통, 큰 넉백
+  gauntlet: { dur: 0.22, reach: 56, width: 34, pierce: 1, stagger: 1, kb: 8 },                // 아주 짧고 빠름, 경직 + 아주 작은 넉백
+  bow:      { dur: 0.35, speed: 820, life: 0.75, noSlow: 1, dmg: 0.85 },                      // 빠르고 아주 멀리, 걸어도 안 느려짐
+  staff:    { dur: 0.75, speed: 300, life: 1.2, blast: 52, dmg: 0.8 },                        // 느린 구슬, 맞은 자리 폭발
 };
 const DUR = {}; for (const k in WB) DUR[k] = WB[k].dur;
 const PI = Math.PI;
@@ -1316,7 +1316,7 @@ function updAtk(dt){
       else if (along > -10 && along < w.reach && side < w.width) hits.push([along, t]);
     }
     hits.sort((p, q) => p[0] - q[0]);
-    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger));
+    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger, undefined, w.kb));
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
@@ -1330,8 +1330,8 @@ function updAtk(dt){
   }
   if (k > 1.2) P.atk = null;
 }
-function hitTarget(t, d, stagger, dmOver){
-  if (t.monster) return hitMonster(t, d, stagger, dmOver);
+function hitTarget(t, d, stagger, dmOver, kbOver){
+  if (t.monster) return hitMonster(t, d, stagger, dmOver, kbOver);
   const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
   t.dummy.wob = stagger ? 1.4 : 1; t.dummy.dir = d[0] || (Math.random() < 0.5 ? -1 : 1);
   pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });
@@ -2607,16 +2607,16 @@ function updEncounters(dt){
     }
   }
 }
-function hitMonster(m,d,stagger,dmOver){
+function hitMonster(m,d,stagger,dmOver,kbOver){
   if(!m||m.dead)return;
   const rr=rollPlayerDamage(dmOver||basicDamage()),v=rr.v,crit=rr.crit;
   // 정예·우두머리는 경직을 한 번 받으면 잠시 면역(무한 경직 방지)
-  let st=stagger?.32:.12,kb=stagger?20:12;
-  if(m.boss||m.elite){if(m.stunImm>0){st=0;kb*=.3;}else if(stagger)m.stunImm=4;}
+  let st=stagger?.32:.12,kb=kbOver!=null?kbOver:(stagger?20:12);
+  if(m.boss||m.elite){kb*=.4;if(m.stunImm>0){st=0;kb*=.3;}else if(stagger)m.stunImm=4;}
   m.hp-=v;m.hurt=.18;m.stun=st;
   if(!dmOver&&WPN&&window.GAME&&GAME.gainMastery)GAME.gainMastery(WPN.wt,1);
-  const q=Math.hypot(d[0],d[1])||1,nx=m.x+d[0]/q*kb,ny=m.y+d[1]/q*kb;
-  if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;}
+  const q=Math.hypot(d[0],d[1])||1;
+  for(const f of [1,.6,.3]){const nx=m.x+d[0]/q*kb*f,ny=m.y+d[1]/q*kb*f;if(!monsterBlocked(nx,ny)){m.x=nx;m.y=ny;break;}}   // 벽에 닿으면 갈 수 있는 만큼만
   pops.push({x:m.x+(Math.random()*14-7),y:m.y-m.h*.72,t:0,txt:String(v),crit});
   sfx.push({type:'hit',t:0,x:m.x,y:m.y-m.h*.55,r:crit?58:40,crit});
   if(m.hp<=0)killMonster(m);
@@ -3760,7 +3760,7 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
   const id=QS[i];if(!id||!quickLearned(id))return;
   if(id==='townPortal'){G.useTownPortal();return;}
   const nw=needWeapon(id),wt=eq[cur]?eq[cur].wt:null;
-  G.cast(id,nw?(wt===nw?{dmg:1,mp:1}:{dmg:.6,mp:1.5}):(wt==='staff'?{dmg:1.25,mp:1}:{dmg:1,mp:1}));
+  G.cast(id,nw?(wt===nw?{dmg:1,mp:1}:{dmg:.6,mp:1.5}):{dmg:1,mp:1});
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
