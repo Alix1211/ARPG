@@ -4217,13 +4217,13 @@
         {
           "type": "visit",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "objective": "던전 최심부 진입"
         },
         {
           "type": "kill",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "need": 15,
           "objective": "최심부 수호 무리 돌파"
         },
@@ -4231,7 +4231,7 @@
           "type": "scene",
           "char": "void",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "lines": [
             "네르바인: 이름도 경계도 소유도 결국 사라진다.",
             "루크레아: 소유가 사라진다고요?",
@@ -4244,7 +4244,7 @@
           "type": "boss",
           "boss": "nervein_phase1",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "objective": "최심부의 존재를 밀어내기"
         },
         {
@@ -4254,7 +4254,7 @@
           "need": 1,
           "point": {
             "map": "dungeon",
-            "floor": 20,
+            "floor": 21,
             "spawnOffset": [
               220,
               80
@@ -4292,14 +4292,14 @@
         {
           "type": "visit",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "objective": "특허장을 들고 최심부로 돌아가기"
         },
         {
           "type": "scene",
           "char": "void",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "lines": [
             "네르바인: 종이 한 장으로 경계를 세우려 하는가.",
             "루크레아: 종이가 아니라 계약입니다.",
@@ -4312,13 +4312,22 @@
           "type": "boss",
           "boss": "nervein_final",
           "map": "dungeon",
-          "floor": 20,
+          "floor": 21,
           "objective": "최종 전투"
         },
         {
-          "type": "event",
-          "event": "story_sign",
+          "type": "collect",
+          "item": "MAIN_070_signed",
+          "itemName": "특허장 서명란",
           "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 21,
+            "spawnOffset": [
+              250,
+              120
+            ]
+          },
           "objective": "대상단 특허장에 서명하기"
         },
         {
