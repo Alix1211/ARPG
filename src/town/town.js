@@ -516,7 +516,7 @@ function sellRate(it){
   const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general';
   return SHOP_BUY_RATE[shop]?.[cat] || 0.60;
 }
-function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0);return Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)));}
+function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0),u=it&&it.unid?.50:1;return Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)*u));}
 function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
 function shopMarketText(){ return '장비는 지역 시세와 무관 · 사는 값은 비싸고 되파는 값은 헐값입니다.'; }
 function openShop(n){
@@ -969,7 +969,8 @@ const WIMG = {}; for (const k in A.wpn) WIMG[k] = load(A.wpn[k]);
 let WPN=null;
 function combatNow(){return window.UI&&UI.combatMods?UI.combatMods():{phys:WPN?WPN.dmg:1,magic:WPN?WPN.dmg:1,as:0,crit:5,critDmg:150,fire:0,ice:0,skill:0,manaReduce:0,move:0};}
 function setWeapon(it){
-  WPN=it?{wt:it.wt,img:WIMG[it.icon],dmg:it.st.atk||it.st.matk||1,item:it}:null;
+  const st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{};
+  WPN=it?{wt:it.wt,img:WIMG[it.icon],dmg:st.atk||st.matk||1,item:it}:null;
   const cm=combatNow();
   for(const k in WB)DUR[k]=WB[k].dur/(1+Math.max(0,cm.as||0)/100);
 }
@@ -1285,7 +1286,7 @@ function drawSkillFx(dt){
 const FXPAL = { neutral:{ glow:[255,196,96], body:[255,238,176], core:[255,255,255] }, fire:{ glow:[255,100,24], body:[255,164,66], core:[255,238,196] }, ice:{ glow:[70,160,255], body:[168,224,255], core:[244,252,255] } };
 let FXC = FXPAL.neutral;
 const fxA = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
-function atkPalette(){ const st = (WPN && WPN.item && WPN.item.st) || {}, f = st.fire || 0, c = st.ice || 0; return f > 0 && f >= c ? FXPAL.fire : c > 0 ? FXPAL.ice : FXPAL.neutral; }
+function atkPalette(){ const it=WPN&&WPN.item,st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{}, f = st.fire || 0, c = st.ice || 0; return f > 0 && f >= c ? FXPAL.fire : c > 0 ? FXPAL.ice : FXPAL.neutral; }
 // 휘두름 궤적(초승달)
 function arcFx(cx, cy, r, a0, a1, k){
   if (k <= 0 || k >= 1) return;
