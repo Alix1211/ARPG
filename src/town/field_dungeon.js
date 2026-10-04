@@ -16,7 +16,7 @@ const monsters = [], dropsLoot = [], enemyShots = [], enemyHazards = [];
 const dropImgs = {};
 const FIELD_TIER={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
 const PLAYER_STATUS={slow:0,stone:0,bleed:0,burn:0,bleedTick:0,burnTick:0};
-let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0;
+let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0, fieldLeg = 1, fieldLegs = 1, legBusy = false;
 
 function combatTargets(){ return dummies.concat(monsters.filter(m => !m.dead && !m.removed && !(m.vanishT>0))); }
 function waitImages(list){ return Promise.all(list.map(im => im.complete && im.naturalWidth ? Promise.resolve() : new Promise(r => { im.onload = im.onerror = r; }))); }
@@ -102,7 +102,7 @@ function randomFieldProps(theme){
   let tries = 0;
   while (out.length < 52 && tries++ < 500){
     const x = 2 + Math.random()*56, y = 2 + Math.random()*36;
-    if (nearMainPath(x,y,2.4) || inTownReserve(x,y) || Math.hypot(x-56,y-8)<4 || Math.hypot(x-3,y-20)<4) continue;
+    if (nearMainPath(x,y,2.4) || inTownReserve(x,y) || Math.hypot(x-56,y-8)<4 || Math.hypot(x-3,y-20)<4 || Math.hypot(x-57.5,y-20)<4) continue;
     const meta = pool[Math.floor(Math.random()*pool.length)]; if (!meta) break;
     if (!fieldPropClear(x,y,meta,out)) continue;
     const p = mkFieldProp(meta,x,y,'',null); if (p) out.push(p);
@@ -122,35 +122,56 @@ function makeFieldVillage(theme){
   ];
 }
 
-async function prepareField(theme){
+// 길 구간(leg): 목적지 티어와 같은 수의 필드를 이어서 지난다. 마지막 구간(leg===legs)에만 작은 마을이 있다.
+async function prepareField(theme, leg, legs){
   const t0 = performance.now();
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
-  const bg = await makeFieldGround(fieldTheme), props = randomFieldProps(fieldTheme);
+  fieldLegs = Math.max(1, legs || FIELD_TIER[fieldTheme] || 1); fieldLeg = Math.max(1, Math.min(leg || fieldLegs, fieldLegs));
+  const lg = fieldLeg, ls = fieldLegs, th = fieldTheme;
+  const bg = await makeFieldGround(th), props = randomFieldProps(th);
+  const ex = [];
+  if (lg === ls) ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>askDestination()});
+  else if (lg > 1) ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>goLeg(th,lg-1,ls,'right')});
+  else ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'});
+  if (lg < ls) ex.push({x0:58.85*TS,x1:60*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
   const map = {
-    name:FIELD_INFO[fieldTheme][1], market:fieldTheme, map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini,
-    blds:makeFieldVillage(fieldTheme), props, npcs:[],
-    spawn:[3.2*TS,20*TS], exits:[{x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'}]
+    name:FIELD_INFO[th][1] + (ls > 1 ? ' ' + lg + '/' + ls : ''), market:th, map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini,
+    blds:lg === ls ? makeFieldVillage(th) : [], props, npcs:[],
+    spawn:[3.2*TS,20*TS], exits:ex
   };
   map.G = bg.ground; map.MINI = bg.mini;
   MAPS.field = map; fieldBuildMs = performance.now() - t0; return map;
 }
+async function goLeg(theme, leg, legs, side){
+  if (legBusy || traveling) return false; legBusy = true;
+  try { const m = await prepareField(theme, leg, legs); travel('field', side === 'right' ? [56.8*TS,20*TS] : m.spawn, 'side'); return true; }
+  finally { legBusy = false; }
+}
+function askDestination(){
+  if (panel || traveling) return; P.x += 70; openRegionSelect('village');
+}
 function ensureRegionUI(){
   if ($('regionPick')) return;
   const st = document.createElement('style');
-  st.textContent = '#regionPick{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:#0d1220aa}#regionPick.on{display:flex}#regionPick .rp{width:min(760px,92vw);padding:34px;border:4px solid #8a6b3e;border-radius:20px;background:#201a15f2;color:#fff3d6;box-shadow:0 18px 60px #000a;font-family:sans-serif}#regionPick h2{margin:0 0 8px;text-align:center;font-size:30px}#regionPick p{text-align:center;color:#d8c7a5}#regionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px}#regionGrid button{padding:16px 18px;border:2px solid #80643a;border-radius:14px;background:#352b20;color:#fff3d6;text-align:left;font-weight:800;font-size:18px}#regionGrid button small{display:block;margin-top:4px;color:#c9b891;font-weight:600}#regionGrid button:hover{background:#4a3927}';
+  st.textContent = '#regionPick{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:#0d1220aa}#regionPick.on{display:flex}#regionPick .rp{width:min(760px,92vw);padding:34px;border:4px solid #8a6b3e;border-radius:20px;background:#201a15f2;color:#fff3d6;box-shadow:0 18px 60px #000a;font-family:sans-serif}#regionPick h2{margin:0 0 8px;text-align:center;font-size:30px}#regionPick p{text-align:center;color:#d8c7a5}#regionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px}#regionGrid button{padding:16px 18px;border:2px solid #80643a;border-radius:14px;background:#352b20;color:#fff3d6;text-align:left;font-weight:800;font-size:18px}#regionGrid button small{display:block;margin-top:4px;color:#c9b891;font-weight:600}#regionGrid button:hover{background:#4a3927}#regionGrid button:disabled{opacity:.45}';
   document.head.append(st);
-  const o = document.createElement('div'); o.id='regionPick'; o.innerHTML='<div class="rp"><h2>어디로 가시겠습니까?</h2><p>시험판에서는 7개 지역을 모두 열어 두었습니다.</p><div id="regionGrid"></div></div>';
+  const o = document.createElement('div'); o.id='regionPick'; o.innerHTML='<div class="rp"><h2>어디로 가시겠습니까?</h2><p id="regionNote"></p><div id="regionGrid"></div></div>';
   document.body.append(o);
-  const gr = $('regionGrid');
-  for (const r of FIELD_THEMES){ const b=document.createElement('button'); b.type='button'; b.dataset.theme=r[0]; b.innerHTML=r[1]+'<small>'+r[2]+'</small>'; b.onclick=()=>selectRegion(r[0],b); gr.append(b); }
   o.addEventListener('click',e=>{ if(e.target===o) closeRegionSelect(); });
 }
-function openRegionSelect(){ closeAll(); ensureRegionUI(); panel='region'; $('regionPick').classList.add('on'); }
+function regionBtnHtml(r){ const n=FIELD_TIER[r[0]]||1; return r[1]+'<small>'+r[2]+' · 길 '+n+'칸</small>'; }
+function fillRegionGrid(mode){
+  const gr=$('regionGrid'); gr.innerHTML='';
+  $('regionNote').textContent = mode==='village' ? '목적지 티어와 같은 수의 길(필드)을 지나갑니다. 지나는 길의 몬스터도 목적지 티어입니다.' : '시험판에서는 7개 지역을 모두 열어 두었습니다. 목적지 티어만큼 길(필드)을 지나갑니다.';
+  if (mode==='village'){ const b=document.createElement('button'); b.type='button'; b.dataset.theme='town'; b.innerHTML='큰 마을<small>바로 돌아갑니다</small>'; b.onclick=()=>{ closeRegionSelect(); returnFromField(); }; gr.append(b); }
+  for (const r of FIELD_THEMES){ const b=document.createElement('button'); b.type='button'; b.dataset.theme=r[0]; b.innerHTML=regionBtnHtml(r); if(mode==='village'&&r[0]===fieldTheme) b.disabled=true; b.onclick=()=>selectRegion(r[0],b); gr.append(b); }
+}
+function openRegionSelect(mode){ closeAll(); ensureRegionUI(); fillRegionGrid(mode); panel='region'; $('regionPick').classList.add('on'); }
 function closeRegionSelect(silent){ const o=$('regionPick'); if(o) o.classList.remove('on'); if(panel==='region') panel=null; }
 async function selectRegion(theme, btn){
-  ensureRegionUI(); const bs=[...$('regionGrid').querySelectorAll('button')]; bs.forEach(x=>x.disabled=true); if(btn) btn.textContent='길을 확인하는 중…';
-  try { const m=await prepareField(theme); closeRegionSelect(); travel('field',m.spawn,'side'); }
-  finally { bs.forEach((x,i)=>{x.disabled=false; x.innerHTML=FIELD_THEMES[i][1]+'<small>'+FIELD_THEMES[i][2]+'</small>';}); }
+  ensureRegionUI(); const bs=[...$('regionGrid').querySelectorAll('button')]; bs.forEach(x=>x.disabled=true); const keep=btn&&btn.innerHTML; if(btn) btn.textContent='길을 확인하는 중…';
+  try { const m=await prepareField(theme,1); closeRegionSelect(); travel('field',m.spawn,'side'); }
+  finally { bs.forEach(x=>{x.disabled=false;}); if(btn&&keep) btn.innerHTML=keep; }
 }
 function returnFromField(){ travel('out',[2.2*TS,11.4*TS],'side'); }
 
@@ -174,7 +195,7 @@ function createMonster(id,x,y,opts={}){
 function spawnClear(m,placed=monsters,field=false){
   if(field){
     const x=m.x/TS,y=m.y/TS;
-    if(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-56,y-8)<5||Math.hypot(x-20,y-31)<5)return false;
+    if(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-57.5,y-20)<7||Math.hypot(x-56,y-8)<5||Math.hypot(x-20,y-31)<5)return false;
   }
   if(pointInSolid(m.x,m.y,m.w*.5))return false;
   if(!field&&typeof gridBlocked==='function'&&gridBlocked(m.x,m.y,m.w*.5))return false;
@@ -591,8 +612,11 @@ function autoAimMonster(){
 
 window.__FD_READY=true;
 window.__FD={
-  async enter(theme){const m=await prepareField(theme||'spring');travel('field',m.spawn,'side');return true;},
-  state(){return {map:MAP,theme:fieldTheme,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
+  async enter(theme,leg){const m=await prepareField(theme||'spring',leg);travel('field',m.spawn,'side');return true;},
+  goLeg,askDestination,
+  mapInfo(){return {blds:MAPS.field.blds.length,exits:MAPS.field.exits.length,name:MAPS.field.name,map:MAP};},
+  warp(tx,ty){P.x=tx*TS;P.y=ty*TS;return true;},
+  state(){return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
   debugTarget(dx,dy,freeze){
     const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;

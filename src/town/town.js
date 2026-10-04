@@ -376,7 +376,7 @@ function travel(id,pos,dir){
 }
 function locationState(){
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
-  if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';}
+  if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
   if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
   return st;
 }
@@ -385,7 +385,7 @@ async function resumeLocation(st){
   const map=st.map,dir=st.dir||'front';
   try{
     if(map==='field'&&typeof prepareField==='function'){
-      await prepareField(st.theme||'spring');buildWorld('field');
+      await prepareField(st.theme||'spring',st.leg,st.legs);buildWorld('field');
     }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
       await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
     }else if(map==='out'){
@@ -898,7 +898,7 @@ function frame(now){
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += sdt;
   } else P.t = 0;
-  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
+  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
 

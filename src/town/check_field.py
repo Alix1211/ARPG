@@ -36,6 +36,9 @@ async def main():
         await pg.evaluate("() => { __P.x=3.0*48; __P.y=20*48; }")
         await pg.keyboard.down('ArrowLeft'); await pg.wait_for_timeout(650); await pg.keyboard.up('ArrowLeft')
         await pg.wait_for_timeout(800)
+        # 마을 칸의 왼쪽 끝은 '어디로 가시겠습니까?' 선택창 → 큰 마을 고르면 성 밖.
+        assert await pg.evaluate("() => document.getElementById('regionPick').classList.contains('on')")
+        await pg.click("#regionGrid button[data-theme=town]"); await pg.wait_for_timeout(900)
         out=await pg.evaluate("() => __FD.state()")
         assert out['map']=='out', out
         assert not errs, errs
