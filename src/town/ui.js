@@ -542,8 +542,26 @@ addEventListener('pointermove',e=>{
 },{passive:false});
 addEventListener('pointerup',e=>{
   const d=itemDrag;if(!d||e.pointerId!==d.pid)return;
-  if(d.moved){const at=document.elementFromPoint(e.clientX,e.clientY),cell=at&&at.closest('[data-inventory]');const target=cell?cell._inventoryRef:at&&at.closest('#shop')?{from:'merchant'}:null;itemClickUntil=performance.now()+500;cancelItemDrag();inventoryDrop(d.ref,target);}else cancelItemDrag();
+  if(d.moved){const at=document.elementFromPoint(e.clientX,e.clientY),cell=at&&at.closest('[data-inventory]');const target=cell?cell._inventoryRef:at&&at.closest('#shop')?{from:'merchant'}:null;itemClickUntil=performance.now()+500;cancelItemDrag();inventoryDrop(d.ref,target);}else{const ref=d.ref;cancelItemDrag();dblTap(ref);}
 });
+// 더블클릭(모바일은 두 번 탭): 상점에선 사기·팔기, 창고에선 넣기·빼기, 평소엔 장비 착용·해제
+let lastTap=null;
+function dblTap(ref){
+  const now=performance.now(),cur0=inventoryItem(ref),key=ref.from+':'+(ref.i!=null?ref.i:ref.slot||'')+':'+(cur0?cur0.id:'');
+  if(lastTap&&lastTap.key===key&&now-lastTap.t<380){lastTap=null;quickMove(ref);return;}
+  lastTap={key,t:now};
+}
+function quickMove(ref){
+  const it=inventoryItem(ref);if(!it)return;
+  const toBag=()=>{const i=bag.indexOf(null);if(i<0){G.say('가방이 가득 찼습니다.');return;}inventoryDrop(ref,{from:'bag',i});};
+  if(ref.from==='goods'||ref.from==='stash'||ref.from==='eq'){toBag();return;}
+  if(ref.from!=='bag')return;
+  if(tab==='shop'){inventoryDrop(ref,{from:'merchant'});return;}
+  if(tab==='stash'){const i=stash.indexOf(null);if(i<0){G.say('창고가 가득 찼습니다.');return;}inventoryDrop(ref,{from:'stash',i});return;}
+  const slots=(it.kind==='weapon'?['w1','w2']:it.kind==='ring'?['ring1','ring2']:[it.kind]).filter(s=>s in eq);
+  if(!slots.length)return;
+  inventoryDrop(ref,{from:'eq',slot:slots.find(s=>!eq[s])||(slots.includes(cur)?cur:slots[0])});
+}
 addEventListener('pointercancel',cancelItemDrag);addEventListener('blur',cancelItemDrag);
 function openStash(){
   const loc=G.locationState();if(!loc||!['town','village'].includes(loc.map)){G.say('창고는 마을에서만 이용할 수 있습니다.');return false;}openChar('stash');return true;
