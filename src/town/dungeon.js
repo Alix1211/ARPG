@@ -144,6 +144,7 @@ async function goDungeon(floor,fromAbove){
   dunBusy=true;
   try{
     say(floor===1?'어둡고 축축하다… 돈 냄새가 난다.':'지하 '+floor+'층');
+    if(window.CHATTER)CHATTER.floor(floor);
     const m=await prepareDungeon(floor);
     // 계단 바로 위/타일 경계 대신 방 중심의 안전 바닥에서 시작.
     const pos=fromAbove===false?[(m.farRoom.x+m.farRoom.w-2)*TS,(m.farRoom.y+m.farRoom.h-2)*TS]:m.spawn;

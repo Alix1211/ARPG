@@ -673,8 +673,8 @@ function drawFx(dt){ drawShots(dt); drawSkillFx(dt); if (typeof vfxZonesTop === 
 function drawBubble(dt, camX, camY){
   const b = $('bubble');
   if (!bubble){ b.style.display = 'none'; return; }
-  bubble.t += dt; if (bubble.t > 1.8){ bubble = null; b.style.display = 'none'; return; }
-  b.style.display = 'block'; b.textContent = bubble.txt;
+  bubble.t += dt; if (bubble.t > (bubble.dur || 1.8)){ bubble = null; b.style.display = 'none'; return; }
+  b.style.display = 'block'; b.textContent = bubble.txt; b.classList.toggle('mono', !!bubble.mono);
   b.style.left = ((P.x - camX) * Z) + 'px'; b.style.top = ((P.y - 112 - camY) * Z) + 'px';
 }
 function setMax(h, m){ P.maxHp = h; P.maxMp = m; P.hp = Math.min(P.hp, h); P.mp = Math.min(P.mp, m); if (P.hp < 1) P.hp = h; syncBars(); }

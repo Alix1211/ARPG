@@ -311,7 +311,7 @@ function rawPlayerDamage(v,label){
   const cm=window.UI&&UI.combatMods?UI.combatMods():{damageReduce:0};
   v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));
   if(P.shield>0){v=absorbShield(v);if(v<=0)return;}   // 빙결 보호막이 먼저 받는다
-  P.hp=Math.max(0,P.hp-v);syncBars();
+  P.hp=Math.max(0,P.hp-v);syncBars();if(window.CHATTER)CHATTER.hurt();
   pops.push({x:P.x,y:P.y-95,t:0,txt:(label?label+' ':'')+'-'+v,enemy:true});
   if(P.hp<=0)defeatPlayer();
 }
@@ -469,7 +469,8 @@ function updEncounters(dt){
     if(d.picked) continue;
     if(Math.hypot(d.x-P.x,d.y-P.y)<28){
       if(d.kind==='gold'){setGold(P.gold+d.amount);d.picked=true;}
-      else if(window.UI&&UI.add(d.item)){d.picked=true;say(d.item.name+' 획득');}
+      else if(window.UI&&UI.add(d.item)){d.picked=true;say(d.item.name+' 획득');if(window.CHATTER)CHATTER.loot(d.item);}
+      else if(window.CHATTER)CHATTER.event('bagfull');
     }
   }
 }

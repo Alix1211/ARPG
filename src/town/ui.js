@@ -248,7 +248,7 @@ function syncPot(){ for (const k of ['hp', 'mp']){ potEl[k].querySelector('b').t
 for (const k of ['hp', 'mp']) potEl[k].addEventListener('pointerdown', e => {
   e.preventDefault(); if (G.isOpen()) return;
   if (!POT[k]){ G.say(k === 'hp' ? '체력 물약이 없습니다' : '마나 물약이 없습니다'); return; }
-  if (G.drink(k)){ POT[k]--; syncPot(); }
+  if (G.drink(k)){ POT[k]--; syncPot(); if (!POT[k] && window.CHATTER) CHATTER.event('nopot', 1900); }
 });
 syncPot();
 function needWeapon(id){if(id==='townPortal')return null;const w=SKW[id.replace(/[0-9].*$/,'')];return w||null;}
