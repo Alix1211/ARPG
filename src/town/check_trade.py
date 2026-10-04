@@ -21,7 +21,7 @@ async def main():
         assert await pg.evaluate("() => document.getElementById('tabEq').classList.contains('on')")
         await pg.click('#tabTr'); await pg.wait_for_timeout(100)
         assert await pg.evaluate("() => document.getElementById('tabTr').classList.contains('on')")
-        assert await pg.evaluate("() => document.querySelectorAll('#bagPane .tc').length") == 24
+        assert await pg.evaluate("() => document.querySelectorAll('#bagPane .tc').length") == 7
         await pg.click('#charClose'); await pg.wait_for_timeout(80)
 
         assert await pg.evaluate("() => !!document.getElementById('tabTr')")

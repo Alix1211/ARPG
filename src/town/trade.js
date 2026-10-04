@@ -22,7 +22,7 @@ const TRADE_REGIONS = {
   volcano: {name:'화산 지대 상인협회', short:'화산', m:{iron:.60,obsidian:.50,chili:.65,pepper:.78,fish:1.55,milk:1.45,wheat:1.40,rice:1.45,apple:1.35}},
   swamp:   {name:'늪지대 상인협회', short:'늪', m:{eel:.55,herb:.60,mushroom:.55,pepper:.70,honey:.85,salt:1.35,beef:1.30,iron:1.35,wheat:1.20}},
 };
-const TRADE_SLOT_MAX = 24, TRADE_STACK_MAX = 50, TRADE_DAY_MS = 480000;
+const TRADE_SLOT_MAX = 7, TRADE_STACK_MAX = 50, TRADE_DAY_MS = 480000;
 const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS };
 let tradeRegion='town', tradeSel='wheat';
 
