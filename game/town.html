@@ -266,7 +266,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1440</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1502</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -406,7 +406,7 @@ const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:fals
   hp:40*NUM, mp:28*NUM, maxHp:40*NUM, maxMp:28*NUM, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
-  skillLv:{ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
+  skillLv:{holy2_shield:0,holy3_revive:0,ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
   passives:{magicGuide:0,precision:0,rapid:0,manaFlow:0,survival:0,greed:0},
   lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){
@@ -990,7 +990,7 @@ function syncBars(){
 }
 window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
-  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
+  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
 
@@ -1478,7 +1478,7 @@ function cast(id,mod){
   if(typeof playerControlLocked==='function'&&playerControlLocked())return false;
   const k=SK[id],rank=(P.skillLv&&P.skillLv[id])||0;if(!k||rank<1)return false;mod=mod||{dmg:1,mp:1};
   if((CD[id]||0)>0)return false;
-  const cm=combatNow(),cost=Math.max(1,Math.round(k.mp*NUM*mod.mp*(1-(cm.manaReduce||0)/100)));
+  const cm=combatNow(),cost=Math.max(k.mp===0?0:1,Math.round(k.mp*NUM*mod.mp*(1-(cm.manaReduce||0)/100)));
   if(P.mp<cost){say('마나가 부족합니다');return false;}
   P.mp-=cost;CD[id]=k.cd;syncBars();
   const d=faceVec(),home=(P.passives&&P.passives.magicGuide)||0;
@@ -1492,7 +1492,7 @@ function cast(id,mod){
   }else if(id==='ice1'){
     // 빙결 보호막: 얼음막이 피해를 대신 받는다. 막이 깨지면 주변이 얼어붙고, 막이 있는 동안 둔화·석화 같은 상태이상도 막는다.
     const v=Math.round(P.maxHp*.45*skillMul);
-    P.shield=v;P.shieldMax=v;P.shieldT=10+rank*.5;P.shieldRank=rank;syncBars();
+    P.shieldKind='ice';P.shield=v;P.shieldMax=v;P.shieldT=10+rank*.5;P.shieldRank=rank;syncBars();
     pops.push({x:P.x,y:P.y-100,t:0,txt:'빙결 보호막 '+v,mana:true});sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:70});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
@@ -1525,6 +1525,7 @@ function absorbShield(v){
   syncBars();return v-ab;
 }
 function breakShield(){
+  if(P.shieldKind==='holy'){sfx.push({type:'holyshield',t:0,x:P.x,y:P.y-30,r:80});return;}
   const rank=P.shieldRank||1;let n=0;
   for(const t of (typeof combatTargets==='function'?combatTargets():[])){
     if(Math.hypot(t.x-P.x,t.y-P.y)<150&&typeof applyMonsterStatus==='function'){applyMonsterStatus(t,'freeze',.9+rank*.1);applyMonsterStatus(t,'slow',3);n++;}
@@ -1537,9 +1538,9 @@ function drawShield(){
   const k=Math.max(0,Math.min(1,P.shield/(P.shieldMax||1)));
   let al=.55+.45*k;if(P.shieldT<2)al*=.55+.45*Math.sin(T*16);
   ctx.save();ctx.translate(P.x,P.y-40);
-  const g=ctx.createRadialGradient(0,0,10,0,0,58);g.addColorStop(0,'rgba(190,240,255,.05)');g.addColorStop(1,'rgba(120,205,255,.38)');
+  const g=ctx.createRadialGradient(0,0,10,0,0,58);g.addColorStop(0,'rgba(190,240,255,.05)');g.addColorStop(1,P.shieldKind==='holy'?'rgba(255,215,95,.45)':'rgba(120,205,255,.38)');
   ctx.globalAlpha=al;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.fill();
-  ctx.strokeStyle='rgba(215,247,255,.95)';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.strokeStyle=P.shieldKind==='holy'?'rgba(255,234,150,.95)':'rgba(215,247,255,.95)';ctx.lineWidth=2.5;ctx.stroke();
   ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,40,Math.PI*1.12,Math.PI*1.45);ctx.stroke();
   if(k<.4){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-14,-38);ctx.lineTo(-4,-14);ctx.lineTo(-18,4);ctx.moveTo(10,-30);ctx.lineTo(18,-6);ctx.stroke();}
   ctx.fillStyle='#eaffff';
@@ -1556,6 +1557,7 @@ function drink(k){
   return true;
 }
 function updSkills(dt){
+  P.reviveGrace=Math.max(0,(P.reviveGrace||0)-dt);
   potCd = Math.max(0, potCd - dt);
   P.castRoot = Math.max(0, (P.castRoot || 0) - dt);
   updZones(dt);
@@ -1596,26 +1598,58 @@ function drawSkillFx(dt){
   while(sfx.length&&sfx[0].t>.8)sfx.shift();
 }
 
+// 무기 속성(화염의·서리의 옵션)에 따라 휘두름·찌르기·타격 효과의 색이 바뀐다. 속성이 없으면 흰색·금색.
+const FXPAL = { neutral:{ glow:[255,196,96], body:[255,238,176], core:[255,255,255] }, fire:{ glow:[255,100,24], body:[255,164,66], core:[255,238,196] }, ice:{ glow:[70,160,255], body:[168,224,255], core:[244,252,255] } };
+let FXC = FXPAL.neutral;
+const fxA = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
+function atkPalette(){ const st = (WPN && WPN.item && WPN.item.st) || {}, f = st.fire || 0, c = st.ice || 0; return f > 0 && f >= c ? FXPAL.fire : c > 0 ? FXPAL.ice : FXPAL.neutral; }
 // 휘두름 궤적(초승달)
 function arcFx(cx, cy, r, a0, a1, k){
   if (k <= 0 || k >= 1) return;
-  ctx.save(); ctx.globalAlpha = 0.85 * (1 - k); ctx.strokeStyle = '#fff6dc'; ctx.lineCap = 'round';
-  ctx.lineWidth = 7 * (1 - k) + 1.5; ctx.beginPath();
-  // 각도 0 = 위 → 캔버스 각도로 바꿈(-PI/2)
-  ctx.arc(cx, cy, r, Math.min(a0, a1) - PI / 2, Math.max(a0, a1) - PI / 2); ctx.stroke(); ctx.restore();
+  const st = Math.min(a0, a1) - PI / 2, en = Math.max(a0, a1) - PI / 2; if (en - st < 0.05) return;
+  const fade = 1 - k, n = 18;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  ctx.strokeStyle = fxA(FXC.glow, .24 * fade); ctx.lineWidth = 18 * (1 - k * .5);   // 바깥 빛번짐
+  ctx.beginPath(); ctx.arc(cx, cy, r, st, en); ctx.stroke();
+  ctx.beginPath();   // 꼬리는 가늘고 머리(칼끝 쪽)는 굵은 초승달
+  for (let i = 0; i <= n; i++){ const t = i / n, an = st + (en - st) * t, w = (1.5 + 15 * Math.pow(t, 1.6)) * (1 - .35 * k), rr = r + w * .55; ctx[i ? 'lineTo' : 'moveTo'](cx + Math.cos(an) * rr, cy + Math.sin(an) * rr); }
+  for (let i = n; i >= 0; i--){ const t = i / n, an = st + (en - st) * t, w = (1.5 + 15 * Math.pow(t, 1.6)) * (1 - .35 * k), rr = r - w * .45; ctx.lineTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr); }
+  ctx.closePath(); ctx.fillStyle = fxA(FXC.body, .62 * fade); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.core, .95 * fade); ctx.lineWidth = 3.4 * (1 - k) + 1;   // 흰 심지
+  ctx.beginPath(); ctx.arc(cx, cy, r + 1, st + (en - st) * .3, en); ctx.stroke();
+  const hx = cx + Math.cos(en) * r, hy = cy + Math.sin(en) * r, g = ctx.createRadialGradient(hx, hy, 0, hx, hy, 15);   // 칼끝 섬광
+  g.addColorStop(0, fxA(FXC.core, fade)); g.addColorStop(1, fxA(FXC.glow, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, 15, 0, 7); ctx.fill();
+  ctx.restore();
 }
 const lerp = (a, b, t) => a + (b - a) * t;
-// 찌르기 잔상(창 아래 공격)
-function streak(x, y, dx, dy, t, r){
+// 찌르기 궤적(창): 잎사귀꼴 본체 + 속도선 + 끝 섬광 + 퍼지는 물결. ang = 찌르는 방향(캔버스 각도)
+function thrustFx(x, y, ang, t, r, len){
   if (t <= 0 || r >= 1) return;
-  ctx.save(); ctx.globalAlpha = 0.9 * (1 - r); ctx.strokeStyle = '#fff6dc'; ctx.lineCap = 'round';
-  ctx.lineWidth = 6 * (1 - r) + 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx * 60 * t, y + dy * 60 * t); ctx.stroke(); ctx.restore();
+  const L = (len || 74) * Math.min(1, t * 1.15), fade = 1 - r, ca = Math.cos(ang), sa = Math.sin(ang), nx = -sa, ny = ca, tx = x + ca * L, ty = y + sa * L;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ca * L * .62 + nx * 7, y + sa * L * .62 + ny * 7); ctx.lineTo(tx, ty); ctx.lineTo(x + ca * L * .62 - nx * 7, y + sa * L * .62 - ny * 7); ctx.closePath();
+  ctx.fillStyle = fxA(FXC.body, .55 * fade); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.core, .95 * fade); ctx.lineWidth = 2.6 * fade + .8;
+  ctx.beginPath(); ctx.moveTo(x + ca * L * .18, y + sa * L * .18); ctx.lineTo(tx, ty); ctx.stroke();
+  ctx.strokeStyle = fxA(FXC.body, .5 * fade); ctx.lineWidth = 1.6;
+  for (const o of [-11, 11]){ ctx.beginPath(); ctx.moveTo(x + ca * L * .18 + nx * o, y + sa * L * .18 + ny * o); ctx.lineTo(x + ca * L * .66 + nx * o, y + sa * L * .66 + ny * o); ctx.stroke(); }
+  const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, 14); g.addColorStop(0, fxA(FXC.core, fade)); g.addColorStop(1, fxA(FXC.glow, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(tx, ty, 14, 0, 7); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.body, .6 * fade); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(tx, ty, 9 + 16 * r, ang - 1.0, ang + 1.0); ctx.stroke();
+  ctx.restore();
 }
 // 주먹 충격(건틀릿 아래 공격)
 function burst(x, y, r){
   if (r >= 1) return;
-  ctx.save(); ctx.globalAlpha = 1 - r; ctx.strokeStyle = '#fff1c8'; ctx.lineWidth = 3; const R0 = 6 + r * 16;
-  for (let i = 0; i < 8; i++){ const a = i * PI / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R0 * 0.5, y + Math.sin(a) * R0 * 0.5); ctx.lineTo(x + Math.cos(a) * R0, y + Math.sin(a) * R0); ctx.stroke(); }
+  const fade = 1 - r, R0 = 13 + r * 36;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  const g = ctx.createRadialGradient(x, y, 0, x, y, 32); g.addColorStop(0, fxA(FXC.core, fade)); g.addColorStop(.5, fxA(FXC.body, .55 * fade)); g.addColorStop(1, fxA(FXC.glow, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 32, 0, 7); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.body, .8 * fade); ctx.lineWidth = 4.2 * fade + 1; ctx.beginPath(); ctx.arc(x, y, R0, 0, 7); ctx.stroke();
+  ctx.strokeStyle = fxA(FXC.core, fade); ctx.lineWidth = 2.4 * fade + .6;
+  for (let i = 0; i < 8; i++){ const a = i * PI / 4 + .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R0 * .55, y + Math.sin(a) * R0 * .55); ctx.lineTo(x + Math.cos(a) * (R0 * .55 + 14 + 12 * fade), y + Math.sin(a) * (R0 * .55 + 14 + 12 * fade)); ctx.stroke(); }
   ctx.restore();
 }
 // 공격 단계: 준비(0~0.3) → 타격(0.3~0.6) → 회수
@@ -1626,6 +1660,7 @@ function weaponLayers(){
   if (!WPN) return out;
   const wt = WPN.wt;
   if (!atkBusy()) return out; // 걷기·서 있기에는 무기를 그리지 않음
+  FXC = atkPalette();
   const a = P.atk, k = Math.min(1, a.t / DUR[wt]), ph = phase(k), d = a.dir;
   const thrust = ph.s * (1 - ph.r), alt = a.n % 2 ? 1 : -1;
   out.lunge = d === 'side' ? [3 * thrust, 0] : d === 'front' ? [0, 3 * thrust] : [0, -3 * thrust];
@@ -1633,20 +1668,20 @@ function weaponLayers(){
     if (wt === 'sword'){ const an = ph.s === 0 ? lerp(-0.6, -2.0, ph.w) : lerp(-2.0, 1.9, ph.s) - ph.r * 0.6;
       out.back = () => wDraw(x + 22, y - 32, an);
       out.front = () => arcFx(x + 22, y - 32, 52, -1.6, lerp(-1.6, 1.9, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }
-    else if (wt === 'spear') out.back = () => wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2);
+    else if (wt === 'spear') out.back = () => { wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2); thrustFx(x + 30, y - 40, 0, thrust, ph.r, 76); };
     else if (wt === 'bow') out.back = () => wDraw(x + 20, y - 44, 0, 1, true);
     else if (wt === 'staff') out.back = () => wDraw(x + 26 + 8 * thrust, y - 42, lerp(0.35, 1.2, thrust) - 0.25 * ph.w * (1 - ph.s));
-    else out.back = () => wDraw(x + 18 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), -PI / 2, 1.1, true);  // 주먹(그림 아래쪽)이 앞을 향하게
+    else out.back = () => { wDraw(x + 18 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), -PI / 2, 1.1, true); burst(x + 46, y - 42 + (alt > 0 ? 8 : -2), ph.s > 0 ? ph.r : 1); };  // 주먹(그림 아래쪽)이 앞을 향하게
   } else if (d === 'back'){
     if (wt === 'sword'){ const an = ph.s === 0 ? lerp(0, -1.5, ph.w) : lerp(-1.5, 1.5, ph.s);
       out.back = () => { wDraw(x + 4, y - 58, an); arcFx(x + 4, y - 58, 48, -1.5, lerp(-1.5, 1.5, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
-    else if (wt === 'spear') out.back = () => wDraw(x + 7, y - 58 - 32 * thrust, 0);
+    else if (wt === 'spear') out.back = () => { wDraw(x + 7, y - 58 - 32 * thrust, 0); thrustFx(x + 7, y - 78, -PI / 2, thrust, ph.r, 76); };
     else if (wt === 'bow') out.back = () => wDraw(x, y - 80, PI / 2);
     else if (wt === 'staff') out.back = () => wDraw(x + 9, y - 60 - 8 * thrust, lerp(0.25, -0.1, thrust));
-    else out.back = () => wDraw(x + 10 * alt, y - 70 - 16 * thrust, PI, 1.1);
+    else out.back = () => { wDraw(x + 10 * alt, y - 70 - 16 * thrust, PI, 1.1); burst(x + 10 * alt, y - 100 - 18 * thrust, ph.s > 0 ? ph.r : 1); };
   } else { // 정면(아래로 공격): 무기는 그리지 않고 이펙트만
     if (wt === 'sword') out.front = () => arcFx(x, y - 30, 46, PI - 1.4, lerp(PI - 1.4, PI + 1.4, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1));
-    else if (wt === 'spear') out.front = () => streak(x + 4, y - 30, 0, 1, thrust, ph.r);
+    else if (wt === 'spear') out.front = () => thrustFx(x + 4, y - 30, PI / 2, thrust, ph.r, 70);
     else if (wt === 'gauntlet') out.front = () => burst(x + 10 * alt, y - 18 + 14 * thrust, ph.s > 0 ? ph.r : 1);
   }
   return out;
@@ -1678,7 +1713,7 @@ const VFX_HEAD = { shot_fire:145, shot_rock:155, shot_poison:150, shot_dark:142,
 const VFX_STATUS = { burn:'fire', slow:'slow', freeze:'ice', stone:'stone', bleed:'blood' };
 
 // 효과별 지속 시간(초). town.js의 drawSkillFx와 아래 바닥 층이 같이 쓴다.
-const VFX_DUR = { thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
+const VFX_DUR = { holyshield:.65,resurrection:1.2, thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
   firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75 };
 
 function vfxReady(n){ const im = VFXI[n]; return !!(im && im.complete && im.naturalWidth > 0); }
@@ -1924,6 +1959,12 @@ function vfxSkill(f, k, x, y, r){
         vfxBlast('fire', sd + i + 1, x + Math.cos(a) * rr, y + 14 + Math.sin(a) * rr * .6, Math.max(26, r * .3), ki);
       }
       return true;
+    }
+    case 'holyshield': case 'resurrection':{
+      const a=1-k,R=r*(.4+.6*k);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle='#ffe8a0';ctx.lineWidth=5*a+1;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(x,y+20-i*25*k,R*(1-i*.18),R*.4,0,0,7);ctx.stroke();}
+      if(f.type==='resurrection'){ctx.strokeStyle='#fffce1';ctx.lineWidth=9*a;ctx.beginPath();ctx.moveTo(x,y-160*k);ctx.lineTo(x,y+15);ctx.moveTo(x-30,y-75*k);ctx.lineTo(x+30,y-75*k);ctx.stroke();}
+      ctx.restore();return true;
     }
     case 'thunderstrike':{
       vfxZig(x-24,y-260,x,y+14,28,Math.floor(k*12),sd,1-k,6,'#9faeff','#ffffff');
@@ -2235,6 +2276,8 @@ window.__VFX = {
 // 이 파일은 vfx.js 다음에 town.js 안으로 합쳐지므로 ctx, P, SK, CD, shots, sfx, pops 등을 그대로 쓴다.
 const GCD = .9;   // 스킬을 쓰면 다른 슬롯도 이만큼 잠깐 잠긴다(큰 스킬 연타 방지)
 const SK2 = {
+  holy2_shield:{mp:20,cd:15},
+  holy3_revive:{mp:0,cd:180},
   ice3:{mp:35,cd:14,root:.35},
   bolt3:{mp:43,cd:16,root:.4},
   dark2:{mp:15,cd:7},
@@ -2263,6 +2306,18 @@ function castExtra(id, d, rank, cm, mod, skillMul){
   const ang = Math.atan2(d[1], d[0]), ox = P.x + d[0] * 28, oy = P.y - 44 + d[1] * 28;
   const popName = () => { if (SK2_POP[id]) pops.push({ x:P.x, y:P.y - 115, t:0, txt:SK2_POP[id], crit:true }); };
   switch (id){
+    case 'holy2_shield': {
+      const v=Math.round(P.maxHp*(.6+rank*.08)*skillMul);
+      P.shield=v;P.shieldMax=v;P.shieldT=rank>=4?8:5;P.shieldRank=rank;P.shieldKind='holy';syncBars();
+      pops.push({x:P.x,y:P.y-100,t:0,txt:'성역의 방패 '+v,heal:true});
+      sfx.push({type:'holyshield',t:0,x:P.x,y:P.y-30,r:70});return true;
+    }
+    case 'holy3_revive': {
+      if(P.reviveArmed || (P.reviveReadyAt||0)>Date.now()){say(P.reviveArmed?'소생이 이미 준비되어 있습니다':'소생을 다시 준비하려면 기다려야 합니다');return false;}
+      P.reviveArmed=true;P.reviveRank=rank;P.reviveReadyAt=Date.now()+180000;
+      sfx.push({type:'heal',t:0,x:P.x,y:P.y-20,r:65});pops.push({x:P.x,y:P.y-110,t:0,txt:'소생 준비',heal:true});
+      if(window.UI&&UI.save)UI.save();return true;
+    }
     case 'ice3': {
       const hits=8+rank-1, dur=4;
       zones.push({type:'blizzard',map:MAP,x:P.x,y:P.y,t:0,dur,R:180,nextTick:dur/hits,interval:dur/hits,
@@ -2462,6 +2517,20 @@ function updZones(dt){
       if (z.t > z.dur + .35) zones.splice(i, 1);
     }
   }
+}
+
+// 소생은 한 번 준비하면 사망 시 소모된다. 재사용 시각은 저장해 재접속으로 초기화되지 않는다.
+function tryRevivePlayer(){
+  if(!P.reviveArmed)return false;
+  P.reviveArmed=false;
+  const rank=Math.max(1,Math.min(5,P.reviveRank||1));
+  P.hp=Math.max(1,Math.round(P.maxHp*(.3+(rank-1)*.175)));
+  P.reviveReadyAt=Date.now()+180000;CD.holy3_revive=180;P.reviveGrace=1.5;playerInv=1.5;
+  P.castRoot=0;P.atk=null;P.shield=0;
+  for(const key in PLAYER_STATUS)PLAYER_STATUS[key]=0;
+  syncBars();sfx.push({type:'resurrection',t:0,x:P.x,y:P.y-20,r:110});
+  pops.push({x:P.x,y:P.y-110,t:0,txt:'기적의 소생!',heal:true});
+  if(window.UI&&UI.save)UI.save();return true;
 }
 
 // ======================= 필드 · 몬스터 =======================
@@ -2766,12 +2835,14 @@ function faceMonster(m,dx,dy){
   if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; } else m.face='front';
 }
 function defeatPlayer(){
+  if(tryRevivePlayer())return;
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
   for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;P.shield=0;syncBars();
   say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
   travel('town',[23*TS,22.2*TS],'front');
 }
 function rawPlayerDamage(v,label){
+  if(P.reviveGrace>0)return;
   const cm=window.UI&&UI.combatMods?UI.combatMods():{damageReduce:0};
   v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));
   if(P.shield>0){v=absorbShield(v);if(v<=0)return;}   // 빙결 보호막이 먼저 받는다
@@ -2789,6 +2860,7 @@ function applyPlayerStatus(kind,dur){
 function hurtPlayer(v,dx,dy,status,statusDur){
   if(playerInv>0||traveling) return false;
   playerInv=.55; rawPlayerDamage(v); sfx.push({type:'hurt',t:0,x:P.x,y:P.y-42,r:36});
+  if(P.reviveGrace>0)return true;
   const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
   if(status&&!(P.shield>0)) applyPlayerStatus(status,statusDur);   // 보호막이 남아 있으면 상태이상도 막는다
   return true;
@@ -4199,10 +4271,10 @@ const QS = [null, null, null, null, null];
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 지팡이 기준(지팡이 +25% 보너스는 2026-10-04 제거)
-const IMPLEMENTED = new Set(['ice3','bolt3','dark2','fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
-const SKN = { ice3:'극야의 눈보라', bolt3:'천벌의 뇌우', dark2:'고통의 늪', fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'빙결 보호막', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
+const IMPLEMENTED = new Set(['holy2_shield','holy3_revive','ice3','bolt3','dark2','fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
+const SKN = { holy2_shield:'성역의 방패', holy3_revive:'기적의 소생', ice3:'극야의 눈보라', bolt3:'천벌의 뇌우', dark2:'고통의 늪', fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'빙결 보호막', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
   holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
-const SKD = { ice3:'내 주변 4초 눈보라·둔화, 단계가 오르면 타수·빙결 확률 증가', bolt3:'전방으로 이어지는 낙뢰 3회, 5단계는 1초 이동불가', dark2:'가까운 적 발밑에 둔화·지속 피해 장판, 4단계부터 5초', fire1:'느리게 날아가 펑 터지는 불덩이, 화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음막이 피해를 대신 받고 상태이상도 막음. 깨지면 주변이 얼어붙음', ice2:'전방 부채꼴 냉기, 둔화',
+const SKD = { holy2_shield:'강한 피해 흡수막 5초, 4단계부터 8초. 다른 보호막과 중첩되지 않음', holy3_revive:'미리 눌러 준비하면 사망 시 제자리 소생. 체력30→100%, 마나0, 발동 후 재사용180초', ice3:'내 주변 4초 눈보라·둔화, 단계가 오르면 타수·빙결 확률 증가', bolt3:'전방으로 이어지는 낙뢰 3회, 5단계는 1초 이동불가', dark2:'가까운 적 발밑에 둔화·지속 피해 장판, 4단계부터 5초', fire1:'느리게 날아가 펑 터지는 불덩이, 화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음막이 피해를 대신 받고 상태이상도 막음. 깨지면 주변이 얼어붙음', ice2:'전방 부채꼴 냉기, 둔화',
   bolt1:'전방 60도로 느리게 나가는 전기 구체 3개, 닿는 동안 감전', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'발밑에서 퍼지는 좁은 전방위 어둠, 낮은 확률로 혼돈', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
   holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기', bow2:'부채꼴로 화살 여러 발', fist2:'앞으로 뻗는 투기, 4랭크부터 관통' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
@@ -4600,7 +4672,7 @@ function saveGame(){
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
-      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,stash,eq,cur,pot:POT,qs:QS,
+      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,stash,eq,cur,pot:POT,qs:QS,
       location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}
 }
@@ -4616,7 +4688,7 @@ function loadGame(){
   let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
   const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
-  P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;
+  P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;P.reviveReadyAt=+d.reviveReadyAt||0;P.reviveArmed=!!d.reviveArmed;P.reviveRank=Math.max(1,Math.min(5,+d.reviveRank||1));
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);return d;
 }
 const saved=loadGame();
