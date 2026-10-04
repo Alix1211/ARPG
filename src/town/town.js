@@ -83,7 +83,7 @@ const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:fals
   hp:40*NUM, mp:28*NUM, maxHp:40*NUM, maxMp:28*NUM, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
-  skillLv:{holy2_shield:0,holy3_revive:0,ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
+  skillLv:{holy2_shield:0,holy3_revive:0,ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,spear1:0,spear2:0,spear3:0,bow1:0,bow2:0,bow3:0,fist1:0,fist2:0,fist3:0},
   passives:{magicGuide:0,precision:0,rapid:0,manaFlow:0,survival:0,greed:0},
   lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){

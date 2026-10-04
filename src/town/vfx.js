@@ -12,7 +12,8 @@ const VFX_STATUS = { burn:'fire', slow:'slow', freeze:'ice', stone:'stone', blee
 
 // 효과별 지속 시간(초). town.js의 drawSkillFx와 아래 바닥 층이 같이 쓴다.
 const VFX_DUR = { holyshield:.65,resurrection:1.2, thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
-  firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75 };
+  firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75,
+  spearthrust:.3,spearburst:.5,fistdash:.35,quake:.55 };
 
 function vfxReady(n){ const im = VFXI[n]; return !!(im && im.complete && im.naturalWidth > 0); }
 // n 그림을 (x,y)에 가로 w 크기로 그린다. o: rot(라디안) alpha add(밝게 겹치기) base(그림 아랫변을 y에 맞춤) sy(세로 눌림) flip
@@ -277,6 +278,10 @@ function vfxSkill(f, k, x, y, r){
       }
       return true;
     }
+    case 'spearthrust': return vfxHitSpark(sd,x,y,r*1.05,k,f.crit?'crit':'hit');
+    case 'spearburst': vfxHitSpark(sd,x,y,r*.85,k,'crit');vfxDust(sd+9,x,y+18,r*.7,k);return true;
+    case 'fistdash': return vfxHitSpark(sd,x,y,r*1.15,k,'crit');
+    case 'quake': vfxDust(sd,x,y+16,r*.9,k);vfxHitSpark(sd+3,x,y,r*.75,k,'hit');return true;
     case 'hit':   return vfxHitSpark(sd, x, y, r * 1.15, k, f.crit ? 'crit' : 'hit');
     case 'hurt':  return vfxHitSpark(sd, x, y, r * 1.0, k, 'hurt');
     case 'kill':  return vfxDust(sd, x, y + 8, Math.max(34, r * 1.1), k);
@@ -315,6 +320,12 @@ const VFX_AURA = { shot_fire:'#ff8a2a', shot_ice:'#7ddcff', shot_dark:'#a050ff',
 // 플레이어가 쏘는 투사체(지팡이·마법·검기·파동). 그렸으면 true
 const VFX_PSHOT = { ice:'shot_ice', fire:'shot_fire', dark:'shot_dark', blade:'shot_blade', wave:'shot_holy' };
 function vfxShot(s, a){
+  if(s.kind==='spear'){
+    ctx.save();ctx.translate(s.x,s.y);ctx.rotate(a);ctx.globalCompositeOperation='lighter';
+    ctx.strokeStyle='rgba(255,214,120,.35)';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-30,0);ctx.lineTo(18,0);ctx.stroke();
+    ctx.strokeStyle='#fff7d6';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(17,0);ctx.stroke();
+    ctx.fillStyle='#ffd06a';ctx.beginPath();ctx.moveTo(29,0);ctx.lineTo(14,-7);ctx.lineTo(14,7);ctx.closePath();ctx.fill();ctx.restore();return true;
+  }
   if (s.kind === 'bolt') return vfxBoltOrb(s);
   const nm = VFX_PSHOT[s.kind] || '';
   if (!nm || !vfxReady(nm)) return false;
@@ -380,10 +391,24 @@ function vfxGroundPass(){
 // ---- 시간이 걸리는 효과(운석·파멸의 링): 바닥 층 ----
 function vfxZonesGround(){
   for (const z of zones){
-    if(z.type==='blizzard'||z.type==='swamp'){
+    if(z.type==='spearfall'&&!z.hit){
+      const k=Math.min(1,z.t/z.delay),yy=z.y-250*(1-k);ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#fff1b0';ctx.lineWidth=8*(1-k)+2;
+      ctx.beginPath();ctx.moveTo(z.x,yy-80);ctx.lineTo(z.x,z.y-10);ctx.stroke();ctx.restore();
+    } else if(z.type==='arrowrain'){
+      ctx.save();ctx.strokeStyle='#f4e6ba';ctx.lineWidth=2;ctx.globalAlpha=Math.max(0,Math.min(1,(z.dur-z.t)*2));
+      for(let q=0;q<12;q++){const ph=(z.t*2.7+q*.173)%1,a=q*2.399,x=z.x+Math.cos(a)*z.R*Math.sqrt((q+.5)/12),y=z.y+Math.sin(a)*z.R*.72-ph*120;
+        ctx.beginPath();ctx.moveTo(x-10,y-36);ctx.lineTo(x+4,y+8);ctx.stroke();}
+      ctx.restore();
+    } else if(z.type==='blizzard'||z.type==='swamp'){
       const ice=z.type==='blizzard',alpha=Math.min(1,z.t*4,(z.dur-z.t)*3);
       ctx.save();ctx.globalAlpha=Math.max(0,alpha);ctx.fillStyle=ice?'rgba(100,205,255,.2)':'rgba(75,20,110,.5)';
       ctx.strokeStyle=ice?'#9eeaff':'#b06cde';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(z.x,z.y,z.R,z.R/1.3,0,0,7);ctx.fill();ctx.stroke();ctx.restore();
+    } else if(z.type==='spearfall'&&!z.hit){
+      const k=Math.min(1,z.t/z.delay);ctx.save();ctx.translate(z.x,z.y);ctx.scale(1,.55);ctx.globalAlpha=.35+.35*Math.sin(z.t*18);
+      ctx.strokeStyle='#ffd66e';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,z.r*(1-k*.45),0,7);ctx.stroke();ctx.restore();
+    } else if(z.type==='arrowrain'){
+      const a=Math.max(0,Math.min(1,z.t*4,(z.dur-z.t)*3));ctx.save();ctx.translate(z.x,z.y);ctx.scale(1,.55);ctx.globalAlpha=a*.7;
+      ctx.fillStyle='rgba(180,210,120,.12)';ctx.strokeStyle='#e8d98a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,z.R,0,7);ctx.fill();ctx.stroke();ctx.restore();
     } else if (z.type === 'meteor'){
       if (z.t < z.delay){   // 낙하 예고: 붉은 원이 조여 들어온다
         const k = z.t / z.delay, pulse = .55 + .25 * Math.sin(z.t * 22);
@@ -537,6 +562,7 @@ function vfxMonsterIcons(m, by){
   if (!vfxReady('status_icon_fire')) return;
   const list = [];
   if (m.burnT > 0) list.push('fire');
+  if (m.poisonT > 0 && vfxReady('status_icon_poison')) list.push('poison');
   if (m.freezeT > 0) list.push('ice'); else if (m.slowT > 0) list.push('slow');
   list.forEach((k, i) => vfxDraw('status_icon_' + k, m.x + (i - (list.length - 1) / 2) * 24, by - 14, 22));
 }

@@ -201,12 +201,18 @@ const QS = [null, null, null, null, null];
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 지팡이 기준(지팡이 +25% 보너스는 2026-10-04 제거)
-const IMPLEMENTED = new Set(['holy2_shield','holy3_revive','ice3','bolt3','dark2','fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
+const IMPLEMENTED = new Set(['holy2_shield','holy3_revive','ice3','bolt3','dark2','fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','spear1','spear2','spear3','bow1','bow2','bow3','fist1','fist2','fist3']);
 const SKN = { holy2_shield:'성역의 방패', holy3_revive:'기적의 소생', ice3:'극야의 눈보라', bolt3:'천벌의 뇌우', dark2:'고통의 늪', fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'빙결 보호막', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
-  holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
+  holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기',
+  spear1:'연속 찌르기', spear2:'투창 강타', spear3:'강하 찌르기',
+  bow1:'맹독 화살', bow2:'산탄 사격', bow3:'화살 비',
+  fist1:'돌진 격', fist2:'파동권', fist3:'지진 쇄' };
 const SKD = { holy2_shield:'강한 피해 흡수막 5초, 4단계부터 8초. 다른 보호막과 중첩되지 않음', holy3_revive:'미리 눌러 준비하면 사망 시 제자리 소생. 체력30→100%, 마나0, 발동 후 재사용180초', ice3:'내 주변 4초 눈보라·둔화, 단계가 오르면 타수·빙결 확률 증가', bolt3:'전방으로 이어지는 낙뢰 3회, 5단계는 1초 이동불가', dark2:'가까운 적 발밑에 둔화·지속 피해 장판, 4단계부터 5초', fire1:'느리게 날아가 펑 터지는 불덩이, 화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음막이 피해를 대신 받고 상태이상도 막음. 깨지면 주변이 얼어붙음', ice2:'전방 부채꼴 냉기, 둔화',
   bolt1:'전방 60도로 느리게 나가는 전기 구체 3개, 닿는 동안 감전', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'발밑에서 퍼지는 좁은 전방위 어둠, 낮은 확률로 혼돈', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
-  holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기', bow2:'부채꼴로 화살 여러 발', fist2:'앞으로 뻗는 투기, 4랭크부터 관통' };
+  holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기',
+  spear1:'좁은 직선 3연속 찌르기, 마지막 타격이 강한 치명타', spear2:'창을 던져 맞은 자리에서 폭발', spear3:'지정 지점에 강하해 넓은 충격파',
+  bow1:'맹독 화살 한 발, 명중 시 지속 독 피해', bow2:'부채꼴로 화살 여러 발', bow3:'넓은 구역에 화살 비, 맞은 적 둔화',
+  fist1:'짧게 돌진해 쳐올리며 적의 준비동작을 끊음', fist2:'앞으로 뻗는 투기, 4랭크부터 관통', fist3:'제자리에서 3연속 원형 충격파, 둔화' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
 const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};

@@ -397,6 +397,7 @@ function applyMonsterStatus(m,kind,dur){
   if(!m||m.dead||!kind)return;
   if(kind==='burn'){m.burnT=Math.max(m.burnT||0,dur||3);m.burnTick=Math.min(m.burnTick||.55,.55);}
   else if(kind==='slow'){m.slowT=Math.max(m.slowT||0,dur||2.5);}
+  else if(kind==='poison'){m.poisonT=Math.max(m.poisonT||0,dur||4);m.poisonTick=Math.min(m.poisonTick||.65,.65);}
   else if(kind==='confuse'){if(m.boss||m.elite)dur=(dur||2.5)*.4;m.confuseT=Math.max(m.confuseT||0,dur||2.5);}
   else if(kind==='freeze'){if(m.boss||m.elite)dur=(dur||.75)*.4;m.freezeT=Math.max(m.freezeT||0,dur||.75);m.stun=Math.max(m.stun||0,dur||.75);}
 }
@@ -430,7 +431,8 @@ function updEncounters(dt){
       continue;
     }
     m.hurt=Math.max(0,m.hurt-dt);m.stun=Math.max(0,m.stun-dt);m.stunImm=Math.max(0,(m.stunImm||0)-dt);m.cd=Math.max(0,(m.cd||0)-dt);m.skillCd=Math.max(0,(m.skillCd||0)-dt);
-    m.slowT=Math.max(0,(m.slowT||0)-dt);m.freezeT=Math.max(0,(m.freezeT||0)-dt);m.rdy=0;
+    m.slowT=Math.max(0,(m.slowT||0)-dt);m.freezeT=Math.max(0,(m.freezeT||0)-dt);m.poisonT=Math.max(0,(m.poisonT||0)-dt);m.rdy=0;
+    if(m.poisonT>0){m.poisonTick=(m.poisonTick||0)-dt;if(m.poisonTick<=0){m.poisonTick=.65;const pv=Math.max(1,Math.round(m.maxHp*.016));m.hp-=pv;pops.push({x:m.x,y:m.y-m.h*.8,t:0,txt:'독 '+pv,crit:true});if(m.hp<=0){killMonster(m);continue;}}}
     if(m.burnT>0){
       m.burnT=Math.max(0,m.burnT-dt);m.burnTick=(m.burnTick||0)-dt;
       if(m.burnTick<=0){m.burnTick=.55;const bv=Math.max(1,Math.round(m.maxHp*.022));m.hp-=bv;pops.push({x:m.x,y:m.y-m.h*.8,t:0,txt:'화상 '+bv,crit:true});if(m.hp<=0){killMonster(m);continue;}}

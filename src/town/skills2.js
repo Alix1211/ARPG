@@ -15,12 +15,21 @@ const SK2 = {
   bolt2:{mp:17,cd:6},                   // 연쇄 벼락: 명중 후 주변으로 튕김(2→3→4)
   dark1:{mp:4,cd:.9},                   // 심연의 파편: 발밑에서 퍼지는 좁은 전방위 충격 + 낮은 확률 혼돈
   dark3:{mp:45,cd:18,root:.6},          // 파멸의 링: 퍼지는 원형 충격파(5랭크 흡혈)
+  spear1:{mp:4,cd:2},                    // 연속 찌르기: 좁은 직선 3연타
+  spear2:{mp:7,cd:5},                    // 투창 강타: 투창 명중점 폭발
+  spear3:{mp:16,cd:14,root:.45},         // 강하 찌르기: 지정 지점 낙하 충격파
+  bow1:{mp:4,cd:1.5},                    // 맹독 화살: 단일 + 독 도트
+  bow3:{mp:15,cd:12,root:.35},           // 화살 비: 넓은 원형 다단 장판
+  fist1:{mp:3,cd:2},                     // 돌진 격: 짧은 대시 + 준비동작 캔슬
+  fist3:{mp:16,cd:12,root:.35},          // 지진 쇄: 제자리 원형 3연타
   sword3:{mp:13,cd:12,root:.35},        // 초승달 검기: 멀리 나가는 관통 검기
   bow2:{mp:8,cd:4.5},                   // 산탄 사격: 부채꼴 5~7발
   fist2:{mp:6,cd:4},                    // 파동권: 직선 투기(4랭크 관통)
 };
 Object.assign(SK, SK2);
-const SK2_POP = { fire2:'화염 폭풍!', fire3:'운석 낙하!', ice2:'서리 돌풍!', bolt2:'연쇄 벼락!', dark3:'파멸의 링!', sword3:'초승달 검기!', bow2:'산탄 사격!', fist2:'파동권!' };
+const SK2_POP = { fire2:'화염 폭풍!', fire3:'운석 낙하!', ice2:'서리 돌풍!', bolt2:'연쇄 벼락!', dark3:'파멸의 링!',
+  spear1:'연속 찌르기!', spear2:'투창 강타!', spear3:'강하 찌르기!', bow1:'맹독 화살!', bow3:'화살 비!', fist1:'돌진 격!', fist3:'지진 쇄!',
+  sword3:'초승달 검기!', bow2:'산탄 사격!', fist2:'파동권!' };
 const zones = [];   // 시간이 걸리는 효과(운석, 파멸의 링)
 
 const skBody = t => ({ x:t.x, y:t.y - (t.h || 60) * .45 });   // 몸통 중심
@@ -154,6 +163,50 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       popName();
       return true;
     }
+    case 'spear1': {
+      zones.push({type:'spearcombo',map:MAP,x:P.x,y:P.y,d:d.slice(),t:0,dur:.4,nextTick:.02,interval:.12,hits:0,
+        R:150+rank*4,width:27,dmg:Math.round(phy*(.68+rank*.025))});
+      sfx.push({type:'spearthrust',t:0,a:ang,x:P.x+d[0]*90,y:P.y-34+d[1]*90,r:42});
+      popName();return true;
+    }
+    case 'spear2': {
+      shots.push({x:ox,y:oy,vx:d[0]*650,vy:d[1]*650,speed:650,t:0,life:.85,kind:'spear',blast:64+rank*4,
+        fx:'spearburst',dmg:Math.round(phy*(3.7+rank*.12)),stagger:true});
+      popName();return true;
+    }
+    case 'spear3': {
+      const tg=nearestShotTarget(P.x,P.y-30,300);
+      let x=tg?tg.x:P.x+d[0]*165,y=tg?tg.y:P.y+d[1]*165;if(blocked(x,y)){x=P.x+d[0]*55;y=P.y+d[1]*55;}
+      zones.push({type:'spearfall',map:MAP,x,y,t:0,delay:.42,r:125+(rank-1)*6,dmg:Math.round(phy*(7+rank*.2)),hit:false});
+      popName();return true;
+    }
+    case 'bow1': {
+      shots.push({x:ox,y:oy,vx:d[0]*840,vy:d[1]*840,speed:840,t:0,life:.78,kind:'bow',blast:0,
+        dmg:Math.round(phy*(1.7+rank*.06)),status:'poison',statusDur:4+rank*.3,fx:'poisonburst'});
+      popName();return true;
+    }
+    case 'bow3': {
+      const tg=nearestShotTarget(P.x,P.y-30,360);let x=tg?tg.x:P.x+d[0]*175,y=tg?tg.y:P.y+d[1]*175;
+      if(blocked(x,y)){x=P.x+d[0]*55;y=P.y+d[1]*55;}
+      zones.push({type:'arrowrain',map:MAP,x,y,t:0,dur:3.2,R:180+rank*8,nextTick:.25,interval:.4,
+        dmg:Math.round(phy*(.95+rank*.04))});
+      popName();return true;
+    }
+    case 'fist1': {
+      const x0=P.x,y0=P.y,dist=86+rank*5,step=7;
+      for(let q=0;q<dist;q+=step){const nx=P.x+d[0]*step,ny=P.y+d[1]*step;if(blocked(nx,ny))break;P.x=nx;P.y=ny;}
+      const sx=P.x-x0,sy=P.y-y0,L2=sx*sx+sy*sy||1;
+      for(const t of combatTargets()){
+        const px=t.x-x0,py=t.y-y0,u=Math.max(0,Math.min(1,(px*sx+py*sy)/L2)),cx=x0+sx*u,cy=y0+sy*u;
+        if(Math.hypot(t.x-cx,t.y-cy)<44)hitTarget(t,d,true,Math.round(phy*(2+rank*.07)),12);
+      }
+      sfx.push({type:'fistdash',t:0,x:P.x,y:P.y-34,r:58});popName();return true;
+    }
+    case 'fist3': {
+      zones.push({type:'fistquake',map:MAP,x:P.x,y:P.y,t:0,dur:.62,R:125+rank*9,nextTick:.04,interval:.2,hits:0,
+        dmg:Math.round(phy*(2.2+rank*.08))});
+      popName();return true;
+    }
     case 'sword3': {
       const hw = 60 + (rank >= 5 ? 14 : 0);
       shots.push({ x:ox, y:oy, vx:d[0] * 620, vy:d[1] * 620, speed:620, t:0, life:.85 + (rank >= 5 ? .15 : 0), kind:'blade', pierce:true, hit:new Set(), hw, blast:0, fx:'impact',
@@ -210,6 +263,31 @@ function updZones(dt){
         if(thunder){z.hits++;sfx.push({type:'thunderstrike',t:0,x:center.x,y:center.y-14,r:z.R});}
       }
       if(z.t>z.dur+.05)zones.splice(i,1);
+    } else if(z.type==='spearcombo'){
+      while(z.hits<3&&z.t>=z.nextTick){
+        z.nextTick+=z.interval;const third=z.hits===2;z.hits++;
+        for(const target of combatTargets()){
+          const dx=target.x-z.x,dy=target.y-z.y,along=dx*z.d[0]+dy*z.d[1],side=Math.abs(dx*z.d[1]-dy*z.d[0]);
+          if(along>-10&&along<z.R&&side<z.width)hitTarget(target,z.d,third,Math.round(z.dmg*(third?1.5:1)),third?36:20);
+        }
+        sfx.push({type:'spearthrust',t:0,a:Math.atan2(z.d[1],z.d[0]),x:z.x+z.d[0]*(72+z.hits*12),y:z.y-34+z.d[1]*(72+z.hits*12),r:third?55:38,crit:third});
+      }
+      if(z.hits>=3&&z.t>z.dur)zones.splice(i,1);
+    } else if(z.type==='spearfall'){
+      if(!z.hit&&z.t>=z.delay){z.hit=true;for(const target of combatTargets())if(skGround(target,z)<z.r+14)hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,38);
+        sfx.push({type:'spearburst',t:0,x:z.x,y:z.y-12,r:z.r});}
+      if(z.t>z.delay+.45)zones.splice(i,1);
+    } else if(z.type==='arrowrain'){
+      while(z.nextTick<=z.dur+.001&&z.t>=z.nextTick){z.nextTick+=z.interval;
+        for(const target of combatTargets())if(skGround(target,z)<z.R+14){hitTarget(target,[0,0],false,z.dmg);applyMonsterStatus(target,'slow',.9);}
+      }
+      if(z.t>z.dur+.05)zones.splice(i,1);
+    } else if(z.type==='fistquake'){
+      while(z.hits<3&&z.t>=z.nextTick){z.nextTick+=z.interval;z.hits++;
+        for(const target of combatTargets())if(skGround(target,z)<z.R+14){hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,28);applyMonsterStatus(target,'slow',1.5);}
+        sfx.push({type:'quake',t:0,x:z.x,y:z.y-8,r:z.R*(.7+z.hits*.1)});
+      }
+      if(z.hits>=3&&z.t>z.dur)zones.splice(i,1);
     } else if (z.type === 'meteor'){
       if (!z.hit && z.t >= z.delay){
         z.hit = true;

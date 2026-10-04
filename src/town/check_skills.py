@@ -5,7 +5,7 @@ URL='file://'+os.path.abspath(os.path.join(os.path.dirname(__file__),'../../game
 SHOT=os.environ.get('SKILL_SHOT','')   # 값이 있으면 이 폴더에 스킬별 확인 화면 저장
 
 # 2차 묶음 스킬 10개: 배울 수 있고, 쓰면 맞은 적이 피해를 받고, 오류 없이 그려지는지
-SKILLS=['ice3','bolt3','dark2','fire2','fire3','ice2','bolt1','bolt2','dark1','dark3','sword3','bow2','fist2']
+SKILLS=['ice3','bolt3','dark2','fire2','fire3','ice2','bolt1','bolt2','dark1','dark3','sword3','spear1','spear2','spear3','bow1','bow2','bow3','fist1','fist2','fist3']
 
 async def main():
     async with async_playwright() as p:
@@ -34,7 +34,7 @@ async def main():
               __P.dir='side'; __P.flip=false; __P.x+=500; __FD.debugTarget(110,0,true); }""",sid)
             before=await ev("() => __FD.debugMonster()")
             assert before,sid
-            kind={'bolt1':'bolt','sword3':'blade','fist2':'wave','bow2':'bow'}.get(sid,'')
+            kind={'bolt1':'bolt','sword3':'blade','spear2':'spear','bow1':'bow','fist2':'wave','bow2':'bow'}.get(sid,'')
             res=await ev("([id,k]) => { const mp=GAME.P.mp; const ok=GAME.cast(id,{dmg:1,mp:1}); return [ok, __CTRL.shots().filter(x=>x.kind===k&&!x.done).length,GAME.P.mp<mp,GAME.cdLeft(id)>0]; }",[sid,kind])
             assert res[0] and res[2] and res[3],(sid,res)
             if sid=='fire3':
