@@ -84,6 +84,7 @@ function guildClaim(id){
     else {const comp=50+q.tier*35;GAME.setGold(P.gold+comp);extra=' · 가방이 차서 '+comp+'G 추가';}
   }
   guildState.active.splice(i,1);guildState.completed++;
+  if(window.QUEST)QUEST.onEvent('guild_claim',{id:q.id,type:q.type,count:1});
   say('의뢰 완료! EXP '+q.exp+' · '+q.gold+'G'+extra);
   if(!guildState.board.length&&!guildState.active.length)guildGenerate();
   guildRender();guildTrack();if(window.UI&&UI.save)UI.save();return true;
