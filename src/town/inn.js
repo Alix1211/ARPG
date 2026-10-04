@@ -1,5 +1,5 @@
 'use strict';
-// 여관 1단계: 실내 이동 + 토비 회복. 감정은 다음 묶음에서 이 대화창에 연결한다.
+// 여관 1단계 + 감정사: 실내 이동, 회복, 미확인 장비 감정.
 function innCost(){return Math.max(0,(P.lv||1)*8);}
 function enterInn(){if(MAP!=='town')return false;return travel('inn',MAPS.inn.spawn,'back');}
 function leaveInn(){closeAll();return MAP==='inn'?travel('town',MAPS.inn.back,'front'):false;}
@@ -10,6 +10,10 @@ function openInnDlg(n){
   $('dlgMainRow').hidden=true;$('dlgInnRow').hidden=false;
   $('dlgRest').textContent='푹 쉬기 ('+innCost()+'G)';
   show('dlg');return true;
+}
+function identifyInn(){
+  if(MAP!=='inn'||!window.UI||!UI.openIdentifyVendor)return false;
+  closeAll();return UI.openIdentifyVendor();
 }
 function restInn(){
   if(MAP!=='inn')return false;
@@ -28,5 +32,6 @@ function restInn(){
   return true;
 }
 $('dlgRest').addEventListener('click',restInn);
+$('dlgIdentify').addEventListener('click',identifyInn);
 $('dlgLeave').addEventListener('click',()=>closeAll());
-window.__INN={enter:enterInn,leave:leaveInn,open:()=>{const n=npcs.find(x=>x.shop==='inn');return n?openInnDlg(n):false;},rest:restInn,cost:innCost,state:()=>({map:MAP,x:P.x,y:P.y,gold:P.gold,hp:P.hp,mp:P.mp})};
+window.__INN={enter:enterInn,leave:leaveInn,open:()=>{const n=npcs.find(x=>x.shop==='inn');return n?openInnDlg(n):false;},rest:restInn,identify:identifyInn,cost:innCost,state:()=>({map:MAP,x:P.x,y:P.y,gold:P.gold,hp:P.hp,mp:P.mp})};
