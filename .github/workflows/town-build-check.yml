@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/town/**'
+      - 'src/story/quests.json'
       - '.github/workflows/town-build-check.yml'
 concurrency:
   group: town-build-main
@@ -59,6 +60,7 @@ jobs:
       - run: python src/town/check_trade.py
       - run: python src/town/check_mount.py
       - run: python src/town/check_guild.py
+      - run: python src/town/check_quest.py
       - run: python src/town/check_dungeon.py
       - run: python src/town/check_chest.py
       - name: Publish built town.html

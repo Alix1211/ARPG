@@ -27,6 +27,18 @@ async def main():
         st=await ev("() => GUILD.state()")
         assert len(st['board'])==6,st
 
+        # 동시 진행/HUD/버튼/저장 모두5개, 6번째는 거절한다.
+        initial=await ev("() => GUILD.saveData()")
+        ids=[q['id'] for q in initial['board']]
+        for qid in ids[:5]:assert await ev("id=>GUILD.accept(id)",qid)
+        assert not await ev("id=>GUILD.accept(id)",ids[5])
+        assert await pg.locator('#questTrack .qtrack').count()==5
+        assert await pg.locator('#gBoard button:disabled').count()==1
+        await ev("() => UI.save()")
+        await pg.reload();await pg.wait_for_timeout(1000)
+        assert await ev("() => GUILD.state().active.length")==5
+        assert await pg.locator('#questTrack .qtrack').count()==5
+        await ev("d=>GUILD.loadData(d)",initial)
         # 일반 처치 의뢰 수락 -> 진행 -> 보상.
         q=await ev("() => GUILD.state().board.find(q=>q.type==='kill_any')")
         assert q

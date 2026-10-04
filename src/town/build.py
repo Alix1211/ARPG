@@ -7,6 +7,8 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HERE = os.path.dirname(os.path.abspath(__file__))
 R = os.path.join(ROOT, 'assets') + '/'
+with open(os.path.join(ROOT,'src','story','quests.json'),encoding='utf-8') as qf:
+    MAIN_QUEST_DATA=json.load(qf)
 TS = 48          # 게임 단위 칸 크기
 PX = 64          # 바닥 그림의 칸당 픽셀
 MW, MH = 46, 32  # 마을 크기(칸)
@@ -272,6 +274,8 @@ NPC = [
  (2,  '에다', '성문 경비병', ('gate', 24.15, 31.7), -1, '들어가기 전에 물약은 챙겼지?', None),
  (6,  '미나', '꽃장수', ('free', 19.0, 18.6), 1, '꽃 한 송이 어때요?', None),
 ]
+for qn in MAIN_QUEST_DATA.get('npcs',[]):
+    NPC.append((qn['no'],qn['name'],qn['title'],tuple(qn['where']),qn.get('side',1),qn.get('line',''),None))
 bpos = {b['k']: b for b in blds}
 PORT = {}
 npcs = []
@@ -494,12 +498,12 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
-A = dict(tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(mainQuests=MAIN_QUEST_DATA, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
 js = source('tier_match.js') + '\n' + source('town.js')
-js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('field_dungeon.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('trade.js') + '\n' + source('guild.js'))
+js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('field_dungeon.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js'))
 html = source('shell.html')
 js += '\n' + source('ui.js')
 import time as _t

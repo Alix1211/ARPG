@@ -25,7 +25,7 @@ function guildMake(type,idx){
   return q;
 }
 function guildGenerate(){
-  if(guildState.board.length||guildState.active.length>=3)return;
+  if(guildState.board.length||guildState.active.length>=5)return;
   guildState.board=[
     guildMake('kill_any',0),guildMake('kill_any',1),
     guildMake('kill_type',0),guildMake('kill_type',1),
@@ -51,7 +51,7 @@ function guildTrack(){
   host.innerHTML='';
   if(!guildState.active.length){host.classList.remove('on');return;}
   host.classList.add('on');
-  for(const q of guildState.active.slice(0,3)){
+  for(const q of guildState.active.slice(0,5)){
     const done=guildDone(q),row=document.createElement('div');
     row.className='qtrack'+(done?' done':'');
     const hasNum=Number.isFinite(q.need)&&q.need>0;
@@ -61,7 +61,7 @@ function guildTrack(){
   }
 }
 function guildAccept(id){
-  if(guildState.active.length>=3){say('진행 중 의뢰는 최대 3개입니다.');return false;}
+  if(guildState.active.length>=5){say('진행 중 의뢰는 최대 5개입니다.');return false;}
   const i=guildState.board.findIndex(q=>q.id===id);if(i<0)return false;
   const q=guildState.board.splice(i,1)[0];q.accepted=true;guildState.active.push(q);guildRender();guildTrack();
   if(window.UI&&UI.save)UI.save();return true;
@@ -108,7 +108,7 @@ function guildCard(q,active){
   d.innerHTML='<b>'+q.title+'</b><small>'+q.desc+'</small><div class="gprog">'+guildProgressText(q)+'</div><small>보상 EXP '+q.exp+' · '+q.gold+'G'+gear+'</small>';
   const btn=document.createElement('button');btn.className='btn';btn.type='button';
   if(active){btn.textContent=guildDone(q)?'보상 받기':'진행 중';btn.disabled=!guildDone(q);btn.onclick=()=>guildClaim(q.id);}
-  else{btn.textContent='수락';btn.disabled=guildState.active.length>=3;btn.onclick=()=>guildAccept(q.id);}
+  else{btn.textContent='수락';btn.disabled=guildState.active.length>=5;btn.onclick=()=>guildAccept(q.id);}
   d.append(btn);return d;
 }
 function guildRender(){

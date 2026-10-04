@@ -529,6 +529,7 @@ function killMonster(m){
   }
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
   if(window.GUILD)GUILD.onKill(m);
+  if(window.QUEST)QUEST.onKill(m);
 }
 function appendEncounterSprites(list){if(!combatMap())return;drawEnemySkillFx();for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y});}
 function drawEnemySkillFx(){

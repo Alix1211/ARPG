@@ -251,13 +251,18 @@ html.app #fs{display:none}
 .stashGrid .slot.has{box-shadow:inset 0 0 0 2px var(--rc)}
 .stashFrame .inventorySort{top:540px;left:20px;right:20px}
 
+#mainQuestTrack{left:max(12px,env(safe-area-inset-left));top:244px;width:286px;display:none;pointer-events:auto;cursor:pointer;color:#ffe083;font:800 11px/1.35 sans-serif;text-shadow:0 2px 3px #000,0 0 5px #000}
+#mainQuestTrack.on{display:block}.mainQtrack{padding:3px 4px}.mainQuestCard{border-color:#bc8c37}
+.inventory-open #mainQuestTrack{visibility:hidden}#dlgQuest[hidden]{display:none}#dlgMainRow{flex-wrap:wrap}
+@media(max-height:480px){#questTrack{gap:0}.qtrack{min-height:18px;font-size:10px}#mainQuestTrack{top:216px;font-size:10px}}
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 <div class="hud" id="me"><div class="ring" role="button" tabindex="0" aria-label="능력치 열기"><img class="face" id="face" alt=""><img id="ringImg" alt=""><div id="lvOrb"><b id="lvTxt">1</b><small>Lv</small></div></div>
   <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
-<div class="hud" id="questTrack" aria-label="진행 중 의뢰"></div>
+<div class="hud" id="questTrack" aria-label="진행 중 길드 의뢰 최대 5개"></div>
+<div class="hud" id="mainQuestTrack" aria-label="본편 진행"></div>
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
 <button class="hud" id="mmPortal" type="button" aria-label="타운 포탈"><span id="mmPortalCd"></span><span id="mmPortalScr"></span></button>
 <div class="hud" id="place">마을</div>
@@ -268,9 +273,9 @@ html.app #fs{display:none}
 <div id="tag"></div>
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
-  <div class="row" id="dlgMainRow"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn" id="dlgTalk" type="button">잡담</button><button class="btn ghost" type="button" data-close>닫기</button></div>
+  <div class="row" id="dlgMainRow"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn" id="dlgQuest" type="button" hidden>★ 본편</button><button class="btn" id="dlgTalk" type="button">잡담</button><button class="btn ghost" type="button" data-close>닫기</button></div>
   <div class="row" id="dlgInnRow" hidden><button class="btn" id="dlgRest" type="button">푹 쉬기</button><button class="btn" id="dlgIdentify" type="button">감정</button><button class="btn" id="dlgChat" type="button">잡담</button><button class="btn ghost" id="dlgMerc" type="button" disabled>용병 · 준비 중</button><button class="btn ghost" id="dlgLeave" type="button">나가기</button></div></div></div>
-<div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small><button id="guildClose" type="button" data-close aria-label="닫기"></button></div><div class="gsect">진행 중 의뢰</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
+<div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small><button id="guildClose" type="button" data-close aria-label="닫기"></button></div><div class="gsect">★ 본편 · 길드 한도와 별도</div><div id="mainQuestActive"></div><div id="mainQuestDoneBlock" hidden><div class="gsect">본편 완료</div><div id="mainQuestDone"></div></div><div class="gsect">진행 중 길드 의뢰 · 최대 5개</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
 <div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><div id="shopTabs"><button class="btn on" id="tabBuy" type="button">사기</button><button class="btn" id="tabSell" type="button">팔기</button></div><small>내 금화 <b id="shopGold">0</b></small></div>
   <div id="shopMarket"></div>
   <div id="grid"></div>

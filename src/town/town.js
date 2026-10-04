@@ -77,6 +77,7 @@ for (const n of npcs){
   $('place').dataset.map = CUR.name || '마을';
   const panic=$('panic'); if(panic) panic.hidden=(id==='town'||id==='inn');
   if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
+  if(window.QUEST)QUEST.onWorld();
 }
 buildWorld('town');
 
@@ -358,6 +359,7 @@ function act(){
   if(near.kind==='stash'&&window.UI)return UI.openStash();
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
+  if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
@@ -438,6 +440,7 @@ function openDlg(n){
   $('dlgTrade').hidden = !n.shop && !n.go;
   $('dlgTrade').textContent = n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
   show('dlg');
+  $('dlgTalk').hidden=false;if(window.QUEST)QUEST.decorateDialog(n);
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 $('dlgTrade').addEventListener('click', () => {
@@ -907,6 +910,7 @@ function frame(now){
     P.t += sdt;
   } else P.t = 0;
   if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
+  if(window.QUEST)QUEST.tick();
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
 
@@ -959,6 +963,7 @@ function frame(now){
     if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
     else ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
+  if(window.QUEST)QUEST.draw();
   if(!DUN&&!INDOOR)drawLeaves();
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
