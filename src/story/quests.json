@@ -3067,6 +3067,627 @@
         "gold": 740,
         "expRatio": 0.32
       }
+    },
+    {
+      "id": "MAIN_051",
+      "kind": "main",
+      "title": "봉인-51",
+      "start": {
+        "npc": 39,
+        "level": 51,
+        "map": "town",
+        "previous": "MAIN_050"
+      },
+      "intro": [
+        "하르트: 화산길에서 몬스터가 평소보다 훨씬 거칠어졌네.",
+        "루크레아: 거래품을 망가뜨리지만 않으면 좋겠는데요.",
+        "하르트: 그 말이 먼저 나오나?",
+        "루크레아: 사람은 도망가지만 화물은 못 뛰니까요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "volcano",
+          "objective": "화산 이상현상 구역 진입"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "volcano",
+          "need": 13,
+          "objective": "폭주 몬스터 진정"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_051_ash",
+          "itemName": "이상한 화산재 결정",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "volcano",
+            "spawnOffset": [
+              520,
+              420
+            ]
+          },
+          "objective": "이상현상 표본 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_051_ash",
+          "need": 1,
+          "lines": [
+            "에드먼: 자연 화산재가 아니군. 길목 장치의 흐름이 새어 나온 흔적이야.",
+            "루크레아: 이번엔 수리비가 크게 들겠군요."
+          ],
+          "objective": "학자에게 표본 전달"
+        }
+      ],
+      "reward": {
+        "gold": 760,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_052",
+      "kind": "main",
+      "title": "봉인-52",
+      "start": {
+        "npc": 39,
+        "level": 52,
+        "map": "town",
+        "previous": "MAIN_051"
+      },
+      "intro": [
+        "하르트: 자네를 찾는 검사가 왔네.",
+        "루크레아: 빚 받으러 온 건 아니죠?",
+        "하르트: 오히려 갚을 게 있다고 하던데.",
+        "루크레아: 현금이면 환영입니다."
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "town",
+          "lines": [
+            "카르도: 예전에 받은 도움을 갚겠다.",
+            "루크레아: 금액으로 정산하실래요, 노동으로 정산하실래요?",
+            "카르도: ...후자로 하지.",
+            "루크레아: 현명한 선택입니다."
+          ],
+          "objective": "카르도와 재회"
+        },
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 14,
+          "objective": "화산 관리구역으로 이동"
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 14,
+          "need": 12,
+          "objective": "관리구역 돌파"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "dungeon",
+          "floor": 14,
+          "lines": [
+            "카르도: 이 정도면 빚은 갚은 거다.",
+            "루크레아: 시간당으로 계산하면 조금 모자랍니다.",
+            "카르도: 다음엔 그냥 돈으로 주지."
+          ],
+          "objective": "공동 전투 마무리"
+        }
+      ],
+      "reward": {
+        "gold": 780,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_053",
+      "kind": "main",
+      "title": "봉인-53",
+      "start": {
+        "npc": 29,
+        "level": 53,
+        "map": "town",
+        "previous": "MAIN_052"
+      },
+      "intro": [
+        "에드먼: 화산 쪽 여섯 번째 관리소 위치를 찾았네. 그런데 부품이 몇 개 비어 있어.",
+        "루크레아: 오래됐으니 도난보다 재활용일 가능성이 높겠네요.",
+        "에드먼: 자네도 이제 패턴을 읽는군."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_053_mount",
+          "itemName": "뜯긴 부품 받침대",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "volcano",
+            "spawnOffset": [
+              620,
+              300
+            ]
+          },
+          "objective": "관리소 도난 흔적 확인"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "volcano",
+          "need": 9,
+          "objective": "관리소 주변 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 42,
+          "item": "MAIN_053_mount",
+          "need": 1,
+          "lines": [
+            "그레타: 최근에 떼간 흔적이야. 이 나사 자국은 새 거라고.",
+            "루크레아: 수백 년 된 문제보다 최근 도둑이 더 반갑네요. 잡을 수 있으니까."
+          ],
+          "objective": "대장간에서 흔적 판별"
+        },
+        {
+          "type": "talk",
+          "npc": 28,
+          "lines": [
+            "고르던: 비슷한 부품이 시장에 들어온 적은 있지. 출처가 수상해서 안 샀네.",
+            "루크레아: 드물게 아주 훌륭한 판단을 하셨군요.",
+            "고르던: '드물게'는 빼게."
+          ],
+          "objective": "전당포 유통 흔적 확인"
+        }
+      ],
+      "reward": {
+        "gold": 790,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_054",
+      "kind": "main",
+      "title": "봉인-54",
+      "start": {
+        "npc": 28,
+        "level": 54,
+        "map": "town",
+        "previous": "MAIN_053"
+      },
+      "intro": [
+        "고르던: 그 부품, 외곽 장사꾼이 다시 내놨다는 소문이네.",
+        "루크레아: 원가 이하라면 제가 사겠습니다.",
+        "고르던: 장물일 수도 있네.",
+        "루크레아: 그럼 더 싸야죠.",
+        "고르던: 자넨 정말 한결같군."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "shop_buy",
+          "filter": {
+            "shop": "pawn"
+          },
+          "need": 1,
+          "objective": "유통시장 흔적 조사"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_054_part",
+          "itemName": "회수한 관리소 부품",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "volcano",
+            "spawnOffset": [
+              470,
+              500
+            ]
+          },
+          "objective": "빠진 부품 회수"
+        },
+        {
+          "type": "deliver",
+          "npc": 42,
+          "item": "MAIN_054_part",
+          "need": 1,
+          "lines": [
+            "그레타: 맞아, 이게 빠진 부품이야. 조금만 손보면 쓸 수 있어.",
+            "루크레아: 새로 제작 안 해도 되는 거죠?",
+            "그레타: 그 말 할 줄 알았다."
+          ],
+          "objective": "부품 수리 맡기기"
+        },
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 관리소 복원 준비는 끝났네.",
+            "루크레아: 구매비와 수리비는 나중에 비용 처리하겠습니다."
+          ],
+          "objective": "복원 준비 확인"
+        }
+      ],
+      "reward": {
+        "gold": 810,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_055",
+      "kind": "main",
+      "title": "봉인-55",
+      "start": {
+        "npc": 29,
+        "level": 55,
+        "map": "town",
+        "previous": "MAIN_054"
+      },
+      "intro": [
+        "에드먼: 이제 확실히 말할 수 있네. 이 일곱 시설은 길만 관리하는 게 아니야.",
+        "루크레아: 또 비용이 늘어나는 얘기군요.",
+        "에드먼: 무너지면 주변 지역 전체가 위험해질 수 있어.",
+        "루크레아: ...제 거래망 전체가요?",
+        "에드먼: 자네식으로 말하면 그렇네."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 여러 지역의 보고가 같은 현상으로 묶이기 시작했네.",
+            "루크레아: 시장 전체가 흔들리면 개별 마진은 의미가 없습니다.",
+            "하르트: 세상을 걱정하는 말처럼 들리는데.",
+            "루크레아: 시장을 걱정하는 겁니다."
+          ],
+          "objective": "길드와 위험 공유"
+        },
+        {
+          "type": "talk",
+          "npc": 43,
+          "lines": [
+            "페닉스: 특허장이 정말 관리권 계약이라면, 복원한 시설과도 연결될 수 있습니다.",
+            "루크레아: 권리와 책임이 세트군요.",
+            "페닉스: 보통 그렇습니다.",
+            "루크레아: 권리만 따로 살 수는 없나요?"
+          ],
+          "objective": "특허장 법적 의미 확인"
+        },
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "inn",
+          "lines": [
+            "펙스: 얼굴 안 좋다.",
+            "루크레아: 시장 전체가 망할 수 있답니다.",
+            "펙스: 세상보다 시장?",
+            "루크레아: 저한텐 거의 같은 말입니다."
+          ],
+          "objective": "여관에서 잠시 정리"
+        }
+      ],
+      "reward": {
+        "gold": 820,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_056",
+      "kind": "main",
+      "title": "봉인-56",
+      "start": {
+        "npc": 12,
+        "level": 56,
+        "map": "town",
+        "previous": "MAIN_055"
+      },
+      "intro": [
+        "핀: 화산 교역로가 오늘도 막혔어요. 이번엔 요청이 오기 전에 움직이실 건가요?",
+        "루크레아: 제 거래망입니다. 남이 망가뜨리기 전에 제가 지켜야죠.",
+        "핀: 그 말, 조금 멋있었어요.",
+        "루크레아: 비용 청구서는 따로 만들 겁니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "volcano",
+          "objective": "위험구역 선제 진입"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "volcano",
+          "need": 14,
+          "objective": "교역로 선제 정리"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_056_link",
+          "itemName": "길목 연결석",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "volcano",
+            "spawnOffset": [
+              700,
+              400
+            ]
+          },
+          "objective": "연결석 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_056_link",
+          "need": 1,
+          "lines": [
+            "에드먼: 자네가 먼저 움직인 덕에 손상이 더 번지진 않았어.",
+            "루크레아: 예방비가 복구비보다 싸니까요."
+          ],
+          "objective": "연결석 전달"
+        }
+      ],
+      "reward": {
+        "gold": 840,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_057",
+      "kind": "main",
+      "title": "봉인-57",
+      "start": {
+        "npc": 29,
+        "level": 57,
+        "map": "town",
+        "previous": "MAIN_056"
+      },
+      "intro": [
+        "에드먼: 여섯 번째 장치를 복원할 준비가 됐네.",
+        "루크레아: 이번엔 조용히 끝났으면 좋겠습니다.",
+        "에드먼: 그런 말을 하면 꼭 일이 생기더군."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_057_core",
+          "itemName": "화산 길목 핵심석",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "volcano",
+            "spawnOffset": [
+              740,
+              260
+            ]
+          },
+          "objective": "핵심석 확보"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "volcano",
+          "need": 12,
+          "objective": "복원 구역 방어"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_057_core",
+          "need": 1,
+          "lines": [
+            "에드먼: 복원됐다! 그런데... 다른 쪽 흐름이 갑자기 거세졌어.",
+            "루크레아: 고치면 끝나는 계약은 왜 세상에 없는 걸까요."
+          ],
+          "objective": "여섯 번째 복구 완료"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 늪지대 쪽에서 대규모 이상 보고가 올라왔네.",
+            "루크레아: 마지막 약한 곳으로 문제가 몰린 거군요."
+          ],
+          "objective": "새 이상현상 보고 받기"
+        }
+      ],
+      "reward": {
+        "gold": 860,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_058",
+      "kind": "main",
+      "title": "봉인-58",
+      "start": {
+        "npc": 39,
+        "level": 58,
+        "map": "town",
+        "previous": "MAIN_057"
+      },
+      "intro": [
+        "하르트: 옛 상단의 늪지대 운송장부가 사라졌네. 누군가 최근까지 보관했던 모양이야.",
+        "루크레아: 물건보다 장부가 더 중요할 때가 있죠. 추적합시다."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 5,
+          "lines": [
+            "토비: 예전에 늪에서 온 손님이 낡은 장부 얘길 한 적 있어요~ 술집에도 들렀다던데요.",
+            "루크레아: 역시 여관은 정보가 모이는 곳이군요."
+          ],
+          "objective": "여관에서 장부 소문 수집"
+        },
+        {
+          "type": "talk",
+          "npc": 40,
+          "lines": [
+            "브란: 그 손님? 전당포로 갔지. 술값은 제대로 냈고.",
+            "루크레아: 신뢰할 만한 사람입니다."
+          ],
+          "objective": "술집에서 행적 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 28,
+          "lines": [
+            "고르던: 장부는 물건값이 안 나와서 돌려보냈네. 대신 표지 일부를 떼어 샘플로 남겼지.",
+            "루크레아: 남의 장부를 뜯으셨군요.",
+            "고르던: 장사는 기록이 필요하네."
+          ],
+          "objective": "전당포에서 흔적 확인"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_058_cover",
+          "itemName": "늪지대 운송장부 표지 조각",
+          "need": 1,
+          "point": {
+            "map": "town",
+            "spawnOffset": [
+              -160,
+              180
+            ]
+          },
+          "objective": "장부 표지 조각 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_058_cover",
+          "need": 1,
+          "lines": [
+            "에드먼: 늪지대 옛 교역소 문장이 맞네.",
+            "루크레아: 이제 장부 본체를 찾으면 되겠군요."
+          ],
+          "objective": "학자에게 표지 확인"
+        }
+      ],
+      "reward": {
+        "gold": 870,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_059",
+      "kind": "main",
+      "title": "봉인-59",
+      "start": {
+        "npc": 43,
+        "level": 59,
+        "map": "town",
+        "previous": "MAIN_058"
+      },
+      "intro": [
+        "페닉스: 장부 표지에 계약 조항 번호가 적혀 있습니다. 특허장 사본과 대조해 봤죠.",
+        "루크레아: 좋은 소식입니까?",
+        "페닉스: 관리권을 가진 자가 길목 시설의 최종 책임자가 된다는 뜻입니다.",
+        "루크레아: '권리' 뒤에 왜 늘 '책임'이 붙죠?"
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 관리권과 봉인 기능이 같은 계약에 묶인 것 같네.",
+            "루크레아: 그럼 특허장을 가지면 유지비도 제가 냅니까?",
+            "에드먼: 가능성이 높지.",
+            "루크레아: 갑자기 전설의 가치가 떨어졌습니다."
+          ],
+          "objective": "계약의 마법적 의미 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 그래도 자네, 찾는 걸 포기하진 않을 거지?",
+            "루크레아: 이미 투자한 비용이 너무 큽니다. 매몰비용이란 무서운 겁니다."
+          ],
+          "objective": "계속 진행 결정"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 늪지대는 공급이 거의 끊겼어요. 시세는 말도 안 되게 뛰었고요.",
+            "루크레아: ...그 정도입니까?",
+            "핀: 지금 눈빛 보니 포기할 생각은 없네요."
+          ],
+          "objective": "늪지대 시세 확인"
+        }
+      ],
+      "reward": {
+        "gold": 890,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_060",
+      "kind": "main",
+      "title": "봉인-60",
+      "start": {
+        "npc": 12,
+        "level": 60,
+        "map": "town",
+        "previous": "MAIN_059"
+      },
+      "intro": [
+        "핀: 늪지대 교역소는 아직 살아 있어요. 다만 물류가 거의 끊겼습니다.",
+        "루크레아: 끊긴 시장은 위험하지만, 다시 열리면 가장 먼저 들어간 사람이 이깁니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "swamp",
+          "objective": "늪지대 교역권 진입"
+        },
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "swamp"
+          },
+          "need": 1,
+          "objective": "늪지대 시세 직접 확인"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "swamp",
+          "need": 11,
+          "objective": "교역소 주변 위험 제거"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 거기 상황이 생각보다 심각하죠?",
+            "루크레아: 네. 하지만 시장은 아직 죽지 않았습니다.",
+            "핀: 그래서 계속 가실 거죠?",
+            "루크레아: 죽기 전에 살려야 제가 법니다."
+          ],
+          "objective": "큰 마을에 늪 상황 보고"
+        }
+      ],
+      "reward": {
+        "gold": 910,
+        "expRatio": 0.32
+      }
     }
   ],
   "sideQuests": [
