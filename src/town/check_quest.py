@@ -27,6 +27,7 @@ async def main():
         assert not await ev("() => QUEST.accept('M02')"),'prerequisite'
         await talk(no)
         assert await ev("() => !!QUEST.state().active.M01"),'accept'
+        assert await ev('no=>QUEST.marker(A.npcs.find(n=>n.no===no))',no)=='?', 'active marker'
         # 본편 수락 후에도 길드5줄을 유지한다.
         await ev('''() => {GUILD.open();for(const q of GUILD.state().board.slice(0,5))GUILD.accept(q.id);GAME.closeAll();}''')
         assert await pg.locator('#questTrack .qtrack').count()==5
@@ -80,7 +81,7 @@ async def main():
         assert await ev("() => QUEST.state().active.T99.progress")==1,'kill filter'
         await ev("() => QUEST.onKill({dead:true,type:'slime'})")
         assert await ev("() => QUEST.state().active.T99.step")==1,'kill advance'
-        await ev('() => GAME.act()');await pg.click('#dlgQuest')
+        await pg.wait_for_timeout(100);await ev('() => GAME.act()');await pg.click('#dlgQuest')
         assert await ev("() => QUEST.state().active.T99.step")==1,'delivery missing'
         assert not errs, 'browser errors'
         print('quest ok: numbered chains',count,'guild HUD 5; save/conditions/rewards ok')

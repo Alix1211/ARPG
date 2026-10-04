@@ -18,6 +18,7 @@ function questNpcAction(n){
     const s=questStep(q);
     if(s&&['talk','deliver'].includes(s.type)&&n.no===s.npc&&questMapMatches(s))return {q,step:s,start:false};
   }
+  for(const q of MAIN_QUESTS)if(mainQuestState.active[q.id]&&q.start.npc===n.no)return {q,step:questStep(q),start:false,waiting:true};
   for(const q of MAIN_QUESTS)if(questAvailable(q)&&q.start.npc===n.no&&questMapMatches(q.start))return {q,start:true};
   return null;
 }
@@ -51,10 +52,11 @@ function questDecorateDialog(n){
   questDialog=null;
   const btn=$('dlgQuest'),a=questNpcAction(n);btn.hidden=!a;
   if(!a)return;
-  btn.textContent=a.start?'★ 본편 수락':'★ 본편 진행';btn.onclick=()=>questBeginDialog(n,a);
+  btn.textContent=a.start?'★ 본편 수락':a.waiting?'★ 진행 확인':'★ 본편 진행';btn.onclick=()=>questBeginDialog(n,a);
 }
 function questBeginDialog(n,a){
   if(Math.hypot(P.x-n.x,P.y-n.y)>90)return false;
+  if(a.waiting){$('dlgLine').textContent=questObjective(a.q);$('dlgQuest').textContent='확인';$('dlgQuest').onclick=closeAll;return true;}
   const s=a.step;
   if(s&&s.type==='deliver'&&(mainQuestState.items[s.item]||0)<(s.need||1)){say('전달할 물품이 부족합니다.');return false;}
   questDialog={id:a.q.id,npc:n.no,start:a.start,step:mainQuestState.active[a.q.id]?.step,index:0,lines:a.start?a.q.intro:s.lines};
