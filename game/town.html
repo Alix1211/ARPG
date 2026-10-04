@@ -279,7 +279,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1557</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1612</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -419,7 +419,7 @@ const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:fals
   hp:40*NUM, mp:28*NUM, maxHp:40*NUM, maxMp:28*NUM, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
-  skillLv:{holy2_shield:0,holy3_revive:0,ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
+  skillLv:{holy2_shield:0,holy3_revive:0,ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,spear1:0,spear2:0,spear3:0,bow1:0,bow2:0,bow3:0,fist1:0,fist2:0,fist3:0},
   passives:{magicGuide:0,precision:0,rapid:0,manaFlow:0,survival:0,greed:0},
   lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){
@@ -1728,7 +1728,8 @@ const VFX_STATUS = { burn:'fire', slow:'slow', freeze:'ice', stone:'stone', blee
 
 // 효과별 지속 시간(초). town.js의 drawSkillFx와 아래 바닥 층이 같이 쓴다.
 const VFX_DUR = { holyshield:.65,resurrection:1.2, thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
-  firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75 };
+  firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75,
+  spearthrust:.3,spearburst:.5,fistdash:.35,quake:.55 };
 
 function vfxReady(n){ const im = VFXI[n]; return !!(im && im.complete && im.naturalWidth > 0); }
 // n 그림을 (x,y)에 가로 w 크기로 그린다. o: rot(라디안) alpha add(밝게 겹치기) base(그림 아랫변을 y에 맞춤) sy(세로 눌림) flip
@@ -1993,6 +1994,10 @@ function vfxSkill(f, k, x, y, r){
       }
       return true;
     }
+    case 'spearthrust': return vfxHitSpark(sd,x,y,r*1.05,k,f.crit?'crit':'hit');
+    case 'spearburst': vfxHitSpark(sd,x,y,r*.85,k,'crit');vfxDust(sd+9,x,y+18,r*.7,k);return true;
+    case 'fistdash': return vfxHitSpark(sd,x,y,r*1.15,k,'crit');
+    case 'quake': vfxDust(sd,x,y+16,r*.9,k);vfxHitSpark(sd+3,x,y,r*.75,k,'hit');return true;
     case 'hit':   return vfxHitSpark(sd, x, y, r * 1.15, k, f.crit ? 'crit' : 'hit');
     case 'hurt':  return vfxHitSpark(sd, x, y, r * 1.0, k, 'hurt');
     case 'kill':  return vfxDust(sd, x, y + 8, Math.max(34, r * 1.1), k);
@@ -2031,6 +2036,12 @@ const VFX_AURA = { shot_fire:'#ff8a2a', shot_ice:'#7ddcff', shot_dark:'#a050ff',
 // 플레이어가 쏘는 투사체(지팡이·마법·검기·파동). 그렸으면 true
 const VFX_PSHOT = { ice:'shot_ice', fire:'shot_fire', dark:'shot_dark', blade:'shot_blade', wave:'shot_holy' };
 function vfxShot(s, a){
+  if(s.kind==='spear'){
+    ctx.save();ctx.translate(s.x,s.y);ctx.rotate(a);ctx.globalCompositeOperation='lighter';
+    ctx.strokeStyle='rgba(255,214,120,.35)';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-30,0);ctx.lineTo(18,0);ctx.stroke();
+    ctx.strokeStyle='#fff7d6';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(17,0);ctx.stroke();
+    ctx.fillStyle='#ffd06a';ctx.beginPath();ctx.moveTo(29,0);ctx.lineTo(14,-7);ctx.lineTo(14,7);ctx.closePath();ctx.fill();ctx.restore();return true;
+  }
   if (s.kind === 'bolt') return vfxBoltOrb(s);
   const nm = VFX_PSHOT[s.kind] || '';
   if (!nm || !vfxReady(nm)) return false;
@@ -2096,10 +2107,24 @@ function vfxGroundPass(){
 // ---- 시간이 걸리는 효과(운석·파멸의 링): 바닥 층 ----
 function vfxZonesGround(){
   for (const z of zones){
-    if(z.type==='blizzard'||z.type==='swamp'){
+    if(z.type==='spearfall'&&!z.hit){
+      const k=Math.min(1,z.t/z.delay),yy=z.y-250*(1-k);ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#fff1b0';ctx.lineWidth=8*(1-k)+2;
+      ctx.beginPath();ctx.moveTo(z.x,yy-80);ctx.lineTo(z.x,z.y-10);ctx.stroke();ctx.restore();
+    } else if(z.type==='arrowrain'){
+      ctx.save();ctx.strokeStyle='#f4e6ba';ctx.lineWidth=2;ctx.globalAlpha=Math.max(0,Math.min(1,(z.dur-z.t)*2));
+      for(let q=0;q<12;q++){const ph=(z.t*2.7+q*.173)%1,a=q*2.399,x=z.x+Math.cos(a)*z.R*Math.sqrt((q+.5)/12),y=z.y+Math.sin(a)*z.R*.72-ph*120;
+        ctx.beginPath();ctx.moveTo(x-10,y-36);ctx.lineTo(x+4,y+8);ctx.stroke();}
+      ctx.restore();
+    } else if(z.type==='blizzard'||z.type==='swamp'){
       const ice=z.type==='blizzard',alpha=Math.min(1,z.t*4,(z.dur-z.t)*3);
       ctx.save();ctx.globalAlpha=Math.max(0,alpha);ctx.fillStyle=ice?'rgba(100,205,255,.2)':'rgba(75,20,110,.5)';
       ctx.strokeStyle=ice?'#9eeaff':'#b06cde';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(z.x,z.y,z.R,z.R/1.3,0,0,7);ctx.fill();ctx.stroke();ctx.restore();
+    } else if(z.type==='spearfall'&&!z.hit){
+      const k=Math.min(1,z.t/z.delay);ctx.save();ctx.translate(z.x,z.y);ctx.scale(1,.55);ctx.globalAlpha=.35+.35*Math.sin(z.t*18);
+      ctx.strokeStyle='#ffd66e';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,z.r*(1-k*.45),0,7);ctx.stroke();ctx.restore();
+    } else if(z.type==='arrowrain'){
+      const a=Math.max(0,Math.min(1,z.t*4,(z.dur-z.t)*3));ctx.save();ctx.translate(z.x,z.y);ctx.scale(1,.55);ctx.globalAlpha=a*.7;
+      ctx.fillStyle='rgba(180,210,120,.12)';ctx.strokeStyle='#e8d98a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,z.R,0,7);ctx.fill();ctx.stroke();ctx.restore();
     } else if (z.type === 'meteor'){
       if (z.t < z.delay){   // 낙하 예고: 붉은 원이 조여 들어온다
         const k = z.t / z.delay, pulse = .55 + .25 * Math.sin(z.t * 22);
@@ -2253,6 +2278,7 @@ function vfxMonsterIcons(m, by){
   if (!vfxReady('status_icon_fire')) return;
   const list = [];
   if (m.burnT > 0) list.push('fire');
+  if (m.poisonT > 0 && vfxReady('status_icon_poison')) list.push('poison');
   if (m.freezeT > 0) list.push('ice'); else if (m.slowT > 0) list.push('slow');
   list.forEach((k, i) => vfxDraw('status_icon_' + k, m.x + (i - (list.length - 1) / 2) * 24, by - 14, 22));
 }
@@ -2302,12 +2328,21 @@ const SK2 = {
   bolt2:{mp:17,cd:6},                   // 연쇄 벼락: 명중 후 주변으로 튕김(2→3→4)
   dark1:{mp:4,cd:.9},                   // 심연의 파편: 발밑에서 퍼지는 좁은 전방위 충격 + 낮은 확률 혼돈
   dark3:{mp:45,cd:18,root:.6},          // 파멸의 링: 퍼지는 원형 충격파(5랭크 흡혈)
+  spear1:{mp:4,cd:2},                    // 연속 찌르기: 좁은 직선 3연타
+  spear2:{mp:7,cd:5},                    // 투창 강타: 투창 명중점 폭발
+  spear3:{mp:16,cd:14,root:.45},         // 강하 찌르기: 지정 지점 낙하 충격파
+  bow1:{mp:4,cd:1.5},                    // 맹독 화살: 단일 + 독 도트
+  bow3:{mp:15,cd:12,root:.35},           // 화살 비: 넓은 원형 다단 장판
+  fist1:{mp:3,cd:2},                     // 돌진 격: 짧은 대시 + 준비동작 캔슬
+  fist3:{mp:16,cd:12,root:.35},          // 지진 쇄: 제자리 원형 3연타
   sword3:{mp:13,cd:12,root:.35},        // 초승달 검기: 멀리 나가는 관통 검기
   bow2:{mp:8,cd:4.5},                   // 산탄 사격: 부채꼴 5~7발
   fist2:{mp:6,cd:4},                    // 파동권: 직선 투기(4랭크 관통)
 };
 Object.assign(SK, SK2);
-const SK2_POP = { fire2:'화염 폭풍!', fire3:'운석 낙하!', ice2:'서리 돌풍!', bolt2:'연쇄 벼락!', dark3:'파멸의 링!', sword3:'초승달 검기!', bow2:'산탄 사격!', fist2:'파동권!' };
+const SK2_POP = { fire2:'화염 폭풍!', fire3:'운석 낙하!', ice2:'서리 돌풍!', bolt2:'연쇄 벼락!', dark3:'파멸의 링!',
+  spear1:'연속 찌르기!', spear2:'투창 강타!', spear3:'강하 찌르기!', bow1:'맹독 화살!', bow3:'화살 비!', fist1:'돌진 격!', fist3:'지진 쇄!',
+  sword3:'초승달 검기!', bow2:'산탄 사격!', fist2:'파동권!' };
 const zones = [];   // 시간이 걸리는 효과(운석, 파멸의 링)
 
 const skBody = t => ({ x:t.x, y:t.y - (t.h || 60) * .45 });   // 몸통 중심
@@ -2441,6 +2476,50 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       popName();
       return true;
     }
+    case 'spear1': {
+      zones.push({type:'spearcombo',map:MAP,x:P.x,y:P.y,d:d.slice(),t:0,dur:.4,nextTick:.02,interval:.12,hits:0,
+        R:150+rank*4,width:27,dmg:Math.round(phy*(.68+rank*.025))});
+      sfx.push({type:'spearthrust',t:0,a:ang,x:P.x+d[0]*90,y:P.y-34+d[1]*90,r:42});
+      popName();return true;
+    }
+    case 'spear2': {
+      shots.push({x:ox,y:oy,vx:d[0]*650,vy:d[1]*650,speed:650,t:0,life:.85,kind:'spear',blast:64+rank*4,
+        fx:'spearburst',dmg:Math.round(phy*(3.7+rank*.12)),stagger:true});
+      popName();return true;
+    }
+    case 'spear3': {
+      const tg=nearestShotTarget(P.x,P.y-30,300);
+      let x=tg?tg.x:P.x+d[0]*165,y=tg?tg.y:P.y+d[1]*165;if(blocked(x,y)){x=P.x+d[0]*55;y=P.y+d[1]*55;}
+      zones.push({type:'spearfall',map:MAP,x,y,t:0,delay:.42,r:125+(rank-1)*6,dmg:Math.round(phy*(7+rank*.2)),hit:false});
+      popName();return true;
+    }
+    case 'bow1': {
+      shots.push({x:ox,y:oy,vx:d[0]*840,vy:d[1]*840,speed:840,t:0,life:.78,kind:'bow',blast:0,
+        dmg:Math.round(phy*(1.7+rank*.06)),status:'poison',statusDur:4+rank*.3,fx:'poisonburst'});
+      popName();return true;
+    }
+    case 'bow3': {
+      const tg=nearestShotTarget(P.x,P.y-30,360);let x=tg?tg.x:P.x+d[0]*175,y=tg?tg.y:P.y+d[1]*175;
+      if(blocked(x,y)){x=P.x+d[0]*55;y=P.y+d[1]*55;}
+      zones.push({type:'arrowrain',map:MAP,x,y,t:0,dur:3.2,R:180+rank*8,nextTick:.25,interval:.4,
+        dmg:Math.round(phy*(.95+rank*.04))});
+      popName();return true;
+    }
+    case 'fist1': {
+      const x0=P.x,y0=P.y,dist=86+rank*5,step=7;
+      for(let q=0;q<dist;q+=step){const nx=P.x+d[0]*step,ny=P.y+d[1]*step;if(blocked(nx,ny))break;P.x=nx;P.y=ny;}
+      const sx=P.x-x0,sy=P.y-y0,L2=sx*sx+sy*sy||1;
+      for(const t of combatTargets()){
+        const px=t.x-x0,py=t.y-y0,u=Math.max(0,Math.min(1,(px*sx+py*sy)/L2)),cx=x0+sx*u,cy=y0+sy*u;
+        if(Math.hypot(t.x-cx,t.y-cy)<44)hitTarget(t,d,true,Math.round(phy*(2+rank*.07)),12);
+      }
+      sfx.push({type:'fistdash',t:0,x:P.x,y:P.y-34,r:58});popName();return true;
+    }
+    case 'fist3': {
+      zones.push({type:'fistquake',map:MAP,x:P.x,y:P.y,t:0,dur:.62,R:125+rank*9,nextTick:.04,interval:.2,hits:0,
+        dmg:Math.round(phy*(2.2+rank*.08))});
+      popName();return true;
+    }
     case 'sword3': {
       const hw = 60 + (rank >= 5 ? 14 : 0);
       shots.push({ x:ox, y:oy, vx:d[0] * 620, vy:d[1] * 620, speed:620, t:0, life:.85 + (rank >= 5 ? .15 : 0), kind:'blade', pierce:true, hit:new Set(), hw, blast:0, fx:'impact',
@@ -2497,6 +2576,31 @@ function updZones(dt){
         if(thunder){z.hits++;sfx.push({type:'thunderstrike',t:0,x:center.x,y:center.y-14,r:z.R});}
       }
       if(z.t>z.dur+.05)zones.splice(i,1);
+    } else if(z.type==='spearcombo'){
+      while(z.hits<3&&z.t>=z.nextTick){
+        z.nextTick+=z.interval;const third=z.hits===2;z.hits++;
+        for(const target of combatTargets()){
+          const dx=target.x-z.x,dy=target.y-z.y,along=dx*z.d[0]+dy*z.d[1],side=Math.abs(dx*z.d[1]-dy*z.d[0]);
+          if(along>-10&&along<z.R&&side<z.width)hitTarget(target,z.d,third,Math.round(z.dmg*(third?1.5:1)),third?36:20);
+        }
+        sfx.push({type:'spearthrust',t:0,a:Math.atan2(z.d[1],z.d[0]),x:z.x+z.d[0]*(72+z.hits*12),y:z.y-34+z.d[1]*(72+z.hits*12),r:third?55:38,crit:third});
+      }
+      if(z.hits>=3&&z.t>z.dur)zones.splice(i,1);
+    } else if(z.type==='spearfall'){
+      if(!z.hit&&z.t>=z.delay){z.hit=true;for(const target of combatTargets())if(skGround(target,z)<z.r+14)hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,38);
+        sfx.push({type:'spearburst',t:0,x:z.x,y:z.y-12,r:z.r});}
+      if(z.t>z.delay+.45)zones.splice(i,1);
+    } else if(z.type==='arrowrain'){
+      while(z.nextTick<=z.dur+.001&&z.t>=z.nextTick){z.nextTick+=z.interval;
+        for(const target of combatTargets())if(skGround(target,z)<z.R+14){hitTarget(target,[0,0],false,z.dmg);applyMonsterStatus(target,'slow',.9);}
+      }
+      if(z.t>z.dur+.05)zones.splice(i,1);
+    } else if(z.type==='fistquake'){
+      while(z.hits<3&&z.t>=z.nextTick){z.nextTick+=z.interval;z.hits++;
+        for(const target of combatTargets())if(skGround(target,z)<z.R+14){hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,28);applyMonsterStatus(target,'slow',1.5);}
+        sfx.push({type:'quake',t:0,x:z.x,y:z.y-8,r:z.R*(.7+z.hits*.1)});
+      }
+      if(z.hits>=3&&z.t>z.dur)zones.splice(i,1);
     } else if (z.type === 'meteor'){
       if (!z.hit && z.t >= z.delay){
         z.hit = true;
@@ -2946,6 +3050,7 @@ function applyMonsterStatus(m,kind,dur){
   if(!m||m.dead||!kind)return;
   if(kind==='burn'){m.burnT=Math.max(m.burnT||0,dur||3);m.burnTick=Math.min(m.burnTick||.55,.55);}
   else if(kind==='slow'){m.slowT=Math.max(m.slowT||0,dur||2.5);}
+  else if(kind==='poison'){m.poisonT=Math.max(m.poisonT||0,dur||4);m.poisonTick=Math.min(m.poisonTick||.65,.65);}
   else if(kind==='confuse'){if(m.boss||m.elite)dur=(dur||2.5)*.4;m.confuseT=Math.max(m.confuseT||0,dur||2.5);}
   else if(kind==='freeze'){if(m.boss||m.elite)dur=(dur||.75)*.4;m.freezeT=Math.max(m.freezeT||0,dur||.75);m.stun=Math.max(m.stun||0,dur||.75);}
 }
@@ -2979,7 +3084,8 @@ function updEncounters(dt){
       continue;
     }
     m.hurt=Math.max(0,m.hurt-dt);m.stun=Math.max(0,m.stun-dt);m.stunImm=Math.max(0,(m.stunImm||0)-dt);m.cd=Math.max(0,(m.cd||0)-dt);m.skillCd=Math.max(0,(m.skillCd||0)-dt);
-    m.slowT=Math.max(0,(m.slowT||0)-dt);m.freezeT=Math.max(0,(m.freezeT||0)-dt);m.rdy=0;
+    m.slowT=Math.max(0,(m.slowT||0)-dt);m.freezeT=Math.max(0,(m.freezeT||0)-dt);m.poisonT=Math.max(0,(m.poisonT||0)-dt);m.rdy=0;
+    if(m.poisonT>0){m.poisonTick=(m.poisonTick||0)-dt;if(m.poisonTick<=0){m.poisonTick=.65;const pv=Math.max(1,Math.round(m.maxHp*.016));m.hp-=pv;pops.push({x:m.x,y:m.y-m.h*.8,t:0,txt:'독 '+pv,crit:true});if(m.hp<=0){killMonster(m);continue;}}}
     if(m.burnT>0){
       m.burnT=Math.max(0,m.burnT-dt);m.burnTick=(m.burnTick||0)-dt;
       if(m.burnTick<=0){m.burnTick=.55;const bv=Math.max(1,Math.round(m.maxHp*.022));m.hp-=bv;pops.push({x:m.x,y:m.y-m.h*.8,t:0,txt:'화상 '+bv,crit:true});if(m.hp<=0){killMonster(m);continue;}}
@@ -4285,12 +4391,18 @@ const QS = [null, null, null, null, null];
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 지팡이 기준(지팡이 +25% 보너스는 2026-10-04 제거)
-const IMPLEMENTED = new Set(['holy2_shield','holy3_revive','ice3','bolt3','dark2','fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
+const IMPLEMENTED = new Set(['holy2_shield','holy3_revive','ice3','bolt3','dark2','fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','spear1','spear2','spear3','bow1','bow2','bow3','fist1','fist2','fist3']);
 const SKN = { holy2_shield:'성역의 방패', holy3_revive:'기적의 소생', ice3:'극야의 눈보라', bolt3:'천벌의 뇌우', dark2:'고통의 늪', fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'빙결 보호막', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
-  holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
+  holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기',
+  spear1:'연속 찌르기', spear2:'투창 강타', spear3:'강하 찌르기',
+  bow1:'맹독 화살', bow2:'산탄 사격', bow3:'화살 비',
+  fist1:'돌진 격', fist2:'파동권', fist3:'지진 쇄' };
 const SKD = { holy2_shield:'강한 피해 흡수막 5초, 4단계부터 8초. 다른 보호막과 중첩되지 않음', holy3_revive:'미리 눌러 준비하면 사망 시 제자리 소생. 체력30→100%, 마나0, 발동 후 재사용180초', ice3:'내 주변 4초 눈보라·둔화, 단계가 오르면 타수·빙결 확률 증가', bolt3:'전방으로 이어지는 낙뢰 3회, 5단계는 1초 이동불가', dark2:'가까운 적 발밑에 둔화·지속 피해 장판, 4단계부터 5초', fire1:'느리게 날아가 펑 터지는 불덩이, 화상', fire2:'내 주변을 불기둥으로 태움', fire3:'지정 지점에 운석, 불바닥이 남음(시전 중 멈춤)', ice1:'얼음막이 피해를 대신 받고 상태이상도 막음. 깨지면 주변이 얼어붙음', ice2:'전방 부채꼴 냉기, 둔화',
   bolt1:'전방 60도로 느리게 나가는 전기 구체 3개, 닿는 동안 감전', bolt2:'맞은 적에서 주변 적으로 튕기는 벼락', dark1:'발밑에서 퍼지는 좁은 전방위 어둠, 낮은 확률로 혼돈', dark3:'퍼져 나가는 어둠의 충격파(시전 중 멈춤)',
-  holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기', bow2:'부채꼴로 화살 여러 발', fist2:'앞으로 뻗는 투기, 4랭크부터 관통' };
+  holy1_heal:'체력을 크게 회복', sword1:'전방 강타·경직', sword2:'주변 전체 베기', sword3:'멀리 나가며 관통하는 거대 검기',
+  spear1:'좁은 직선 3연속 찌르기, 마지막 타격이 강한 치명타', spear2:'창을 던져 맞은 자리에서 폭발', spear3:'지정 지점에 강하해 넓은 충격파',
+  bow1:'맹독 화살 한 발, 명중 시 지속 독 피해', bow2:'부채꼴로 화살 여러 발', bow3:'넓은 구역에 화살 비, 맞은 적 둔화',
+  fist1:'짧게 돌진해 쳐올리며 적의 준비동작을 끊음', fist2:'앞으로 뻗는 투기, 4랭크부터 관통', fist3:'제자리에서 3연속 원형 충격파, 둔화' };
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
 const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};
