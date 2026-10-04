@@ -68,7 +68,7 @@ function tradeBuy(id,n){
   if(!n){ tradeMsg('금화가 부족합니다.'); return false; }
   const next=cur.qty+n, avg=(cur.avg*cur.qty+q.buy*n)/next;
   tradeState.cargo[id]={qty:next,avg:avg};
-  setGold(P.gold-q.buy*n);if(window.GUILD)GUILD.refreshTrack();if(window.UI&&UI.save)UI.save();
+  setGold(P.gold-q.buy*n);if(window.GUILD)GUILD.refreshTrack();if(window.QUEST)QUEST.onEvent('trade_buy',{region:tradeRegion,id,n,price:q.buy,count:n});if(window.UI&&UI.save)UI.save();
   tradeMsg(g.name+' '+n+'개 매입. 금화 '+(q.buy*n)+'닢… 남는 장사여야 할 텐데요.');
   renderTrade(); return true;
 }
@@ -78,7 +78,7 @@ function tradeSell(id,n){
   const q=tradeQuote(tradeRegion,id), revenue=q.sell*n, cost=cur.avg*n, profit=Math.round(revenue-cost);
   cur.qty-=n; if(cur.qty<=0) delete tradeState.cargo[id]; else tradeState.cargo[id]=cur;
   const key=tradeRegion+':'+id; tradeState.pressure[key]=(tradeState.pressure[key]||0)+n;
-  setGold(P.gold+revenue);if(window.GUILD)GUILD.refreshTrack();if(window.UI&&UI.save)UI.save();
+  setGold(P.gold+revenue);if(window.GUILD)GUILD.refreshTrack();if(window.QUEST)QUEST.onEvent('trade_sell',{region:tradeRegion,id,n,price:q.sell,profit,count:n});if(window.UI&&UI.save)UI.save();
   tradeMsg((profit>=0?'좋습니다. ':'아깝군요. ')+g.name+' '+n+'개, '+(profit>=0?'+':'')+profit+'골드.');
   renderTrade(); return true;
 }
