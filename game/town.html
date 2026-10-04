@@ -235,7 +235,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1041</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1004-1048</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -3234,14 +3234,14 @@ const TRADE_GOODS = [
 ];
 const TRADE_BY_ID = Object.fromEntries(TRADE_GOODS.map(g=>[g.id,g]));
 const TRADE_REGIONS = {
-  town:    {name:'큰 마을 교역소', short:'큰 마을', m:{}},
-  spring:  {name:'봄 초원 상인협회', short:'봄', m:{wheat:0.8,barley:0.8,milk:0.8,egg:0.76,honey:0.79,iron:1.15,pepper:1.15,obsidian:1.15}},
-  summer:  {name:'여름 숲 상인협회', short:'여름', m:{apple:0.8,grape:0.8,timber:0.67,herb:0.78,chicken:0.76,salt:1.19,iron:1.15,beef:1.15}},
-  autumn:  {name:'가을 들판 상인협회', short:'가을', m:{rice:0.8,barley:0.75,apple:0.71,grape:0.75,pork:0.74,wine:0.75,fish:1.27,herb:1.49}},
-  winter:  {name:'겨울 설원 상인협회', short:'겨울', m:{potato:0.75,wool:0.78,leather:0.78,beef:0.8,apple:1.54,grape:1.61,pepper:1.64,chili:1.8}},
-  ice:     {name:'얼음 지대 상인협회', short:'얼음', m:{fish:0.8,salt:0.69,wool:0.75,leather:0.75,wheat:1.61,barley:1.61,rice:1.8,pepper:1.62,wine:1.66}},
-  volcano: {name:'화산 지대 상인협회', short:'화산', m:{iron:0.72,obsidian:0.72,chili:0.66,pepper:0.72,fish:1.61,milk:1.61,wheat:1.61,rice:1.61,apple:1.8}},
-  swamp:   {name:'늪지대 상인협회', short:'늪', m:{eel:0.65,herb:0.65,mushroom:0.65,pepper:0.79,honey:0.52,salt:1.7,beef:1.76,iron:1.8,wheat:1.8}},
+  town:    {name:'큰 마을 교역소', short:'큰 마을', m:{wine:1.22,pepper:1.22,honey:1.22,obsidian:1.22,chili:1.22}},
+  spring:  {name:'봄 초원 상인협회', short:'봄', m:{wheat:0.8,barley:0.79,milk:0.8,egg:0.67,honey:0.8,iron:1.15,pepper:1.15,obsidian:1.15}},
+  summer:  {name:'여름 숲 상인협회', short:'여름', m:{apple:0.8,grape:0.8,timber:0.78,herb:0.74,chicken:0.78,salt:1.29,iron:1.16,beef:1.15}},
+  autumn:  {name:'가을 들판 상인협회', short:'가을', m:{rice:0.8,barley:0.72,apple:0.67,grape:0.75,pork:0.75,wine:0.8,fish:1.26,herb:1.37}},
+  winter:  {name:'겨울 설원 상인협회', short:'겨울', m:{potato:0.75,wool:0.75,leather:0.71,beef:0.8,apple:1.52,grape:1.61,pepper:1.63,chili:1.8}},
+  ice:     {name:'얼음 지대 상인협회', short:'얼음', m:{fish:0.8,salt:0.73,wool:0.75,leather:0.71,wheat:1.64,barley:1.62,rice:1.8,pepper:1.64,wine:1.68}},
+  volcano: {name:'화산 지대 상인협회', short:'화산', m:{iron:0.74,obsidian:0.76,chili:0.76,pepper:0.77,fish:1.71,milk:1.66,wheat:1.66,rice:1.76,apple:1.8}},
+  swamp:   {name:'늪지대 상인협회', short:'늪', m:{eel:0.68,herb:0.64,mushroom:0.68,pepper:0.79,honey:0.61,salt:1.75,beef:1.77,iron:1.8,wheat:1.8}},
 };
 const TRADE_STACK_MAX = 50, TRADE_DAY_MS = 480000;
 // 수레용 탈것(화물칸 확장 전용, 타고 다니지 않음). 칸 수·가격·구매 가능 마을 티어는 초기값(케인 플레이 피드백으로 조정).
@@ -3327,7 +3327,9 @@ function ensureTradeUI(){
 #trade.on{display:flex}
 #trade .tbox{width:min(980px,94vw);height:min(620px,88vh);background:#eadab8;border:4px solid #7b5228;border-radius:18px;box-shadow:0 15px 50px #000a;padding:14px;color:#402915;font-family:sans-serif;display:grid;grid-template-columns:1fr 285px;grid-template-rows:auto 1fr;gap:10px}
 #tradeHead{grid-column:1/3;display:flex;align-items:center;gap:12px;border-bottom:2px solid #b78a4d;padding-bottom:8px}
-#tradeHead b{font-size:21px} #tradeHead small{margin-left:auto;font-weight:900;color:#77511f}
+#tradeHead b{font-size:21px} #tradeHead #tradeNote b{font-size:13px}
+#tradeHead #tradeNote{font-size:12px;color:#7b5a2e;line-height:1.35;flex:1}
+#tradeHead small{margin-left:auto;font-weight:900;color:#77511f}
 #tradeList{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:7px;overflow:auto;align-content:start;padding-right:4px}
 .tgood{border:2px solid #b58a51;border-radius:11px;background:#f5e9cd;padding:6px;text-align:left;color:#4b321a;min-height:82px}
 .tgood.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}
@@ -3346,7 +3348,7 @@ function ensureTradeUI(){
 `;
   document.head.append(st);
   const d=document.createElement('div'); d.id='trade';
-  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><span id="tradeHint"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeList"></div><div id="tradeInfo"><div id="tradeIcon"></div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeBtns"><button data-tb="b1">1개 사기</button><button data-tb="b5">5개 사기</button><button data-tb="b10">10개 사기</button><button data-tb="s1">1개 팔기</button><button data-tb="s5">5개 팔기</button><button data-tb="sa">전부 팔기</button></div><div id="tradeSay"></div><button id="tradeClose">나가기</button></div></div>';
+  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><span id="tradeHint"></span><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeList"></div><div id="tradeInfo"><div id="tradeIcon"></div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeBtns"><button data-tb="b1">1개 사기</button><button data-tb="b5">5개 사기</button><button data-tb="b10">10개 사기</button><button data-tb="s1">1개 팔기</button><button data-tb="s5">5개 팔기</button><button data-tb="sa">전부 팔기</button></div><div id="tradeSay"></div><button id="tradeClose">나가기</button></div></div>';
   document.body.append(d);
   const inf=$('tradeInfo'), cl=$('tradeClose');
   const seen=document.createElement('div'); seen.id='tradeSeen'; seen.style.cssText='font-size:11px;line-height:1.5;color:#684c2c;width:100%;text-align:left';
@@ -3373,6 +3375,12 @@ function renderTrade(){
   ensureTradeUI(); const R=tradeRegionDef(tradeRegion);
   $('tradeTitle').textContent=R.name; $('tradeGold').textContent=P.gold;
   $('tradeHint').textContent='화물 '+cargoSlots()+'/'+cargoMax()+'칸';
+  { // 이 마을의 성격: 싼 것 / 귀한 것(비싸게 사 주는 것)
+    const ent=Object.entries(R.m), nm=id=>TRADE_BY_ID[id]?TRADE_BY_ID[id].name:id;
+    const cheap=ent.filter(e=>e[1]<=.85).sort((a,b)=>a[1]-b[1]).slice(0,4).map(e=>nm(e[0])).join('·');
+    const dear=ent.filter(e=>e[1]>=1.12).sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>nm(e[0])).join('·');
+    $('tradeNote').innerHTML=tradeRegion==='town'?(dear?'수도 · 사치품을 비싸게 사 줍니다: <b>'+dear+'</b>':''):((cheap?'싼 것 <b>'+cheap+'</b>':'')+(cheap&&dear?' · ':'')+(dear?'귀한 것 <b>'+dear+'</b>':''));
+  }
   const list=$('tradeList'); list.innerHTML='';
   for(const g of TRADE_GOODS){
     const q=tradeQuote(tradeRegion,g.id), c=cargoEntry(g.id), b=document.createElement('button');
