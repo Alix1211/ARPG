@@ -301,13 +301,15 @@ function faceMonster(m,dx,dy){
 }
 function defeatPlayer(){
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
-  for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;
+  for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;P.shield=0;syncBars();
   say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
   travel('town',[23*TS,22.2*TS],'front');
 }
 function rawPlayerDamage(v,label){
   const cm=window.UI&&UI.combatMods?UI.combatMods():{damageReduce:0};
-  v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));P.hp=Math.max(0,P.hp-v);syncBars();
+  v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));
+  if(P.shield>0){v=absorbShield(v);if(v<=0)return;}   // 빙결 보호막이 먼저 받는다
+  P.hp=Math.max(0,P.hp-v);syncBars();
   pops.push({x:P.x,y:P.y-95,t:0,txt:(label?label+' ':'')+'-'+v,enemy:true});
   if(P.hp<=0)defeatPlayer();
 }
@@ -322,7 +324,7 @@ function hurtPlayer(v,dx,dy,status,statusDur){
   if(playerInv>0||traveling) return false;
   playerInv=.55; rawPlayerDamage(v); sfx.push({type:'hurt',t:0,x:P.x,y:P.y-42,r:36});
   const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
-  if(status) applyPlayerStatus(status,statusDur);
+  if(status&&!(P.shield>0)) applyPlayerStatus(status,statusDur);   // 보호막이 남아 있으면 상태이상도 막는다
   return true;
 }
 function updatePlayerStatus(dt){
@@ -719,5 +721,6 @@ window.__FD={
   debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
   testSpawn(id,dx,dy){const m=createMonster(id,P.x+dx,P.y+dy);m.stun=99;monsters.push(m);return monsters.indexOf(m);},   // 연출 확인용
   testOp(i,op,a){const m=monsters[i];if(!m)return false;if(op==='hit')hitMonster(m,[a||1,0],true,1);else if(op==='kill')killMonster(m);else if(op==='act')monAct(m,a,.5,1,0);else if(op==='clear'){for(const x of monsters)x.removed=true;}else if(op==='go'){m.stun=0;}return true;},
+  hurtTest(v){rawPlayerDamage(v);return P.hp;},   // 검사용: 방어 계산 후 직접 피해
   respawn:()=>spawnFieldMonsters(fieldTheme),rest:restAtCamp,prepareField,openRegionSelect
 };

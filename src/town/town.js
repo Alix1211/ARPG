@@ -676,7 +676,7 @@ function setMax(h, m){ P.maxHp = h; P.maxMp = m; P.hp = Math.min(P.hp, h); P.mp 
 function syncBars(){
   document.querySelector('.bar.hp i').style.width = (P.hp / P.maxHp * 100) + '%';
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
-  $('hpTxt').textContent = `${P.hp} / ${P.maxHp}`; $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
+  $('hpTxt').textContent = `${P.hp} / ${P.maxHp}` + (P.shield > 0 ? `  (+${Math.ceil(P.shield)})` : ''); $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
 window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
@@ -927,7 +927,7 @@ function frame(now){
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.hide) continue;
-    if (s.me){ drawPortalArrivalAura();drawMe(); continue; }
+    if (s.me){ drawPortalArrivalAura();drawMe();drawShield(); continue; }
     if (s.portal){drawTownPortal(s);continue;}
     if (s.vil){ drawVil(s.vil); continue; }
     if (s.mon){ drawMonster(s.mon, sdt); continue; }
@@ -1156,7 +1156,7 @@ function boom(s,t){
 // ======================= 1차 전투 스킬 =======================
 const SK={
   fire1:{mp:5,cd:1.35},      // 화염구: 강한 광역 + 화상
-  ice1:{mp:4,cd:1.0},        // 빙결창: 빠른 일격 + 둔화/빙결
+  ice1:{mp:8,cd:12},         // 빙결 보호막: 피해 흡수막 + 깨질 때 주변 빙결
   holy1_heal:{mp:7,cd:4.5},  // 치유: 큰 즉시 회복
   sword1:{mp:3,cd:.95},      // 강베기: 강한 전방 부채꼴 + 경직
   sword2:{mp:6,cd:2.2},      // 회전베기: 넓은 전방위 + 밀치기
@@ -1179,16 +1179,10 @@ function cast(id,mod){
     shots.push({x:P.x+ux*28,y:P.y-44+uy*28,vx:aim.vx,vy:aim.vy,speed:280,t:0,life:2.1,kind:'fire',blast,dmg:Math.round(base*(2.45+rank*.08)),status:'burn',statusDur:3.2+rank*.25,stagger:rank>=3,home,homeRange:range,target:aim.target});
     sfx.push({type:'castfire',t:0,x:P.x,y:P.y-36,r:40});
   }else if(id==='ice1'){
-    // 얼음 알갱이 5발이 좁게 퍼지며 후두두둑 날아간다. 가까울수록 많이 맞고, 쌓이면 더 느려지다 3랭크부터 얼어붙는다.
-    const base=Math.max(8,cm.magic)*mod.dmg*skillMul*(1+(cm.ice||0)/100);
-    const range=home?360+home*95:0,aim=home>0?magicAim(270,range):{vx:d[0]*270,vy:d[1]*270,target:null};
-    const a0=Math.atan2(aim.vy,aim.vx),N=5,pd=Math.round(base*(1.75+rank*.06)*.3);
-    for(let i=0;i<N;i++){
-      const a=a0+(i-(N-1)/2)*.075+(Math.random()-.5)*.07,sp=250+Math.random()*30;
-      shots.push({x:P.x+Math.cos(a0)*28,y:P.y-44+Math.sin(a0)*28,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,speed:sp,t:0,life:1.45,wait:i*.05+Math.random()*.04,kind:'ice',pellet:true,blast:0,dmg:pd,
-        status:'slow',statusDur:2.4+rank*.2,stagger:rank>=5,chill:true,chillFreeze:rank>=3?.85+rank*.08:0,home:0,target:null});
-    }
-    sfx.push({type:'castice',t:0,x:P.x,y:P.y-34,r:34});
+    // 빙결 보호막: 얼음막이 피해를 대신 받는다. 막이 깨지면 주변이 얼어붙고, 막이 있는 동안 둔화·석화 같은 상태이상도 막는다.
+    const v=Math.round(P.maxHp*.45*skillMul);
+    P.shield=v;P.shieldMax=v;P.shieldT=10+rank*.5;P.shieldRank=rank;syncBars();
+    pops.push({x:P.x,y:P.y-100,t:0,txt:'빙결 보호막 '+v,mana:true});sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:70});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
     pops.push({x:P.x,y:P.y-100,t:0,txt:'+'+v,heal:true});sfx.push({type:'heal',t:0,x:P.x,y:P.y-20,r:72});
@@ -1211,6 +1205,36 @@ function cast(id,mod){
   if(k.root)P.castRoot=k.root;
   return true;
 }
+// 빙결 보호막: 들어온 피해를 먼저 막이 받는다. 남은 피해만 돌려준다.
+function absorbShield(v){
+  if(!(P.shield>0))return v;
+  const ab=Math.min(P.shield,v);P.shield-=ab;
+  pops.push({x:P.x,y:P.y-100,t:0,txt:'막 -'+Math.round(ab),mana:true});
+  if(P.shield<=0){P.shield=0;breakShield();}
+  syncBars();return v-ab;
+}
+function breakShield(){
+  const rank=P.shieldRank||1;let n=0;
+  for(const t of (typeof combatTargets==='function'?combatTargets():[])){
+    if(Math.hypot(t.x-P.x,t.y-P.y)<150&&typeof applyMonsterStatus==='function'){applyMonsterStatus(t,'freeze',.9+rank*.1);applyMonsterStatus(t,'slow',3);n++;}
+  }
+  sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:150});
+  pops.push({x:P.x,y:P.y-115,t:0,txt:n?'보호막 파열! 얼음 폭발':'보호막 파열!',crit:true});
+}
+function drawShield(){
+  if(!(P.shield>0))return;
+  const k=Math.max(0,Math.min(1,P.shield/(P.shieldMax||1)));
+  let al=.55+.45*k;if(P.shieldT<2)al*=.55+.45*Math.sin(T*16);
+  ctx.save();ctx.translate(P.x,P.y-40);
+  const g=ctx.createRadialGradient(0,0,10,0,0,58);g.addColorStop(0,'rgba(190,240,255,.05)');g.addColorStop(1,'rgba(120,205,255,.38)');
+  ctx.globalAlpha=al;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(215,247,255,.95)';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,40,Math.PI*1.12,Math.PI*1.45);ctx.stroke();
+  if(k<.4){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-14,-38);ctx.lineTo(-4,-14);ctx.lineTo(-18,4);ctx.moveTo(10,-30);ctx.lineTo(18,-6);ctx.stroke();}
+  ctx.fillStyle='#eaffff';
+  for(let i=0;i<3;i++){const a=T*1.6+i*2.094,x=Math.cos(a)*44,y=Math.sin(a)*58;ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.fillRect(-2.5,-2.5,5,5);ctx.restore();}
+  ctx.restore();
+}
 let potCd = 0;
 function drink(k){
   if (potCd > 0) return false;
@@ -1225,6 +1249,7 @@ function updSkills(dt){
   P.castRoot = Math.max(0, (P.castRoot || 0) - dt);
   updZones(dt);
   for (const id in CD) CD[id] = Math.max(0, CD[id] - dt);
+  if (P.shield > 0){ P.shieldT -= dt; if (P.shieldT <= 0){ P.shield = 0; syncBars(); pops.push({ x:P.x, y:P.y-100, t:0, txt:'보호막 사라짐', mana:true }); } }
   if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2 * NUM; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
 }
 function drawSkillFx(dt){

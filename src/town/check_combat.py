@@ -39,11 +39,18 @@ async def main():
         fire=await ev("() => __CTRL.shots().filter(x=>x.kind==='fire').at(-1)")
         assert fire and fire['blast']>=100 and fire['status']=='burn' and fire['dmg']>=20,fire
 
-        await ev("() => { GAME.clearCd(); GAME.cast('ice1'); }")
-        ice=await ev("() => __CTRL.shots().filter(x=>x.kind==='ice').at(-1)")
-        npel=await ev("() => __CTRL.shots().filter(x=>x.kind==='ice'&&!x.done).length")
-        assert ice and npel>=3 and ice['status']=='slow' and ice['dmg']>=1,(ice,npel)
-
+        # 빙결 보호막: 피해를 대신 받고, 깨지면 사라진다.
+        await ev("() => { GAME.clearCd(); GAME.P.hp=GAME.P.maxHp; GAME.cast('ice1'); }")
+        sh=await ev("() => ({s:GAME.P.shield,m:GAME.P.maxHp,t:GAME.P.shieldT})")
+        assert sh['s']>=sh['m']*.4 and sh['t']>=9,sh
+        hp0=await ev("() => GAME.P.hp")
+        await ev("() => __FD.hurtTest(500)")
+        after=await ev("() => ({hp:GAME.P.hp,s:GAME.P.shield})")
+        assert after['hp']==hp0 and after['s']<sh['s'],(hp0,after,sh)
+        await ev("() => __FD.hurtTest(GAME.P.shield+777)")
+        broken=await ev("() => ({hp:GAME.P.hp,s:GAME.P.shield})")
+        assert broken['s']==0 and broken['hp']<hp0,(hp0,broken)
+        ice=sh;npel=0
         assert not errs,errs
         print('combat overhaul ok',{'lv1':m1,'lv4':m4,'fire':fire,'ice':ice})
         await b.close()
