@@ -199,7 +199,7 @@ const SWAPPOS = [30, 88];
 const QS = [null, null, null, null, null];
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
-const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 아무 무기나 100%, 지팡이면 +25%
+const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 지팡이 기준(지팡이 +25% 보너스는 2026-10-04 제거)
 const IMPLEMENTED = new Set(['fire1','fire2','fire3','ice1','ice2','bolt1','bolt2','dark1','dark3','holy1_heal','sword1','sword2','sword3','bow2','fist2']);
 const SKN = { fire1:'불덩이', fire2:'화염 폭풍', fire3:'운석 낙하', ice1:'얼음 알갱이', ice2:'서리 돌풍', bolt1:'번개 구체', bolt2:'연쇄 벼락', dark1:'심연의 파편', dark3:'파멸의 링',
   holy1_heal:'치유', sword1:'강하게 베기', sword2:'회전 베기', sword3:'초승달 검기', bow2:'산탄 사격', fist2:'파동권' };
@@ -239,7 +239,7 @@ function syncQS(){
     b.dataset.glyph=id==='townPortal'?'↩':'';
     b.classList.toggle('empty',!id);
     const nw=id&&needWeapon(id),off=nw&&(!eq[cur]||eq[cur].wt!==nw);
-    b.dataset.pen=id==='townPortal'?'':(off?'60%':(id&&!nw&&eq[cur]&&eq[cur].wt==='staff'?'+25%':''));
+    b.dataset.pen=id==='townPortal'?'':(off?'60%':'');
   });
 }
 skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
