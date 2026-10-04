@@ -252,6 +252,18 @@ for d in ['front', 'back', 'side']:
     el[d] = fr
 face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((105, 45, 275, 215)).resize((128, 128), Image.LANCZOS)   # 얼굴 중심 정사각
 
+# ---- 봉인 스토리 반복 등장 캐릭터(대화 장면용) ----
+# 실제 이름/역할은 src/story/master_70.md 및 quests.json 내부에서만 관리한다.
+STORY_CHARS = {}
+for sid, nm, title, folder in [
+    ('hero', '카르도', '검사', 'hero'),
+    ('knight', '펙스', '용병', 'knight'),
+    ('dragon', '벨로라', '용의 산맥 총괄', 'dragon'),
+]:
+    im = Image.open(R + f'characters/{folder}/front_0.png').convert('RGBA')
+    pt = im.copy(); pt.thumbnail((520, 560), Image.LANCZOS)
+    STORY_CHARS[sid] = dict(name=nm, title=title, port=enc(pt, 88))
+
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
     ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
@@ -498,7 +510,7 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
-A = dict(mainQuests=MAIN_QUEST_DATA, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
