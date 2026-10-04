@@ -11,8 +11,8 @@ const VFX_HEAD = { shot_fire:145, shot_rock:155, shot_poison:150, shot_dark:142,
 const VFX_STATUS = { burn:'fire', slow:'slow', freeze:'ice', stone:'stone', bleed:'blood' };
 
 // 효과별 지속 시간(초). town.js의 drawSkillFx와 아래 바닥 층이 같이 쓴다.
-const VFX_DUR = { heal:.75, hit:.26, hurt:.3, kill:.55, fireburst:.55, iceburst:.55, icehit:.45, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
-  firestorm:.6, frostwave:.55, chain:.4, voltburst:.45, darkburst:.5, waveburst:.4, castdark:.75, castbolt:.75 };
+const VFX_DUR = { heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
+  firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75 };
 
 function vfxReady(n){ const im = VFXI[n]; return !!(im && im.complete && im.naturalWidth > 0); }
 // n 그림을 (x,y)에 가로 w 크기로 그린다. o: rot(라디안) alpha add(밝게 겹치기) base(그림 아랫변을 y에 맞춤) sy(세로 눌림) flip
@@ -42,35 +42,240 @@ function vfxPlay(n, x, y, size, k, o){
 }
 function vfxPick(f, list){ if (f.v == null) f.v = Math.floor(Math.random() * 1000); return list[f.v % list.length]; }
 
+// ================= 코드로 직접 그리는 폭발(그림 없이) =================
+// 섬광 → 불덩이 → 연기, 튀는 파편, 속성별 특징(얼음 조각·번개 줄기·어둠 수축·독 거품)을 겹쳐 그린다.
+// 모양은 진행도 k(0~1)와 씨앗(seed)만으로 정해져서, 같은 폭발은 매 프레임 같은 모양이다.
+const VFX_PAL = {
+  fire:  { core:[255,248,214], mid:[255,176,46],  out:[255,72,18],  smoke:[44,32,28],  s1:'#fff0a0', s2:'#ff8a2a' },
+  ice:   { core:[255,255,255], mid:[190,240,255], out:[70,170,255], smoke:[205,238,255], s1:'#ffffff', s2:'#9fe4ff' },
+  volt:  { core:[255,255,255], mid:[255,244,120], out:[255,190,20], smoke:[60,50,20],  s1:'#ffffff', s2:'#ffe45c' },
+  dark:  { core:[240,220,255], mid:[170,100,255], out:[80,25,150],  smoke:[28,8,48],   s1:'#f0e0ff', s2:'#b070ff' },
+  poison:{ core:[240,255,190], mid:[150,255,60],  out:[50,150,20],  smoke:[30,60,15],  s1:'#eaffb0', s2:'#8cff38' }
+};
+function vfxRnd(s, i){ const v = Math.sin(s * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); }
+function vfxSeed(o){ if (o.v == null) o.v = Math.floor(Math.random() * 1000); return o.v + 1; }
+function vfxC(c, a){ return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')'; }
+function vfxGlow(x, y, rad, stops){
+  const g = ctx.createRadialGradient(x, y, 0, x, y, Math.max(1, rad));
+  for (const s of stops) g.addColorStop(s[0], s[1]);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, Math.max(1, rad), 0, 7); ctx.fill();
+}
+// 지그재그 줄기(번개) 하나. 두 번 겹쳐 그려 빛번짐과 심지를 만든다.
+function vfxZig(x0, y0, x1, y1, amp, tick, seed, a, wide, col, core){
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, n = 6;
+  const path = () => {
+    ctx.beginPath(); ctx.moveTo(x0, y0);
+    for (let j = 1; j < n; j++){ const t = j / n, o = (vfxRnd(seed + tick * 3.7, j) - .5) * 2 * amp * Math.sin(t * 3.14); ctx.lineTo(x0 + dx * t + nx * o, y0 + dy * t + ny * o); }
+    ctx.lineTo(x1, y1);
+  };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.globalAlpha = a * .55; ctx.strokeStyle = col; ctx.lineWidth = wide; path(); ctx.stroke();
+  ctx.globalAlpha = a; ctx.strokeStyle = core; ctx.lineWidth = Math.max(1, wide * .35); path(); ctx.stroke();
+}
+
+// 속성 폭발 한 방. (x, gy) = 바닥에 닿는 자리, R = 폭발 반지름(실제로 맞는 범위에 맞춘다), k = 0~1 진행도
+function vfxBlast(kind, seed, x, gy, R, k){
+  const Pa = VFX_PAL[kind]; if (!Pa) return false;
+  k = Math.max(0, Math.min(1, k));
+  const e = 1 - Math.pow(1 - Math.min(1, k * 2.4), 3);
+  const life = k < .12 ? k / .12 : Math.max(0, 1 - Math.pow((k - .12) / .88, 1.5));
+  const heat = Math.max(0, 1 - k * 1.7);
+  const cy = gy - R * .38, tt = k * .6;
+  const rn = (i) => vfxRnd(seed, i);
+  ctx.save();
+  // 1) 연기·안개: 몸통 뒤에 깔려서 터진 뒤에도 잠깐 남는다
+  if (k > .16 && kind !== 'volt'){
+    const s = (k - .16) / .84, sa = Math.sin(s * Math.PI) * (kind === 'ice' ? .3 : kind === 'dark' ? .5 : .38);
+    for (let i = 0; i < 5; i++){
+      const an = rn(40 + i) * 6.283, d = R * .35 * rn(50 + i);
+      const px = x + Math.cos(an) * d, py = cy + Math.sin(an) * d * .5 - R * (.15 + .55 * s) * (.5 + rn(60 + i));
+      const rad = R * (.28 + .3 * rn(70 + i)) * (.6 + .6 * s);
+      vfxGlow(px, py, rad, [[0, vfxC(Pa.smoke, sa)], [.6, vfxC(Pa.smoke, sa * .6)], [1, vfxC(Pa.smoke, 0)]]);
+    }
+  }
+  // 2) 몸통: 겹친 덩어리들이 부풀며 식는다(속이 하얗다가 노랑→주황→붉게)
+  for (let i = 0; i < 7; i++){
+    const an = rn(i) * 6.283, d = R * .5 * e * (.3 + .7 * rn(10 + i));
+    const px = x + Math.cos(an) * d, py = cy + Math.sin(an) * d * .7 - R * .3 * k * (.4 + rn(20 + i));
+    const rad = R * (.3 + .28 * rn(30 + i)) * (.35 + .65 * e) * (1 - .2 * k);
+    vfxGlow(px, py, rad, [[0, vfxC(Pa.core, life * heat)], [.3, vfxC(Pa.mid, life * .95)], [.7, vfxC(Pa.out, life * .65)], [1, vfxC(Pa.out, 0)]]);
+  }
+  // 3) 속성별 몸통 보강
+  if (kind === 'dark'){   // 한가운데가 검게 뚫린 구체: 터지기 전에 빨려 들어가는 점들
+    vfxGlow(x, cy, R * .55 * (.7 + .5 * e), [[0, 'rgba(8,0,20,' + (life * .92).toFixed(3) + ')'], [.55, 'rgba(60,15,110,' + (life * .6).toFixed(3) + ')'], [1, 'rgba(90,30,160,0)']]);
+    if (k < .4){
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 10; i++){
+        const an = i * .628 + rn(80 + i), rr = R * (1.05 - .95 * (k / .4)) * (.8 + .4 * rn(90 + i));
+        vfxGlow(x + Math.cos(an) * rr, cy + Math.sin(an) * rr * .7, 5, [[0, vfxC(Pa.s1 === '' ? Pa.mid : Pa.mid, .95)], [1, vfxC(Pa.out, 0)]]);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+  if (kind === 'poison'){   // 터지는 거품
+    for (let i = 0; i < 8; i++){
+      const bx = x + (rn(100 + i) - .5) * R * 1.4 * e, rise = k * R * (.35 + .7 * rn(110 + i)), by = cy + R * .1 - rise;
+      const br = R * (.07 + .08 * rn(120 + i)) * (1 + k * .5), ba = Math.max(0, 1 - Math.pow(k, 2.2)) * Math.min(1, k * 8);
+      ctx.fillStyle = vfxC([140, 255, 70], ba * .22); ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.fill();
+      ctx.strokeStyle = vfxC([205, 255, 150], ba * .9); ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.fillStyle = vfxC([255, 255, 255], ba * .9); ctx.beginPath(); ctx.arc(bx - br * .35, by - br * .35, Math.max(1, br * .22), 0, 7); ctx.fill();
+    }
+  }
+  // 4) 터지는 순간의 섬광(밝게 겹치기)
+  if (k < .3){
+    const q = k / .3;
+    ctx.globalCompositeOperation = 'lighter';
+    vfxGlow(x, cy, R * (.55 + .9 * q), [[0, vfxC(Pa.core, Math.pow(1 - q, 1.3))], [.45, vfxC(Pa.mid, .6 * Math.pow(1 - q, 1.3))], [1, vfxC(Pa.out, 0)]]);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // 5) 튀는 파편: 중력에 휘며 떨어지는 불꽃/불씨 (줄무늬 꼬리)
+  const nsp = ({ fire:14, volt:9, dark:8, poison:6, ice:0 })[kind];
+  if (nsp){
+    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    const sa = Math.pow(1 - k, 1.2);
+    for (let i = 0; i < nsp; i++){
+      const an = rn(130 + i) * 6.283, sp = R * (2.2 + 2.4 * rn(140 + i));
+      const vx = Math.cos(an) * sp, vy = Math.sin(an) * sp * .8 - sp * .3;
+      const px = x + vx * tt * (1 - .3 * k), py = cy + vy * tt * (1 - .3 * k) + R * 5 * tt * tt;
+      ctx.strokeStyle = i % 2 ? Pa.s2 : Pa.s1; ctx.globalAlpha = sa; ctx.lineWidth = 2.4 * (1 - k) + .8;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px - vx * .035, py - vy * .035); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  // 6) 얼음: 깨져 튀는 유리 조각 + 십자 서리 섬광
+  if (kind === 'ice'){
+    if (k < .35){
+      const q = k / .35; ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = vfxC([230, 250, 255], 1 - q); ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (let i = 0; i < 6; i++){ const an = i * 1.047 + .3, l1 = R * (.25 + .8 * q), l0 = R * .1; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * l0, cy + Math.sin(an) * l0); ctx.lineTo(x + Math.cos(an) * l1, cy + Math.sin(an) * l1); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    for (let i = 0; i < 9; i++){
+      const an = rn(150 + i) * 6.283, sp = R * (1.5 + 1.5 * rn(160 + i)), L = R * (.12 + .12 * rn(170 + i)), w = L * .36;
+      const px = x + Math.cos(an) * sp * tt * (1 - .25 * k), py = cy + Math.sin(an) * sp * .85 * tt * (1 - .25 * k) - sp * .1 * tt + R * 4.5 * tt * tt;
+      const rot = an + k * 5 * (rn(180 + i) - .5), a = Math.pow(1 - k, .8) * Math.min(1, k * 14);
+      ctx.save(); ctx.translate(px, py); ctx.rotate(rot);
+      ctx.beginPath(); ctx.moveTo(L, 0); ctx.lineTo(0, w); ctx.lineTo(-L * .6, 0); ctx.lineTo(0, -w); ctx.closePath();
+      ctx.fillStyle = vfxC([196, 238, 255], a * .85); ctx.fill(); ctx.strokeStyle = vfxC([255, 255, 255], a); ctx.lineWidth = 1.3; ctx.stroke();
+      ctx.restore();
+    }
+  }
+  // 7) 번개: 사방으로 갈라지는 전기 줄기(몇 프레임마다 모양이 바뀜)
+  if (kind === 'volt'){
+    const tick = Math.floor(k * 16), a = Math.max(0, 1 - Math.pow(k, 1.5));
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 6; i++){
+      const an = i * 1.047 + rn(190 + i) * .6, len = R * (.75 + .5 * rn(200 + i)) * (.5 + .5 * e);
+      vfxZig(x, cy, x + Math.cos(an) * len, cy + Math.sin(an) * len * .8, R * .16, tick, seed + i, a, 6 * (1 - k) + 2, '#ffd93a', '#fffbe0');
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.restore();
+  return true;
+}
+
+// 타격 불꽃: 번쩍 + 사방으로 뻗는 선 (치명타는 십자 섬광이 더해짐, 'hurt'는 붉은색)
+function vfxHitSpark(seed, x, y, R, k, mode){
+  k = Math.max(0, Math.min(1, k));
+  const crit = mode === 'crit', hurt = mode === 'hurt';
+  const e = 1 - Math.pow(1 - Math.min(1, k * 2.6), 3), fade = Math.pow(1 - k, 1.4);
+  const main = hurt ? [255, 90, 70] : crit ? [255, 170, 40] : [255, 214, 120], core = hurt ? [255, 225, 215] : [255, 250, 220];
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  vfxGlow(x, y, R * (.45 + .5 * k), [[0, vfxC(core, fade)], [.5, vfxC(main, fade * .6)], [1, vfxC(main, 0)]]);
+  const n = crit ? 11 : 7;
+  for (let i = 0; i < n; i++){
+    const an = i / n * 6.283 + vfxRnd(seed, i) * .5, r0 = R * (.12 + .5 * e), r1 = r0 + R * (.35 + .4 * vfxRnd(seed, 20 + i)) * (1 - k);
+    ctx.strokeStyle = vfxC(main, fade * .55); ctx.lineWidth = (crit ? 6 : 4.5) * (1 - k) + 1;
+    ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * r0, y + Math.sin(an) * r0); ctx.lineTo(x + Math.cos(an) * r1, y + Math.sin(an) * r1); ctx.stroke();
+    ctx.strokeStyle = vfxC(core, fade); ctx.lineWidth = (crit ? 2.6 : 1.8) * (1 - k) + .6; ctx.stroke();
+  }
+  if (crit){   // 네 갈래 별빛
+    const L = R * 1.15 * (1 - k * .5), W = R * .1 * (1 - k);
+    for (let q = 0; q < 2; q++){
+      ctx.save(); ctx.translate(x, y); ctx.rotate(q * 1.5708 + .785);
+      ctx.fillStyle = vfxC(core, fade); ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(0, W); ctx.lineTo(L, 0); ctx.lineTo(0, -W); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.strokeStyle = vfxC(main, fade * .5); ctx.lineWidth = 2 * (1 - k) + .5; ctx.beginPath(); ctx.arc(x, y, R * (.2 + .8 * e), 0, 7); ctx.stroke();
+  ctx.restore();
+  return true;
+}
+// 쓰러질 때 먼지: 바닥으로 퍼지는 흙먼지 + 튀는 부스러기
+function vfxDust(seed, x, gy, R, k){
+  k = Math.max(0, Math.min(1, k));
+  const e = 1 - Math.pow(1 - Math.min(1, k * 2), 3), a = Math.sin(Math.min(1, k * 1.15) * Math.PI) * .5;
+  ctx.save();
+  for (let i = 0; i < 7; i++){
+    const an = i / 7 * 6.283 + vfxRnd(seed, i) * .8, d = R * (.35 + .65 * vfxRnd(seed, 10 + i)) * e;
+    const px = x + Math.cos(an) * d, py = gy + Math.sin(an) * d * .38 - R * .22 * k * (.4 + vfxRnd(seed, 20 + i)), rad = R * (.22 + .18 * vfxRnd(seed, 30 + i)) * (.6 + .6 * e);
+    vfxGlow(px, py, rad, [[0, 'rgba(176,160,132,' + a.toFixed(3) + ')'], [.6, 'rgba(150,136,112,' + (a * .6).toFixed(3) + ')'], [1, 'rgba(150,136,112,0)']]);
+  }
+  for (let i = 0; i < 6; i++){
+    const an = -3.14 * (.15 + .7 * vfxRnd(seed, 40 + i)), sp = R * (1.4 + 1.6 * vfxRnd(seed, 50 + i)), tt = k * .6;
+    ctx.fillStyle = 'rgba(120,104,84,' + (Math.pow(1 - k, 1.2) * .9).toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(x + Math.cos(an) * sp * tt, gy + Math.sin(an) * sp * tt + R * 5 * tt * tt, 2.4 * (1 - k * .5), 0, 7); ctx.fill();
+  }
+  ctx.restore();
+  return true;
+}
+// 타오르는 불꽃 한 가닥(장판용): 아래가 넓고 끝이 일렁이며 뾰족한 방울꼴. ph = 0~1 위상
+function vfxFlame(x, gy, w, ph, al){
+  const h = w * (1.5 + .5 * Math.sin(ph * 6.283)), sway = Math.sin(ph * 12.566) * w * .18;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(x, gy);
+  const layer = (s, c0, c1) => {
+    const ww = w * s, hh = h * (.55 + .45 * s);
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(-ww * .6, -hh * .15, -ww * .55, -hh * .6, sway * s, -hh);
+    ctx.bezierCurveTo(ww * .55, -hh * .6, ww * .6, -hh * .15, 0, 0);
+    const g = ctx.createLinearGradient(0, 0, 0, -hh); g.addColorStop(0, c0); g.addColorStop(1, c1);
+    ctx.fillStyle = g; ctx.fill();
+  };
+  layer(1, vfxC([255, 120, 20], al * .8), vfxC([255, 60, 10], 0));
+  layer(.62, vfxC([255, 200, 70], al * .9), vfxC([255, 150, 30], 0));
+  layer(.3, vfxC([255, 250, 210], al), vfxC([255, 230, 150], 0));
+  ctx.restore();
+}
+
+// 폭발 종류별로 맞는 반지름을 정한다 (몬스터 몸집을 크게 넘지 않게)
+function vfxBlastR(r, min, mul){ return Math.max(min, r * mul); }
 // 스킬·타격 이펙트 하나를 그린다. 그렸으면 true (drawSkillFx가 부름)
 function vfxSkill(f, k, x, y, r){
   if (f.type === 'chain') return vfxChain(f, k);
-  if (!vfxReady('burst_fire_0')) return false;
+  const sd = vfxSeed(f);
   switch (f.type){
-    // 폭발 그림 크기는 실제로 맞는 범위(r)에 맞춘다. 몬스터 몸집을 크게 넘지 않게.
-    case 'fireburst': return vfxPlay('burst_fire_' + vfxPick(f, [0, 1, 2]), x, y + 14, Math.max(96, r * 1.9), k, { base: true, s0: .45 });
-    case 'iceburst':  return vfxPlay('burst_ice_' + vfxPick(f, [0, 2, 4]), x, y + 14, Math.max(90, r * 1.9), k, { base: true, s0: .45 });
-    case 'icehit':    return vfxPlay('burst_ice_2', x, y + 10, Math.max(70, r * 2.3), k, { base: true, s0: .5 });
-    case 'heal':      return true;   // 치유 마법진은 vfxGroundPass가 캐릭터 발밑(아래 층)에 그린다
-    case 'castfire': case 'castice': case 'castdark': case 'castbolt': return true;
+    case 'fireburst': return vfxBlast('fire', sd, x, y + 14, vfxBlastR(r, 50, .95), k);
+    case 'iceburst':  return vfxBlast('ice', sd, x, y + 14, vfxBlastR(r, 46, .95), k);
+    case 'icehit':    return vfxBlast('ice', sd, x, y + 10, vfxBlastR(r, 36, 1.15), k);
+    case 'voltburst': return vfxBlast('volt', sd, x, y + 14, vfxBlastR(r, 36, 1.15), k);
+    case 'darkburst': return vfxBlast('dark', sd, x, y + 14, vfxBlastR(r, 36, 1.15), k);
+    case 'poisonburst': return vfxBlast('poison', sd, x, y + 14, vfxBlastR(r, 36, 1.15), k);
     case 'firestorm':{
       const e = 1 - Math.pow(1 - Math.min(1, k * 1.6), 3);
-      for (let i = 0; i < 10; i++){
-        const a = i * .6283 + .3, rr = r * (.35 + .65 * e) * (i % 2 ? 1 : .8);
-        vfxPlay('burst_fire_' + (i % 3), x + Math.cos(a) * rr, y + 14 + Math.sin(a) * rr * .6, 78, k, { base: true, s0: .4 });
+      vfxBlast('fire', sd, x, y + 14, Math.max(40, r * .5), k);
+      for (let i = 0; i < 8; i++){
+        const a = i * .785 + .3, rr = r * (.35 + .65 * e) * (i % 2 ? 1 : .8), ki = Math.max(0, Math.min(1, (k - (i % 4) * .06) / .8));
+        vfxBlast('fire', sd + i + 1, x + Math.cos(a) * rr, y + 14 + Math.sin(a) * rr * .6, Math.max(26, r * .3), ki);
       }
-      return vfxPlay('burst_fire_1', x, y + 14, 100, k, { base: true, s0: .4 });
+      return true;
     }
     case 'frostwave':{
       const a = f.a || 0, e = 1 - Math.pow(1 - Math.min(1, k * 1.5), 3);
       for (let i = 0; i < 9; i++){
         const row = i % 3, idx = Math.floor(i / 3) - 1, dist = r * (.3 + .3 * row) * (.4 + .6 * e), lat = idx * dist * .5;
-        vfxPlay('burst_ice_' + ((i * 2) % 5), x + Math.cos(a) * dist - Math.sin(a) * lat, y + 10 + Math.sin(a) * dist + Math.cos(a) * lat, 58 + row * 14, k, { base: true, s0: .4 });
+        const ki = Math.max(0, Math.min(1, (k - row * .07) / .8));
+        vfxBlast('ice', sd + i + 1, x + Math.cos(a) * dist - Math.sin(a) * lat, y + 10 + Math.sin(a) * dist + Math.cos(a) * lat, 24 + row * 6, ki);
       }
       return true;
     }
-    case 'voltburst': return vfxPlay('burst_volt_' + vfxPick(f, [0, 2, 4]), x, y + 14, Math.max(70, r * 2.3), k, { base: true, s0: .5 });
-    case 'darkburst': return vfxPlay('burst_dark_' + vfxPick(f, [0, 2, 4]), x, y + 14, Math.max(70, r * 2.3), k, { base: true, s0: .5 });
+    case 'hit':   return vfxHitSpark(sd, x, y, r * 1.15, k, f.crit ? 'crit' : 'hit');
+    case 'hurt':  return vfxHitSpark(sd, x, y, r * 1.0, k, 'hurt');
+    case 'kill':  return vfxDust(sd, x, y + 8, Math.max(34, r * 1.1), k);
+    case 'heal':  return true;   // 치유 마법진은 vfxGroundPass가 캐릭터 발밑(아래 층)에 그린다
+    case 'castfire': case 'castice': case 'castdark': case 'castbolt': return true;
+  }
+  // 아래는 그림 시트를 쓰는 베기·파동 효과
+  if (!vfxReady('burst_fire_0')) return false;
+  switch (f.type){
     case 'waveburst': return vfxPlay('hit_spark_3', x, y, Math.max(70, r * 2.4), k, { add: true, s0: .45 });   // 발밑 마법진은 vfxGroundPass가 캐릭터 아래 층에 그린다
     case 'slashpower':{
       const a = f.a || 0, nm = 'hit_slash_' + vfxPick(f, [0, 2, 3]);
@@ -81,10 +286,7 @@ function vfxSkill(f, k, x, y, r){
       vfxDraw('hit_slash_0', x, y, r * 2.1, { rot: k * 7 + Math.PI / 4, alpha: a, add: true });
       return vfxDraw('hit_slash_2', x, y, r * 2.1, { rot: k * 7 + Math.PI * 1.25, alpha: a, add: true });
     }
-    case 'hit':       return vfxPlay('hit_spark_' + (f.crit ? 3 : vfxPick(f, [0, 2, 4])), x, y, r * 2.2, k, { add: true, s0: .45 });
-    case 'hurt':      return vfxPlay('hit_spark_1', x, y, r * 2.0, k, { add: true, s0: .5 });
-    case 'kill':      return vfxPlay('hit_rock_12', x, y + 6, r * 2.4, k, { base: true, s0: .5, alpha: .9 });
-    default:          return vfxPlay('hit_spark_' + vfxPick(f, [0, 2, 4]), x, y, Math.max(70, r * 2.4), k, { add: true, s0: .5 });
+    default:          return vfxHitSpark(sd, x, y, Math.max(34, r * 1.2), k, 'hit');
   }
 }
 // 날아가는 것 밑에 바닥 그림자와 번지는 빛을 깔아서 "떠다니는 그림"처럼 보이지 않게 한다.
@@ -143,7 +345,7 @@ function vfxChain(f, k){
     ctx.globalAlpha = a; ctx.strokeStyle = '#fffbe0'; ctx.lineWidth = 3.2 * (1 - k) + 1.2; path(); ctx.stroke();
   }
   ctx.restore();
-  for (let i = 1; i < p.length; i++) vfxPlay('burst_volt_' + ((i * 2) % 5), p[i].x, p[i].y + 22, 76, k, { base: true, s0: .5 });
+  for (let i = 1; i < p.length; i++) vfxBlast('volt', Math.floor(f.seed) + i, p[i].x, p[i].y + 22, 34, k);
   return true;
 }
 // ---- 바닥 층: 캐릭터·몬스터보다 아래에 깔리는 효과 (town.js 그리기 순서에서 스프라이트 앞에 부름) ----
@@ -185,7 +387,7 @@ function vfxZonesGround(){
         vfxDraw('status_ground_fire', z.x, z.y, z.r * 1.9, { sy: .6, alpha: .75 * a });
         for (let i = 0; i < 6; i++){
           const an = i * 1.047 + 0.6, rr = z.r * (.35 + .4 * ((i * 37) % 10) / 10), ph = ((z.t * 1.4 + i * .17) % 1);
-          vfxDraw('burst_fire_' + (i % 3), z.x + Math.cos(an) * rr, z.y + Math.sin(an) * rr * .55 + 4, 38 + 18 * ph, { base: true, alpha: a * Math.sin(ph * 3.14) * .85 });
+          vfxFlame(z.x + Math.cos(an) * rr, z.y + Math.sin(an) * rr * .55 + 4, 15 + 8 * ph, ph + i * .31, a * Math.sin(ph * 3.14) * .95);
         }
       }
     } else if (z.type === 'voidring' || z.type === 'darkpulse'){
@@ -216,7 +418,7 @@ function vfxZonesTop(){
       const n = sm ? 8 : 12;
       for (let i = 0; i < n; i++){
         const an = i * (6.2832 / n) + z.t * 2;
-        vfxDraw('burst_dark_' + (i % 5), z.x + Math.cos(an) * cr, z.y + 6 + Math.sin(an) * cr * .55, sm ? 40 : 54, { base: true, alpha: a * .85 });
+        vfxBlast('dark', 7 + i, z.x + Math.cos(an) * cr, z.y + 6 + Math.sin(an) * cr * .55, sm ? 22 : 30, .3 + .25 * ((z.t * 1.6 + i * .21) % 1));
       }
     }
   }
@@ -296,8 +498,8 @@ function vfxHazard(h){
     return vfxDraw(ring, h.x, h.y + 4, r * 3.0 * (.7 + p * .3), { alpha: .35 + .5 * p, sy: .85 });
   }
   const k = Math.min(1, (h.t - delay) / (h.kind === 'lightning' ? .32 : .4));
-  if (h.kind === 'lightning'){ vfxGroundBurst(k, h.x, h.y + 8, r * 1.5, '#ffe45c', false); return vfxPlay('burst_volt_0', h.x, h.y + 8, r * 3.6, k, { base: true, s0: .8 }); }
-  if (h.kind === 'slime'){ vfxGroundBurst(k, h.x, h.y + 8, r * 1.3, '#8cff38', false); return vfxPlay('burst_poison_1', h.x, h.y + 8, r * 2.6, k, { base: true }); }
+  if (h.kind === 'lightning'){ vfxGroundBurst(k, h.x, h.y + 8, r * 1.5, '#ffe45c', false); return vfxBlast('volt', vfxSeed(h), h.x, h.y + 8, r * 1.3, k); }
+  if (h.kind === 'slime'){ vfxGroundBurst(k, h.x, h.y + 8, r * 1.3, '#8cff38', false); return vfxBlast('poison', vfxSeed(h), h.x, h.y + 8, r * 1.1, k); }
   return vfxPlay('hit_slash_2', h.x, h.y - 6, r * 2.5, k, { rot: -Math.PI / 4 + (h.x % 2 ? 0 : Math.PI), add: true, s0: .7 });
 }
 // 몬스터에 걸린 상태이상 표시. 몬스터 그림 아래(발)에 깔리는 효과

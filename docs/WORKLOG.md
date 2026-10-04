@@ -717,3 +717,10 @@
 - 케인 후속 결정(14:01): 새 그림 없이 기존 icon_chest 또는 dungeon/props/chest_closed·chest_open 사용 승인. 나무 상자 열림 연출을 선택하여 town_props/personal_stash_closed·open으로 복사, 무기점 왼쪽(27.8,25.8칸)에 연결. 앞선 그림 대기/시트 요청은 해소됐으며 개인 창고는 일반 플레이에서 접근 가능하도록 마무리. 캐릭터 창처럼 열려 있는 동안 일시정지, 닫으면 닫힌 그림. 기존 길/건물/출구는 이동하지 않음.
 
 - 최종 로컬 확인: 상자 실제 접근→상호작용으로 창고 열기, 기존 저장(창고 필드 없음) 빈 창고 복원, 창고 포함 초기화, 필드 개방 거절까지 통과. overlap.py에서 새 창고 관련 겹침0건(기존 성문 경비병/울타리 겹침만 남음). 관련 검사9개(check2/sell/pot/ui/equipcmp/save/reset/trade/stash) 모두 통과, 서버에 stash·sell 2개를 추가하여 총28개 검사. 상자/상점/가방/창고 실제 화면을 확인하고 game/ 결과는 되돌림.
+
+## 2026-10-04 마법 이펙트를 그림 대신 코드로 직접 그리기 (Claude)
+- 이유: 폭발 그림 한 장을 키우며 흐리게 하는 방식이 스티커처럼 겉돌아 보인다는 케인님 평가.
+- src/town/vfx.js만 수정(소리 담당 GPT 작업 파일과 분리). 새로 추가: `vfxBlast`(불·얼음·번개·암흑·독 폭발: 섬광→불덩이→연기, 중력 파편, 얼음 조각, 번개 줄기, 암흑 수축, 독 거품), `vfxHitSpark`(타격·치명타·피격), `vfxDust`(사망 먼지), `vfxFlame`(운석 불꽃 장판).
+- 교체: fireburst/iceburst/icehit/voltburst/darkburst/firestorm/frostwave/hit/hurt/kill, 연쇄 번개 폭발, 몬스터 번개·슬라임 공격 폭발, 암흑 고리. 새 종류 `poisonburst` 추가. 지속시간(VFX_DUR) 조금 늘림.
+- 그대로: 마법진(시전 고리), 투사체 그림, 베기·파동 그림, 상태이상 표시.
+- 검사: check_vfx/combat/skill/skills/hit 통과.
