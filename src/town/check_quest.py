@@ -10,10 +10,24 @@ async def main():
         ev=pg.evaluate
         await pg.goto(URL); await pg.wait_for_timeout(1200)
 
-        assert await ev('() => A.mainQuests.quests.length')==10, 'main count'
+        assert await ev('() => A.mainQuests.quests.length')==70, 'main count'
         assert await ev('() => A.mainQuests.sideQuests.length')==5, 'side count'
         lists=await ev('() => QUEST.lists()')
-        assert len(lists['main'])==10 and len(lists['side'])==5
+        assert len(lists['main'])==70 and len(lists['side'])==5
+        # 11~70은 같은 공통 엔진을 쓰므로 빌드 전 구조를 전수 검사하고, 실제 진행 검사는 1~10 + 특수 단계 표본으로 한다.
+        structural=await ev("""() => A.mainQuests.quests.map((q,i)=>({
+          id:q.id,idx:i+1,start:q.start,steps:q.steps.map(s=>({type:s.type,map:s.map||null,floor:s.floor||null,char:s.char||null,boss:s.boss||null,point:s.point||null}))
+        }))""")
+        allowed={'talk','deliver','visit','collect','kill','event','scene','boss'}
+        for i,q in enumerate(structural,1):
+            assert q['id']==f'MAIN_{i:03d}',(i,q['id'])
+            assert q['start']['previous']==(None if i==1 else f'MAIN_{i-1:03d}'),(q['id'],q['start'])
+            assert q['steps'],q['id']
+            for s in q['steps']:
+                assert s['type'] in allowed,(q['id'],s)
+                if s['type']=='scene' and s['char']!='void':
+                    assert await ev("id=>!!(A.storyChars&&A.storyChars[id]&&A.storyChars[id].port)",s['char']),(q['id'],s)
+        assert await ev("() => !!(A.storyChars&&A.storyChars.hero&&A.storyChars.knight&&A.storyChars.dragon&&A.storyChars.void)")
 
         async def town():
             if await ev("() => document.getElementById('place').dataset.map")!='마을':
@@ -138,7 +152,7 @@ async def main():
         await pg.reload(); await pg.wait_for_timeout(1200)
         assert await ev('() => QUEST.state().completed.length')==0,'old save without quest state'
         assert not errs, errs
-        print('quest ok: main10 side5; save/events/guild coexistence ok')
+        print('quest ok: main70 side5; main001-010 playthrough + 011-070 structural ok')
         await b.close()
 
 asyncio.run(main())
