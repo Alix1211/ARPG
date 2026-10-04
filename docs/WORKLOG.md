@@ -749,3 +749,11 @@
 - src/town/town.js: `arcFx`(칼, 꼬리 가늘고 칼끝 굵은 초승달 + 빛번짐 + 흰 심지 + 끝 섬광), `thrustFx`(창, 잎사귀꼴 궤적·속도선·끝 섬광·물결), `burst`(주먹, 섬광·고리·사방 선; 이전보다 크게)로 교체. 창·주먹은 이전엔 정면 공격에만 효과가 있었고 옆·뒤 방향은 이제 `weaponLayers`에서 추가됨.
 - 색: `FXPAL`/`atkPalette()` — 무기 옵션 화염의(st.fire)=주황, 서리의(st.ice)=파랑, 속성 없음=흰색·금색. 번개·암흑 옵션이 생기면 FXPAL에 색만 추가.
 - 검사: check_atk/move_atk/hit/control/combat 통과, 방향 3×무기 3 화면 캡처로 확인.
+
+## 2026-10-04 스킬창 드래그·스크롤, 렙제 아이템 어둡게 (Claude)
+- 케인님 보고: 스킬창에서 드래그할 때 퀵슬롯이 안 보임 / 스킬을 배우면 화면이 맨 위로 올라감 / 렙제 걸린 아이템이 어둡게 안 보임.
+- 원인: shell.html `.inventory-open #cluster{visibility:hidden}`가 드래그 중(`#cluster.drop`)에도 적용돼 퀵슬롯이 숨음 → `.inventory-open #cluster.drop{visibility:visible}` 추가. 스킬 아이콘 `.skc`에 `touch-action:none`(모바일 드래그가 스크롤에 먹히지 않게).
+- 스킬창은 render()마다 새로 그려져 스크롤이 0으로 돌아감 → ui.js `skillScroll` 변수에 위치를 기억하고 다시 그린 뒤 복원.
+- 렙제: ui.js `slotEl`(가방·창고)과 town.js 상점 진열 칸에 `requiredLevel > 플레이어 레벨`이면 `.lvlock`(반투명 검정 42%, blur 없음) + 작은 `Lv N` 표시.
+- 검사: ui/stash/sell/trade/skills/skill 통과, 화면 검사로 스크롤 유지(400→400)와 드래그 중 퀵슬롯 표시 확인.
+- 메모(케인 질문 답변용 조사): 감정 스킬은 생활스킬 데이터만 있고 감정 시설/UI·미확인 아이템은 아직 없음(STATUS.md 122행). 여관은 이정표 글자뿐, 건물·실내 없음.

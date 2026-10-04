@@ -312,11 +312,13 @@ function slotEl(it, x, y, w, h, onTap, selected){
   if (it){
     const im = el('img'); im.src = A.icons[it.icon]; im.alt = it.name; s.append(im);
     s.style.setProperty('--rc', RARC[it.rar]); s.classList.add('has');
+    if (it.requiredLevel && G.P && it.requiredLevel > G.P.lv){ s.classList.add('lvlock'); s.append(el('span', 'lvtag', 'Lv' + it.requiredLevel)); }
   }
   if (selected) s.classList.add('sel');
   s.addEventListener('click', onTap);
   return s;
 }
+let skillScroll=0;   // 스킬창 스크롤 위치(스킬을 배울 때 창을 다시 그려도 유지)
 function render(){
   for (const b of document.querySelectorAll('[data-tab]')) b.classList.toggle('on', b.dataset.tab === tab);
   const L = $('leftPane'); if(L.contains($('shop')))document.body.append($('shop'));$('shop').classList.toggle('on',tab==='shop'); L.innerHTML = '';
@@ -338,7 +340,7 @@ function render(){
     for (const [x, y] of EQ_OFF){ const o = el('div', 'off'); o.style.cssText = `left:${x}px;top:${y}px;width:74px;height:78px`; L.append(o); }
   } else if(tab==='skill'){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
-    const pane=el('div','skpane');L.append(pane);
+    const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
     pane.append(el('div','skhead',`전투 스킬 · 보유 ${Pp.skillPts||0}P`),el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 배운 액티브는 퀵슬롯으로 끌어 놓을 수 있습니다.'));
     for(const [gname,ids] of SKG){
       const row=el('div','skrow');row.append(el('b','',gname));

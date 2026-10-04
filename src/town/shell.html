@@ -208,6 +208,12 @@ html.app #fs{display:none}
 
 /* 창이 열리면 겹치는 HUD를 가리고 장비·가방을 같은 좌표계에 둡니다. */
 .inventory-open .hud,.inventory-open #cluster,.inventory-open #questHud{visibility:hidden}
+.inventory-open #cluster.drop{visibility:visible}
+.skc{touch-action:none}
+.slot.lvlock::after{content:'';position:absolute;inset:0;border-radius:10px;background:rgba(0,0,0,.42);pointer-events:none}
+.cell.lvlock::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.42);pointer-events:none}
+.cell .lvtag{position:absolute;left:3px;top:2px;font:700 10px sans-serif;color:#ffb0a0;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;z-index:1}
+.slot .lvtag{position:absolute;left:3px;bottom:2px;font:700 10px sans-serif;color:#ffb0a0;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;z-index:1}
 #tabs b{margin-top:42px;background:#321b0ee6;border-radius:5px;padding:2px 0;font-size:13px}
 .bgold,.bcnt{top:90px;color:#533315;text-shadow:0 1px #fff4}
 .inventorySort{position:absolute;left:100px;right:95px;top:532px;display:flex;justify-content:center;gap:10px}

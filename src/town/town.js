@@ -534,6 +534,7 @@ function renderShop(){
     list.forEach((it, i) => {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
       const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
+      if (it.requiredLevel && it.requiredLevel > P.lv){ c.classList.add('lvlock'); const lt = document.createElement('span'); lt.className = 'lvtag'; lt.textContent = 'Lv' + it.requiredLevel; c.append(lt); }
       const price = buyPrice(it);
       const pr = document.createElement('span'); pr.textContent = price; c.append(pr);
       UI.bindItemSlot(c,{from:'goods',it});c.addEventListener('click', () => {shopMode='buy';pickBuy(it,c,price);});g.append(c);
