@@ -23,7 +23,7 @@ async def main():
         await ev("() => { GAME.setGold(5000); }")
         assert await ev("() => TRADE.buyMount()")
         st=await ev("() => TRADE.state()");assert st['max']==10 and st['mount']==1,st
-        assert await ev("() => GAME.P.gold")==3800
+        assert await ev("() => GAME.P.gold")==1000
         # 다음 탈것(멧돼지)은 3티어 마을부터.
         assert not await ev("() => TRADE.buyMount()")
         # 시세 수첩: 다녀온 마을이 기록되고 저장/불러오기가 된다.

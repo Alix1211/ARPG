@@ -26,10 +26,10 @@ const TRADE_STACK_MAX = 50, TRADE_DAY_MS = 480000;
 // 수레용 탈것(화물칸 확장 전용, 타고 다니지 않음). 칸 수·가격·구매 가능 마을 티어는 초기값(케인 플레이 피드백으로 조정).
 const TRADE_MOUNTS = [
   {id:'pack',  name:'배낭',       icon:'🎒', slots:7,  price:0,     tier:0},
-  {id:'donkey',name:'당나귀 수레', icon:'🫏', slots:10, price:1200,  tier:2},
-  {id:'boar',  name:'멧돼지 수레', icon:'🐗', slots:14, price:3500,  tier:3},
-  {id:'ox',    name:'황소 수레',   icon:'🐂', slots:19, price:9000,  tier:5},
-  {id:'bear',  name:'백곰 수레',   icon:'🐻‍❄️', slots:24, price:22000, tier:7}
+  {id:'donkey',name:'당나귀 수레', icon:'🫏', slots:10, price:4000,  tier:2},
+  {id:'boar',  name:'멧돼지 수레', icon:'🐗', slots:14, price:10000, tier:3},
+  {id:'ox',    name:'황소 수레',   icon:'🐂', slots:19, price:25000, tier:5},
+  {id:'bear',  name:'백곰 수레',   icon:'🐻‍❄️', slots:24, price:60000, tier:7}
 ];
 const REGION_TIER = {town:0, spring:1, summer:2, autumn:3, winter:4, ice:5, volcano:6, swamp:7};
 const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS, mount:0, seen:{} };
