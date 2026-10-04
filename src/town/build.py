@@ -288,6 +288,45 @@ for no, name, title, where, side, line, shop in NPC:
         b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
 
+
+# ---- 큰 마을 여관 실내(1단계) ----
+INN_W, INN_H = 14, 10
+_inn_floor = Image.open(R + 'interior/int_03.png').convert('RGB').resize((TS, TS), Image.LANCZOS)
+_inn_wall = Image.open(R + 'interior/int_12.png').convert('RGB').resize((TS, TS), Image.LANCZOS)
+inn_ground = Image.new('RGB', (INN_W * TS, INN_H * TS), (70, 47, 30))
+for yy in range(INN_H):
+    for xx in range(INN_W): inn_ground.paste(_inn_floor, (xx * TS, yy * TS))
+for xx in range(INN_W): inn_ground.paste(_inn_wall, (xx * TS, 0))
+
+def _inn_prop(key, src, cx, by, wt, cw=.8, cd=.45, kind=None):
+    im = Image.open(R + f'interior/{src}.png').convert('RGBA')
+    box = im.getbbox()
+    if box: im = im.crop(box)
+    w = wt * TS; h = w * im.height / im.width
+    k = 'inn_' + key
+    assets[k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 88)
+    return dict(k=k, name=None, x=cx*TS, y=by*TS, w=w, h=h, cw=cw, cd=cd*TS, tree=False, kind=kind)
+
+inn_props = [
+    _inn_prop('fireplace','int_49',2.0,2.75,2.05,.78,.7,'fire'),
+    _inn_prop('counter','int_25',9.5,3.55,3.4,.92,.62),
+    _inn_prop('round_table','int_23',4.2,5.7,2.25,.78,.58),
+    _inn_prop('long_table','int_24',9.2,6.05,3.45,.86,.62),
+    _inn_prop('bookshelf','int_44_bookshelf',12.1,2.75,1.6,.82,.52),
+    _inn_prop('bench','int_31',4.1,8.0,2.2,.88,.35),
+    _inn_prop('cabinet','int_36',12.0,6.75,1.35,.78,.48),
+]
+_toby = next(n for n in npcs if n['no'] == 5)
+inn_npcs = [dict(k='npc_05', no=5, name='토비', title='여관 주인', x=9.5*TS, y=3.02*TS,
+                 w=_toby['w'], h=_toby['h'], line='어서 와요~ 잠깐 쉬었다 가세요.', shop='inn', at=None)]
+INN_BACK = [7.0*TS, 15.85*TS]
+INN = dict(
+    map=dict(w=INN_W,h=INN_H,ts=TS,px=PX), ground=enc(inn_ground,86),
+    mini=enc(inn_ground.resize((INN_W*6,INN_H*6),Image.LANCZOS),86),
+    blds=[], props=inn_props, npcs=inn_npcs, name='여관', spawn=[7.0*TS,8.45*TS], back=INN_BACK,
+    exits=[dict(x0=6.15*TS,x1=7.85*TS,y0=9.05*TS,y1=9.85*TS,to='town',pos=INN_BACK,dir='front')]
+)
+
 # 승인표의 모든 장비를 명시적으로 로딩(없는 이미지 대체 금지)
 with open(os.path.join(HERE, 'data/tier_match.json'), encoding='utf-8') as f:
     CATALOG = json.load(f)
@@ -438,12 +477,12 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
-A = dict(tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
 js = source('tier_match.js') + '\n' + source('town.js')
-js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('field_dungeon.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('trade.js') + '\n' + source('guild.js'))
+js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('field_dungeon.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('trade.js') + '\n' + source('guild.js'))
 html = source('shell.html')
 js += '\n' + source('ui.js')
 import time as _t

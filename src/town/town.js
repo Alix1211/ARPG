@@ -7,6 +7,7 @@ function load(s){ const i = new Image(); i.src = s; return i; }
 const MAPS = {
   town: { name: '마을', map: A.map, ground: A.ground, mini: A.mini, blds: A.blds, props: A.props, npcs: A.npcs },
   out: { ...A.out },
+  inn: { ...A.inn },
 };
 let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
 for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
@@ -41,6 +42,7 @@ for (const b of CUR.blds){
     exits.push({ x0: b.x - b.w * 0.15, x1: b.x + b.w * 0.15, y0: b.y - b.h * 0.42 - 22, y1: b.y - b.h * 0.42 + 2, to: 'out' });
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
+  if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
   if (b.k === 'watchtower' || hasNpc.has(b.k)) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
@@ -71,7 +73,7 @@ for (const n of npcs){
   if (CUR.exits) exits.push(...CUR.exits);
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
-  const panic=$('panic'); if(panic) panic.hidden=(id==='town');
+  const panic=$('panic'); if(panic) panic.hidden=(id==='town'||id==='inn');
   if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
 }
 buildWorld('town');
@@ -214,7 +216,7 @@ function portalTransition(id,pos,dir,onArrive){
 }
 function useTownPortal(){
   const r=lifeRank('townPortal');if(!r){say('타운 포탈을 아직 배우지 못했습니다.');return false;}
-  if(MAP==='town'){say('이미 마을에 있습니다.');return false;}
+  if(MAP==='town'||MAP==='inn'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r]*60000;
   if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
   townPortalReturn={
@@ -345,7 +347,8 @@ function act(){
   if (panel) return;
   if (!near) return;
   if(near.kind==='stash'&&window.UI)return UI.openStash();
-  if (near.kind === 'npc') return openDlg(near.npc);
+  if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
+  if(near.kind==='npc')return near.npc.shop==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
@@ -376,6 +379,7 @@ function travel(id,pos,dir){
   return true;
 }
 function locationState(){
+  if(MAP==='inn'&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
   if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
   if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
@@ -418,6 +422,7 @@ function emergencyEscape(){
 $('panic').addEventListener('click',emergencyEscape);
 function openDlg(n){
   talking = n;
+  $('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
   $('dlgTrade').hidden = !n.shop && !n.go;
@@ -894,9 +899,9 @@ function frame(now){
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = Math.max(0, Math.min(MWp - vw, camX)); camY = Math.max(0, Math.min(MHp - vh, camY));
-  const DUN = MAP === 'dungeon';
+  const DUN=MAP==='dungeon', INDOOR=MAP==='inn';
   if(!simPaused){
-    if(!DUN)weather(dt,camX,camY,vw,vh);
+    if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
   }
@@ -904,7 +909,7 @@ function frame(now){
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(G, 0, 0, MWp, MHp);
-  if (!DUN) drawGroundFx();
+  if(!DUN&&!INDOOR)drawGroundFx();
   if (typeof drawEncounterGround === 'function') drawEncounterGround(sdt);
   vfxGroundPass();
 
@@ -938,13 +943,13 @@ function frame(now){
     if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
     else ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
-  if (!DUN) drawLeaves();
+  if(!DUN&&!INDOOR)drawLeaves();
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + sdt / DAYLEN) % 1;
-  if (!DUN) drawDay(camX, camY); else if ($('place').textContent !== CUR.name) $('place').textContent = CUR.name;
+  if(!DUN&&!INDOOR)drawDay(camX,camY);else if($('place').textContent!==CUR.name)$('place').textContent=CUR.name;
   if (typeof drawDungeonShade === 'function') drawDungeonShade(camX, camY);
-  if (!DUN) drawRain(VW, VH);
+  if(!DUN&&!INDOOR)drawRain(VW,VH);
 
   const tag = $('tag');
   if (near && !panel){
