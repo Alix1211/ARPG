@@ -3,6 +3,8 @@
 // 이 파일은 vfx.js 다음에 town.js 안으로 합쳐지므로 ctx, P, SK, CD, shots, sfx, pops 등을 그대로 쓴다.
 const GCD = .9;   // 스킬을 쓰면 다른 슬롯도 이만큼 잠깐 잠긴다(큰 스킬 연타 방지)
 const SK2 = {
+  holy2_shield:{mp:20,cd:15},
+  holy3_revive:{mp:0,cd:180},
   ice3:{mp:35,cd:14,root:.35},
   bolt3:{mp:43,cd:16,root:.4},
   dark2:{mp:15,cd:7},
@@ -31,6 +33,18 @@ function castExtra(id, d, rank, cm, mod, skillMul){
   const ang = Math.atan2(d[1], d[0]), ox = P.x + d[0] * 28, oy = P.y - 44 + d[1] * 28;
   const popName = () => { if (SK2_POP[id]) pops.push({ x:P.x, y:P.y - 115, t:0, txt:SK2_POP[id], crit:true }); };
   switch (id){
+    case 'holy2_shield': {
+      const v=Math.round(P.maxHp*(.6+rank*.08)*skillMul);
+      P.shield=v;P.shieldMax=v;P.shieldT=rank>=4?8:5;P.shieldRank=rank;P.shieldKind='holy';syncBars();
+      pops.push({x:P.x,y:P.y-100,t:0,txt:'성역의 방패 '+v,heal:true});
+      sfx.push({type:'holyshield',t:0,x:P.x,y:P.y-30,r:70});return true;
+    }
+    case 'holy3_revive': {
+      if(P.reviveArmed || (P.reviveReadyAt||0)>Date.now()){say(P.reviveArmed?'소생이 이미 준비되어 있습니다':'소생을 다시 준비하려면 기다려야 합니다');return false;}
+      P.reviveArmed=true;P.reviveRank=rank;P.reviveReadyAt=Date.now()+180000;
+      sfx.push({type:'heal',t:0,x:P.x,y:P.y-20,r:65});pops.push({x:P.x,y:P.y-110,t:0,txt:'소생 준비',heal:true});
+      if(window.UI&&UI.save)UI.save();return true;
+    }
     case 'ice3': {
       const hits=8+rank-1, dur=4;
       zones.push({type:'blizzard',map:MAP,x:P.x,y:P.y,t:0,dur,R:180,nextTick:dur/hits,interval:dur/hits,
@@ -230,4 +244,18 @@ function updZones(dt){
       if (z.t > z.dur + .35) zones.splice(i, 1);
     }
   }
+}
+
+// 소생은 한 번 준비하면 사망 시 소모된다. 재사용 시각은 저장해 재접속으로 초기화되지 않는다.
+function tryRevivePlayer(){
+  if(!P.reviveArmed)return false;
+  P.reviveArmed=false;
+  const rank=Math.max(1,Math.min(5,P.reviveRank||1));
+  P.hp=Math.max(1,Math.round(P.maxHp*(.3+(rank-1)*.175)));
+  P.reviveReadyAt=Date.now()+180000;CD.holy3_revive=180;P.reviveGrace=1.5;playerInv=1.5;
+  P.castRoot=0;P.atk=null;P.shield=0;
+  for(const key in PLAYER_STATUS)PLAYER_STATUS[key]=0;
+  syncBars();sfx.push({type:'resurrection',t:0,x:P.x,y:P.y-20,r:110});
+  pops.push({x:P.x,y:P.y-110,t:0,txt:'기적의 소생!',heal:true});
+  if(window.UI&&UI.save)UI.save();return true;
 }

@@ -300,12 +300,14 @@ function faceMonster(m,dx,dy){
   if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; } else m.face='front';
 }
 function defeatPlayer(){
+  if(tryRevivePlayer())return;
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
   for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;P.shield=0;syncBars();
   say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
   travel('town',[23*TS,22.2*TS],'front');
 }
 function rawPlayerDamage(v,label){
+  if(P.reviveGrace>0)return;
   const cm=window.UI&&UI.combatMods?UI.combatMods():{damageReduce:0};
   v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));
   if(P.shield>0){v=absorbShield(v);if(v<=0)return;}   // 빙결 보호막이 먼저 받는다
@@ -323,6 +325,7 @@ function applyPlayerStatus(kind,dur){
 function hurtPlayer(v,dx,dy,status,statusDur){
   if(playerInv>0||traveling) return false;
   playerInv=.55; rawPlayerDamage(v); sfx.push({type:'hurt',t:0,x:P.x,y:P.y-42,r:36});
+  if(P.reviveGrace>0)return true;
   const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
   if(status&&!(P.shield>0)) applyPlayerStatus(status,statusDur);   // 보호막이 남아 있으면 상태이상도 막는다
   return true;

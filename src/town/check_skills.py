@@ -15,7 +15,7 @@ async def main():
         ev=pg.evaluate
         await pg.goto(URL);await pg.wait_for_timeout(1500)
         # 스킬 포인트로 배울 수 있어야 한다
-        for sid in SKILLS:
+        for sid in SKILLS+['holy2_shield','holy3_revive']:
             ok=await ev("(id) => { GAME.P.skillLv[id]=0; GAME.P.skillPts=3; const r=GAME.investSkill(id); return [r, UI.skillRank(id)]; }",sid)
             assert ok==[True,1],(sid,ok)
             assert await ev("id => UI.assignQuick(0,id) && UI.quickSlots()[0]===id",sid),sid
@@ -47,6 +47,23 @@ async def main():
             await pg.wait_for_timeout(1100)
             after=await ev("() => __FD.debugMonster()")
             assert after is None or after['hp']<before['hp'],(sid,before,after)
+        # 성역 방패는 피해를 흡수하고 얼음 폭발을 빌려 쓰지 않는다.
+        r=await ev("""() => { GAME.clearCd();GAME.P.mp=99999;GAME.P.skillLv.holy2_shield=4;
+          const mp=GAME.P.mp,ok=GAME.cast('holy2_shield'),hp=GAME.P.hp,shield=GAME.P.shield;
+          __FD.hurtTest(100);return [ok,GAME.P.mp<mp,GAME.cdLeft('holy2_shield')>0,GAME.P.shield<shield,GAME.P.hp===hp,GAME.P.shieldKind,GAME.P.shieldT]; }""")
+        assert r[:6]==[True,True,True,True,True,'holy'] and r[6]==8,r
+        # 소생은 MP 0인 준비형 스킬: 발동 후 180초, 제자리/금화 유지, 1회만 발동.
+        await ev("() => {GAME.P.shield=0;GAME.P.reviveArmed=false;GAME.P.reviveReadyAt=0;GAME.P.skillLv.holy3_revive=1;GAME.clearCd();}")
+        r=await ev("""() => {const p=GAME.P,mp=p.mp,gold=p.gold,x=p.x,y=p.y,ok=GAME.cast('holy3_revive');
+          const cd=GAME.cdLeft('holy3_revive')>0;__FD.hurtTest(p.maxHp*100);
+          return [ok,p.mp===mp,cd,Math.abs(p.hp/p.maxHp-.3)<.001,p.x===x&&p.y===y,p.gold===gold,!p.reviveArmed,p.reviveReadyAt>Date.now()+179000];}""")
+        assert all(r),r
+        await ev("() => UI.save()")
+        await pg.reload();await pg.wait_for_timeout(1200)
+        r=await ev("() => {GAME.clearCd();return [GAME.cdLeft('holy3_revive')>0,GAME.cast('holy3_revive'),GAME.P.reviveArmed];}")
+        assert r==[True,False,False],r
+        await ev("() => {GAME.P.reviveReadyAt=0;GAME.P.reviveGrace=0;GAME.P.skillLv.holy3_revive=5;GAME.clearCd();GAME.cast('holy3_revive');__FD.hurtTest(GAME.P.maxHp*100);}")
+        assert await ev("() => GAME.P.hp===GAME.P.maxHp"),'rank5 revive'
         # 마나가 모자라면 못 쓰고, 대상 없는 연쇄 벼락은 마나를 쓰지 않는다
         await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(900)
         r=await ev("""() => { GAME.clearCd(); __FD.debugTarget(900,900); GAME.P.mp=50; GAME.P.skillLv.bolt2=1; const a=GAME.cast('bolt2'); return [a, GAME.P.mp]; }""")

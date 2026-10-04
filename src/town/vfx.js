@@ -11,7 +11,7 @@ const VFX_HEAD = { shot_fire:145, shot_rock:155, shot_poison:150, shot_dark:142,
 const VFX_STATUS = { burn:'fire', slow:'slow', freeze:'ice', stone:'stone', bleed:'blood' };
 
 // 효과별 지속 시간(초). town.js의 drawSkillFx와 아래 바닥 층이 같이 쓴다.
-const VFX_DUR = { thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
+const VFX_DUR = { holyshield:.65,resurrection:1.2, thunderstrike:.55, heal:.75, hit:.26, hurt:.3, kill:.6, fireburst:.7, iceburst:.65, icehit:.5, castfire:.75, castice:.75, slashpower:.42, spinpower:.45,
   firestorm:.75, frostwave:.65, chain:.4, voltburst:.5, darkburst:.6, poisonburst:.55, waveburst:.4, castdark:.75, castbolt:.75 };
 
 function vfxReady(n){ const im = VFXI[n]; return !!(im && im.complete && im.naturalWidth > 0); }
@@ -257,6 +257,12 @@ function vfxSkill(f, k, x, y, r){
         vfxBlast('fire', sd + i + 1, x + Math.cos(a) * rr, y + 14 + Math.sin(a) * rr * .6, Math.max(26, r * .3), ki);
       }
       return true;
+    }
+    case 'holyshield': case 'resurrection':{
+      const a=1-k,R=r*(.4+.6*k);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle='#ffe8a0';ctx.lineWidth=5*a+1;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(x,y+20-i*25*k,R*(1-i*.18),R*.4,0,0,7);ctx.stroke();}
+      if(f.type==='resurrection'){ctx.strokeStyle='#fffce1';ctx.lineWidth=9*a;ctx.beginPath();ctx.moveTo(x,y-160*k);ctx.lineTo(x,y+15);ctx.moveTo(x-30,y-75*k);ctx.lineTo(x+30,y-75*k);ctx.stroke();}
+      ctx.restore();return true;
     }
     case 'thunderstrike':{
       vfxZig(x-24,y-260,x,y+14,28,Math.floor(k*12),sd,1-k,6,'#9faeff','#ffffff');

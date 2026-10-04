@@ -83,7 +83,7 @@ const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:fals
   hp:40*NUM, mp:28*NUM, maxHp:40*NUM, maxMp:28*NUM, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
-  skillLv:{ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
+  skillLv:{holy2_shield:0,holy3_revive:0,ice3:0,bolt3:0,dark2:0,fire1:1,ice1:0,holy1_heal:0,sword1:0,sword2:0,fire2:0,fire3:0,ice2:0,bolt1:0,bolt2:0,dark1:0,dark3:0,sword3:0,bow2:0,fist2:0},
   passives:{magicGuide:0,precision:0,rapid:0,manaFlow:0,survival:0,greed:0},
   lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){
@@ -667,7 +667,7 @@ function syncBars(){
 }
 window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
-  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>(CD[id]||0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
+  PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char', setOpen:v=>{panel=v;}, swing, say, setMax };
 
@@ -1155,7 +1155,7 @@ function cast(id,mod){
   if(typeof playerControlLocked==='function'&&playerControlLocked())return false;
   const k=SK[id],rank=(P.skillLv&&P.skillLv[id])||0;if(!k||rank<1)return false;mod=mod||{dmg:1,mp:1};
   if((CD[id]||0)>0)return false;
-  const cm=combatNow(),cost=Math.max(1,Math.round(k.mp*NUM*mod.mp*(1-(cm.manaReduce||0)/100)));
+  const cm=combatNow(),cost=Math.max(k.mp===0?0:1,Math.round(k.mp*NUM*mod.mp*(1-(cm.manaReduce||0)/100)));
   if(P.mp<cost){say('마나가 부족합니다');return false;}
   P.mp-=cost;CD[id]=k.cd;syncBars();
   const d=faceVec(),home=(P.passives&&P.passives.magicGuide)||0;
@@ -1169,7 +1169,7 @@ function cast(id,mod){
   }else if(id==='ice1'){
     // 빙결 보호막: 얼음막이 피해를 대신 받는다. 막이 깨지면 주변이 얼어붙고, 막이 있는 동안 둔화·석화 같은 상태이상도 막는다.
     const v=Math.round(P.maxHp*.45*skillMul);
-    P.shield=v;P.shieldMax=v;P.shieldT=10+rank*.5;P.shieldRank=rank;syncBars();
+    P.shieldKind='ice';P.shield=v;P.shieldMax=v;P.shieldT=10+rank*.5;P.shieldRank=rank;syncBars();
     pops.push({x:P.x,y:P.y-100,t:0,txt:'빙결 보호막 '+v,mana:true});sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:70});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
@@ -1202,6 +1202,7 @@ function absorbShield(v){
   syncBars();return v-ab;
 }
 function breakShield(){
+  if(P.shieldKind==='holy'){sfx.push({type:'holyshield',t:0,x:P.x,y:P.y-30,r:80});return;}
   const rank=P.shieldRank||1;let n=0;
   for(const t of (typeof combatTargets==='function'?combatTargets():[])){
     if(Math.hypot(t.x-P.x,t.y-P.y)<150&&typeof applyMonsterStatus==='function'){applyMonsterStatus(t,'freeze',.9+rank*.1);applyMonsterStatus(t,'slow',3);n++;}
@@ -1214,9 +1215,9 @@ function drawShield(){
   const k=Math.max(0,Math.min(1,P.shield/(P.shieldMax||1)));
   let al=.55+.45*k;if(P.shieldT<2)al*=.55+.45*Math.sin(T*16);
   ctx.save();ctx.translate(P.x,P.y-40);
-  const g=ctx.createRadialGradient(0,0,10,0,0,58);g.addColorStop(0,'rgba(190,240,255,.05)');g.addColorStop(1,'rgba(120,205,255,.38)');
+  const g=ctx.createRadialGradient(0,0,10,0,0,58);g.addColorStop(0,'rgba(190,240,255,.05)');g.addColorStop(1,P.shieldKind==='holy'?'rgba(255,215,95,.45)':'rgba(120,205,255,.38)');
   ctx.globalAlpha=al;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.fill();
-  ctx.strokeStyle='rgba(215,247,255,.95)';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.strokeStyle=P.shieldKind==='holy'?'rgba(255,234,150,.95)':'rgba(215,247,255,.95)';ctx.lineWidth=2.5;ctx.stroke();
   ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,40,Math.PI*1.12,Math.PI*1.45);ctx.stroke();
   if(k<.4){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-14,-38);ctx.lineTo(-4,-14);ctx.lineTo(-18,4);ctx.moveTo(10,-30);ctx.lineTo(18,-6);ctx.stroke();}
   ctx.fillStyle='#eaffff';
@@ -1233,6 +1234,7 @@ function drink(k){
   return true;
 }
 function updSkills(dt){
+  P.reviveGrace=Math.max(0,(P.reviveGrace||0)-dt);
   potCd = Math.max(0, potCd - dt);
   P.castRoot = Math.max(0, (P.castRoot || 0) - dt);
   updZones(dt);
