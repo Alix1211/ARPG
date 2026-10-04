@@ -48,6 +48,7 @@ jobs:
       - run: python src/town/check_growth.py
       - run: python src/town/check_pot.py
       - run: python src/town/check_save.py
+      - run: python src/town/check_reset.py
       - run: python src/town/check_resume.py
       - run: python src/town/check_field.py
       - run: python src/town/check_legs.py

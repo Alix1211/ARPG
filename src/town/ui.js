@@ -505,7 +505,9 @@ window.UI = {
 // ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
 const SKEY='arpg_save_v3';
 try{localStorage.removeItem('arpg_save_v1');localStorage.removeItem('arpg_save_v2');}catch(e){}
+let RESETTING=false;
 function saveGame(){
+  if(RESETTING)return;
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
@@ -539,5 +541,11 @@ if(saved){
   });
 }
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
-window.UI.save=saveGame;window.UI.reset=()=>{try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+window.UI.save=saveGame;window.UI.reset=()=>{RESETTING=true;try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+// 테스트용 초기화 버튼: 두 번 눌러야 지워진다. 정식 시작 전에 false로.
+const TEST_RESET_BUTTON=true;
+{const b=document.getElementById('resetBtn');
+ if(b&&TEST_RESET_BUTTON){b.hidden=false;let armed=false,tm=0;
+  b.addEventListener('click',()=>{if(!armed){armed=true;b.textContent='정말 지울까요?';tm=setTimeout(()=>{armed=false;b.textContent='초기화';},3500);}
+   else{clearTimeout(tm);window.UI.reset();}});}}
 })();

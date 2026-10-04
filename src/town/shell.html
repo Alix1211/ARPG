@@ -148,6 +148,8 @@ html.app #fs{display:none}
 #snd{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:44px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
 #panic{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:78px;pointer-events:auto;border:2px solid #d87358;background:#6b1d18e8;color:#fff1df;border-radius:8px;font-size:11px;font-weight:900;padding:5px 8px;box-shadow:0 2px 4px #0008}
 #panic[hidden]{display:none}
+#resetBtn{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:112px;pointer-events:auto;border:2px solid #7a6a55;background:#2c2218e8;color:#e9dcc4;border-radius:8px;font-size:11px;font-weight:900;padding:5px 8px;box-shadow:0 2px 4px #0008}
+#resetBtn[hidden]{display:none}
 #joy{left:0;bottom:0;width:46%;height:72%;pointer-events:auto;touch-action:none;overscroll-behavior:none}
 #stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none;opacity:.45;transition:opacity .15s}
 #stick.act{opacity:1}
@@ -212,7 +214,7 @@ html.app #fs{display:none}
 <div class="hud" id="questTrack" aria-label="진행 중 의뢰"></div>
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
 <div class="hud" id="place">마을</div>
-<button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="snd" type="button">소리 켬</button><button class="hud" id="panic" type="button" hidden>비상탈출</button>
+<button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="snd" type="button">소리 켬</button><button class="hud" id="panic" type="button" hidden>비상탈출</button><button class="hud" id="resetBtn" type="button" hidden>초기화</button>
 <div class="hud" id="joy"></div><div id="stick"><div id="knob"></div></div>
 <div id="cluster"><button id="atk" type="button" aria-label="공격"><img id="atkIc" alt=""><span id="atkCap"></span></button><button class="sk" data-i="0" type="button" hidden><i></i></button><button class="sk" data-i="1" type="button" hidden><i></i></button><button class="sk" data-i="2" type="button" hidden><i></i></button><button class="sk" data-i="3" type="button" hidden><i></i></button><button class="sk" data-i="4" type="button" hidden><i></i></button><button class="pot" id="potHp" type="button" aria-label="체력 물약"><b>0</b></button><button class="pot" id="potMp" type="button" aria-label="마나 물약"><b>0</b></button><button id="swap" type="button" aria-label="무기 교체"><small id="swapNo">1</small></button></div>
 <div id="bubble"></div>
