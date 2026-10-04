@@ -205,6 +205,7 @@ async def main():
         assert await ev("() => QUEST.state().active.MAIN_015.step")==1,'scene step advance'
 
         await ev("""() => QUEST.loadData({schema:3,active:{MAIN_004:{step:1,progress:0,reward:{gold:1,exp:1}}},completed:['MAIN_001','MAIN_002','MAIN_003'],items:{},visited:[],flags:{}})""")
+        await go_dungeon(3)
         await ev("() => QUEST.onKill({dead:true,boss:true,type:'test',family:'test'})")
         assert await ev("() => QUEST.state().active.MAIN_004.step")==2,'boss step advance'
 
