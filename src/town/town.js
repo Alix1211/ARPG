@@ -1275,26 +1275,58 @@ function drawSkillFx(dt){
   while(sfx.length&&sfx[0].t>.8)sfx.shift();
 }
 
+// 무기 속성(화염의·서리의 옵션)에 따라 휘두름·찌르기·타격 효과의 색이 바뀐다. 속성이 없으면 흰색·금색.
+const FXPAL = { neutral:{ glow:[255,196,96], body:[255,238,176], core:[255,255,255] }, fire:{ glow:[255,100,24], body:[255,164,66], core:[255,238,196] }, ice:{ glow:[70,160,255], body:[168,224,255], core:[244,252,255] } };
+let FXC = FXPAL.neutral;
+const fxA = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
+function atkPalette(){ const st = (WPN && WPN.item && WPN.item.st) || {}, f = st.fire || 0, c = st.ice || 0; return f > 0 && f >= c ? FXPAL.fire : c > 0 ? FXPAL.ice : FXPAL.neutral; }
 // 휘두름 궤적(초승달)
 function arcFx(cx, cy, r, a0, a1, k){
   if (k <= 0 || k >= 1) return;
-  ctx.save(); ctx.globalAlpha = 0.85 * (1 - k); ctx.strokeStyle = '#fff6dc'; ctx.lineCap = 'round';
-  ctx.lineWidth = 7 * (1 - k) + 1.5; ctx.beginPath();
-  // 각도 0 = 위 → 캔버스 각도로 바꿈(-PI/2)
-  ctx.arc(cx, cy, r, Math.min(a0, a1) - PI / 2, Math.max(a0, a1) - PI / 2); ctx.stroke(); ctx.restore();
+  const st = Math.min(a0, a1) - PI / 2, en = Math.max(a0, a1) - PI / 2; if (en - st < 0.05) return;
+  const fade = 1 - k, n = 18;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  ctx.strokeStyle = fxA(FXC.glow, .24 * fade); ctx.lineWidth = 18 * (1 - k * .5);   // 바깥 빛번짐
+  ctx.beginPath(); ctx.arc(cx, cy, r, st, en); ctx.stroke();
+  ctx.beginPath();   // 꼬리는 가늘고 머리(칼끝 쪽)는 굵은 초승달
+  for (let i = 0; i <= n; i++){ const t = i / n, an = st + (en - st) * t, w = (1.5 + 15 * Math.pow(t, 1.6)) * (1 - .35 * k), rr = r + w * .55; ctx[i ? 'lineTo' : 'moveTo'](cx + Math.cos(an) * rr, cy + Math.sin(an) * rr); }
+  for (let i = n; i >= 0; i--){ const t = i / n, an = st + (en - st) * t, w = (1.5 + 15 * Math.pow(t, 1.6)) * (1 - .35 * k), rr = r - w * .45; ctx.lineTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr); }
+  ctx.closePath(); ctx.fillStyle = fxA(FXC.body, .62 * fade); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.core, .95 * fade); ctx.lineWidth = 3.4 * (1 - k) + 1;   // 흰 심지
+  ctx.beginPath(); ctx.arc(cx, cy, r + 1, st + (en - st) * .3, en); ctx.stroke();
+  const hx = cx + Math.cos(en) * r, hy = cy + Math.sin(en) * r, g = ctx.createRadialGradient(hx, hy, 0, hx, hy, 15);   // 칼끝 섬광
+  g.addColorStop(0, fxA(FXC.core, fade)); g.addColorStop(1, fxA(FXC.glow, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, 15, 0, 7); ctx.fill();
+  ctx.restore();
 }
 const lerp = (a, b, t) => a + (b - a) * t;
-// 찌르기 잔상(창 아래 공격)
-function streak(x, y, dx, dy, t, r){
+// 찌르기 궤적(창): 잎사귀꼴 본체 + 속도선 + 끝 섬광 + 퍼지는 물결. ang = 찌르는 방향(캔버스 각도)
+function thrustFx(x, y, ang, t, r, len){
   if (t <= 0 || r >= 1) return;
-  ctx.save(); ctx.globalAlpha = 0.9 * (1 - r); ctx.strokeStyle = '#fff6dc'; ctx.lineCap = 'round';
-  ctx.lineWidth = 6 * (1 - r) + 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx * 60 * t, y + dy * 60 * t); ctx.stroke(); ctx.restore();
+  const L = (len || 74) * Math.min(1, t * 1.15), fade = 1 - r, ca = Math.cos(ang), sa = Math.sin(ang), nx = -sa, ny = ca, tx = x + ca * L, ty = y + sa * L;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ca * L * .62 + nx * 7, y + sa * L * .62 + ny * 7); ctx.lineTo(tx, ty); ctx.lineTo(x + ca * L * .62 - nx * 7, y + sa * L * .62 - ny * 7); ctx.closePath();
+  ctx.fillStyle = fxA(FXC.body, .55 * fade); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.core, .95 * fade); ctx.lineWidth = 2.6 * fade + .8;
+  ctx.beginPath(); ctx.moveTo(x + ca * L * .18, y + sa * L * .18); ctx.lineTo(tx, ty); ctx.stroke();
+  ctx.strokeStyle = fxA(FXC.body, .5 * fade); ctx.lineWidth = 1.6;
+  for (const o of [-11, 11]){ ctx.beginPath(); ctx.moveTo(x + ca * L * .18 + nx * o, y + sa * L * .18 + ny * o); ctx.lineTo(x + ca * L * .66 + nx * o, y + sa * L * .66 + ny * o); ctx.stroke(); }
+  const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, 14); g.addColorStop(0, fxA(FXC.core, fade)); g.addColorStop(1, fxA(FXC.glow, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(tx, ty, 14, 0, 7); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.body, .6 * fade); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(tx, ty, 9 + 16 * r, ang - 1.0, ang + 1.0); ctx.stroke();
+  ctx.restore();
 }
 // 주먹 충격(건틀릿 아래 공격)
 function burst(x, y, r){
   if (r >= 1) return;
-  ctx.save(); ctx.globalAlpha = 1 - r; ctx.strokeStyle = '#fff1c8'; ctx.lineWidth = 3; const R0 = 6 + r * 16;
-  for (let i = 0; i < 8; i++){ const a = i * PI / 4; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R0 * 0.5, y + Math.sin(a) * R0 * 0.5); ctx.lineTo(x + Math.cos(a) * R0, y + Math.sin(a) * R0); ctx.stroke(); }
+  const fade = 1 - r, R0 = 13 + r * 36;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+  const g = ctx.createRadialGradient(x, y, 0, x, y, 32); g.addColorStop(0, fxA(FXC.core, fade)); g.addColorStop(.5, fxA(FXC.body, .55 * fade)); g.addColorStop(1, fxA(FXC.glow, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 32, 0, 7); ctx.fill();
+  ctx.strokeStyle = fxA(FXC.body, .8 * fade); ctx.lineWidth = 4.2 * fade + 1; ctx.beginPath(); ctx.arc(x, y, R0, 0, 7); ctx.stroke();
+  ctx.strokeStyle = fxA(FXC.core, fade); ctx.lineWidth = 2.4 * fade + .6;
+  for (let i = 0; i < 8; i++){ const a = i * PI / 4 + .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R0 * .55, y + Math.sin(a) * R0 * .55); ctx.lineTo(x + Math.cos(a) * (R0 * .55 + 14 + 12 * fade), y + Math.sin(a) * (R0 * .55 + 14 + 12 * fade)); ctx.stroke(); }
   ctx.restore();
 }
 // 공격 단계: 준비(0~0.3) → 타격(0.3~0.6) → 회수
@@ -1305,6 +1337,7 @@ function weaponLayers(){
   if (!WPN) return out;
   const wt = WPN.wt;
   if (!atkBusy()) return out; // 걷기·서 있기에는 무기를 그리지 않음
+  FXC = atkPalette();
   const a = P.atk, k = Math.min(1, a.t / DUR[wt]), ph = phase(k), d = a.dir;
   const thrust = ph.s * (1 - ph.r), alt = a.n % 2 ? 1 : -1;
   out.lunge = d === 'side' ? [3 * thrust, 0] : d === 'front' ? [0, 3 * thrust] : [0, -3 * thrust];
@@ -1312,20 +1345,20 @@ function weaponLayers(){
     if (wt === 'sword'){ const an = ph.s === 0 ? lerp(-0.6, -2.0, ph.w) : lerp(-2.0, 1.9, ph.s) - ph.r * 0.6;
       out.back = () => wDraw(x + 22, y - 32, an);
       out.front = () => arcFx(x + 22, y - 32, 52, -1.6, lerp(-1.6, 1.9, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }
-    else if (wt === 'spear') out.back = () => wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2);
+    else if (wt === 'spear') out.back = () => { wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2); thrustFx(x + 30, y - 40, 0, thrust, ph.r, 76); };
     else if (wt === 'bow') out.back = () => wDraw(x + 20, y - 44, 0, 1, true);
     else if (wt === 'staff') out.back = () => wDraw(x + 26 + 8 * thrust, y - 42, lerp(0.35, 1.2, thrust) - 0.25 * ph.w * (1 - ph.s));
-    else out.back = () => wDraw(x + 18 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), -PI / 2, 1.1, true);  // 주먹(그림 아래쪽)이 앞을 향하게
+    else out.back = () => { wDraw(x + 18 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), -PI / 2, 1.1, true); burst(x + 46, y - 42 + (alt > 0 ? 8 : -2), ph.s > 0 ? ph.r : 1); };  // 주먹(그림 아래쪽)이 앞을 향하게
   } else if (d === 'back'){
     if (wt === 'sword'){ const an = ph.s === 0 ? lerp(0, -1.5, ph.w) : lerp(-1.5, 1.5, ph.s);
       out.back = () => { wDraw(x + 4, y - 58, an); arcFx(x + 4, y - 58, 48, -1.5, lerp(-1.5, 1.5, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
-    else if (wt === 'spear') out.back = () => wDraw(x + 7, y - 58 - 32 * thrust, 0);
+    else if (wt === 'spear') out.back = () => { wDraw(x + 7, y - 58 - 32 * thrust, 0); thrustFx(x + 7, y - 78, -PI / 2, thrust, ph.r, 76); };
     else if (wt === 'bow') out.back = () => wDraw(x, y - 80, PI / 2);
     else if (wt === 'staff') out.back = () => wDraw(x + 9, y - 60 - 8 * thrust, lerp(0.25, -0.1, thrust));
-    else out.back = () => wDraw(x + 10 * alt, y - 70 - 16 * thrust, PI, 1.1);
+    else out.back = () => { wDraw(x + 10 * alt, y - 70 - 16 * thrust, PI, 1.1); burst(x + 10 * alt, y - 100 - 18 * thrust, ph.s > 0 ? ph.r : 1); };
   } else { // 정면(아래로 공격): 무기는 그리지 않고 이펙트만
     if (wt === 'sword') out.front = () => arcFx(x, y - 30, 46, PI - 1.4, lerp(PI - 1.4, PI + 1.4, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1));
-    else if (wt === 'spear') out.front = () => streak(x + 4, y - 30, 0, 1, thrust, ph.r);
+    else if (wt === 'spear') out.front = () => thrustFx(x + 4, y - 30, PI / 2, thrust, ph.r, 70);
     else if (wt === 'gauntlet') out.front = () => burst(x + 10 * alt, y - 18 + 14 * thrust, ph.s > 0 ? ph.r : 1);
   }
   return out;
