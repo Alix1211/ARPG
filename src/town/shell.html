@@ -220,6 +220,9 @@ html.app #fs{display:none}
 .cell.lvlock::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.42);pointer-events:none}
 .cell .lvtag{position:absolute;left:3px;top:2px;font:700 10px sans-serif;color:#ffb0a0;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;z-index:1}
 .slot .lvtag{position:absolute;left:3px;bottom:2px;font:700 10px sans-serif;color:#ffb0a0;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;z-index:1}
+.slot .unidtag{position:absolute;right:3px;top:2px;width:18px;height:18px;border-radius:50%;background:#2d241dcc;color:#fff2a8;font:900 14px/18px sans-serif;text-align:center;text-shadow:0 1px 2px #000;pointer-events:none;z-index:2}
+.unidline{color:#6f5b45;letter-spacing:2px}
+#dlgInnRow{flex-wrap:wrap}#dlgInnRow .btn{padding:6px 13px;font-size:14px}
 #tabs b{margin-top:42px;background:#321b0ee6;border-radius:5px;padding:2px 0;font-size:13px}
 .bgold,.bcnt{top:90px;color:#533315;text-shadow:0 1px #fff4}
 .inventorySort{position:absolute;left:100px;right:95px;top:532px;display:flex;justify-content:center;gap:10px}
@@ -264,7 +267,7 @@ html.app #fs{display:none}
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
 <div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
   <div class="row" id="dlgMainRow"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn ghost" type="button" data-close>닫기</button></div>
-  <div class="row" id="dlgInnRow" hidden><button class="btn" id="dlgRest" type="button">푹 쉬기</button><button class="btn ghost" id="dlgChat" type="button" disabled>잡담 · 준비 중</button><button class="btn ghost" id="dlgMerc" type="button" disabled>용병 · 준비 중</button><button class="btn ghost" id="dlgLeave" type="button">나가기</button></div></div></div>
+  <div class="row" id="dlgInnRow" hidden><button class="btn" id="dlgRest" type="button">푹 쉬기</button><button class="btn" id="dlgIdentify" type="button">감정</button><button class="btn ghost" id="dlgChat" type="button" disabled>잡담 · 준비 중</button><button class="btn ghost" id="dlgMerc" type="button" disabled>용병 · 준비 중</button><button class="btn ghost" id="dlgLeave" type="button">나가기</button></div></div></div>
 <div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small><button id="guildClose" type="button" data-close aria-label="닫기"></button></div><div class="gsect">진행 중 의뢰</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
 <div class="pan" id="shop"><img id="shopImg" alt=""><div class="frame"><div id="shopHead"><span id="shopName"></span><div id="shopTabs"><button class="btn on" id="tabBuy" type="button">사기</button><button class="btn" id="tabSell" type="button">팔기</button></div><small>내 금화 <b id="shopGold">0</b></small></div>
   <div id="shopMarket"></div>
