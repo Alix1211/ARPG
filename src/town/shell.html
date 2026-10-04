@@ -147,6 +147,7 @@ html.app #fs{display:none}
 #mmPortal::before{content:'↩';position:absolute;right:-2px;top:-4px;font:900 15px sans-serif;color:#ffe9a8;text-shadow:0 1px 2px #000,0 0 4px #000}
 #mmPortal.off{filter:grayscale(.85) brightness(.6)}
 #mmPortalCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 13px sans-serif;color:#fff;text-shadow:0 1px 3px #000,0 0 4px #000;pointer-events:none}
+#mmPortalScr{position:absolute;right:-3px;bottom:-4px;min-width:18px;height:18px;border-radius:9px;background:#5b2c8f;border:2px solid #e3b35f;color:#fff;font:900 11px/14px sans-serif;text-align:center;padding:0 2px;box-sizing:border-box;pointer-events:none}#mmPortalScr:empty{display:none}
 #mmPortal:active{transform:scale(.94)}
 
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
@@ -257,7 +258,7 @@ html.app #fs{display:none}
   <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
 <div class="hud" id="questTrack" aria-label="진행 중 의뢰"></div>
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
-<button class="hud" id="mmPortal" type="button" aria-label="타운 포탈"><span id="mmPortalCd"></span></button>
+<button class="hud" id="mmPortal" type="button" aria-label="타운 포탈"><span id="mmPortalCd"></span><span id="mmPortalScr"></span></button>
 <div class="hud" id="place">마을</div>
 <button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="snd" type="button">소리 켬</button><button class="hud" id="panic" type="button" hidden>비상탈출</button><button class="hud" id="resetBtn" type="button" hidden>초기화</button>
 <div class="hud" id="joy"></div><div id="stick"><div id="knob"></div></div>

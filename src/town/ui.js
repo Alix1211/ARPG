@@ -240,6 +240,7 @@ skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top 
 $('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWAPPOS[1]) + 'px';
 // 물약 버튼 2개: 스킬 칸 위 (케인 지시)
 const POT = { hp: 3, mp: 2 };   // 시작할 때 체력 물약 3, 마나 물약 2 — 잡화점(마르코)에서 삼
+const SCR = { portal: 0, ident: 0 }, SCR_MAX = 20;   // 스크롤(포탈·감정): 한 종류당 20장까지
 const potEl = { hp: $('potHp'), mp: $('potMp') };
 potEl.hp.style.cssText += `left:${C0 - 26}px;top:${C0 - 172}px;background-image:url(${K.h_php})`;
 potEl.mp.style.cssText += `left:${C0 + 40}px;top:${C0 - 172}px;background-image:url(${K.h_pmp})`;
@@ -256,8 +257,10 @@ const MM_BTN = 'townPortal', mmBtn = $('mmPortal'), mmCd = $('mmPortalCd');
 function syncMmBtn(){
   const r = (G.P.lifeSkills && G.P.lifeSkills.townPortal) || 0, left = (G.P.portalReadyAt || 0) - Date.now(), loc = G.locationState && G.locationState();
   mmBtn.style.backgroundImage = `url(${lifeIcon(MM_BTN)})`;
-  mmBtn.classList.toggle('off', !r || left > 0 || !!(loc && loc.map === 'town'));
+  const sc = SCR.portal, inTown = !!(loc && (loc.map === 'town' || loc.map === 'inn'));
+  mmBtn.classList.toggle('off', inTown || (!(r && left <= 0) && !sc));
   mmCd.textContent = !r ? '' : left > 0 ? (left > 60000 ? Math.ceil(left / 60000) + '분' : Math.ceil(left / 1000) + '초') : '';
+  $('mmPortalScr').textContent = sc ? sc : '';
 }
 mmBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (G.isOpen()) return; G.useTownPortal(); setTimeout(syncMmBtn, 50); });
 setInterval(syncMmBtn, 500);
@@ -430,7 +433,7 @@ function render(){
     TRADE.renderCargo(R);
   } else {
     R.style.backgroundImage = `url(${K['01']})`;
-    R.append(el('div', 'btitle', '가방'));
+    {const t=el('div', 'btitle', '가방');if(SCR.portal||SCR.ident){const s=el('span','',`  · 포탈 스크롤 ${SCR.portal} · 감정 스크롤 ${SCR.ident}`);s.style.cssText='font-size:12px;font-weight:700;color:#e3d2a8';t.append(s);}R.append(t);}
     bag.forEach((it, i) => {
       const x = INV.x + (i % 7) * INV.px, y = INV.y + Math.floor(i / 7) * INV.py;
       const cell=slotEl(it,x,y,INV.w,INV.h,()=>tapBag(i),pickSel&&pickSel.from==='bag'&&pickSel.i===i);bindItemSlot(cell,{from:'bag',i});
@@ -492,6 +495,9 @@ function identifyItem(it,via='self'){
     const inInn=window.__INN&&__INN.state&&__INN.state().map==='inn';
     if(!identifyVendor||!inInn){G.say('여관 감정사를 이용해 주세요.');return false;}
     const cost=identifyCost(it);if(G.P.gold<cost){G.say('금화가 부족합니다.');return false;}G.setGold(G.P.gold-cost);
+  }else if(via==='scroll'){
+    if(!(SCR.ident>0)){G.say('감정 스크롤이 없습니다.');return false;}
+    SCR.ident--;G.say(['감정 스크롤… 100골드가 연기가 됐네!','아까워라… 그래도 궁금하니까!'][Math.random()<.5?0:1]);
   }else{
     const need=identifyNeedRank(it),rank=(G.P.lifeSkills&&G.P.lifeSkills.identify)||0;
     if(rank<need){G.say('감정 랭크가 부족합니다. 여관 감정사를 이용해 주세요.');return false;}
@@ -516,6 +522,7 @@ function showInfo(it, from){
   if(it.unid){
     const need=identifyNeedRank(it),rank=(G.P.lifeSkills&&G.P.lifeSkills.identify)||0;
     if(identifyVendor){const b=el('button','btn',`감정사 감정 (${identifyCost(it)}G)`);b.type='button';b.onclick=()=>identifyItem(it,'vendor');row.append(b);}
+    if(SCR.ident>0){const b=el('button','btn',`감정 스크롤 (보유 ${SCR.ident})`);b.type='button';b.onclick=()=>identifyItem(it,'scroll');row.append(b);}
     if(rank>=need){const b=el('button','btn','자가 감정');b.type='button';b.onclick=()=>identifyItem(it,'self');row.append(b);}
     else I.append(el('div','isub','자가 감정 랭크 부족 · 여관 감정사를 이용하세요.'));
   }
@@ -631,6 +638,9 @@ function stashInfo(from,i){
 
 window.UI = {
   addPotion(k,n){POT[k]+=n;syncPot();},
+  addScroll(k,n){const had=SCR[k]|0;SCR[k]=Math.min(SCR_MAX,had+n);syncMmBtn();if($('char').classList.contains('on'))render();return SCR[k]-had;},
+  scrolls:()=>({portal:SCR.portal,ident:SCR.ident}),scrollMax:SCR_MAX,
+  useScroll(k){if(!(SCR[k]>0))return false;SCR[k]--;syncMmBtn();if($('char').classList.contains('on'))render();saveGame();return true;},
   make,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
   merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=BAG||bag[i])return false;bag[i]=it;return true;},add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
@@ -657,7 +667,7 @@ function saveGame(){
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
-      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,stash,eq,cur,pot:POT,qs:QS,
+      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null}));
   }catch(e){}
 }
@@ -669,6 +679,7 @@ function loadGame(){
   for(const k in eq)eq[k]=d.eq&&d.eq[k]||null;
   cur=d.cur==='w2'&&eq.w2?'w2':'w1';
   if(d.pot){POT.hp=d.pot.hp|0;POT.mp=d.pot.mp|0;}
+  if(d.scr){SCR.portal=Math.max(0,Math.min(SCR_MAX,d.scr.portal|0));SCR.ident=Math.max(0,Math.min(SCR_MAX,d.scr.ident|0));}
   if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&(d.qs[i]==='townPortal'||A.skicon[d.qs[i]])?d.qs[i]:null;
   // unid 필드가 없는 이전 저장 장비는 falsy이므로 모두 감정 완료로 취급한다.
   let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;

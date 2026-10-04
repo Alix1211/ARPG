@@ -214,17 +214,24 @@ function portalTransition(id,pos,dir,onArrive){
   },560);
   return true;
 }
+let portalScrollConfirm=0;
 function useTownPortal(){
-  const r=lifeRank('townPortal');if(!r){say('타운 포탈을 아직 배우지 못했습니다.');return false;}
+  const r=lifeRank('townPortal'),sc=window.UI&&UI.scrolls?UI.scrolls().portal:0;
   if(MAP==='town'||MAP==='inn'){say('이미 마을에 있습니다.');return false;}
-  const now=Date.now(),cd=[0,15,8,3][r]*60000;
-  if((P.portalReadyAt||0)>now){say('타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
+  const now=Date.now(),cd=[0,15,8,3][r||0]*60000;
+  let byScroll=false;
+  if(!r||(P.portalReadyAt||0)>now){
+    if(sc<=0){say(!r?'타운 포탈을 아직 배우지 못했습니다.':'타운 포탈 재사용까지 '+Math.ceil((P.portalReadyAt-now)/60000)+'분');return false;}
+    if(now>portalScrollConfirm){portalScrollConfirm=now+3000;say((!r?'타운 포탈을 아직 못 배웠습니다. ':'재사용 대기 중입니다. ')+'한 번 더 누르면 포탈 스크롤을 씁니다. (보유 '+sc+'장)');return false;}
+    byScroll=true;
+  }
   townPortalReturn={
     map:MAP,pos:[P.x,P.y],dir:P.dir||'front',
     runtime:typeof snapshotDynamicWorld==='function'?snapshotDynamicWorld():null,
     dungeon:MAP==='dungeon'&&window.__DUN&&__DUN.snapshotPortal?__DUN.snapshotPortal():null
   };
-  P.portalReadyAt=now+cd;
+  if(byScroll){UI.useScroll('portal');portalScrollConfirm=0;say(['아까워라… 100골드가 연기가 됐네!','포탈 스크롤이라니… 내 100골드…!','급하니까 어쩔 수 없지… 아깝다!'][Math.floor(Math.random()*3)]);}
+  else P.portalReadyAt=now+cd;
   const ok=portalTransition('town',[23*TS,22.2*TS],'front',()=>{portalArrivalUntil=performance.now()+1700;});
   if(window.UI&&UI.save)UI.save();return ok;
 }
@@ -447,7 +454,9 @@ function shopGear(baseId,price){
 const GOODS = {
   arms:[...['sword','spear','gauntlet','bow','staff'].flatMap(t=>[shopGear(t+'_01',30),shopGear(t+'_02',75)]),
     ...['head','body','hands','feet'].map((k,i)=>shopGear('knight_'+k+'_02',[40,70,30,30][i]))],
-  general:[{ic:'php',name:'체력 물약',slot:'물약',price:20,potion:'hp'},{ic:'pmp',name:'마나 물약',slot:'물약',price:20,potion:'mp'}],
+  general:[{ic:'php',name:'체력 물약',slot:'물약',price:20,potion:'hp'},{ic:'pmp',name:'마나 물약',slot:'물약',price:20,potion:'mp'},
+    {ic:'scr_portal',name:'타운 포탈 스크롤',slot:'스크롤',desc:'대기시간 무시 · 최대 20장',price:100,scroll:'portal'},
+    {ic:'scr_ident',name:'감정 스크롤',slot:'스크롤',desc:'어디서나 감정 · 최대 20장',price:100,scroll:'ident'}],
   pawn:[shopGear('acc_0_01',120),shopGear('acc_1_01',150)]
 };
 let sel = null, shopNpc = null, shopMode = 'buy';
@@ -487,7 +496,7 @@ function sellCat(it){
 }
 function goodsCat(it){
   if (!it) return 'junk';
-  if (it.potion) return 'potion';
+  if (it.potion || it.scroll) return 'potion';
   return sellCat(it.spec || {kind:'junk'});
 }
 function buyPrice(it){const d=1-.02*((P.lifeSkills&&P.lifeSkills.discount)||0);return Math.max(1,Math.round((it.price||1)*Math.max(.90,d)));}
@@ -558,7 +567,7 @@ function pickBuy(it, c, price){
   saleConfirm=null;price = price || buyPrice(it); sel = { mode:'buy', it, price };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
   $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
-  $('infoSlot').textContent = it.slot + ' · 일반';
+  $('infoSlot').textContent = it.slot + ' · ' + (it.desc || '일반');
   $('infoPrice').textContent = '금화 ' + price;
   $('buy').textContent = '사기'; $('buy').disabled = P.gold < price; $('shopSay').textContent = '';
 }
@@ -587,13 +596,15 @@ function sellAt(idx){
 function buyAt(it,idx){
   if(!(GOODS[shopNpc.shop]||[]).includes(it))return false;
   const price=buyPrice(it);if(P.gold<price){$('shopSay').textContent='금화가 부족합니다.';return false;}
-  if(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx)){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
-  if(it.potion)UI.addPotion(it.potion,1);
+  if(it.scroll){if(UI.scrolls()[it.scroll]>=UI.scrollMax){$('shopSay').textContent='스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.';return false;}}
+  else if(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx)){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
+  if(it.scroll)UI.addScroll(it.scroll,1);
+  else if(it.potion)UI.addPotion(it.potion,1);
   else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
   setGold(P.gold-price);UI.refresh();UI.save();$('shopSay').textContent=it.name+'을(를) 샀습니다.';$('buy').disabled=P.gold<price;return true;
 }
 $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
-window.__SHOP={open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
+window.__SHOP={goods:k=>GOODS[k],open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
 
 // ======================= 행인 =======================
 const WP = [[14.5,14],[18,13.6],[28,13.6],[31.5,14],[14.5,19.9],[20,20.7],[26,20.7],[31.5,19.9],[23,13.9],[19.6,16.4],[26.4,16.4],
