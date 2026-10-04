@@ -262,6 +262,10 @@ for sid,nm,title,folder in [
     pt=im.copy(); pt.thumbnail((520,560),Image.LANCZOS)
     STORY_CHARS[sid]=dict(name=nm,title=title,port=enc(pt,88))
 
+_shadow=Image.open(R+'npc_hd/npc_35.png' if os.path.exists(R+'npc_hd/npc_35.png') else R+'npc/npc_35.png').convert('RGBA')
+_shadow.thumbnail((520,560),Image.LANCZOS)
+STORY_CHARS['shadow']=dict(name='???',title='',port=enc(_shadow,88))
+
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
     ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
