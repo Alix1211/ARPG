@@ -1818,6 +1818,642 @@
         "gold": 440,
         "expRatio": 0.32
       }
+    },
+    {
+      "id": "MAIN_031",
+      "kind": "main",
+      "title": "봉인-31",
+      "start": {
+        "npc": 39,
+        "level": 31,
+        "map": "town",
+        "previous": "MAIN_030"
+      },
+      "intro": [
+        "하르트: 설원에서 이상한 보고가 왔네. 누군가 먼저 조사 중이라더군.",
+        "루크레아: 경쟁자입니까?",
+        "하르트: 자네는 사람을 죄다 경쟁자로 보는군."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "winter",
+          "objective": "겨울 설원 조사 지점 이동"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "field",
+          "market": "winter",
+          "lines": [
+            "카르도: 또 만났군.",
+            "루크레아: 이번엔 경호비를 받을 생각인가요?",
+            "카르도: 내가 자네를 경호한다는 전제부터 틀렸다.",
+            "루크레아: 결과는 늘 비슷하던데요."
+          ],
+          "objective": "낯익은 검사와 재회"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "winter",
+          "need": 11,
+          "objective": "설원 위험구역 돌파"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "field",
+          "market": "winter",
+          "lines": [
+            "카르도: 이쪽 흔적은 사람 손이다.",
+            "루크레아: 사람이 만든 문제면 청구할 곳이 있다는 뜻이군요."
+          ],
+          "objective": "현장 흔적 확인"
+        }
+      ],
+      "reward": {
+        "gold": 450,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_032",
+      "kind": "main",
+      "title": "봉인-32",
+      "start": {
+        "npc": 39,
+        "level": 32,
+        "map": "town",
+        "previous": "MAIN_031"
+      },
+      "intro": [
+        "하르트: 설원 의뢰의 발주자가 연락을 끊었네.",
+        "루크레아: 일을 시키고 보수를 안 주겠다는 겁니까?",
+        "하르트: 아직 그렇게 단정하긴 이르네.",
+        "루크레아: 저는 아주 빠르게 단정할 수 있습니다."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_032_receipt",
+          "itemName": "찢어진 의뢰 영수증",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "winter",
+            "spawnOffset": [
+              610,
+              360
+            ]
+          },
+          "objective": "발주자 흔적 찾기"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "winter",
+          "need": 8,
+          "objective": "추적로 확보"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_032_plate",
+          "itemName": "옛 관리소 표지판",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "winter",
+            "spawnOffset": [
+              760,
+              200
+            ]
+          },
+          "objective": "숨겨진 관리소 표지 확인"
+        },
+        {
+          "type": "deliver",
+          "npc": 39,
+          "item": "MAIN_032_receipt",
+          "need": 1,
+          "lines": [
+            "하르트: 발주자는 무사히 빠져나갔다는군. 보수도 맡겨두었네.",
+            "루크레아: 그렇다면 오해를 철회하겠습니다. 이자까진 안 붙이죠."
+          ],
+          "objective": "길드에서 보수 확인"
+        }
+      ],
+      "reward": {
+        "gold": 470,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_033",
+      "kind": "main",
+      "title": "봉인-33",
+      "start": {
+        "npc": 29,
+        "level": 33,
+        "map": "town",
+        "previous": "MAIN_032"
+      },
+      "intro": [
+        "에드먼: 설원의 옛 관리소는 잠겨 있다네. 열쇠가 특이한 형태라는 기록이 있어.",
+        "루크레아: 열쇠를 잃어버린 관리자는 벌금이 있었겠죠?",
+        "에드먼: 수백 년 전 사람에게 청구하진 말게."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 8,
+          "objective": "설원 기록이 가리키는 던전 구역 진입"
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 8,
+          "need": 10,
+          "objective": "열쇠를 지닌 몬스터 무리 처치"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_033_key",
+          "itemName": "옛 관리소 열쇠",
+          "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 8,
+            "spawnOffset": [
+              160,
+              120
+            ]
+          },
+          "objective": "관리소 열쇠 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_033_key",
+          "need": 1,
+          "lines": [
+            "에드먼: 맞아. 이 열쇠면 기록보관함을 열 수 있겠군.",
+            "루크레아: 보관함 안에 권리증이 있길 바랍니다."
+          ],
+          "objective": "학자에게 열쇠 전달"
+        }
+      ],
+      "reward": {
+        "gold": 480,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_034",
+      "kind": "main",
+      "title": "봉인-34",
+      "start": {
+        "npc": 29,
+        "level": 34,
+        "map": "town",
+        "previous": "MAIN_033"
+      },
+      "intro": [
+        "에드먼: 관리소 기록에서 흥미로운 문서가 나왔네.",
+        "루크레아: 수익성이 있습니까?",
+        "에드먼: 대상단 특허장의 사본 일부일 가능성이 커.",
+        "루크레아: 그럼 수익성이 아주 높군요."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_034_copy",
+          "itemName": "대상단 특허장 사본 조각",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "winter",
+            "spawnOffset": [
+              430,
+              520
+            ]
+          },
+          "objective": "관리소 기록함에서 문서 조각 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 43,
+          "item": "MAIN_034_copy",
+          "need": 1,
+          "lines": [
+            "페닉스: 이 문구대로면 창고와 통행 우선권을 함께 줍니다.",
+            "루크레아: 평생 통행료를 줄일 수 있는 문서네요.",
+            "페닉스: 살아 있는 권리인지부터 확인해야 합니다.",
+            "루크레아: 살아 있게 만들 방법을 찾죠."
+          ],
+          "objective": "금고 관리인에게 문서 가치 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 자네, 이제 이 특허장을 진짜 찾을 셈인가?",
+            "루크레아: 네. 사명감이 생겼습니다.",
+            "하르트: 정말?",
+            "루크레아: 비용 절감에 대한 사명감이요."
+          ],
+          "objective": "길드장에게 장기 목표 알리기"
+        }
+      ],
+      "reward": {
+        "gold": 500,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_035",
+      "kind": "main",
+      "title": "봉인-35",
+      "start": {
+        "npc": 12,
+        "level": 35,
+        "map": "town",
+        "previous": "MAIN_034"
+      },
+      "intro": [
+        "핀: 설원 상인이 직접 호송을 부탁했어요. 이번엔 경호비도 포함됐대요.",
+        "루크레아: 선불입니까?",
+        "핀: 역시 그걸 먼저 보시네요."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "town"
+          },
+          "need": 1,
+          "objective": "호송 화물 준비"
+        },
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "winter",
+          "objective": "겨울 호송로 이동"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "field",
+          "market": "winter",
+          "lines": [
+            "카르도: 이번엔 정식 호송인가.",
+            "루크레아: 경호비가 포함돼 있어서 마음이 넓어졌습니다.",
+            "카르도: 돈이 사람을 이렇게 평온하게 만드는군."
+          ],
+          "objective": "카르도와 호송 합류"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "winter",
+          "need": 12,
+          "objective": "호송로 적대 무리 제거"
+        },
+        {
+          "type": "event",
+          "event": "trade_sell",
+          "filter": {
+            "region": "winter"
+          },
+          "need": 1,
+          "objective": "화물 인도"
+        }
+      ],
+      "reward": {
+        "gold": 510,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_036",
+      "kind": "main",
+      "title": "봉인-36",
+      "start": {
+        "npc": 5,
+        "level": 36,
+        "map": "town",
+        "previous": "MAIN_035"
+      },
+      "intro": [
+        "토비: 설원에 조난자가 있다는 연락이 왔어요~",
+        "루크레아: 구조 보수는요?",
+        "토비: 지금 그걸 따질 때예요?",
+        "루크레아: 그래서 먼저 구조하고 나중에 따지겠습니다."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "winter",
+          "objective": "조난 지점 이동"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "winter",
+          "need": 9,
+          "objective": "조난자 주변 몬스터 몰아내기"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_036_pack",
+          "itemName": "조난자의 짐",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "winter",
+            "spawnOffset": [
+              560,
+              440
+            ]
+          },
+          "objective": "조난자의 짐 회수"
+        },
+        {
+          "type": "talk",
+          "npc": 5,
+          "lines": [
+            "토비: 사람도 짐도 무사히 돌아왔어요~",
+            "루크레아: 좋습니다. 구조비 청구서는 어디로 보내죠?",
+            "토비: 그래도 먼저 사람부터 구했잖아요~",
+            "루크레아: 그건 이자를 덜 받기 위해서였습니다."
+          ],
+          "objective": "여관에 구조 결과 알리기"
+        }
+      ],
+      "reward": {
+        "gold": 520,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_037",
+      "kind": "main",
+      "title": "봉인-37",
+      "start": {
+        "npc": 29,
+        "level": 37,
+        "map": "town",
+        "previous": "MAIN_036"
+      },
+      "intro": [
+        "에드먼: 설원 경계석 하나가 기울어져 있네. 그 뒤로 몬스터 이동이 이상해졌다는군.",
+        "루크레아: 돌 하나가 물류를 망친다고요?",
+        "에드먼: 오래된 시설이라면 그럴 수도 있지."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_037_stone",
+          "itemName": "비뚤어진 경계석 파편",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "winter",
+            "spawnOffset": [
+              700,
+              300
+            ]
+          },
+          "objective": "경계석 상태 확인"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "winter",
+          "need": 10,
+          "objective": "경계석 주변 정리"
+        },
+        {
+          "type": "deliver",
+          "npc": 42,
+          "item": "MAIN_037_stone",
+          "need": 1,
+          "lines": [
+            "그레타: 재질은 멀쩡해. 받침만 제대로 맞추면 돼.",
+            "루크레아: 새로 살 필요가 없다는 말씀이죠?",
+            "그레타: 그 부분에만 귀가 밝구나."
+          ],
+          "objective": "대장간에서 수리법 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 제자리로 돌아간 뒤 주변 흐름도 안정됐네.",
+            "루크레아: 수리비 대비 효과가 훌륭합니다."
+          ],
+          "objective": "학자에게 안정화 확인"
+        }
+      ],
+      "reward": {
+        "gold": 530,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_038",
+      "kind": "main",
+      "title": "봉인-38",
+      "start": {
+        "npc": 39,
+        "level": 38,
+        "map": "town",
+        "previous": "MAIN_037"
+      },
+      "intro": [
+        "하르트: 설원 길이 망가진 원인을 두고 서로 남 탓을 한다는군.",
+        "루크레아: 책임자가 여러 명이면 청구서도 여러 장이죠.",
+        "하르트: 그 생각은 접어두게."
+      ],
+      "steps": [
+        {
+          "type": "talk",
+          "npc": 42,
+          "lines": [
+            "그레타: 광산 쪽에서 받침돌을 빼다 쓴 흔적이 있어.",
+            "루크레아: 원가 절감의 방향이 잘못됐군요."
+          ],
+          "objective": "대장간에서 흔적 분석"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_038_scrap",
+          "itemName": "불법 채굴 장비 조각",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "winter",
+            "spawnOffset": [
+              620,
+              520
+            ]
+          },
+          "objective": "불법 채굴 흔적 확보"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "winter",
+          "need": 7,
+          "objective": "채굴지 주변 정리"
+        },
+        {
+          "type": "deliver",
+          "npc": 39,
+          "item": "MAIN_038_scrap",
+          "need": 1,
+          "lines": [
+            "하르트: 한두 명의 음모가 아니라 여러 업체가 조금씩 규정을 어긴 결과였군.",
+            "루크레아: 작은 절약이 모이면 큰 손해가 되는군요.",
+            "하르트: 자네 입에서 그런 말이 나오다니.",
+            "루크레아: 제 절약은 계산된 절약입니다."
+          ],
+          "objective": "길드에 원인 보고"
+        }
+      ],
+      "reward": {
+        "gold": 540,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_039",
+      "kind": "main",
+      "title": "봉인-39",
+      "start": {
+        "npc": 12,
+        "level": 39,
+        "map": "town",
+        "previous": "MAIN_038"
+      },
+      "intro": [
+        "핀: 겨울 길도 정상화됐어요. 다음 기록은 얼음 지대 쪽으로 이어집니다.",
+        "루크레아: 추위가 더 심해지면 운송비도 더 비싸겠군요.",
+        "핀: 네.",
+        "루크레아: 기대되네요."
+      ],
+      "steps": [
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "winter"
+          },
+          "need": 1,
+          "objective": "겨울 특산품 매입"
+        },
+        {
+          "type": "event",
+          "event": "trade_sell",
+          "filter": {
+            "region": "town",
+            "profitPositive": true
+          },
+          "need": 1,
+          "objective": "겨울 거래 정산"
+        },
+        {
+          "type": "scene",
+          "char": "hero",
+          "map": "town",
+          "lines": [
+            "카르도: 난 다시 떠난다.",
+            "루크레아: 이번에도 목적지는 비밀입니까?",
+            "카르도: 애초에 자네에게 보고할 이유가 없다.",
+            "루크레아: 일정 공유는 협업의 기본인데요.",
+            "카르도: 우린 협업한 적이 없다."
+          ],
+          "objective": "카르도와 작별"
+        },
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 특허장 기록 일부가 얼음 지대 창고와 연결돼 있어.",
+            "루크레아: 그럼 다음 장부는 얼음 속이군요."
+          ],
+          "objective": "다음 기록 위치 확인"
+        }
+      ],
+      "reward": {
+        "gold": 550,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_040",
+      "kind": "main",
+      "title": "봉인-40",
+      "start": {
+        "npc": 29,
+        "level": 40,
+        "map": "town",
+        "previous": "MAIN_039"
+      },
+      "intro": [
+        "에드먼: 얼음 지대 아래 오래된 창고가 있다는 기록을 찾았네.",
+        "루크레아: 창고라면 내용물도 남았을 가능성이 있겠죠?",
+        "에드먼: 역사 조사라는 말은 끝내 안 하는군."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "ice",
+          "objective": "얼음 지대 창고 위치 조사"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "ice",
+          "need": 10,
+          "objective": "창고 접근로 확보"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_040_plate",
+          "itemName": "얼음 아래 창고 명패",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "ice",
+            "spawnOffset": [
+              520,
+              340
+            ]
+          },
+          "objective": "창고 명패 회수"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_040_plate",
+          "need": 1,
+          "lines": [
+            "에드먼: 틀림없네. 옛 대상단의 보급창고야.",
+            "루크레아: 보급창고. 좋은 단어네요."
+          ],
+          "objective": "창고 정체 확인"
+        }
+      ],
+      "reward": {
+        "gold": 570,
+        "expRatio": 0.32
+      }
     }
   ],
   "sideQuests": [
