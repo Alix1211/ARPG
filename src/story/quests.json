@@ -2454,6 +2454,619 @@
         "gold": 570,
         "expRatio": 0.32
       }
+    },
+    {
+      "id": "MAIN_041",
+      "kind": "main",
+      "title": "봉인-41",
+      "start": {
+        "npc": 29,
+        "level": 41,
+        "map": "town",
+        "previous": "MAIN_040"
+      },
+      "intro": [
+        "에드먼: 창고 입구가 보통 얼음이 아니라네. 오래된 보존 마법이 걸려 있어.",
+        "루크레아: 보존 상태가 좋다는 말이군요.",
+        "에드먼: 안의 물건보다 마법이 더 귀할 수도 있지.",
+        "루크레아: 둘 다 팔 수 있으면 가장 좋고요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "ice",
+          "objective": "보존 창고 입구 조사"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_041_frost",
+          "itemName": "녹지 않는 얼음 조각",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "ice",
+            "spawnOffset": [
+              600,
+              280
+            ]
+          },
+          "objective": "보존 얼음 표본 채취"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "ice",
+          "need": 9,
+          "objective": "창고 주변 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_041_frost",
+          "need": 1,
+          "lines": [
+            "에드먼: 이건 봉인이라기보다 보존 장치군.",
+            "루크레아: 창고 관리비가 수백 년간 무료였다는 뜻이네요.",
+            "에드먼: 그렇게 계산할 수도 있겠군."
+          ],
+          "objective": "보존 얼음 분석"
+        }
+      ],
+      "reward": {
+        "gold": 590,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_042",
+      "kind": "main",
+      "title": "봉인-42",
+      "start": {
+        "npc": 43,
+        "level": 42,
+        "map": "town",
+        "previous": "MAIN_041"
+      },
+      "intro": [
+        "페닉스: 얼음 창고 관련 권리증이 일부 남았다는 기록을 찾았습니다.",
+        "루크레아: 권리증은 물건보다 오래 삽니다. 어디 있죠?"
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 10,
+          "objective": "권리증 보관 구역 진입"
+        },
+        {
+          "type": "kill",
+          "map": "dungeon",
+          "floor": 10,
+          "need": 11,
+          "objective": "보관 구역 몬스터 제거"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_042_deed",
+          "itemName": "낡은 창고 권리증",
+          "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 10,
+            "spawnOffset": [
+              180,
+              80
+            ]
+          },
+          "objective": "권리증 회수"
+        },
+        {
+          "type": "deliver",
+          "npc": 43,
+          "item": "MAIN_042_deed",
+          "need": 1,
+          "lines": [
+            "페닉스: 법적 효력은 끊겼지만 특허장과 같은 인장이 찍혀 있습니다.",
+            "루크레아: 효력은 다시 만들면 됩니다. 인장만 진짜면 돼요."
+          ],
+          "objective": "금고 관리인에게 권리증 확인"
+        }
+      ],
+      "reward": {
+        "gold": 610,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_043",
+      "kind": "main",
+      "title": "봉인-43",
+      "start": {
+        "npc": 39,
+        "level": 43,
+        "map": "town",
+        "previous": "MAIN_042"
+      },
+      "intro": [
+        "하르트: 자네 앞으로 이상한 청구서가 왔네. 발신지가 '용의 산맥 총괄본부'라는데.",
+        "루크레아: 제가 산 적도 없는 서비스 요금이요?",
+        "하르트: 산맥 통과 예상비용, 검토수수료, 문서발급비... 항목이 많군.",
+        "루크레아: 이건 선전포고입니다."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_043_invoice",
+          "itemName": "산맥 총괄본부 청구서",
+          "need": 1,
+          "point": {
+            "map": "town",
+            "spawnOffset": [
+              100,
+              -40
+            ]
+          },
+          "objective": "황당한 청구서 확인"
+        },
+        {
+          "type": "deliver",
+          "npc": 43,
+          "item": "MAIN_043_invoice",
+          "need": 1,
+          "lines": [
+            "페닉스: 계약 체결 전 청구는 효력이 없습니다.",
+            "루크레아: 역시 전문가의 말은 아름답네요."
+          ],
+          "objective": "청구서 효력 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 용의 산맥 쪽 상단이 최근 주변 시장에 손을 뻗고 있긴 해요.",
+            "루크레아: 누군지 몰라도 수수료 감각이 악질이군요."
+          ],
+          "objective": "산맥 상단 소문 확인"
+        }
+      ],
+      "reward": {
+        "gold": 620,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_044",
+      "kind": "main",
+      "title": "봉인-44",
+      "start": {
+        "npc": 12,
+        "level": 44,
+        "map": "town",
+        "previous": "MAIN_043"
+      },
+      "intro": [
+        "핀: 청구서 발신자가 직접 사람을 보냈어요. 아니... 본인이 온 것 같기도 하고요.",
+        "루크레아: 빚 받으러 왔으면 돌려보내세요.",
+        "핀: 그분이 드래곤이라면요?",
+        "루크레아: 계약서부터 봅니다."
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "dragon",
+          "map": "town",
+          "lines": [
+            "벨로라: 네가 루크레아구나? 내 산맥 물류권을 건드렸다며.",
+            "루크레아: 산맥을 소유하셨습니까?",
+            "벨로라: 몬스터부터 돌멩이까지 전부 내 직원이야.",
+            "루크레아: 직원에게 직급도 붙이셨던데요.",
+            "벨로라: 당연하지. 대리는 대리답게 야근해야지.",
+            "루크레아: ...제가 돈 좋아하는 건 정상 범위였군요."
+          ],
+          "objective": "산맥의 주인과 첫 협상"
+        },
+        {
+          "type": "talk",
+          "npc": 43,
+          "lines": [
+            "페닉스: 상대가 드래곤이어도 계약은 계약입니다.",
+            "루크레아: 아주 든든한 말씀입니다."
+          ],
+          "objective": "계약 대응 준비"
+        },
+        {
+          "type": "scene",
+          "char": "dragon",
+          "map": "field",
+          "market": "ice",
+          "lines": [
+            "벨로라: 내 물류 직원들이 얼음길까지 내려왔어. 성과가 안 나오네.",
+            "루크레아: 제 거래길을 막으면 손해배상부터 계산하겠습니다.",
+            "벨로라: 마음에 드네. 너도 경영자 체질이야.",
+            "루크레아: 그쪽과 같은 종류로 묶지는 마세요."
+          ],
+          "objective": "얼음길 현장 협상"
+        }
+      ],
+      "reward": {
+        "gold": 640,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_045",
+      "kind": "main",
+      "title": "봉인-45",
+      "start": {
+        "npc": 39,
+        "level": 45,
+        "map": "town",
+        "previous": "MAIN_044"
+      },
+      "intro": [
+        "하르트: 얼음길에 직급을 단 몬스터들이 돌아다닌다는 보고가 왔네.",
+        "루크레아: 정말 그 조직 직원들이군요.",
+        "하르트: 조직이라 부르기도 애매한데... 어쨌든 정리해 주게."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "ice",
+          "objective": "산맥 파견조가 내려온 구역 이동"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "ice",
+          "need": 12,
+          "objective": "파견 몬스터 무리 제압"
+        },
+        {
+          "type": "scene",
+          "char": "dragon",
+          "map": "field",
+          "market": "ice",
+          "lines": [
+            "벨로라: 부장 하나 키우는 데 얼마나 드는 줄 알아?",
+            "루크레아: 그걸 왜 제가 걱정하죠?",
+            "벨로라: 직원 손실분 청구할 거야.",
+            "루크레아: 계약관계가 없으므로 기각입니다."
+          ],
+          "objective": "파견조 문제 정리"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 산맥 쪽은 일단 물러났네.",
+            "루크레아: 일단이라니 불길한 단어군요."
+          ],
+          "objective": "길드에 상황 보고"
+        }
+      ],
+      "reward": {
+        "gold": 650,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_046",
+      "kind": "main",
+      "title": "봉인-46",
+      "start": {
+        "npc": 12,
+        "level": 46,
+        "map": "town",
+        "previous": "MAIN_045"
+      },
+      "intro": [
+        "핀: 산맥 소동 뒤 얼음길 운송 손실이 더 커졌어요. 이번엔 다른 원인 같아요.",
+        "루크레아: 손실 원인이 둘이면 청구 대상도 둘입니다. 가보죠."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "ice",
+          "objective": "얼음길 손실 구역 조사"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_046_fragment",
+          "itemName": "길목 장치 파편",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "ice",
+            "spawnOffset": [
+              650,
+              420
+            ]
+          },
+          "objective": "손상된 장치 파편 회수"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "ice",
+          "need": 10,
+          "objective": "운송 손실 구역 정리"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_046_fragment",
+          "need": 1,
+          "lines": [
+            "에드먼: 앞서 복구한 시설과 같은 계열이네. 여긴 두 장치가 서로 물려 있어.",
+            "루크레아: 하나 고치면 두 배 효과라는 뜻이죠?",
+            "에드먼: 자네식으론 그렇겠지."
+          ],
+          "objective": "장치 파편 분석"
+        }
+      ],
+      "reward": {
+        "gold": 670,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_047",
+      "kind": "main",
+      "title": "봉인-47",
+      "start": {
+        "npc": 5,
+        "level": 47,
+        "map": "town",
+        "previous": "MAIN_046"
+      },
+      "intro": [
+        "토비: 펙스 씨가 또 일거리를 찾고 있어요~ 이번엔 급료부터 물어보더라고요.",
+        "루크레아: 성장했군요. 협상력이 늘었습니다."
+      ],
+      "steps": [
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "inn",
+          "lines": [
+            "펙스: 이번엔 먼저 말한다. 지난번보다 비싸게.",
+            "루크레아: 숙박비를 제가 대신 정산하는 조건이면요?",
+            "펙스: ...조금 비싸게.",
+            "루크레아: 합의됐습니다."
+          ],
+          "objective": "펙스 재고용"
+        },
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "ice",
+          "objective": "펙스와 얼음길 장치 조사"
+        },
+        {
+          "type": "scene",
+          "char": "knight",
+          "map": "field",
+          "market": "ice",
+          "lines": [
+            "펙스: 이 장치, 내 장비와 주파... 아니, 느낌 비슷하다.",
+            "루크레아: 느낌으로 만지지 마세요.",
+            "펙스: 조금만—",
+            "루크레아: 손 떼세요. 수리비는 금화입니다."
+          ],
+          "objective": "장치 오작동 막기"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "ice",
+          "need": 9,
+          "objective": "오작동으로 몰려든 몬스터 제거"
+        },
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 큰 고장은 피했군. 펙스의 장비는 대체 뭔가?",
+            "루크레아: 고장 나면 비싼 물건입니다. 그 정도만 알아두죠."
+          ],
+          "objective": "학자에게 상황 설명"
+        }
+      ],
+      "reward": {
+        "gold": 680,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_048",
+      "kind": "main",
+      "title": "봉인-48",
+      "start": {
+        "npc": 43,
+        "level": 48,
+        "map": "town",
+        "previous": "MAIN_047"
+      },
+      "intro": [
+        "페닉스: 얼음 창고 안쪽 문을 열 수는 있지만, 소유권이 모호합니다.",
+        "루크레아: 열고 나서 소송당하는 건 싫습니다.",
+        "페닉스: 그래서 옛 계약 조항을 더 찾아야 합니다.",
+        "루크레아: 위험보다 법무비가 더 무섭군요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "dungeon",
+          "floor": 12,
+          "objective": "안쪽 문의 위치 확인"
+        },
+        {
+          "type": "collect",
+          "item": "MAIN_048_clause",
+          "itemName": "소유권 조항 파편",
+          "need": 1,
+          "point": {
+            "map": "dungeon",
+            "floor": 12,
+            "spawnOffset": [
+              140,
+              160
+            ]
+          },
+          "objective": "계약 조항 조각 회수"
+        },
+        {
+          "type": "deliver",
+          "npc": 43,
+          "item": "MAIN_048_clause",
+          "need": 1,
+          "lines": [
+            "페닉스: '관리권 보유자만 개봉 가능'이라 적혀 있습니다.",
+            "루크레아: 그 관리권이 특허장에 있겠군요.",
+            "페닉스: 가능성이 높습니다."
+          ],
+          "objective": "금고 관리인에게 조항 전달"
+        },
+        {
+          "type": "talk",
+          "npc": 29,
+          "lines": [
+            "에드먼: 문은 나중에 열게. 지금 억지로 열 필요는 없어.",
+            "루크레아: 동의합니다. 합법적으로 가져갈 때까지 보관해 두죠."
+          ],
+          "objective": "학자와 개봉 보류 결정"
+        }
+      ],
+      "reward": {
+        "gold": 700,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_049",
+      "kind": "main",
+      "title": "봉인-49",
+      "start": {
+        "npc": 29,
+        "level": 49,
+        "map": "town",
+        "previous": "MAIN_048"
+      },
+      "intro": [
+        "에드먼: 얼음 지대 길목 장치를 다시 맞출 준비가 됐네.",
+        "루크레아: 이번엔 고장 내는 사람이 없겠죠?",
+        "에드먼: 펙스는 여관에 있네.",
+        "루크레아: 안심했습니다."
+      ],
+      "steps": [
+        {
+          "type": "collect",
+          "item": "MAIN_049_core",
+          "itemName": "얼음 길목 핵심석",
+          "need": 1,
+          "point": {
+            "map": "field",
+            "market": "ice",
+            "spawnOffset": [
+              720,
+              330
+            ]
+          },
+          "objective": "핵심석 회수"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "ice",
+          "need": 11,
+          "objective": "복구 구역 확보"
+        },
+        {
+          "type": "deliver",
+          "npc": 29,
+          "item": "MAIN_049_core",
+          "need": 1,
+          "lines": [
+            "에드먼: 됐어. 여러 지역의 흐름이 서로 이어지는 게 느껴지는군.",
+            "루크레아: 그럼 특허장 가치도 올라가는 겁니까?",
+            "에드먼: 자네는 이 상황에서도 그 생각뿐이군."
+          ],
+          "objective": "길목 복구 완료"
+        },
+        {
+          "type": "talk",
+          "npc": 39,
+          "lines": [
+            "하르트: 이상현상이 여러 지역에서 한꺼번에 줄었다네.",
+            "루크레아: 투자 대비 효과가 검증됐군요."
+          ],
+          "objective": "길드 보고 확인"
+        }
+      ],
+      "reward": {
+        "gold": 720,
+        "expRatio": 0.32
+      }
+    },
+    {
+      "id": "MAIN_050",
+      "kind": "main",
+      "title": "봉인-50",
+      "start": {
+        "npc": 12,
+        "level": 50,
+        "map": "town",
+        "previous": "MAIN_049"
+      },
+      "intro": [
+        "핀: 화산 마을 상인들이 철수를 고민하고 있어요. 재고를 싸게 넘긴다는데...",
+        "루크레아: 철수한다고요?",
+        "핀: 네.",
+        "루크레아: 싸게 나온 재고 목록부터 주세요.",
+        "핀: 역시 그쪽이 먼저군요."
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "map": "field",
+          "market": "volcano",
+          "objective": "화산 지대 교역권 진입"
+        },
+        {
+          "type": "event",
+          "event": "trade_buy",
+          "filter": {
+            "region": "volcano"
+          },
+          "need": 1,
+          "objective": "철수 재고 매입"
+        },
+        {
+          "type": "kill",
+          "map": "field",
+          "market": "volcano",
+          "need": 10,
+          "objective": "화산 교역로 위험 확인"
+        },
+        {
+          "type": "talk",
+          "npc": 12,
+          "lines": [
+            "핀: 단기 재고차익보다 길 자체가 끊길 위험이 더 커요.",
+            "루크레아: 시장이 없어지면 팔 곳도 없어지죠. 장기 손실이군요.",
+            "핀: 이제 원인을 조사하시겠죠?",
+            "루크레아: 제 재고를 지키기 위해서요."
+          ],
+          "objective": "교역소에서 손실 규모 확인"
+        }
+      ],
+      "reward": {
+        "gold": 740,
+        "expRatio": 0.32
+      }
     }
   ],
   "sideQuests": [
