@@ -18,6 +18,7 @@ const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '�
 let seq = 1;
 const GRADE_MUL = [1.00,1.35,1.75,2.25,2.90,3.70,4.70,6.00,7.60,9.60];
 const ALL_GEAR = ['weapon','head','body','hands','feet','ring','neck'];
+const UNID_MIN_AFFIXES = 3;
 // 일부러 무기/직업별로 과하게 제한하지 않는다.
 // 검에 화염 마법, 지팡이에 공격 속도 같은 '이상하지만 가끔 대박인' 조합이 파밍의 핵심.
 const AFFIX = [
@@ -84,9 +85,21 @@ function make(spec){
     const used=new Set(),n=it.rar===1?1:it.rar===2?2+Math.floor(Math.random()*3):4;
     while(it.aff.length<n)rollAffix(it,used);
   }
-  finalizeName(it);it.price=spec.price||Math.max(10,Math.round(16*mul*[1,2.2,5,12][it.rar]));return it;
+  finalizeName(it);
+  if(roll&&it.aff.length>=UNID_MIN_AFFIXES){it.unid=true;it.name='미확인 '+base.name;}
+  it.price=spec.price||Math.max(10,Math.round(16*mul*[1,2.2,5,12][it.rar]));return it;
 }
 function canEquip(it){return G.P.lv>=(it.requiredLevel||1);}
+function itemStats(it){
+  const st=Object.assign({},it&&it.st||{});
+  if(it&&it.unid)for(const a of (it.aff||[])){
+    const k=a.st,v=Number(a.v)||0;if(!k||!v)continue;
+    st[k]=(st[k]||0)-v;if(Math.abs(st[k])<1e-9)delete st[k];
+  }
+  return st;
+}
+function identifyNeedRank(it){return Math.max(1,Math.min(3,(it&&it.rar)||1));}
+function identifyCost(it){return Math.max(1,Math.round(((it&&it.tier)||1)*50));}
 const STN = { atk:'공격력',matk:'마법 공격력',atkPct:'물리 공격',matkPct:'마법 공격',as:'공격 속도',crit:'치명타 확률',critDmg:'치명타 피해',fire:'화염마법',ice:'냉기마법',skill:'스킬 피해',def:'방어력',hp:'최대 체력',mp:'최대 마나',ms:'이동 속도',coin:'금화 획득',find:'아이템 발견',luck:'운' };
 const PCTSTAT=new Set(['atkPct','matkPct','as','crit','critDmg','fire','ice','skill','ms','coin','find']);
 const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
@@ -103,7 +116,7 @@ function totals(){
   for(const s in eq){
     const it=eq[s];if(!it)continue;
     if((s==='w1'||s==='w2')&&s!==cur)continue;
-    for(const k in it.st)t[k]=(t[k]||0)+it.st[k];
+    const st=itemStats(it);for(const k in st)t[k]=(t[k]||0)+st[k];
   }
   return t;
 }
@@ -307,7 +320,7 @@ addEventListener('pointerup',e=>{
 const EQS = { head: [72, 107], w1: [72, 196], hands: [72, 287], ring1: [71, 393], neck: [337, 107], w2: [337, 196], body: [337, 286], feet: [340, 379], ring2: [339, 472] };
 const EQ_OFF = [[161, 467], [249, 467]];   // 허리띠·별 칸: 지금은 안 씀
 const INV = { x: 80, y: 117, px: 65.5, py: 66.8, w: 60, h: 62 };
-let tab = 'equip', pickSel = null;
+let tab = 'equip', pickSel = null, identifyVendor = false;
 const wrap = $('charWrap');
 function el(t, c, txt){ const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; }
 function fit(){
@@ -316,8 +329,9 @@ function fit(){
   wrap.style.transform = `translate(-50%,-50%) scale(${s})`;
 }
 addEventListener('resize', fit);
-function openChar(t){ tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
-function closeChar(){ cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
+function openChar(t){ identifyVendor=false;tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
+function openIdentifyVendor(){openChar('equip');identifyVendor=true;return true;}
+function closeChar(){ identifyVendor=false;cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
 for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
@@ -329,6 +343,7 @@ function slotEl(it, x, y, w, h, onTap, selected){
     const im = el('img'); im.src = A.icons[it.icon]; im.alt = it.name; s.append(im);
     s.style.setProperty('--rc', RARC[it.rar]); s.classList.add('has');
     if (it.requiredLevel && G.P && it.requiredLevel > G.P.lv){ s.classList.add('lvlock'); s.append(el('span', 'lvtag', 'Lv' + it.requiredLevel)); }
+    if(it.unid)s.append(el('span','unidtag','?'));
   }
   if (selected) s.classList.add('sel');
   s.addEventListener('click', onTap);
@@ -438,10 +453,10 @@ function tapEq(s){
 function r2(x){ return Math.round(x * 100) / 100; }
 // 새 장비(it)와 낀 장비(o)의 수치를 한 줄씩. 숫자는 낀 장비 값, ▲▼는 "새 장비가 이만큼 더 좋다/나쁘다"
 function cmpLine(o, it){
-  const out = [];
-  const keys = new Set([...Object.keys(o ? o.st : {}), ...Object.keys(it ? it.st : {})]);
+  const out = [],os=o?itemStats(o):{},ns=it?itemStats(it):{};
+  const keys = new Set([...Object.keys(os), ...Object.keys(ns)]);
   for (const k of keys){
-    const a = o ? (o.st[k] || 0) : 0, b = it ? (it.st[k] || 0) : 0;
+    const a = o ? (os[k] || 0) : 0, b = it ? (ns[k] || 0) : 0;
     const li = el('li', '', `${STN[k]} ${a}`);
     if (it && o !== it && a !== b){ const d = r2(Math.abs(b - a)); li.append(el('span', b > a ? 'up' : 'dn', b > a ? ` ▲${d}` : ` ▼${d}`)); }
     out.push(li);
@@ -471,6 +486,20 @@ function targetSlot(it){
   if (it.kind === 'ring') return eq.ring1 ? (eq.ring2 ? 'ring1' : 'ring2') : 'ring1';
   return it.kind;
 }
+function identifyItem(it,via='self'){
+  if(!it||!it.unid)return false;
+  if(via==='vendor'){
+    const loc=G.locationState&&G.locationState();
+    if(!identifyVendor||!loc||loc.map!=='inn'){G.say('여관 감정사를 이용해 주세요.');return false;}
+    const cost=identifyCost(it);if(G.P.gold<cost){G.say('금화가 부족합니다.');return false;}G.setGold(G.P.gold-cost);
+  }else{
+    const need=identifyNeedRank(it),rank=(G.P.lifeSkills&&G.P.lifeSkills.identify)||0;
+    if(rank<need){G.say('감정 랭크가 부족합니다. 여관 감정사를 이용해 주세요.');return false;}
+  }
+  it.unid=false;finalizeName(it);syncHud();render();
+  if(pickSel)showInfo(it,pickSel.from==='eq'?'eq':'bag');
+  saveGame();return true;
+}
 function showInfo(it, from){
   const I = $('iinfo'); I.innerHTML = '';
   const nm = el('div', 'iname', it.name); nm.style.color = RART[it.rar]; I.append(nm);
@@ -479,9 +508,17 @@ function showInfo(it, from){
   if (it.kind === 'weapon') I.append(el('div', 'isub', WINFO[it.wt]));
   const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
   const ul = el('ul', 'ist');
-  cmpLine(it, null).forEach(li => ul.append(li)); I.append(ul);
+  cmpLine(it, null).forEach(li => ul.append(li));
+  if(it.unid)for(let i=0;i<(it.aff||[]).length;i++)ul.append(el('li','unidline','???'));
+  I.append(ul);
   if (from === 'bag') I.append(cmpCards(it));
   const row = el('div', 'ibtns');
+  if(it.unid){
+    const need=identifyNeedRank(it),rank=(G.P.lifeSkills&&G.P.lifeSkills.identify)||0;
+    if(identifyVendor){const b=el('button','btn',`감정사 감정 (${identifyCost(it)}G)`);b.type='button';b.onclick=()=>identifyItem(it,'vendor');row.append(b);}
+    if(rank>=need){const b=el('button','btn','자가 감정');b.type='button';b.onclick=()=>identifyItem(it,'self');row.append(b);}
+    else I.append(el('div','isub','자가 감정 랭크 부족 · 여관 감정사를 이용하세요.'));
+  }
   if (from === 'bag'){
     if (it.kind === 'weapon'){
       for (const s of ['w1', 'w2']){ const b = el('button', 'btn', `${SLOTN[s]}에 장착`); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
@@ -594,7 +631,7 @@ function stashInfo(from,i){
 
 window.UI = {
   addPotion(k,n){POT[k]+=n;syncPot();},
-  make,canEquip,equip,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
+  make,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
   merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=BAG||bag[i])return false;bag[i]=it;return true;},add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
@@ -633,6 +670,7 @@ function loadGame(){
   cur=d.cur==='w2'&&eq.w2?'w2':'w1';
   if(d.pot){POT.hp=d.pot.hp|0;POT.mp=d.pot.mp|0;}
   if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&(d.qs[i]==='townPortal'||A.skicon[d.qs[i]])?d.qs[i]:null;
+  // unid 필드가 없는 이전 저장 장비는 falsy이므로 모두 감정 완료로 취급한다.
   let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
   const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
