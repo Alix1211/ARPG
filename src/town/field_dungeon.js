@@ -231,10 +231,11 @@ function pointInSolid(px, py, pad=0){
   for (const s of solids) if (px > s.x0 - pad && px < s.x1 + pad && py > s.y0 - pad && py < s.y1 + pad) return true;
   return false;
 }
+const FIELD_MOB_N=32;   // 필드 몬스터 예산(이전 16)
 function spawnFieldMonsters(theme){
   monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;
   const tier=FIELD_TIER[theme]||1,pool=THEME_MOBS[theme],elites=TIER_MATCH.fieldElites[tier-1];
-  // 16마리 예산 안에서 군집을 교체 배치(부하를 일반 스폰에 중복 추가하지 않는다).
+  // 32마리 예산(케인 2026-10-04: 필드 100% 상향) 안에서 군집을 교체 배치(부하를 일반 스폰에 중복 추가하지 않는다).
   const first=createMonster(pool[0],0,0);
   for(let tries=0;tries<400;tries++){
     first.x=(7+Math.random()*48)*TS;first.y=(3+Math.random()*34)*TS;
@@ -242,8 +243,8 @@ function spawnFieldMonsters(theme){
   }
   const pack=TIER_MATCH.groups.find(g=>g.tier===tier&&!g.dungeonOnly);
   if(pack)for(let tries=0;tries<700;tries++)if(spawnPack(pack,(10+Math.random()*41)*TS,(7+Math.random()*26)*TS,{field:true}))break;
-  for(let i=monsters.length;i<16;i++){
-    const id=elites.length&&i===14?elites[fieldSerial%elites.length]:pool[i%pool.length];
+  for(let i=monsters.length;i<FIELD_MOB_N;i++){
+    const id=elites.length&&(i===FIELD_MOB_N/2-2||i===FIELD_MOB_N-2)?elites[(fieldSerial+(i>FIELD_MOB_N/2?1:0))%elites.length]:pool[i%pool.length];
     for(let tries=0;tries<400;tries++){
       const m=createMonster(id,(7+Math.random()*48)*TS,(3+Math.random()*34)*TS);
       if(spawnClear(m,monsters,true)){monsters.push(m);break;}

@@ -108,7 +108,7 @@ def check_spawn(ms, tier, dungeon=False, floor=0):
         bosses = [m for m in ms if m['bossRole'] == 'floor']
         assert len(bosses) == 1 and bosses[0]['type'] == DATA['floorBosses'][tier-1], bosses
     if not dungeon:
-        assert len(ms) == 16, (tier, len(ms))
+        assert len(ms) == 32, (tier, len(ms))
         assert any(m['packLeader'] for m in ms), (tier, ms)
 
 

@@ -118,7 +118,7 @@ function spawnDungeonMonsters(){
   }
   for(const room of M.rooms){
     if(room===M.startRoom||room===arena)continue;
-    const n=2+Math.floor(Math.random()*3)+Math.min(3,tier-1);
+    const n=Math.round((2+Math.floor(Math.random()*3)+Math.min(3,tier-1))*1.3);   // 방당 출현 +30%(케인 2026-10-04)
     for(let i=0;i<n;i++){
       const id=elites.length&&i===n-1?elites[Math.floor(Math.random()*elites.length)]:pool[Math.floor(Math.random()*pool.length)];
       for(let tries=0;tries<150;tries++){
