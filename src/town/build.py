@@ -429,7 +429,11 @@ for f in sorted(_g.glob(R + 'vfx/*.png')):
 CAMPART = {}
 for nm in ('day','night'):
     im = Image.open(R + f'illustrations/camp_{nm}.png').convert('RGB'); im.thumbnail((1100,1100), Image.LANCZOS); CAMPART[nm] = enc(im, 84)
-A = dict(tierCatalog=CATALOG, camp=CAMPART, vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+# 무역 수레 탈것 일러스트(배경 투명, 원본 시트는 source_sheets/mounts)
+MOUNTART = {}
+for nm in ('pack','donkey','boar','ox','bear'):
+    im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
+A = dict(tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()

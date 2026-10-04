@@ -35,6 +35,7 @@ const REGION_TIER = {town:0, spring:1, summer:2, autumn:3, winter:4, ice:5, volc
 const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS, mount:0, seen:{} };
 function mountNow(){ return TRADE_MOUNTS[Math.max(0,Math.min(tradeState.mount|0,TRADE_MOUNTS.length-1))]; }
 function cargoMax(){ return mountNow().slots; }
+function mountImg(m,h,extra){ const u=(typeof A!=='undefined'&&A.mounts)?A.mounts[m.id]:''; return u?'<img src="'+u+'" alt="'+m.name+'" style="height:'+h+'px;vertical-align:middle;'+(extra||'')+'">':m.icon; }
 let tradeRegion='town', tradeSel='wheat';
 
 function tradeRegionDef(k){ return TRADE_REGIONS[k] || TRADE_REGIONS.town; }
@@ -173,7 +174,7 @@ function renderTrade(){
   $('tradeSeen').innerHTML=rows.length?('<b>수첩</b> · '+rows.join(' · ')+(best&&q.buy?'<br>가장 비싸게 파는 곳: '+tradeRegionDef(best.r).short+' ('+(best.s-q.buy>=0?'+':'')+(best.s-q.buy)+'/개)':'')):'<b>수첩</b> · 아직 다녀온 다른 마을이 없습니다.';
   // 탈것
   const m=mountNow(), nx=TRADE_MOUNTS[(tradeState.mount|0)+1], tier=REGION_TIER[tradeRegion]||0;
-  $('tradeMountTxt').innerHTML=m.icon+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?'<br>다음: '+nx.icon+' '+nx.name+' '+nx.slots+'칸 · '+nx.price+'G'+(tier<nx.tier?' ('+nx.tier+'티어 마을부터)':''):'<br>최고 단계');
+  $('tradeMountTxt').innerHTML=mountImg(m,44)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?'<br>다음: '+mountImg(nx,22)+' '+nx.name+' '+nx.slots+'칸 · '+nx.price+'G'+(tier<nx.tier?' ('+nx.tier+'티어 마을부터)':''):'<br>최고 단계');
   $('tradeMountBtn').style.display=nx?'':'none'; if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
 }
 function tradeSaveData(){ return {cargo:tradeState.cargo,pressure:tradeState.pressure,resetAt:tradeState.resetAt,mount:tradeState.mount|0,seen:tradeState.seen}; }
@@ -197,17 +198,18 @@ function renderTradeSummary(L){
   let value=0,cost=0,units=0;
   for(const id in tradeState.cargo){const c=tradeState.cargo[id];if(!c||!c.qty)continue;units+=c.qty;cost+=c.avg*c.qty;value+=tradeQuote('town',id).sell*c.qty;}
   d.innerHTML='<h2>무역품 화물</h2><p>장비 가방과 별개로 보관됩니다.<br><strong>'+cargoSlots()+' / '+cargoMax()+'칸</strong> · 총 '+units+'개</p><p>평균 매입 총액 '+Math.round(cost)+'G<br>큰 마을 기준 처분가 '+Math.round(value)+'G</p><p>지역 상인협회에서 싸게 사고, 다른 지역에서 비싸게 파십시오.<br>같은 품목을 너무 많이 풀면 그 지역 매입가가 하루 동안 조금 내려갑니다.</p>';
+  d.insertAdjacentHTML('afterbegin','<div style="float:right;text-align:center;margin:0 0 4px 8px">'+mountImg(mountNow(),128)+'<div style="font-size:11px;color:#7a5a30;margin-top:2px">'+mountNow().name+'</div></div>');
   const lines=['<b>시세 수첩</b> <small>(싼 것 / 비싸게 사 주는 것)</small>'];
   for(const r in TRADE_REGIONS){ const e=tradeState.seen[r]; if(!e){ lines.push(tradeRegionDef(r).short+': ?'); continue; }
     const arr=TRADE_GOODS.map(g=>({n:g.name,x:e.q[g.id][0]/g.base})).sort((a,b)=>a.x-b.x);
     lines.push(tradeRegionDef(r).short+': 싼 '+arr.slice(0,3).map(a=>a.n).join('·')+' / 비싼 '+arr.slice(-3).reverse().map(a=>a.n).join('·')); }
-  const nb=document.createElement('p'); nb.style.cssText='font-size:12px;line-height:1.6'; nb.innerHTML=lines.join('<br>'); d.append(nb);
+  const nb=document.createElement('p'); nb.style.cssText='font-size:12px;line-height:1.5;clear:both'; nb.innerHTML=lines.join('<br>'); d.append(nb);
   L.append(d);
 }
 function renderTradeCargo(R){
   ensureTradeUI();
   R.innerHTML='';R.style.backgroundImage=`url(${A.kit['01']})`;
-  const d=document.createElement('div');d.className='tradeCargo';d.innerHTML='<h3>'+mountNow().icon+' '+mountNow().name+' · 화물 '+cargoMax()+'칸</h3>';
+  const d=document.createElement('div');d.className='tradeCargo';d.innerHTML='<h3>'+mountImg(mountNow(),28)+' '+mountNow().name+' · 화물 '+cargoMax()+'칸</h3>';
   const ids=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
   const top=TRADE_MOUNTS[TRADE_MOUNTS.length-1].slots;
   for(let i=0;i<top;i++){

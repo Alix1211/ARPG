@@ -642,3 +642,7 @@
 - 무역품 탭(캐릭터창) 표시 수정: 무역창을 한 번도 안 열면 `.tradeCargo`/`.tradeSummary` 스타일이 주입되지 않아 칸이 깨져 보이던 문제 → `renderTradeCargo/Summary`에서 `ensureTradeUI()` 먼저 호출. 일러스트(가방 틀 그림) 자체는 건드리지 않음.
 - 화물칸을 틀 그림의 7열 슬롯 위치에 맞춤(칸 61×62px, 간격 5px, 틀 확대 1.047배 반영). 최대 24칸을 그리고 아직 못 쓰는 칸은 🔒로 흐리게 표시(탈것을 사면 열림). 머리글은 위쪽 붉은 리본에 '탈것 아이콘+이름 · 화물 N칸'.
 - 시세 수첩 전체 요약을 왼쪽 페이지로 이동(양피지 배경 + 탭 아래 시작). check_trade는 `.tc:not(.lock)` 7칸을 기대.
+
+## 2026-10-04 (작성: Claude)
+- 수레 탈것 일러스트 5종 연결: 케인이 GPT로 만든 시트(배경 연두 단색)를 연두 키 제거+번짐 제거로 투명 PNG로 잘라 `assets/trade/mount_{pack,donkey,boar,ox,bear}.png`, 원본 시트는 `source_sheets/mounts/mounts_sheet.png`. `build.py`가 520px로 줄여 `A.mounts`에 담고, `trade.js`의 `mountImg()`가 그림을 쓰되 없으면 이모지로 대체. 표시 위치: 무역품 탭 왼쪽 페이지 오른쪽 위(128px), 오른쪽 리본 머리글(28px), 교역소 탈것 블록(44px).
+- 검사: check_trade/mount/guild/save/equipcmp 통과.
