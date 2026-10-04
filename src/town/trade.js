@@ -118,9 +118,9 @@ function ensureTradeUI(){
 #tradeBtns button,#tradeClose{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:7px;font-weight:900}
 #tradeBtns button:disabled{opacity:.35} #tradeClose{margin-top:auto;background:#e8d4ad;color:#50351d}
 #tradeSay{font-size:12px;color:#883d20;min-height:42px;line-height:1.4}
-.tradeSummary{padding:20px;color:#53391d}.tradeSummary h2{margin:0 0 10px}.tradeSummary p{font-size:13px;line-height:1.6}.tradeSummary strong{color:#9a541e}
-.tradeCargo{position:relative;width:100%;height:100%;padding:82px 42px 46px;box-sizing:border-box;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:72px;gap:8px;overflow:auto}
-.tradeCargo h3{position:absolute;left:48px;top:28px;margin:0;font-size:20px;color:#6d431f}.tradeCargo .tc{border:2px solid #ab8251;border-radius:10px;background:#ead8b5;text-align:center;padding:5px;min-width:0}.tradeCargo .tc i{font-style:normal;font-size:25px}.tradeCargo .tc b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tradeCargo .tc small{font-size:10px;color:#725435}
+.tradeSummary{margin-top:52px;height:calc(100% - 52px);box-sizing:border-box;overflow:auto;background:linear-gradient(#f3e6c6,#e4cf9f);border:4px solid #7b5228;border-radius:16px;padding:18px 22px;color:#53391d}.tradeSummary h2{margin:0 0 10px}.tradeSummary p{font-size:13px;line-height:1.6}.tradeSummary strong{color:#9a541e}
+.tradeCargo{position:relative;width:100%;height:100%;padding:118px 0 0 80px;box-sizing:border-box;display:grid;grid-template-columns:repeat(7,61px);grid-auto-rows:62px;gap:5px;align-content:start;overflow:hidden}
+.tradeCargo h3{position:absolute;left:0;right:0;top:38px;margin:0;text-align:center;font-size:19px;color:#fff0ce;text-shadow:0 2px 3px #4a1a14}.tradeCargo .tc{border:2px solid #ab8251;border-radius:10px;background:#ead8b5;text-align:center;padding:3px;min-width:0;box-sizing:border-box;overflow:hidden}.tradeCargo .tc.lock{opacity:.28;background:#c9b48c}.tradeCargo .tc i{font-style:normal;font-size:22px}.tradeCargo .tc b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tradeCargo .tc small{font-size:9px;color:#725435}
 `;
   document.head.append(st);
   const d=document.createElement('div'); d.id='trade';
@@ -191,28 +191,31 @@ function tradeConsume(id,qty){
   return true;
 }
 function renderTradeSummary(L){
+  ensureTradeUI();
   L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
   const d=document.createElement('div');d.className='tradeSummary';
   let value=0,cost=0,units=0;
   for(const id in tradeState.cargo){const c=tradeState.cargo[id];if(!c||!c.qty)continue;units+=c.qty;cost+=c.avg*c.qty;value+=tradeQuote('town',id).sell*c.qty;}
   d.innerHTML='<h2>무역품 화물</h2><p>장비 가방과 별개로 보관됩니다.<br><strong>'+cargoSlots()+' / '+cargoMax()+'칸</strong> · 총 '+units+'개</p><p>평균 매입 총액 '+Math.round(cost)+'G<br>큰 마을 기준 처분가 '+Math.round(value)+'G</p><p>지역 상인협회에서 싸게 사고, 다른 지역에서 비싸게 파십시오.<br>같은 품목을 너무 많이 풀면 그 지역 매입가가 하루 동안 조금 내려갑니다.</p>';
-  L.append(d);
-}
-function renderTradeCargo(R){
-  R.innerHTML='';R.style.backgroundImage=`url(${A.kit['01']})`;
-  const d=document.createElement('div');d.className='tradeCargo';d.innerHTML='<h3>'+mountNow().icon+' '+mountNow().name+' · 화물칸</h3>';
-  const ids=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
-  for(let i=0;i<cargoMax();i++){
-    const c=document.createElement('div');c.className='tc';const id=ids[i];
-    if(id){const g=TRADE_BY_ID[id],e=tradeState.cargo[id];c.innerHTML='<i>'+g.icon+'</i><b>'+g.name+' ×'+e.qty+'</b><small>평균 '+Math.round(e.avg)+'G</small>';}
-    d.append(c);
-  }
-  const nb=document.createElement('div'); nb.className='tseen'; nb.style.cssText='grid-column:1/-1;font-size:11px;line-height:1.45;color:#5b4023;border-top:2px solid #b78a4d;padding-top:6px;margin-top:4px';
-  const lines=['<b>시세 수첩</b> (싸게 사는 곳 / 비싸게 사 주는 곳)'];
+  const lines=['<b>시세 수첩</b> <small>(싼 것 / 비싸게 사 주는 것)</small>'];
   for(const r in TRADE_REGIONS){ const e=tradeState.seen[r]; if(!e){ lines.push(tradeRegionDef(r).short+': ?'); continue; }
     const arr=TRADE_GOODS.map(g=>({n:g.name,x:e.q[g.id][0]/g.base})).sort((a,b)=>a.x-b.x);
     lines.push(tradeRegionDef(r).short+': 싼 '+arr.slice(0,3).map(a=>a.n).join('·')+' / 비싼 '+arr.slice(-3).reverse().map(a=>a.n).join('·')); }
-  nb.innerHTML=lines.join('<br>'); d.append(nb);
+  const nb=document.createElement('p'); nb.style.cssText='font-size:12px;line-height:1.6'; nb.innerHTML=lines.join('<br>'); d.append(nb);
+  L.append(d);
+}
+function renderTradeCargo(R){
+  ensureTradeUI();
+  R.innerHTML='';R.style.backgroundImage=`url(${A.kit['01']})`;
+  const d=document.createElement('div');d.className='tradeCargo';d.innerHTML='<h3>'+mountNow().icon+' '+mountNow().name+' · 화물 '+cargoMax()+'칸</h3>';
+  const ids=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
+  const top=TRADE_MOUNTS[TRADE_MOUNTS.length-1].slots;
+  for(let i=0;i<top;i++){
+    const c=document.createElement('div');c.className='tc'+(i>=cargoMax()?' lock':'');const id=ids[i];
+    if(i<cargoMax()&&id){const g=TRADE_BY_ID[id],e=tradeState.cargo[id];c.innerHTML='<i>'+g.icon+'</i><b>'+g.name+' ×'+e.qty+'</b><small>평균 '+Math.round(e.avg)+'G</small>';}
+    else if(i>=cargoMax())c.innerHTML='<i>🔒</i>';
+    d.append(c);
+  }
   R.append(d);
 }
 window.TRADE={
