@@ -1193,7 +1193,7 @@ function cast(id,mod){
     // 빙결 보호막: 얼음막이 피해를 대신 받는다. 막이 깨지면 주변이 얼어붙고, 막이 있는 동안 둔화·석화 같은 상태이상도 막는다.
     const v=Math.round(P.maxHp*.45*skillMul);
     P.shieldKind='ice';P.shield=v;P.shieldMax=v;P.shieldT=10+rank*.5;P.shieldRank=rank;syncBars();
-    pops.push({x:P.x,y:P.y-100,t:0,txt:'빙결 보호막 '+v,mana:true});sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:70});
+    sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:70});
   }else if(id==='holy1_heal'){
     const v=Math.round(P.maxHp*(.34+rank*.07));P.hp=Math.min(P.maxHp,P.hp+v);syncBars();
     pops.push({x:P.x,y:P.y-100,t:0,txt:'+'+v,heal:true});sfx.push({type:'heal',t:0,x:P.x,y:P.y-20,r:72});
@@ -1231,20 +1231,37 @@ function breakShield(){
     if(Math.hypot(t.x-P.x,t.y-P.y)<150&&typeof applyMonsterStatus==='function'){applyMonsterStatus(t,'freeze',.9+rank*.1);applyMonsterStatus(t,'slow',3);n++;}
   }
   sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:150});
-  pops.push({x:P.x,y:P.y-115,t:0,txt:n?'보호막 파열! 얼음 폭발':'보호막 파열!',crit:true});
 }
 function drawShield(){
   if(!(P.shield>0))return;
-  const k=Math.max(0,Math.min(1,P.shield/(P.shieldMax||1)));
-  let al=.55+.45*k;if(P.shieldT<2)al*=.55+.45*Math.sin(T*16);
-  ctx.save();ctx.translate(P.x,P.y-40);
-  const g=ctx.createRadialGradient(0,0,10,0,0,58);g.addColorStop(0,'rgba(190,240,255,.05)');g.addColorStop(1,P.shieldKind==='holy'?'rgba(255,215,95,.45)':'rgba(120,205,255,.38)');
-  ctx.globalAlpha=al;ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.fill();
-  ctx.strokeStyle=P.shieldKind==='holy'?'rgba(255,234,150,.95)':'rgba(215,247,255,.95)';ctx.lineWidth=2.5;ctx.stroke();
-  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,40,Math.PI*1.12,Math.PI*1.45);ctx.stroke();
+  const holy=P.shieldKind==='holy',k=Math.max(0,Math.min(1,P.shield/(P.shieldMax||1)));
+  let al=.6+.4*k;if(P.shieldT<2)al*=.55+.45*Math.sin(T*16);
+  const c1=holy?'255,215,95':'120,205,255',c2=holy?'255,240,170':'225,250,255';
+  ctx.save();ctx.translate(P.x,P.y-40);ctx.globalAlpha=al;
+  // 발밑 서리 고리
+  ctx.save();ctx.translate(0,44);ctx.scale(1,.32);
+  ctx.strokeStyle='rgba('+c1+',.5)';ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,40,0,7);ctx.stroke();
+  ctx.strokeStyle='rgba('+c2+',.8)';ctx.lineWidth=1.5;ctx.setLineDash([6,9]);ctx.lineDashOffset=-T*14;ctx.beginPath();ctx.arc(0,0,48,0,7);ctx.stroke();
+  ctx.restore();
+  // 막 본체
+  const g=ctx.createRadialGradient(-10,-18,6,0,0,60);g.addColorStop(0,'rgba('+c2+',.16)');g.addColorStop(.7,'rgba('+c1+',.14)');g.addColorStop(1,'rgba('+c1+',.46)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.fill();
+  // 결정 면 무늬 + 훑고 지나가는 빛
+  ctx.save();ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.clip();
+  ctx.strokeStyle='rgba('+c2+',.26)';ctx.lineWidth=1;ctx.beginPath();
+  for(let i=-3;i<=3;i++){ctx.moveTo(i*18,-60);ctx.lineTo(i*18+30,60);ctx.moveTo(i*18,-60);ctx.lineTo(i*18-30,60);}
+  ctx.stroke();
+  const sx=((T*60)%220)-110,gl=ctx.createLinearGradient(sx-14,0,sx+14,0);
+  gl.addColorStop(0,'rgba(255,255,255,0)');gl.addColorStop(.5,'rgba(255,255,255,.35)');gl.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=gl;ctx.fillRect(sx-14,-60,28,120);
+  ctx.restore();
+  // 테두리
+  ctx.strokeStyle='rgba('+c2+',.95)';ctx.lineWidth=2.2;ctx.beginPath();ctx.ellipse(0,0,44,58,0,0,7);ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,41,55,0,Math.PI*1.1,Math.PI*1.42);ctx.stroke();
   if(k<.4){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-14,-38);ctx.lineTo(-4,-14);ctx.lineTo(-18,4);ctx.moveTo(10,-30);ctx.lineTo(18,-6);ctx.stroke();}
-  ctx.fillStyle='#eaffff';
-  for(let i=0;i<3;i++){const a=T*1.6+i*2.094,x=Math.cos(a)*44,y=Math.sin(a)*58;ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.fillRect(-2.5,-2.5,5,5);ctx.restore();}
+  // 도는 얼음 조각
+  ctx.fillStyle='rgba('+c2+',.95)';
+  for(let i=0;i<4;i++){const a=T*1.3+i*1.571;ctx.save();ctx.translate(Math.cos(a)*46,Math.sin(a)*60);ctx.rotate(a+1.57);ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(3,0);ctx.lineTo(0,6);ctx.lineTo(-3,0);ctx.closePath();ctx.fill();ctx.restore();}
   ctx.restore();
 }
 let potCd = 0;
@@ -1262,7 +1279,7 @@ function updSkills(dt){
   P.castRoot = Math.max(0, (P.castRoot || 0) - dt);
   updZones(dt);
   for (const id in CD) CD[id] = Math.max(0, CD[id] - dt);
-  if (P.shield > 0){ P.shieldT -= dt; if (P.shieldT <= 0){ P.shield = 0; syncBars(); pops.push({ x:P.x, y:P.y-100, t:0, txt:'보호막 사라짐', mana:true }); } }
+  if (P.shield > 0){ P.shieldT -= dt; if (P.shieldT <= 0){ P.shield = 0; syncBars(); } }
   if (P.mp < P.maxMp){ P.mpAcc = (P.mpAcc || 0) + dt * 2 * NUM; if (P.mpAcc >= 1){ const n = Math.floor(P.mpAcc); P.mpAcc -= n; P.mp = Math.min(P.maxMp, P.mp + n); syncBars(); } }
 }
 function drawSkillFx(dt){
