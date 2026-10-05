@@ -303,7 +303,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-0128</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-0954</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1217,6 +1217,16 @@ function drawMini(camX, camY){
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
   mx.fillStyle = '#e8f2ff'; if (MAP === 'town') for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
+  if(window.QUEST&&QUEST.minimapTargets){
+    const pulse=.5+.5*Math.sin(T*6.2),r=3.8+pulse*2.8;
+    for(const q of QUEST.minimapTargets()){
+      const x=q.x*sx,y=q.y*sy;
+      mx.save();mx.globalAlpha=.35+.65*pulse;
+      mx.fillStyle='#ff2419';mx.beginPath();mx.arc(x,y,r+4,0,7);mx.fill();
+      mx.globalAlpha=1;mx.fillStyle='#ff3328';mx.strokeStyle='#fff2df';mx.lineWidth=1.4;
+      mx.beginPath();mx.arc(x,y,r,0,7);mx.fill();mx.stroke();mx.restore();
+    }
+  }
   if (typeof drawEncounterMini === 'function') drawEncounterMini(mx, sx, sy);
   mx.strokeStyle = '#fff8'; mx.lineWidth = 2;
   mx.strokeRect(camX * sx, camY * sy, VW / Z * sx, VH / Z * sy);
@@ -4652,6 +4662,27 @@ function questNpcAction(n){
   return null;
 }
 function questMarker(n){const a=questNpcAction(n);return a?(a.start?'!':'?'):'';}
+function questMiniTargets(){
+  const out=[],seen=new Set();
+  const add=(x,y,id,kind)=>{
+    if(!Number.isFinite(x)||!Number.isFinite(y))return;
+    const k=Math.round(x)+':'+Math.round(y);
+    if(seen.has(k))return;seen.add(k);
+    out.push({x,y,id,kind});
+  };
+  for(const q of ALL_QUESTS){
+    if(!mainQuestState.active[q.id])continue;
+    const s=questStep(q);if(!s)continue;
+    if(['talk','deliver'].includes(s.type)&&questMapMatches(s)){
+      const n=questNpc(s.npc);if(n)add(n.x,n.y,q.id,'npc');
+      continue;
+    }
+    if(s.point&&questMapMatches(s.point)){
+      const p=questPoint(s);if(p)add(p.x,p.y,q.id,'point');
+    }
+  }
+  return out;
+}
 function questAccept(id){
   const q=questDef(id),n=q&&questNpc(q.start.npc);
   if(!q||!questAvailable(q)||!questMapMatches(q.start)||!n||Math.hypot(P.x-n.x,P.y-n.y)>90)return false;
@@ -4897,7 +4928,7 @@ window.QUEST={isDialog:()=>panel==='dlg'&&!!questDialog,accept:questAccept,colle
   decorateDialog:questDecorateDialog,marker:questMarker,openList:()=>{GUILD.open();questRender();},
   saveData:()=>({schema:3,...JSON.parse(JSON.stringify(mainQuestState))}),loadData:questLoad,
   state:()=>({active:Object.fromEntries(Object.entries(mainQuestState.active).map(([id,a])=>[id,{step:a.step,progress:a.progress}])),completed:mainQuestState.completed.slice(),items:{...mainQuestState.items},flags:{...mainQuestState.flags}}),
-  points:()=>spots.filter(s=>s.kind==='questclue').map(s=>({id:s.questId,x:s.x,y:s.y,type:s.questType})),nextDialog:questNextDialog,nextSpecial:questNextSpecial,
+  points:()=>spots.filter(s=>s.kind==='questclue').map(s=>({id:s.questId,x:s.x,y:s.y,type:s.questType})),minimapTargets:questMiniTargets,nextDialog:questNextDialog,nextSpecial:questNextSpecial,
   lists:()=>({main:MAIN_QUESTS.map(q=>q.id),side:SIDE_QUESTS.map(q=>q.id)})};
 $('mainQuestTrack').onclick=()=>QUEST.openList();
 
