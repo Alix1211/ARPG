@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright
 URL='file://'+os.path.abspath(os.path.join(os.path.dirname(__file__),'../../game/town.html'))
 THEMES=['spring','summer','autumn','winter','ice','volcano','swamp']
 async def enter(pg, theme):
-    await pg.evaluate("(t) => __FD.enter(t)", theme)
+    await pg.evaluate("(t) => __FD.enter(t,1)", theme)
     await pg.wait_for_timeout(650)
     st=await pg.evaluate("() => __FD.state()")
     assert st['map']=='field', (theme,st)
