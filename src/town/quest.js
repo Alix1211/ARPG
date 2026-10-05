@@ -10,8 +10,8 @@ const questStep=q=>q&&mainQuestState.active[q.id]?q.steps[mainQuestState.active[
 const questNpc=no=>npcs.find(n=>n.no===no||n.k==='npc_'+String(no).padStart(2,'0'));
 function questSave(){questUiDirty=true;questRefreshWorld();questRender();if(window.UI&&UI.save)UI.save();}
 function questAvailable(q){
-  const s=q.start||{};
-  return !mainQuestState.completed.includes(q.id)&&!mainQuestState.active[q.id]&&P.lv>=(s.level||1)&&
+  const s=q.start||{},main=questKind(q)==='main';
+  return !mainQuestState.completed.includes(q.id)&&!mainQuestState.active[q.id]&&(main||P.lv>=(s.level||1))&&
     (!s.previous||mainQuestState.completed.includes(s.previous))&&(!s.visit||mainQuestState.visited.includes(s.visit));
 }
 function questMapMatches(s){
@@ -44,8 +44,10 @@ function questMiniTargets(){
     if(seen.has(k))return;seen.add(k);
     out.push({x,y,id,kind});
   };
+  let activeMain=false;
   for(const q of ALL_QUESTS){
     if(!mainQuestState.active[q.id])continue;
+    if(questKind(q)==='main')activeMain=true;
     const s=questStep(q);if(!s)continue;
     if(['talk','deliver'].includes(s.type)&&questMapMatches(s)){
       const n=questNpc(s.npc);if(n)add(n.x,n.y,q.id,'npc');
@@ -53,6 +55,12 @@ function questMiniTargets(){
     }
     if(s.point&&questMapMatches(s.point)){
       const p=questPoint(s);if(p)add(p.x,p.y,q.id,'point');
+    }
+  }
+  if(!activeMain&&MAP==='town'){
+    const next=MAIN_QUESTS.find(q=>questAvailable(q));
+    if(next){
+      const n=questNpc(next.start.npc);if(n)add(n.x,n.y,next.id,'start');
     }
   }
   return out;
