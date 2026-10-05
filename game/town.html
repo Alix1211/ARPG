@@ -24,6 +24,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #dlg.on{display:flex;align-items:flex-end;gap:0}
 #dlgImg{height:min(250px,56vh);margin-right:-18px;position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0007)}
 #dlg .frame{flex:1;min-height:120px;position:relative}
+#dlgCloseX{display:none}
 #dlgName{position:absolute;left:-6px;top:-58px;min-width:120px;height:44px;padding:0 24px;background:var(--banner) center/100% 100% no-repeat;color:#fff4d8;font-weight:900;font-size:17px;line-height:42px;text-align:center;text-shadow:0 1px 2px #000}
 #dlgTitle{font-size:12px;color:#8a5a2a;font-weight:800}
 #dlgLine{font-size:17px;line-height:1.55;margin:4px 0 10px;font-weight:600}
@@ -160,6 +161,19 @@ html.app #fs{display:none}
 .settingLine span{min-width:64px}.settingLine input[type=range]{flex:1;min-width:60px;accent-color:#9c642d;touch-action:pan-x}.settingLine output{min-width:42px;text-align:right}
 .settingLine input[type=checkbox]{width:24px;height:24px;accent-color:#9c642d}
 #settings small{display:block;margin:8px 0 14px;line-height:1.5}#settings .row{justify-content:center;flex-wrap:wrap}
+#driveBackup[hidden]{display:none}
+#driveBackup{margin:10px 0;border-top:1px solid #99733d;padding-top:8px}
+#backupStatus,#backupMessage{margin:5px 0;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+#backupMessage:empty{display:none}
+#driveBackup .btn{font-size:13px;padding:7px 10px}
+@media(max-height:480px){
+  #settings h2{margin-bottom:5px;font-size:17px}
+  #settings .settingLine{margin:5px 0;font-size:13px;gap:8px}
+  #settings small{margin:5px 0;font-size:11px}
+  #driveBackup{margin:5px 0;padding-top:4px}
+  #driveBackup .row{gap:5px}
+  #settings .btn{padding:5px 8px;font-size:12px}
+}
 #resetBtn{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:112px;pointer-events:auto;border:2px solid #7a6a55;background:#2c2218e8;color:#e9dcc4;border-radius:8px;font-size:11px;font-weight:900;padding:5px 8px;box-shadow:0 2px 4px #0008}
 #resetBtn[hidden]{display:none}
 #joy{left:0;bottom:0;width:46%;height:72%;pointer-events:auto;touch-action:none;overscroll-behavior:none}
@@ -263,6 +277,9 @@ html.app #fs{display:none}
 
 /* 폰 전용(세로 480 이하, 케인 시안 2026-10-05). 패드는 영향 없음 */
 @media(max-height:480px){
+#dlgCloseX{display:block;position:absolute;right:-18px;top:-18px;z-index:3;width:38px;height:38px;padding:0;border:2px solid #f3c394;border-radius:9px;background:#a82e25;color:#fff6e3;font:900 28px/32px sans-serif;box-shadow:0 2px 4px #0008;touch-action:manipulation}
+#dlgMainRow [data-close]{display:none}
+#dlgTitle{padding-right:26px}
 #me{transform:scale(.85);transform-origin:left top}
 #questTrack{top:92px}#mainQuestTrack{top:196px}
 #mm{width:148px;height:126px;top:6px}
@@ -305,11 +322,16 @@ html.app #fs{display:none}
 <label class="settingLine" for="volume_sfx"><span>효과음</span><input id="volume_sfx" type="range" min="0" max="100" step="1"><output id="value_sfx" for="volume_sfx">100%</output></label>
 <label class="settingLine" for="volume_bgm"><span>배경음</span><input id="volume_bgm" type="range" min="0" max="100" step="1"><output id="value_bgm" for="volume_bgm">100%</output></label>
 <label class="settingLine" for="vibration"><span>진동</span><input id="vibration" type="checkbox">켜기</label>
+<div id="driveBackup" hidden>
+<div id="backupStatus" role="status">백업 파일: 안 됨 · 마지막 백업: 없음</div>
+<div class="row"><button class="btn" id="pickBackup" type="button">드라이브 백업 파일 고르기</button><button class="btn" id="restoreBackup" type="button" disabled>백업에서 불러오기</button></div>
+<div id="backupMessage" role="status" aria-live="polite"></div>
+</div>
 <small>움직일 수 없을 때 탈출하면 큰 마을로 돌아갑니다.</small>
 <div class="row"><button class="btn" id="escapeStuck" type="button">끼었을 때 탈출하기</button><button class="btn ghost" id="settingsClose" type="button" data-close>닫기</button></div>
 </div>
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
-<div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
+<div class="pan" id="dlg"><img id="dlgImg" alt=""><div class="frame"><button id="dlgCloseX" type="button" data-close aria-label="대화창 닫기">×</button><div id="dlgName"></div><div id="dlgTitle"></div><div id="dlgLine"></div>
   <div class="row" id="dlgMainRow"><button class="btn" id="dlgTrade" type="button">거래</button><button class="btn" id="dlgQuest" type="button" hidden>★ 본편</button><button class="btn" id="dlgTalk" type="button">잡담</button><button class="btn ghost" type="button" data-close>닫기</button></div>
   <div class="row" id="dlgInnRow" hidden><button class="btn" id="dlgRest" type="button">푹 쉬기</button><button class="btn" id="dlgIdentify" type="button">감정</button><button class="btn" id="dlgChat" type="button">잡담</button><button class="btn ghost" id="dlgMerc" type="button" disabled>용병 · 준비 중</button><button class="btn ghost" id="dlgLeave" type="button">나가기</button></div></div></div>
 <div class="pan frame" id="guild"><div id="guildHead"><b>모험가 길드 의뢰판</b><small id="guildRank">견습</small><button id="guildClose" type="button" data-close aria-label="닫기"></button></div><div class="gsect">★ 본편 · 길드 한도와 별도</div><div id="mainQuestActive"></div><div id="mainQuestDoneBlock" hidden><div class="gsect">본편 완료</div><div id="mainQuestDone"></div></div><div class="gsect">연쇄·서브 의뢰 · 길드 한도와 별도</div><div id="sideQuestActive"></div><div id="sideQuestDoneBlock" hidden><div class="gsect">연쇄·서브 완료</div><div id="sideQuestDone"></div></div><div class="gsect">진행 중 길드 의뢰 · 최대 5개</div><div id="gActive"></div><div class="gsect">게시판</div><div id="gBoard"></div><div class="row"><button class="btn ghost" type="button" data-close>닫기</button></div></div>
@@ -327,7 +349,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-1541</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-1657</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -4291,6 +4313,51 @@ const BGM = (() => {
 })();
 window.AUDIO={settings:AUDIO_SETTINGS,sfx:SFX,bgm:BGM,haptic:HAP};
 
+// 문플로의 문서 선택/연결 방식. 백업은 기존 arpg_* 문자열 값의 묶음이며 저장 스키마는 유지한다.
+(() => {
+  const bridge=window.ArpgBridge, el=id=>document.getElementById(id);
+  if(!bridge||typeof bridge.pickBackup!=='function'||typeof bridge.backupStatus!=='function'||typeof bridge.restoreBackup!=='function')return;
+  el('driveBackup').hidden=false;
+  let busy=false;
+  function refresh(){
+    let s={};try{s=JSON.parse(bridge.backupStatus()||'{}');}catch(e){}
+    el('backupStatus').textContent='백업 파일: '+(s.linked?'연결됨':'안 됨')+' · 마지막 백업: '+(s.at?new Date(s.at).toLocaleString('ko-KR'):'없음')+(s.held?' · 불러오기 대기':s.error?' · 백업 실패':'');
+    el('restoreBackup').disabled=!s.linked||busy;el('pickBackup').disabled=busy;
+  }
+  const message=text=>{el('backupMessage').textContent=text||'';refresh();};
+  window.onArpgBackup=message;
+  window.onArpgBackupFail=text=>{try{bridge.cancelRestore();}catch(e){}busy=false;window.ARPG_BACKUP_RESTORING=false;message(text);};
+  function valid(text){
+    const all=JSON.parse(text);
+    if(!all||Array.isArray(all)||typeof all!=='object'||Object.keys(all).some(k=>!k.startsWith('arpg_')||typeof all[k]!=='string'))throw Error();
+    const s=JSON.parse(all.arpg_save_v3),obj=v=>v&&typeof v==='object'&&!Array.isArray(v);
+    if(s.v!==3||!Number.isInteger(s.lv)||s.lv<1||s.lv>70||!['gold','hp','mp'].every(k=>Number.isFinite(s[k]))||!obj(s.stats)||!Array.isArray(s.bag)||!obj(s.eq))throw Error();
+    return all;
+  }
+  window.onArpgRestore=text=>{
+    let all;try{all=valid(text);}catch(e){window.onArpgBackupFail('불러올 수 없는 파일입니다. 기존 저장은 유지됩니다.');return;}
+    try{bridge.applyBackup();}catch(e){window.onArpgBackupFail('기기 저장을 갱신하지 못했습니다.');}
+  };
+  window.onArpgBackupApplied=text=>{
+    let all;try{all=valid(text);}catch(e){window.onArpgBackupFail('불러올 수 없는 파일입니다.');return;}
+    // pagehide/4초 자동 저장이 예전 플레이 상태를 덮어쓰지 않도록 불러오기 동안 저장을 막는다.
+    window.ARPG_BACKUP_RESTORING=true;
+    try{
+      for(const k of Object.keys(localStorage))if(k.startsWith('arpg_'))localStorage.removeItem(k);
+      for(const [k,v] of Object.entries(all))localStorage.setItem(k,v);
+      location.reload();
+    }catch(e){message('기기 저장을 갱신하지 못했습니다. 앱을 완전히 껐다 켜 주세요.');}
+  };
+  el('settingsBtn').addEventListener('click',refresh);
+  el('pickBackup').addEventListener('click',()=>{try{if(window.UI)UI.save();bridge.pickBackup();}catch(e){message('파일 선택 화면을 열지 못했습니다.');}});
+  el('restoreBackup').addEventListener('click',()=>{
+    if(busy||!confirm('현재 진행을 백업 파일 내용으로 바꿉니다. 불러오시겠습니까?'))return;
+    busy=true;window.ARPG_BACKUP_RESTORING=true;message('백업 파일을 읽는 중입니다.');
+    try{bridge.restoreBackup();}catch(e){window.onArpgBackupFail('백업 파일을 읽지 못했습니다.');}
+  });
+  refresh();
+})();
+
 // ======================= 무역: 교역소·상인협회·화물칸 =======================
 // 장비 경제와 완전히 분리한다. 장비는 비싸게 사고 헐값에 팔고, 지역 차익은 오직 무역품에서만 발생.
 const TRADE_GOODS = [
@@ -5656,7 +5723,7 @@ const SKEY='arpg_save_v3';
 try{localStorage.removeItem('arpg_save_v1');localStorage.removeItem('arpg_save_v2');}catch(e){}
 let RESETTING=false;
 function saveGame(){
-  if(RESETTING)return;
+  if(RESETTING||window.ARPG_BACKUP_RESTORING)return;
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
