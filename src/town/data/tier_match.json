@@ -3633,8 +3633,8 @@
       8.2,
       11
     ],
-    "baseHP": 300,
-    "baseAttack": 1.6667,
+    "baseHP": 600,
+    "baseAttack": 3.3334,
     "withinHP": [
       1.5,
       0.35,
