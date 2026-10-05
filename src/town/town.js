@@ -458,10 +458,12 @@ function openDlg(n){
   $('dlgLine').textContent = n.line;
   $('dlgTrade').hidden = !n.shop && !n.go;
   $('dlgTrade').textContent = n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
+  const gx=$('dlgGuildExam');if(gx)gx.hidden=n.shop!=='guild';
   show('dlg');
   $('dlgTalk').hidden=false;if(window.QUEST)QUEST.decorateDialog(n);
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
+const guildExamBtn=$('dlgGuildExam');if(guildExamBtn)guildExamBtn.addEventListener('click',()=>{if(talking&&talking.shop==='guild'&&window.GUILD)GUILD.openExam();});
 $('dlgTrade').addEventListener('click', () => {
   if (talking.shop==='inn'){ closeAll(); if(typeof enterInn==='function')enterInn(); return; }
   if (talking.go === 'field'){ openRegionSelect(); return; }
