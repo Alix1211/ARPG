@@ -408,7 +408,7 @@ function locationState(){
   if(MAP==='inn'&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
   if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
-  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
+  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;st.dungeonTheme=d.theme||'ruins';st.caveReturn=d.caveReturn||null;}
   return st;
 }
 async function resumeLocation(st){
@@ -418,6 +418,7 @@ async function resumeLocation(st){
     if(map==='field'&&typeof prepareField==='function'){
       await prepareField(st.theme||'spring',st.leg,st.legs);buildWorld('field');
     }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
+      if(window.__DUN&&__DUN.restoreEntry)__DUN.restoreEntry(st.dungeonTheme||'ruins',st.caveReturn||null);
       await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
     }else if(map==='out'){
       buildWorld('out');
