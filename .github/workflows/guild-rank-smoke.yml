@@ -16,6 +16,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src/town/.enc_cache
+            src/town/.ground_cache.png
+            src/town/.ground_out_cache.png
+          key: guild-rank-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'src/town/outmap.py', 'assets/**') }}
+          restore-keys: |
+            guild-rank-${{ runner.os }}-
+            town-build-${{ runner.os }}-
       - run: |
           pip install pillow numpy scipy playwright
           python -m playwright install --with-deps chromium
