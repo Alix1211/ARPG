@@ -29,9 +29,9 @@ async def main():
             await pg.evaluate("([t,l]) => __FD.enter(t,l)",[theme,ti+1]);await pg.wait_for_timeout(700)
             last=await pg.evaluate("() => __FD.state()")
             assert last['leg']==ti+1 and len(last['village'])==2 and last['dungeons']==1,(theme,'last',last)
-            assert last['fieldSize']=={'w':60,'h':40},(theme,'fixed-last-size',last)
+            assert last['fieldSize']=={'w':48,'h':32},(theme,'fixed-last-size',last)
             assert last['outdoorDungeon'] is False,(theme,'last-must-be-fixed',last)
-            assert all(v['x']>44*48 for v in last['village']),(theme,last['village'])
+            assert all(v['x']>35*48 for v in last['village']),(theme,last['village'])
         a=await enter(pg,'summer'); layout_a=a['layout']; serial_a=a['serial']
         b=await enter(pg,'summer')
         assert b['serial']>serial_a, (a,b)
@@ -54,7 +54,7 @@ async def main():
         await pg.evaluate("(p) => __FD.warp(p.x+.7,p.y)",leg2['end']);await pg.wait_for_timeout(1300)
         leg3=await pg.evaluate("() => __FD.state()")
         assert leg3['leg']==3 and len(leg3['village'])==2 and leg3['dungeons']==1,leg3
-        await pg.evaluate("() => __FD.warp(59,8)");await pg.wait_for_timeout(300)
+        await pg.evaluate("(p) => __FD.warp(p.x+.8,p.y)",leg3['end']);await pg.wait_for_timeout(300)
         assert await pg.evaluate("() => document.getElementById('regionPick').classList.contains('on')")
         await pg.click("#regionGrid button[data-theme=town]"); await pg.wait_for_timeout(900)
         out=await pg.evaluate("() => __FD.state()")
