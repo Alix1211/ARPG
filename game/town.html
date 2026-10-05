@@ -357,7 +357,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-2148</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-2309</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -457,7 +457,7 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
-  if (b.k === 'watchtower' || hasNpc.has(b.k)) continue;
+  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k)) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
 for (const p of CUR.props){
@@ -487,6 +487,7 @@ for (const n of npcs){
   if (CUR.exits) exits.push(...CUR.exits);
   if (CUR.solids) solids.push(...CUR.solids);
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
+  if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
   if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
@@ -793,6 +794,7 @@ function act(){
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
+  if (near.kind === 'field_village' && window.__FD) return __FD.enterVillage(near.market || (CUR && CUR.market) || 'spring');
   if (near.kind === 'trade' && window.TRADE) return TRADE.open(near.market || (CUR && CUR.market) || 'town');
   if(near.kind==='town_portal')return returnTownPortal();
   if(MAP==='field'&&near.name==='야영지'&&typeof restAtCamp==='function')return restAtCamp();
@@ -822,7 +824,8 @@ function locationState(){
   if(MAP==='inn'&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
   if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
-  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
+  if(MAP==='fieldvillage'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;st.villageReturn=f.villageReturn||null;}
+  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;st.dungeonTheme=d.theme||'ruins';st.caveReturn=d.caveReturn||null;}
   return st;
 }
 async function resumeLocation(st){
@@ -831,7 +834,10 @@ async function resumeLocation(st){
   try{
     if(map==='field'&&typeof prepareField==='function'){
       await prepareField(st.theme||'spring',st.leg,st.legs);buildWorld('field');
+    }else if(map==='fieldvillage'&&window.__FD&&__FD.prepareVillage){
+      await __FD.prepareVillage(st.theme||'spring',st.villageReturn||null);buildWorld('fieldvillage');
     }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
+      if(window.__DUN&&__DUN.restoreEntry)__DUN.restoreEntry(st.dungeonTheme||'ruins',st.caveReturn||null);
       await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
     }else if(map==='out'){
       buildWorld('out');
@@ -1062,6 +1068,23 @@ const vils = A.vils.map((v, i) => {
   return { ...v, x: st.x, y: st.y, home, tx: st.x, ty: st.y, wait: rand(0, 3), dir: 'front', flip: false, t: 0, moving: false,
     sp: v.name === 'kid' ? 95 : v.name === 'grandpa' ? 42 : rand(55, 70), stuck: 0, hidden: false, ph: rand(0, 7) };
 });
+const FVP=[[7,14],[10,17],[16,16],[22,17],[25,14],[12,9],[20,9],[16,19]].map(([x,y])=>({x:x*TS,y:y*TS}));
+const fvils=vils.slice(0,4).map((v,i)=>({...v,x:FVP[i].x,y:FVP[i].y,tx:FVP[i].x,ty:FVP[i].y,wait:rand(.5,2.5),hidden:false,goingHome:false,stuck:0}));
+function resetFieldVils(){
+  for(let i=0;i<fvils.length;i++){const p=FVP[i%FVP.length],v=fvils[i];v.x=p.x;v.y=p.y;v.tx=p.x;v.ty=p.y;v.wait=rand(.4,2.2);v.hidden=false;v.goingHome=false;v.stuck=0;}
+}
+function updFieldVils(dt){
+  for(const v of fvils){
+    if(v.wait>0){v.wait-=dt;v.moving=false;v.t=0;continue;}
+    const dx=v.tx-v.x,dy=v.ty-v.y,d=Math.hypot(dx,dy);
+    if(d<6){v.wait=rand(1,3.5);const n=FVP[Math.floor(rand(0,FVP.length))];v.tx=n.x+rand(-16,16);v.ty=n.y+rand(-12,12);continue;}
+    const sp=v.sp*.9,mx=dx/d*sp*dt,my=dy/d*sp*dt,ox=v.x,oy=v.y;
+    if(!vBlocked(v.x+mx,v.y))v.x+=mx;if(!vBlocked(v.x,v.y+my))v.y+=my;
+    const moved=Math.hypot(v.x-ox,v.y-oy);v.moving=moved>.2;v.t+=dt*(sp/60);
+    if(moved<sp*dt*.25){v.stuck+=dt;if(v.stuck>1){const n=FVP[Math.floor(rand(0,FVP.length))];v.tx=n.x;v.ty=n.y;v.stuck=0;}}else v.stuck=0;
+    if(Math.abs(dx)>Math.abs(dy)*1.2){v.dir='side';v.flip=dx>0;}else v.dir=dy<0?'back':'front';
+  }
+}
 function vBlocked(x, y){
   const r = 9;
   if (x < r || y < 30 || x > MWp - r || y > MHp - 6) return true;
@@ -1295,6 +1318,7 @@ function drawMini(camX, camY){
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
   mx.fillStyle = '#e8f2ff'; if (MAP === 'town') for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
+  else if(MAP==='fieldvillage')for(const v of fvils){mx.beginPath();mx.arc(v.x*sx,v.y*sy,2,0,7);mx.fill();}
   if(window.QUEST&&QUEST.minimapTargets){
     const pulse=.5+.5*Math.sin(T*6.2),r=3.8+pulse*2.8;
     for(const q of QUEST.minimapTargets()){
@@ -1370,6 +1394,7 @@ function frame(now){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
+    else if(MAP==='fieldvillage')updFieldVils(dt);
   }
 
   if (INDOOR){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120a05'; ctx.fillRect(0, 0, cv.width, cv.height); }
@@ -1383,6 +1408,7 @@ function frame(now){
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
   if (MAP === 'town') for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
+  else if (MAP === 'fieldvillage') for (const v of fvils) list.push({vil:v,key:v.y});
   if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list);
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
@@ -3280,11 +3306,64 @@ function fieldBuilding(k,name,x,y,wt,kind,market){
   return {k,name,x:x*TS,y:y*TS,w,h,door:0,kind:kind||'bld',market:market||null};
 }
 function makeFieldVillage(theme){
-  // 마지막 구간의 길 끝 쉼터. 동굴/다음 지역 출구와 겹치지 않게 길 아래쪽에 둔다.
-  return [
-    fieldBuilding('shop_tools','상인협회',48.6,12.0,3.7,'trade',theme),
-    fieldBuilding('house_blue','여관',52.1,14.3,3.5,'bld',theme),
-  ];
+  // 마지막 구간 우상단에는 마을 입구가 보이고, 실제 상점/교역은 별도 소형마을 내부에서 한다.
+  const gate=fieldBuilding('cottage_thatch',FIELD_INFO[theme][1]+' 작은 마을',49.3,12.0,4.4,'field_village',theme);
+  const house=fieldBuilding('house_red','마을 주택',53.1,14.2,3.7,'bld',theme);house.noSpot=1;
+  return [gate,house];
+}
+function villageProp(k,x,y,wt,name=null,kind=''){
+  const im=BI[k],ar=im&&im.naturalWidth?im.naturalHeight/im.naturalWidth:.8,w=wt*TS,h=w*ar;
+  return {k,name,x:x*TS,y:y*TS,w,h,cw:kind?0:.72,cd:kind?0:.34*TS,kind,shadow:true};
+}
+async function makeFieldVillageGround(theme){
+  const W=32,H=22,w=W*TS,h=H*TS,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const g=cv.getContext('2d'),t=fieldTiles[theme],ims=Object.values(t);await waitImages(ims);
+  const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base,path=t.path||dirt;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)g.drawImage(Math.random()<.16?flower:base,x*TS,y*TS,TS+1,TS+1);
+  g.save();g.lineCap='round';g.lineJoin='round';
+  g.globalAlpha=.55;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse(16*TS,12.2*TS,8.2*TS,4.8*TS,0,0,7);g.fill();
+  g.beginPath();g.moveTo(16*TS,21.5*TS);g.lineTo(16*TS,12*TS);g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.96;g.lineWidth=76;g.stroke();
+  g.beginPath();g.moveTo(8.5*TS,11.1*TS);g.bezierCurveTo(11*TS,12*TS,21*TS,12*TS,23.5*TS,11.1*TS);g.lineWidth=54;g.stroke();g.restore();
+  const mini=document.createElement('canvas');mini.width=256;mini.height=176;mini.getContext('2d').drawImage(cv,0,0,mini.width,mini.height);
+  return {ground:cv,mini};
+}
+function villageNpc(shop,name,title,line,x,y,market){
+  const base=MAPS.town.npcs.find(n=>n.shop===shop);
+  if(!base)return null;
+  return {...base,name,title,line,shop,market,x:x*TS,y:y*TS,at:null};
+}
+let fieldVillageReturn=null;
+async function prepareFieldVillage(theme,returnState){
+  theme=theme in FIELD_INFO?theme:'spring';fieldTheme=theme;fieldVillageReturn=returnState||fieldVillageReturn;
+  if(fieldVillageReturn){fieldLegs=Math.max(1,fieldVillageReturn.legs||FIELD_TIER[theme]||1);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
+  const bg=await makeFieldVillageGround(theme);
+  const b1=fieldBuilding('cottage_thatch','마을집',5.7,7.2,4.0,'bld',theme);b1.noSpot=1;
+  const b2=fieldBuilding('house_blue','마을집',26.3,7.2,4.0,'bld',theme);b2.noSpot=1;
+  const props=[
+    villageProp('fountain',16,13.0,3.5),
+    villageProp('stall_red',9.2,10.2,3.2),villageProp('stall_blue',22.8,10.2,3.2),
+    villageProp('bench_iron',12.2,15.6,1.7),villageProp('bench_iron',19.8,15.6,1.7),
+    villageProp('cart',5.3,13.9,2.1),villageProp('hay',27.1,14.2,1.6),
+    villageProp('flowerbed_wood',8.0,16.7,2.0),villageProp('flowerbed_wood',24.0,16.7,2.0),
+    villageProp('pot_flowers',12.2,8.4,1.0),villageProp('pot_flowers',19.8,8.4,1.0),
+    villageProp('tree_small',3.0,5.0,2.7),villageProp('tree_small',29.0,5.2,2.7)
+  ].filter(p=>BI[p.k]);
+  const general=villageNpc('general','마을 잡화상','잡화 노점','필요한 물건은 여기서 챙겨 가세요.',9.2,11.0,theme);
+  const trader=villageNpc('trade','마을 교역상','교역 노점','이 지역 물건 시세부터 보고 가시죠.',22.8,11.0,theme);
+  const map={name:FIELD_INFO[theme][1]+' 작은 마을',market:theme,map:{w:32,h:22,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
+    blds:[b1,b2],props,npcs:[general,trader].filter(Boolean),spawn:[16*TS,19.2*TS],
+    exits:[{x0:13.8*TS,x1:18.2*TS,y0:21.1*TS,y1:22*TS,fn:()=>leaveFieldVillage()}]};
+  map.G=bg.ground;map.MINI=bg.mini;MAPS.fieldvillage=map;return map;
+}
+async function enterFieldVillage(theme){
+  if(traveling)return false;
+  const fs=window.__FD&&__FD.state?__FD.state():null;
+  const ret={theme:fs&&fs.theme?fs.theme:fieldTheme,leg:fs&&fs.leg?fs.leg:fieldLeg,legs:fs&&fs.legs?fs.legs:fieldLegs,x:P.x,y:P.y,dir:P.dir||'front'};
+  const m=await prepareFieldVillage(theme||fieldTheme,ret);travel('fieldvillage',m.spawn,'back');return true;
+}
+async function leaveFieldVillage(){
+  if(traveling||!fieldVillageReturn)return false;
+  const q=fieldVillageReturn;await prepareField(q.theme,q.leg,q.legs);travel('field',[q.x,q.y+TS*.85],q.dir||'front');return true;
 }
 
 // 길 구간(leg): 목적지 티어와 같은 수의 필드를 이어서 지난다. 마지막 구간(leg===legs)에만 작은 마을이 있다.
@@ -3899,10 +3978,11 @@ function autoAimMonster(){
 window.__FD_READY=true;
 window.__FD={
   async enter(theme,leg){const m=await prepareField(theme||'spring',leg);travel('field',m.spawn,'side');return true;},
+  prepareVillage:(theme,ret)=>prepareFieldVillage(theme,ret),enterVillage:enterFieldVillage,leaveVillage:leaveFieldVillage,
   goLeg,askDestination,
   mapInfo(){return {blds:MAPS.field.blds.length,exits:MAPS.field.exits.length,name:MAPS.field.name,map:MAP};},
   warp(tx,ty){P.x=tx*TS;P.y=ty*TS;return true;},
-  state(){return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,dungeons:MAPS.field?MAPS.field.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
+  state(){return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,villageReturn:fieldVillageReturn?{...fieldVillageReturn}:null,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,dungeons:MAPS.field?MAPS.field.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
   debugTarget(dx,dy,freeze){
     const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;
@@ -3923,7 +4003,7 @@ window.__FD={
 // 필드 코드(field_dungeon.js)의 몬스터·드랍·판정을 그대로 함께 쓴다.
 const combatMap = () => MAP === 'field' || MAP === 'dungeon';
 // 던전은 두 가지 모습: ruins(성 밖 입구, 석조) · cave(필드 동굴 입구, 자연 동굴). 들어온 입구에 따라 정해지고 층을 내려가도 유지된다.
-const DT = {}, DP = {}; let dunTheme = 'ruins';
+const DT = {}, DP = {}; let dunTheme = 'ruins', caveReturn = null;
 for (const th in A.dtiles){ DT[th] = {}; for (const k in A.dtiles[th]) DT[th][k] = load(A.dtiles[th][k]); }
 for (const th in A.dprops){ DP[th] = {}; for (const k in A.dprops[th]) DP[th][k] = load(A.dprops[th][k].src); }
 const DUN_MOBS=TIER_MATCH.dungeonPools;
@@ -3995,7 +4075,7 @@ async function prepareDungeon(floor){
   const paint = await paintDungeon(D);
   const props = [], dspots = [], torches = [];
   // 위층 계단(시작 방)과 아래층 계단(가장 먼 방)
-  props.push(dprop('stairs_up', D.start.cx, D.start.cy - 1, { name: floor === 1 ? '위로 (성 밖으로)' : '위로 (' + (floor - 1) + '층)', kind: 'stairs_up', flat: 1 }));
+  props.push(dprop('stairs_up', D.start.cx, D.start.cy - 1, { name: floor === 1 ? (dunTheme==='cave' ? '위로 (필드로)' : '위로 (성 밖으로)') : '위로 (' + (floor - 1) + '층)', kind: 'stairs_up', flat: 1 }));
   props.push(dprop('stairs_down', D.far.x+D.far.w-2, D.far.y+D.far.h-2, { name: '아래로 (' + (floor + 1) + '층)', kind: 'stairs_down', flat: 1 }));
   // 횃불: 벽 앞면에 띄엄띄엄
   for (let y = 1; y < dunH - 1; y++) for (let x = 1; x < dunW - 1; x++){
@@ -4076,12 +4156,25 @@ async function goDungeon(floor,fromAbove){
     return true;
   }finally{dunBusy=false;}
 }
-function enterDungeonFromOut(){closeAll();dunTheme='ruins';goDungeon(1);}
-function enterDungeonFromHere(){dunTheme='cave';goDungeon(1);}
+function enterDungeonFromOut(){closeAll();dunTheme='ruins';caveReturn=null;goDungeon(1);}
+function enterDungeonFromHere(){
+  const fs=window.__FD&&__FD.state?__FD.state():null;
+  caveReturn={theme:fs&&fs.theme?fs.theme:(typeof fieldTheme!=='undefined'?fieldTheme:'spring'),leg:fs&&fs.leg?fs.leg:1,legs:fs&&fs.legs?fs.legs:1,x:P.x,y:P.y,dir:P.dir||'front'};
+  dunTheme='cave';goDungeon(1);
+}
 function nextDungeonFloor(){if(!dunBusy)goDungeon(dunFloor+1);}
-function previousDungeonFloor(){
+async function previousDungeonFloor(){
   if(dunBusy)return;
-  if(dunFloor<=1){dunGrid=null;travel('out',[27.3*TS,11.6*TS],'front');return;}
+  if(dunFloor<=1){
+    dunGrid=null;
+    if(dunTheme==='cave'&&caveReturn&&typeof prepareField==='function'){
+      const q=caveReturn;dunBusy=true;
+      try{await prepareField(q.theme,q.leg,q.legs);travel('field',[q.x,q.y+TS*.9],q.dir||'front');}
+      finally{dunBusy=false;}
+      return;
+    }
+    travel('out',[27.3*TS,11.6*TS],'front');return;
+  }
   goDungeon(dunFloor-1,false);
 }
 function openDungeonChest(spot){
@@ -4151,9 +4244,10 @@ window.__DUN={
     return {id,closed,opened:!!m&&m.imgs.front===mobImageSet(id).front,blocked:!!m&&(pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5)),mobLv:m&&m.mobLv};
   },
   go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
-  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor,theme:dunTheme}),
-  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunTheme=s.theme||'ruins';dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
-  state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
+  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor,theme:dunTheme,caveReturn:caveReturn?{...caveReturn}:null}),
+  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunTheme=s.theme||'ruins';caveReturn=s.caveReturn||null;dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
+  restoreEntry:(theme,ret)=>{dunTheme=theme==='cave'?'cave':'ruins';caveReturn=ret||null;return true;},
+  state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),theme:dunTheme,caveReturn:caveReturn?{...caveReturn}:null,busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
     blocked:blocked(P.x,P.y),moves:[[16,0],[-16,0],[0,16],[0,-16]].filter(([dx,dy])=>!blocked(P.x+dx,P.y+dy)).length}),
   spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)])
 };
@@ -4439,7 +4533,7 @@ const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS, mou
 function mountNow(){ return TRADE_MOUNTS[Math.max(0,Math.min(tradeState.mount|0,TRADE_MOUNTS.length-1))]; }
 function cargoMax(){ return mountNow().slots; }
 function mountImg(m,h,extra){ const u=(typeof A!=='undefined'&&A.mounts)?A.mounts[m.id]:''; return u?'<img src="'+u+'" alt="'+m.name+'" style="height:'+h+'px;vertical-align:middle;'+(extra||'')+'">':m.icon; }
-let tradeRegion='town', tradeSel='wheat';
+let tradeRegion='town', tradeSel='wheat', tradeMode='buy';
 
 function tradeRegionDef(k){ return TRADE_REGIONS[k] || TRADE_REGIONS.town; }
 function tradeMod(region,id){ return tradeRegionDef(region).m[id] || 1; }
@@ -4501,92 +4595,103 @@ function buyMount(){
 }
 function tradeMsg(t){ const e=$('tradeSay'); if(e)e.textContent=t; }
 
+function tradeQtyMax(mode,id){
+  const cur=cargoEntry(id),q=tradeQuote(tradeRegion,id);
+  if(mode==='sell')return cur.qty||0;
+  if(!cur.qty&&cargoSlots()>=cargoMax())return 0;
+  return Math.max(0,Math.min(TRADE_STACK_MAX-cur.qty,Math.floor(P.gold/Math.max(1,q.buy))));
+}
+function bindTradePress(el,onTap,onHold){
+  let timer=0,held=false;
+  const clear=()=>{if(timer){clearTimeout(timer);timer=0;}};
+  el.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;held=false;clear();timer=setTimeout(()=>{held=true;timer=0;onHold();},520);});
+  el.addEventListener('pointerup',e=>{const was=held;clear();if(!was)onTap();});
+  el.addEventListener('pointercancel',clear);el.addEventListener('pointerleave',e=>{if(e.buttons)clear();});
+}
+function openTradeQty(mode,id){
+  tradeMode=mode;tradeSel=id;renderTrade();
+  const max=tradeQtyMax(mode,id);if(max<1){tradeMsg(mode==='buy'?'더 살 수 없습니다.':'팔 물건이 없습니다.');return false;}
+  const g=TRADE_BY_ID[id],q=tradeQuote(tradeRegion,id),o=$('tradeQty'),inp=$('tradeQtyInput');
+  $('tradeQtyTitle').textContent=(mode==='buy'?'구매 수량':'판매 수량')+' · '+g.name;
+  $('tradeQtyLine').textContent='1개 '+(mode==='buy'?q.buy:q.sell)+'G · 최대 '+max+'개';
+  inp.min=1;inp.max=max;inp.value=Math.min(10,max);o.classList.add('on');inp.focus();inp.select();return true;
+}
+function closeTradeQty(){const o=$('tradeQty');if(o)o.classList.remove('on');}
 function ensureTradeUI(){
   if($('trade'))return;
   const st=document.createElement('style');
   st.textContent=`
-#trade{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;background:#100b06b8}
-#trade.on{display:flex}
-#trade .tbox{width:min(980px,94vw);height:min(620px,88vh);background:#eadab8;border:4px solid #7b5228;border-radius:18px;box-shadow:0 15px 50px #000a;padding:14px;color:#402915;font-family:sans-serif;display:grid;grid-template-columns:1fr 285px;grid-template-rows:auto 1fr;gap:10px}
-#tradeHead{grid-column:1/3;display:flex;align-items:center;gap:12px;border-bottom:2px solid #b78a4d;padding-bottom:8px}
-#tradeHead b{font-size:21px} #tradeHead #tradeNote b{font-size:13px}
-#tradeHead #tradeNote{font-size:12px;color:#7b5a2e;line-height:1.35;flex:1}
-#tradeHead small{margin-left:auto;font-weight:900;color:#77511f}
-#tradeList{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:7px;overflow:auto;align-content:start;padding-right:4px}
-.tgood{border:2px solid #b58a51;border-radius:11px;background:#f5e9cd;padding:6px;text-align:left;color:#4b321a;min-height:82px}
-.tgood.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}
-.tgood i{font-style:normal;font-size:25px;float:left;margin-right:5px}.tgood b{font-size:13px}.tgood small{display:block;clear:both;font-size:11px;margin-top:6px;line-height:1.35}
-.tgood .hi{color:#b32720}.tgood .lo{color:#24689c}
-#tradeInfo{border-left:2px solid #b78a4d;padding-left:12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;overflow:auto}
-#tradeIcon{font-size:58px;line-height:70px} #tradeName{font-size:20px;font-weight:900} #tradePrice{font-weight:900;font-size:17px}
-#tradeStock{font-size:12px;line-height:1.55;color:#684c2c;min-height:62px}
-#tradeBtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
-#tradeBtns button,#tradeClose{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:7px;font-weight:900}
-#tradeBtns button:disabled{opacity:.35} #tradeClose{margin-top:auto;background:#e8d4ad;color:#50351d}
-#tradeSay{font-size:12px;color:#883d20;min-height:42px;line-height:1.4}
+#trade{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;background:#100b06c9;font-family:sans-serif}#trade.on{display:flex}
+#trade .tbox{width:min(1040px,96vw);height:min(650px,91vh);background:#eadab8;border:4px solid #7b5228;border-radius:16px;box-shadow:0 15px 50px #000a;padding:12px;color:#402915;display:grid;grid-template-rows:auto 1fr auto;gap:9px;box-sizing:border-box}
+#tradeHead{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px;border-bottom:2px solid #b78a4d;padding-bottom:8px}#tradeTitle{font-size:20px}
+#tradeTabs{display:flex;gap:5px}#tradeTabs button{border:2px solid #9a6b34;background:#d6bd8d;color:#4e3218;border-radius:8px;padding:6px 14px;font-weight:900}#tradeTabs button.on{background:#6f3e1f;color:#fff0ce}
+#tradeNote{font-size:11px;color:#77511f;line-height:1.3;overflow:hidden}#tradeHead small{font-weight:900;white-space:nowrap}
+#tradeColumns{display:grid;grid-template-columns:1.35fr .85fr;gap:10px;min-height:0}.tradePane{background:#f4e7c9;border:2px solid #b58a51;border-radius:11px;padding:8px;min-height:0;display:grid;grid-template-rows:auto 1fr}
+.tradePane h3{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between;align-items:center}.tradePane h3 small{font-size:10px;color:#76542d}
+#tradeList,#tradeCargoList{overflow:auto;align-content:start;display:grid;gap:5px;padding-right:2px}#tradeList{grid-template-columns:repeat(5,minmax(74px,1fr))}#tradeCargoList{grid-template-columns:repeat(3,minmax(78px,1fr))}
+.tgood,.tcargo{border:2px solid #b58a51;border-radius:8px;background:#fff4d9;color:#4b321a;min-height:58px;padding:5px;text-align:left;position:relative;overflow:hidden}.tgood.sel,.tcargo.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}.tgood.dim,.tcargo.dim{opacity:.55}
+.tgood i,.tcargo i{font-style:normal;font-size:21px;float:left;margin-right:4px}.tgood b,.tcargo b{font-size:11px;white-space:nowrap}.tgood small,.tcargo small{display:block;clear:both;font-size:9px;line-height:1.25;margin-top:3px}.tgood .hi{color:#b32720}.tgood .lo{color:#24689c}.tempty{border:1px dashed #bda77d;border-radius:8px;min-height:58px;opacity:.45}
+#tradeDetail{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-top:2px solid #b78a4d;padding-top:8px;min-height:86px}#tradeIcon{font-size:36px;width:45px;text-align:center}#tradeName{font-size:16px;font-weight:900}#tradePrice,#tradeStock,#tradeSeen{font-size:10px;line-height:1.35;color:#684c2c}
+#tradeActionBox{display:grid;grid-template-columns:130px 80px;gap:5px;align-items:center}#tradeAction,#tradeClose,#tradeMountBtn{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:8px;font-weight:900}#tradeClose{background:#e8d4ad;color:#50351d}#tradeAction:disabled{opacity:.35}
+#tradeHold{grid-column:1/3;text-align:center;font-size:9px;color:#7d6546}#tradeMount{grid-column:1/4;font-size:10px;color:#5a3d20;border-top:1px solid #c7a875;padding-top:4px;display:flex;gap:8px;align-items:center}#tradeMountTxt{flex:1}#tradeMountBtn{padding:5px 9px;width:auto}
+#tradeSay{grid-column:1/4;font-size:10px;color:#883d20;min-height:14px}
+#tradeQty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1a1009a8;z-index:3}#tradeQty.on{display:flex}#tradeQty .qbox{width:280px;background:#f1dfb8;border:3px solid #795026;border-radius:12px;padding:16px;text-align:center;box-shadow:0 12px 30px #0008}#tradeQtyTitle{font-weight:900;font-size:16px}#tradeQtyLine{font-size:11px;color:#725233;margin:6px 0 10px}#tradeQtyInput{width:110px;font-size:24px;text-align:center;padding:4px;border:2px solid #9b7447;border-radius:8px;background:#fff8e8}#tradeQty .qrow{display:flex;gap:6px;justify-content:center;margin-top:10px}#tradeQty button{border:2px solid #99642c;border-radius:7px;padding:7px 12px;font-weight:900;background:#6f3e1f;color:#fff0ce}#tradeQty button.ghost{background:#e8d4ad;color:#50351d}
 .tradeSummary{margin-top:52px;height:calc(100% - 52px);box-sizing:border-box;overflow:auto;background:linear-gradient(#f3e6c6,#e4cf9f);border:4px solid #7b5228;border-radius:16px;padding:18px 22px;color:#53391d}.tradeSummary h2{margin:0 0 10px}.tradeSummary p{font-size:13px;line-height:1.6}.tradeSummary strong{color:#9a541e}
-.tradeCargo{position:relative;width:100%;height:100%;padding:118px 0 0 80px;box-sizing:border-box;display:grid;grid-template-columns:repeat(7,61px);grid-auto-rows:62px;gap:5px;align-content:start;overflow:hidden}
-.tradeCargo h3{position:absolute;left:0;right:0;top:38px;margin:0;text-align:center;font-size:19px;color:#fff0ce;text-shadow:0 2px 3px #4a1a14}.tradeCargo .tc{border:2px solid #ab8251;border-radius:10px;background:#ead8b5;text-align:center;padding:3px;min-width:0;box-sizing:border-box;overflow:hidden}.tradeCargo .tc.lock{opacity:.28;background:#c9b48c}.tradeCargo .tc i{font-style:normal;font-size:22px}.tradeCargo .tc b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tradeCargo .tc small{font-size:9px;color:#725435}
+.tradeCargo{position:relative;width:100%;height:100%;padding:118px 0 0 80px;box-sizing:border-box;display:grid;grid-template-columns:repeat(7,61px);grid-auto-rows:62px;gap:5px;align-content:start;overflow:hidden}.tradeCargo h3{position:absolute;left:0;right:0;top:38px;margin:0;text-align:center;font-size:19px;color:#fff0ce;text-shadow:0 2px 3px #4a1a14}.tradeCargo .tc{border:2px solid #ab8251;border-radius:10px;background:#ead8b5;text-align:center;padding:3px;min-width:0;box-sizing:border-box;overflow:hidden}.tradeCargo .tc.lock{opacity:.28;background:#c9b48c}.tradeCargo .tc i{font-style:normal;font-size:22px}.tradeCargo .tc b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tradeCargo .tc small{font-size:9px;color:#725435}
 `;
   document.head.append(st);
-  const d=document.createElement('div'); d.id='trade';
-  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><span id="tradeHint"></span><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeList"></div><div id="tradeInfo"><div id="tradeIcon"></div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeBtns"><button data-tb="b1">1개 사기</button><button data-tb="b5">5개 사기</button><button data-tb="b10">10개 사기</button><button data-tb="s1">1개 팔기</button><button data-tb="s5">5개 팔기</button><button data-tb="sa">전부 팔기</button></div><div id="tradeSay"></div><button id="tradeClose">나가기</button></div></div>';
+  const d=document.createElement('div');d.id='trade';
+  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><div id="tradeTabs"><button id="tradeBuyTab" type="button">사기</button><button id="tradeSellTab" type="button">팔기</button></div><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeColumns"><section class="tradePane"><h3>이 마을 물품 <small>짧게 선택 · 길게 수량</small></h3><div id="tradeList"></div></section><section class="tradePane"><h3>내 화물 <small id="tradeHint"></small></h3><div id="tradeCargoList"></div></section></div><div id="tradeDetail"><div id="tradeIcon"></div><div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeSeen"></div></div><div id="tradeActionBox"><button id="tradeAction" type="button">1개 사기</button><button id="tradeClose" type="button">나가기</button><div id="tradeHold">길게 누르면 수량 선택</div></div><div id="tradeMount"><div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn">수레 구매</button></div><div id="tradeSay"></div></div><div id="tradeQty"><div class="qbox"><div id="tradeQtyTitle"></div><div id="tradeQtyLine"></div><input id="tradeQtyInput" type="number" inputmode="numeric" min="1"><div class="qrow"><button id="tradeQtyMax" type="button">최대</button><button id="tradeQtyOk" type="button">확인</button><button class="ghost" id="tradeQtyCancel" type="button">취소</button></div></div></div></div>';
   document.body.append(d);
-  const inf=$('tradeInfo'), cl=$('tradeClose');
-  const seen=document.createElement('div'); seen.id='tradeSeen'; seen.style.cssText='font-size:11px;line-height:1.5;color:#684c2c;width:100%;text-align:left';
-  const mt=document.createElement('div'); mt.id='tradeMount'; mt.style.cssText='width:100%;border-top:2px solid #b78a4d;padding-top:6px;font-size:12px;line-height:1.45;color:#50351d';
-  mt.innerHTML='<div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn" style="margin-top:4px;border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:6px;font-weight:900;width:100%">구매</button>';
-  inf.insertBefore(seen,cl); inf.insertBefore(mt,cl);
-  $('tradeMountBtn').onclick=()=>buyMount();
   d.addEventListener('click',e=>{if(e.target===d)closeTrade();});
-  $('tradeClose').onclick=()=>closeTrade();
-  $('tradeBtns').addEventListener('click',e=>{
-    const k=e.target.dataset.tb;if(!k)return;
-    const c=cargoEntry(tradeSel);
-    if(k==='b1')tradeBuy(tradeSel,1); else if(k==='b5')tradeBuy(tradeSel,5); else if(k==='b10')tradeBuy(tradeSel,10);
-    else if(k==='s1')tradeSell(tradeSel,1); else if(k==='s5')tradeSell(tradeSel,5); else if(k==='sa')tradeSell(tradeSel,c.qty);
-  });
+  $('tradeClose').onclick=()=>closeTrade();$('tradeBuyTab').onclick=()=>{tradeMode='buy';renderTrade();};$('tradeSellTab').onclick=()=>{tradeMode='sell';renderTrade();};
+  $('tradeMountBtn').onclick=()=>buyMount();
+  bindTradePress($('tradeAction'),()=>{const max=tradeQtyMax(tradeMode,tradeSel);if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,1):tradeSell(tradeSel,1);},()=>openTradeQty(tradeMode,tradeSel));
+  $('tradeQtyCancel').onclick=closeTradeQty;$('tradeQty').addEventListener('click',e=>{if(e.target.id==='tradeQty')closeTradeQty();});
+  $('tradeQtyMax').onclick=()=>{$('tradeQtyInput').value=tradeQtyMax(tradeMode,tradeSel);};
+  $('tradeQtyOk').onclick=()=>{const max=tradeQtyMax(tradeMode,tradeSel),n=Math.max(1,Math.min(max,parseInt($('tradeQtyInput').value,10)||1));closeTradeQty();if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,n):tradeSell(tradeSel,n);};
 }
 function openTrade(region){
-  closeAll(); ensureTradeUI(); tradeRegion=TRADE_REGIONS[region]?region:'town'; panel='trade'; $('trade').classList.add('on'); recordSeen(tradeRegion); renderTrade();
+  closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
 }
-function closeTrade(silent){
-  const d=$('trade'); if(d)d.classList.remove('on'); if(panel==='trade')panel=null;
-}
+function closeTrade(silent){closeTradeQty();const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
 function renderTrade(){
-  ensureTradeUI(); const R=tradeRegionDef(tradeRegion);
-  $('tradeTitle').textContent=R.name; $('tradeGold').textContent=P.gold;
-  $('tradeHint').textContent='화물 '+cargoSlots()+'/'+cargoMax()+'칸';
-  { // 이 마을의 성격: 싼 것 / 귀한 것(비싸게 사 주는 것)
-    const ent=Object.entries(R.m), nm=id=>TRADE_BY_ID[id]?TRADE_BY_ID[id].name:id;
-    const cheap=ent.filter(e=>e[1]<=.85).sort((a,b)=>a[1]-b[1]).slice(0,4).map(e=>nm(e[0])).join('·');
-    const dear=ent.filter(e=>e[1]>=1.12).sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>nm(e[0])).join('·');
-    $('tradeNote').innerHTML=tradeRegion==='town'?(dear?'수도 · 사치품을 비싸게 사 줍니다: <b>'+dear+'</b>':''):((cheap?'싼 것 <b>'+cheap+'</b>':'')+(cheap&&dear?' · ':'')+(dear?'귀한 것 <b>'+dear+'</b>':''));
-  }
-  const list=$('tradeList'); list.innerHTML='';
+  ensureTradeUI();const R=tradeRegionDef(tradeRegion),cargoIds=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
+  if(tradeMode==='sell'&&!cargoEntry(tradeSel).qty&&cargoIds.length)tradeSel=cargoIds[0];
+  $('tradeTitle').textContent=R.name;$('tradeGold').textContent=P.gold;$('tradeHint').textContent=cargoSlots()+'/'+cargoMax()+'칸';
+  $('tradeBuyTab').classList.toggle('on',tradeMode==='buy');$('tradeSellTab').classList.toggle('on',tradeMode==='sell');
+  const ent=Object.entries(R.m),nm=id=>TRADE_BY_ID[id]?TRADE_BY_ID[id].name:id;
+  const cheap=ent.filter(e=>e[1]<=.85).sort((a,b)=>a[1]-b[1]).slice(0,3).map(e=>nm(e[0])).join('·');
+  const dear=ent.filter(e=>e[1]>=1.12).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>nm(e[0])).join('·');
+  $('tradeNote').textContent=(cheap?'싼 것 '+cheap:'')+(cheap&&dear?' / ':'')+(dear?'비싸게 사는 것 '+dear:'');
+  const list=$('tradeList');list.innerHTML='';
   for(const g of TRADE_GOODS){
-    const q=tradeQuote(tradeRegion,g.id), c=cargoEntry(g.id), b=document.createElement('button');
-    b.className='tgood'+(tradeSel===g.id?' sel':''); b.type='button';
+    const q=tradeQuote(tradeRegion,g.id),cur=cargoEntry(g.id),card=document.createElement('button');card.type='button';
     const cls=q.mod>=1.18?'hi':q.mod<=.82?'lo':'';
-    b.innerHTML='<i>'+g.icon+'</i><b>'+g.name+'</b><small class="'+cls+'">사 '+q.buy+' / 팔 '+q.sell+(c.qty?' · '+c.qty+'개':'')+'</small>';
-    b.onclick=()=>{tradeSel=g.id;renderTrade();}; list.append(b);
+    card.className='tgood'+(tradeMode==='buy'&&tradeSel===g.id?' sel':'')+(tradeMode==='sell'?' dim':'');
+    card.innerHTML='<i>'+g.icon+'</i><b>'+g.name+'</b><small class="'+cls+'">사 '+q.buy+' / 팔 '+q.sell+(cur.qty?' · 보유 '+cur.qty:'')+'</small>';
+    bindTradePress(card,()=>{tradeMode='buy';tradeSel=g.id;renderTrade();},()=>openTradeQty('buy',g.id));list.append(card);
   }
-  const g=TRADE_BY_ID[tradeSel]||TRADE_GOODS[0], q=tradeQuote(tradeRegion,g.id), c=cargoEntry(g.id);
-  $('tradeIcon').textContent=g.icon; $('tradeName').textContent=g.name;
-  $('tradePrice').textContent='매입 '+q.buy+' · 매각 '+q.sell+' 골드';
-  const allProfit=c.qty?Math.round((q.sell-c.avg)*c.qty):0;
-  $('tradeStock').innerHTML='보유 <b>'+c.qty+'</b>개'+(c.qty?'<br>평균 매입 '+Math.round(c.avg)+' · 지금 전부 팔면 <b>'+(allProfit>=0?'+':'')+allProfit+'</b>':'<br>화물칸에 없습니다.');
-  const btn=[...$('tradeBtns').querySelectorAll('button')];
-  btn[0].disabled=P.gold<q.buy||c.qty>=TRADE_STACK_MAX; btn[1].disabled=P.gold<q.buy||c.qty>=TRADE_STACK_MAX;
-  btn[2].disabled=P.gold<q.buy||c.qty>=TRADE_STACK_MAX; btn[3].disabled=!c.qty; btn[4].disabled=c.qty<1; btn[5].disabled=!c.qty;
-  // 시세 수첩: 다녀온 다른 마을의 같은 품목 가격
-  const rows=[]; let best=null;
-  for(const r in tradeState.seen){ if(r===tradeRegion)continue; const e=tradeState.seen[r].q[g.id]; if(!e)continue; rows.push('<span>'+tradeRegionDef(r).short+' 사 '+e[0]+' / 팔 '+e[1]+'</span>'); if(!best||e[1]>best.s)best={r,s:e[1]}; }
-  $('tradeSeen').innerHTML=rows.length?('<b>수첩</b> · '+rows.join(' · ')+(best&&q.buy?'<br>가장 비싸게 파는 곳: '+tradeRegionDef(best.r).short+' ('+(best.s-q.buy>=0?'+':'')+(best.s-q.buy)+'/개)':'')):'<b>수첩</b> · 아직 다녀온 다른 마을이 없습니다.';
-  // 탈것
-  const m=mountNow(), nx=TRADE_MOUNTS[(tradeState.mount|0)+1], tier=REGION_TIER[tradeRegion]||0;
-  $('tradeMountTxt').innerHTML=mountImg(m,44)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?'<br>다음: '+mountImg(nx,22)+' '+nx.name+' '+nx.slots+'칸 · '+nx.price+'G'+(tier<nx.tier?' ('+nx.tier+'티어 마을부터)':''):'<br>최고 단계');
-  $('tradeMountBtn').style.display=nx?'':'none'; if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
+  const cargo=$('tradeCargoList');cargo.innerHTML='';
+  for(let i=0;i<cargoMax();i++){
+    const id=cargoIds[i];
+    if(!id){const empty=document.createElement('div');empty.className='tempty';cargo.append(empty);continue;}
+    const g=TRADE_BY_ID[id],cur=cargoEntry(id),q=tradeQuote(tradeRegion,id),card=document.createElement('button');card.type='button';
+    card.className='tcargo'+(tradeMode==='sell'&&tradeSel===id?' sel':'')+(tradeMode==='buy'?' dim':'');
+    card.innerHTML='<i>'+g.icon+'</i><b>'+g.name+' ×'+cur.qty+'</b><small>평균 '+Math.round(cur.avg)+'G · 팔 '+q.sell+'G</small>';
+    bindTradePress(card,()=>{tradeMode='sell';tradeSel=id;renderTrade();},()=>openTradeQty('sell',id));cargo.append(card);
+  }
+  const g=TRADE_BY_ID[tradeSel]||TRADE_GOODS[0],q=tradeQuote(tradeRegion,g.id),cur=cargoEntry(g.id);
+  $('tradeIcon').textContent=g.icon;$('tradeName').textContent=g.name;$('tradePrice').textContent='구매 '+q.buy+'G · 판매 '+q.sell+'G';
+  const allProfit=cur.qty?Math.round((q.sell-cur.avg)*cur.qty):0;
+  $('tradeStock').innerHTML='내 화물 <b>'+cur.qty+'</b>개'+(cur.qty?' · 평균 '+Math.round(cur.avg)+'G · 전부 팔면 '+(allProfit>=0?'+':'')+allProfit+'G':'');
+  const rows=[];let best=null;
+  for(const r in tradeState.seen){if(r===tradeRegion)continue;const e=tradeState.seen[r].q[g.id];if(!e)continue;rows.push(tradeRegionDef(r).short+' '+e[0]+'/'+e[1]);if(!best||e[1]>best.s)best={r,s:e[1]};}
+  $('tradeSeen').textContent=rows.length?'수첩 · '+rows.join(' · '):'수첩 · 다른 마을 시세 미확인';
+  const action=$('tradeAction'),max=tradeQtyMax(tradeMode,g.id);action.textContent=tradeMode==='buy'?'1개 사기':'1개 팔기';action.disabled=max<1;
+  const m=mountNow(),nx=TRADE_MOUNTS[(tradeState.mount|0)+1],tier=REGION_TIER[tradeRegion]||0;
+  $('tradeMountTxt').innerHTML=mountImg(m,30)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?' → '+mountImg(nx,20)+' '+nx.name+' '+nx.slots+'칸 / '+nx.price+'G':' · 최고 단계');
+  $('tradeMountBtn').style.display=nx?'':'none';if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
 }
 function tradeSaveData(){ return {cargo:tradeState.cargo,pressure:tradeState.pressure,resetAt:tradeState.resetAt,mount:tradeState.mount|0,seen:tradeState.seen}; }
 function tradeLoadData(d){
