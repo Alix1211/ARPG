@@ -31,7 +31,7 @@ async def main():
 
         # 10건 한도 -> 뒷거래 30/45/60% -> 최대 19건.
         await ev("() => {GUILD.setNow(new Date(2026,0,2,12,0).getTime());GAME.P.lv=15;GAME.setGold(999999);GUILD.debugSetRank(1,0)}")
-        st=await ev("() => GUILD.saveData()");st['todayAccepted']=9;st['bribeCount']=0;st['active']=[];st['board']=st['board'].slice(0,6)
+        st=await ev("() => GUILD.saveData()");st['todayAccepted']=9;st['bribeCount']=0;st['active']=[];st['board']=st['board'][:6]
         await ev("d=>GUILD.loadData(d)",st)
         qid=await ev("() => GUILD.state().board[0].id")
         assert await ev("id=>GUILD.accept(id)",qid)
