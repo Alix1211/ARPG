@@ -18,6 +18,8 @@ async def main():
         errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto(URL); await pg.wait_for_timeout(1000)
         timings=[]
+        final_ends={}
+        final_layouts={}
         for ti,theme in enumerate(THEMES,1):
             st=await enter(pg,theme); timings.append(st['buildMs']); assert st['tier']==ti,(theme,st)
             assert len(st['village'])==0 and st['dungeons']==0,(theme,'intermediate',st)
@@ -26,12 +28,17 @@ async def main():
             assert st['rooms']>=8,(theme,'room-count',st)
             assert st['walkableCells']>=300,(theme,'walkable-area',st)
             assert st['legs']==ti+1,(theme,'random-plus-final-count',st)
+            assert st['props']>=80,(theme,'themed-boundary-props',st)
             await pg.evaluate("([t,l]) => __FD.enter(t,l)",[theme,ti+1]);await pg.wait_for_timeout(700)
             last=await pg.evaluate("() => __FD.state()")
             assert last['leg']==ti+1 and len(last['village'])==2 and last['dungeons']==1,(theme,'last',last)
             assert last['fieldSize']=={'w':48,'h':32},(theme,'fixed-last-size',last)
             assert last['outdoorDungeon'] is False,(theme,'last-must-be-fixed',last)
             assert all(v['x']>35*48 for v in last['village']),(theme,last['village'])
+            final_ends[theme]=(round(last['end']['x'],1),round(last['end']['y'],1))
+            final_layouts[theme]=tuple((p[0],p[1],p[2]) for p in last['layout'])
+        assert len(set(final_ends.values()))>=5,final_ends
+        assert len(set(final_layouts.values()))>=5,final_layouts
         a=await enter(pg,'summer'); layout_a=a['layout']; serial_a=a['serial']
         b=await enter(pg,'summer')
         assert b['serial']>serial_a, (a,b)
@@ -60,6 +67,6 @@ async def main():
         out=await pg.evaluate("() => __FD.state()")
         assert out['map']=='out', out
         assert not errs, errs
-        print('48x48 outdoor dungeon fields + fixed final village/cave + leg exits ok; build ms=',timings)
+        print('7 themed outdoor fields + unique final hubs + leg exits ok; build ms=',timings)
         await browser.close()
 asyncio.run(main())
