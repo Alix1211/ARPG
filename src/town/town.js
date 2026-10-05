@@ -186,9 +186,14 @@ function investStat(key){
   if(!['str','vit','int','mag','dex'].includes(key)||P.statPts<1)return false;
   P.stats[key]=(P.stats[key]||0)+1;P.statPts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
+const SKILL_PREV={fire2:'fire1',fire3:'fire2',ice2:'ice1',ice3:'ice2',bolt2:'bolt1',bolt3:'bolt2',dark2:'dark1',dark3:'dark2',
+  holy2_shield:'holy1_heal',holy3_revive:'holy2_shield',sword2:'sword1',sword3:'sword2',spear2:'spear1',spear3:'spear2',
+  bow2:'bow1',bow3:'bow2',fist2:'fist1',fist3:'fist2'};
+function skillPrereq(id){const prev=SKILL_PREV[id]||null;return {id:prev,ok:!prev||((P.skillLv&&P.skillLv[prev])||0)>=3};}
 function investSkill(id){
   if(!P.skillLv||!(id in P.skillLv)||P.skillPts<1)return false;
   const cur=P.skillLv[id]||0;if(cur>=5)return false;
+  const pre=skillPrereq(id);if(cur<1&&!pre.ok){say('선행 스킬을 3단계까지 올려야 합니다.');return false;}
   P.skillLv[id]=cur+1;P.skillPts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
 function investPassive(key){
@@ -252,6 +257,12 @@ function returnTownPortal(){
   return ok;
 }
 function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,returnFloor:townPortalReturn&&townPortalReturn.dungeon?townPortalReturn.dungeon.floor:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
+let levelNoticeTimer=0;
+function showLevelNotice(txt){
+  const n=$('levelNotice');if(!n)return;
+  n.textContent=txt;n.classList.remove('on');void n.offsetWidth;n.classList.add('on');
+  clearTimeout(levelNoticeTimer);levelNoticeTimer=setTimeout(()=>n.classList.remove('on'),3200);
+}
 function gainExp(amount){
   amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
   P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
@@ -264,7 +275,11 @@ function gainExp(amount){
   }
   if(P.lv>=LEVEL_CAP)P.exp=0;
   const lv=$('lvTxt');if(lv)lv.textContent=P.lv;
-  if(ups){syncLifeUnlocks(false);say('레벨 '+P.lv+'! 능력치 +'+addStat+'P · 스킬 +'+addSkill+'P'+(addLife?' · 생활 +'+addLife+'P':''));}
+  if(ups){
+    syncLifeUnlocks(false);
+    showLevelNotice('LEVEL UP!  Lv'+P.lv+' · 능력 +'+addStat+'P · 스킬 +'+addSkill+'P'+(addLife?' · 생활 +'+addLife+'P':''));
+    say(['좋아, 더 강해졌네!','좋았어! 포인트부터 잘 써야지.','한 단계 올랐네. 어디에 투자할까?'][P.lv%3]);
+  }
   if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
 
@@ -599,7 +614,6 @@ $('tabSell').addEventListener('click', () => setShopMode('sell'));
 let saleConfirm=null;
 function sellAt(idx){
   const row=UI.bagItems().find(x=>x.i===idx);if(!row)return false;if(row.it.locked){$('shopSay').textContent='잠긴 아이템입니다.';return false;}
-  if((row.it.rar||0)>=2&&saleConfirm!==row.it.id){saleConfirm=row.it.id;pickSell(idx,row.it,null);$('buy').textContent='확인 후 팔기';$('shopSay').textContent='희귀 이상 장비입니다. 한 번 더 눌러 팔아 주세요.';return false;}
   const price=sellPrice(row.it),rate=sellRate(row.it);saleConfirm=null;
   UI.removeBagAt(idx);setGold(P.gold+price);sel=null;UI.refresh();renderShop();UI.save();
   if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:row.it.kind,price,count:1});
@@ -699,7 +713,7 @@ function syncBars(){
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}` + (P.shield > 0 ? `  (+${Math.ceil(P.shield)})` : ''); $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
 window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
-  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
+  gainMastery, masteryNeed, masteryBonus, investStat, investSkill, skillPrereq, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings', setOpen:v=>{panel=v;}, swing, say, setMax };
