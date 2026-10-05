@@ -32,7 +32,7 @@ function fieldPropSize(name){
 }
 function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
-let fieldRoute=[], fieldBranches=[], fieldMapW=60, fieldMapH=40;
+let fieldRoute=[], fieldBranches=[], fieldMapW=60, fieldMapH=40; // 야외 던전형 중간 필드 생성 상태
 function routeDist(x,y,pts=fieldRoute){
   let best=1e9;
   for(let i=1;i<pts.length;i++){
