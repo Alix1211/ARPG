@@ -14,10 +14,16 @@ async def main():
         errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
         ev=pg.evaluate
         await pg.goto(URL);await pg.wait_for_timeout(1500)
-        # 스킬 포인트로 배울 수 있어야 한다
+        # 선행 스킬이 없는 것은 바로, 2·3번째는 직전 스킬 Lv3 이후에 배울 수 있어야 한다.
         for sid in SKILLS+['holy2_shield','holy3_revive']:
-            ok=await ev("(id) => { GAME.P.skillLv[id]=0; GAME.P.skillPts=3; const r=GAME.investSkill(id); return [r, UI.skillRank(id)]; }",sid)
-            assert ok==[True,1],(sid,ok)
+            pre=await ev("id => GAME.skillPrereq(id)",sid)
+            if pre['id']:
+                locked=await ev("(x) => { GAME.P.skillLv[x.id]=0; GAME.P.skillLv[x.pre]=2; GAME.P.skillPts=3; return GAME.investSkill(x.id); }",{'id':sid,'pre':pre['id']})
+                assert locked is False,(sid,pre,locked)
+                ok=await ev("(x) => { GAME.P.skillLv[x.id]=0; GAME.P.skillLv[x.pre]=3; GAME.P.skillPts=3; const r=GAME.investSkill(x.id); return [r, UI.skillRank(x.id)]; }",{'id':sid,'pre':pre['id']})
+            else:
+                ok=await ev("(id) => { GAME.P.skillLv[id]=0; GAME.P.skillPts=3; const r=GAME.investSkill(id); return [r, UI.skillRank(id)]; }",sid)
+            assert ok==[True,1],(sid,pre,ok)
             assert await ev("id => UI.assignQuick(0,id) && UI.quickSlots()[0]===id",sid),sid
         for sid in SKILLS:
             await ev("(id) => { GAME.P.skillLv[id]=1; }",sid)
