@@ -36,7 +36,7 @@ function pathPointY(x){ const t = Math.max(0, Math.min(1, (x - 3) / 53)); return
 function nearMainPath(x,y, pad){ return Math.abs(y - pathPointY(x)) < (pad || 2.2); }
 function inTownReserve(x,y){ return x > 8 && x < 17 && y > 4 && y < 12; }
 
-async function makeFieldGround(theme){
+async function makeFieldGround(theme, withVillage=false){
   const w = 60 * TS, h = 40 * TS, c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d'), t = fieldTiles[theme], ims = Object.values(t);
   await waitImages(ims);
@@ -52,14 +52,16 @@ async function makeFieldGround(theme){
   g.strokeStyle = fieldPattern(g, path); g.globalAlpha = 0.93; g.lineWidth = 86; g.stroke();
   g.restore();
 
-  // 작은 마을 예약 구역으로 들어가는 샛길 + 마을 앞 작은 흙광장
-  g.save(); g.lineCap='round'; g.lineJoin='round';
-  g.beginPath(); g.moveTo(13.2*TS,19.7*TS); g.bezierCurveTo(13.0*TS,16.5*TS,12.7*TS,14.0*TS,12.4*TS,11.3*TS);
-  g.strokeStyle=fieldPattern(g,dirt); g.globalAlpha=.42; g.lineWidth=92; g.stroke();
-  g.strokeStyle=fieldPattern(g,path); g.globalAlpha=.92; g.lineWidth=54; g.stroke();
-  g.globalAlpha=.78; g.fillStyle=fieldPattern(g,dirt);
-  g.beginPath(); g.ellipse(12.7*TS,8.9*TS,4.2*TS,2.7*TS,0,0,7); g.fill();
-  g.restore();
+  // 작은 마을은 마지막 구간의 길 끝에만 둔다.
+  if(withVillage){
+    g.save(); g.lineCap='round'; g.lineJoin='round';
+    g.beginPath(); g.moveTo(47.2*TS,8.4*TS); g.bezierCurveTo(48.0*TS,9.6*TS,49.0*TS,10.9*TS,49.6*TS,12.0*TS);
+    g.strokeStyle=fieldPattern(g,dirt); g.globalAlpha=.42; g.lineWidth=92; g.stroke();
+    g.strokeStyle=fieldPattern(g,path); g.globalAlpha=.92; g.lineWidth=54; g.stroke();
+    g.globalAlpha=.78; g.fillStyle=fieldPattern(g,dirt);
+    g.beginPath(); g.ellipse(50.2*TS,12.2*TS,4.5*TS,2.8*TS,0,0,7); g.fill();
+    g.restore();
+  }
   if (t.water && t.sand){
     const spots = [[29,8,2.8,1.5],[48,29,2.4,1.3]];
     for (const q of spots){
@@ -88,7 +90,7 @@ function fieldPropClear(x, y, meta, out){
   }
   return true;
 }
-function randomFieldProps(theme){
+function randomFieldProps(theme, isLast=false){
   const all = A.field.props[theme] || [], out = [];
   const cave = fieldPropMeta(theme,'16_'), camp = fieldPropMeta(theme,'14_'), ruin = fieldPropMeta(theme,'13_'), sign = fieldPropMeta(theme,'15_'), special = fieldPropMeta(theme,'12_');
   for (const p of [
@@ -96,13 +98,13 @@ function randomFieldProps(theme){
     mkFieldProp(camp,20,31,'fire','야영지'),
     mkFieldProp(ruin,38,23,'','무너진 폐허'),
     mkFieldProp(special,46,31,'','이상한 흔적'),
-    mkFieldProp(cave,56,8,'dungeon','필드 동굴 입구')
+    isLast ? mkFieldProp(cave,54.2,4.8,'dungeon','필드 동굴 입구') : null
   ]) if (p) out.push(p);
   const pool = all.filter(x => !/^1[3-6]_/.test(x.name));
   let tries = 0;
   while (out.length < 52 && tries++ < 500){
     const x = 2 + Math.random()*56, y = 2 + Math.random()*36;
-    if (nearMainPath(x,y,2.4) || inTownReserve(x,y) || Math.hypot(x-56,y-8)<4 || Math.hypot(x-3,y-20)<4 || Math.hypot(x-57.5,y-20)<4) continue;
+    if (nearMainPath(x,y,2.4) || (isLast&&x>44&&x<56&&y>8&&y<17) || Math.hypot(x-54.2,y-4.8)<4 || Math.hypot(x-3,y-20)<4 || Math.hypot(x-57.5,y-8)<4) continue;
     const meta = pool[Math.floor(Math.random()*pool.length)]; if (!meta) break;
     if (!fieldPropClear(x,y,meta,out)) continue;
     const p = mkFieldProp(meta,x,y,'',null); if (p) out.push(p);
@@ -115,10 +117,10 @@ function fieldBuilding(k,name,x,y,wt,kind,market){
   return {k,name,x:x*TS,y:y*TS,w,h,door:0,kind:kind||'bld',market:market||null};
 }
 function makeFieldVillage(theme){
-  // 예약 구역 x 8~17, y 4~12. 기존 정제 건물 에셋을 작게 재사용한다.
+  // 마지막 구간의 길 끝 쉼터. 동굴/다음 지역 출구와 겹치지 않게 길 아래쪽에 둔다.
   return [
-    fieldBuilding('shop_tools','상인협회',10.9,8.9,3.7,'trade',theme),
-    fieldBuilding('house_blue','여관',14.7,11.2,3.5,'bld',theme),
+    fieldBuilding('shop_tools','상인협회',48.6,12.0,3.7,'trade',theme),
+    fieldBuilding('house_blue','여관',52.1,14.3,3.5,'bld',theme),
   ];
 }
 
@@ -127,13 +129,13 @@ async function prepareField(theme, leg, legs){
   const t0 = performance.now();
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
   fieldLegs = Math.max(1, legs || FIELD_TIER[fieldTheme] || 1); fieldLeg = Math.max(1, Math.min(leg || fieldLegs, fieldLegs));
-  const lg = fieldLeg, ls = fieldLegs, th = fieldTheme;
-  const bg = await makeFieldGround(th), props = randomFieldProps(th);
+  const lg = fieldLeg, ls = fieldLegs, th = fieldTheme, isLast = lg === ls;
+  const bg = await makeFieldGround(th,isLast), props = randomFieldProps(th,isLast);
   const ex = [];
-  if (lg === ls) ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>askDestination()});
-  else if (lg > 1) ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>goLeg(th,lg-1,ls,'right')});
+  if (lg > 1) ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>goLeg(th,lg-1,ls,'right')});
   else ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'});
-  if (lg < ls) ex.push({x0:58.85*TS,x1:60*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
+  if (isLast) ex.push({x0:58.85*TS,x1:60*TS,y0:5.5*TS,y1:10.5*TS,fn:()=>askDestination()});
+  else ex.push({x0:58.85*TS,x1:60*TS,y0:5.5*TS,y1:10.5*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
   const map = {
     name:FIELD_INFO[th][1] + (ls > 1 ? ' ' + lg + '/' + ls : ''), market:th, map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini,
     blds:lg === ls ? makeFieldVillage(th) : [], props, npcs:[],
@@ -144,11 +146,11 @@ async function prepareField(theme, leg, legs){
 }
 async function goLeg(theme, leg, legs, side){
   if (legBusy || traveling) return false; legBusy = true;
-  try { const m = await prepareField(theme, leg, legs); travel('field', side === 'right' ? [56.8*TS,20*TS] : m.spawn, 'side'); return true; }
+  try { const m = await prepareField(theme, leg, legs); travel('field', side === 'right' ? [56.8*TS,8*TS] : m.spawn, 'side'); return true; }
   finally { legBusy = false; }
 }
 function askDestination(){
-  if (panel || traveling) return; P.x += 70; openRegionSelect('village');
+  if (panel || traveling) return; P.x -= 70; openRegionSelect('village');
 }
 function ensureRegionUI(){
   if ($('regionPick')) return;
