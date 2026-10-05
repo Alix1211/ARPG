@@ -29,7 +29,12 @@
     window.ARPG_BACKUP_RESTORING=true;
     try{
       for(const k of Object.keys(localStorage))if(k.startsWith('arpg_'))localStorage.removeItem(k);
-      for(const [k,v] of Object.entries(all))localStorage.setItem(k,v);
+      for(const [k,v] of Object.entries(all)){
+        localStorage.setItem(k,v);
+        // 앱 브리지 쪽 저장도 즉시 같은 값으로 맞춘다. 브라우저 저장만 바뀐 뒤 reload 되며
+        // 앱의 더 최신 기본 저장이 다시 덮어쓰는 복원 회귀를 막는다.
+        try{bridge.put(k,String(v));}catch(e){}
+      }
       location.reload();
     }catch(e){message('기기 저장을 갱신하지 못했습니다. 앱을 완전히 껐다 켜 주세요.');}
   };
