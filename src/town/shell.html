@@ -79,6 +79,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .slot{position:absolute;border:0;padding:6px;background:transparent;border-radius:10px}
 .slot img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 2px #0008)}
 .slot.has{box-shadow:inset 0 0 0 2px var(--rc),0 0 8px -2px var(--rc)}
+.locktag{position:absolute;right:2px;bottom:2px;width:18px;height:18px;border-radius:50%;background:#1d2734dd;color:#fff;font:900 12px/18px sans-serif;text-align:center;pointer-events:none;z-index:3}
+.bagPages{position:absolute;left:0;right:0;top:505px;display:flex;justify-content:center;gap:8px;z-index:3}.bagDot{width:9px;height:9px;padding:0;border:1px solid #fff9;border-radius:50%;background:#ffffff55;box-shadow:0 1px 2px #0008}.bagDot.on{background:#fff;transform:scale(1.2)}
 .slot.sel{box-shadow:inset 0 0 0 3px #ffe08a,0 0 12px #ffd34d}
 .slab{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);white-space:nowrap;font-size:12px;font-weight:900;color:#f6e7c6;background:#2a160bcc;border-radius:6px;padding:0 5px}
 .slab.hide{display:none}
@@ -339,7 +341,7 @@ html.app #fs{display:none}
   <div id="shopMarket"></div>
   <div id="grid"></div>
   <div id="info"><img id="infoIc" alt=""><div id="infoName"></div><div id="infoSlot"></div><div id="infoPrice"></div>
-    <button class="btn" id="buy" type="button">사기</button><div id="shopSay"></div><button class="btn ghost" type="button" data-close>나가기</button></div></div></div>
+    <button class="btn" id="buy" type="button">사기</button><button class="btn" id="buy10" type="button" hidden>10개 사기</button><button class="btn ghost" id="sellAll" type="button" hidden>일괄판매</button><div id="shopSay"></div><button class="btn ghost" type="button" data-close>나가기</button></div></div></div>
 <div id="char"><div id="charWrap">
   <div id="tabs"><button type="button" data-tab="equip" id="tabEq"><b>장비</b></button><button type="button" data-tab="stat" id="tabSt"><b>능력치</b></button><button type="button" data-tab="skill" id="tabSk"><b>스킬</b></button><button type="button" data-tab="trade" id="tabTr"><b>무역품</b></button></div>
   <button id="charClose" type="button" aria-label="닫기"></button>
