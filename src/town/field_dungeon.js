@@ -16,13 +16,13 @@ const monsters = [], dropsLoot = [], enemyShots = [], enemyHazards = [];
 const dropImgs = {};
 const FIELD_TIER={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
 const FIELD_LAYOUT={
-  spring:{start:[2.5,16],end:[44.5,7],curve:[13,14,27,22],village:[39.4,10.8,43.1,12.8],cave:[44,4.2],camp:[15.5,24],ruin:[28.5,18.5],special:[36,24],sign:[4.2,15.4]},
-  summer:{start:[2.5,18],end:[44.5,9],curve:[12,11,27,24],village:[38.7,12.6,42.7,14.5],cave:[43.7,5.0],camp:[13.5,24.8],ruin:[25.5,8.0],special:[33.5,23.8],sign:[4.0,17.4]},
-  autumn:{start:[2.5,14],end:[44.5,20],curve:[13,20,28,9],village:[38.8,17.0,42.8,19.0],cave:[43.8,23.5],camp:[14.0,7.0],ruin:[27.5,23.8],special:[34.5,8.0],sign:[4.0,13.4]},
-  winter:{start:[2.5,18],end:[44.5,6.5],curve:[15,23,29,12],village:[38.5,10.6,42.4,12.8],cave:[43.8,3.8],camp:[13.2,9.0],ruin:[27.0,24.0],special:[35.5,21.5],sign:[4.1,17.3]},
-  ice:{start:[2.5,13],end:[44.5,18],curve:[13,7,29,24],village:[38.5,16.0,42.5,18.0],cave:[43.7,22.0],camp:[14.0,24.0],ruin:[26.5,6.5],special:[35.0,9.0],sign:[4.0,12.4]},
-  volcano:{start:[2.5,20],end:[44.5,8],curve:[12,13,29,25],village:[38.7,11.6,42.7,13.5],cave:[43.8,4.5],camp:[12.8,25.0],ruin:[26.5,8.5],special:[35.5,24.0],sign:[4.0,19.4]},
-  swamp:{start:[2.5,17],end:[44.5,13],curve:[13,24,29,7],village:[38.4,14.8,42.4,16.8],cave:[43.8,18.2],camp:[13.3,7.5],ruin:[27.5,24.0],special:[34.0,6.5],sign:[4.0,16.4]}
+  spring:{start:[2.5,16],end:[47.1,7],curve:[13,14,27,22],village:[39.4,10.8,43.1,12.8],cave:[44,4.2],camp:[15.5,24],ruin:[28.5,18.5],special:[36,24],sign:[4.2,15.4]},
+  summer:{start:[2.5,18],end:[47.1,9],curve:[12,11,27,24],village:[38.7,12.6,42.7,14.5],cave:[43.7,5.0],camp:[13.5,24.8],ruin:[25.5,8.0],special:[33.5,23.8],sign:[4.0,17.4]},
+  autumn:{start:[2.5,14],end:[47.1,20],curve:[13,20,28,9],village:[38.8,17.0,42.8,19.0],cave:[43.8,23.5],camp:[14.0,7.0],ruin:[27.5,23.8],special:[34.5,8.0],sign:[4.0,13.4]},
+  winter:{start:[2.5,18],end:[47.1,6.5],curve:[15,23,29,12],village:[38.5,10.6,42.4,12.8],cave:[43.8,3.8],camp:[13.2,9.0],ruin:[27.0,24.0],special:[35.5,21.5],sign:[4.1,17.3]},
+  ice:{start:[2.5,13],end:[47.1,18],curve:[13,7,29,24],village:[38.5,16.0,42.5,18.0],cave:[43.7,22.0],camp:[14.0,24.0],ruin:[26.5,6.5],special:[35.0,9.0],sign:[4.0,12.4]},
+  volcano:{start:[2.5,20],end:[47.1,8],curve:[12,13,29,25],village:[38.7,11.6,42.7,13.5],cave:[43.8,4.5],camp:[12.8,25.0],ruin:[26.5,8.5],special:[35.5,24.0],sign:[4.0,19.4]},
+  swamp:{start:[2.5,17],end:[47.1,13],curve:[13,24,29,7],village:[38.4,14.8,42.4,16.8],cave:[43.8,18.2],camp:[13.3,7.5],ruin:[27.5,24.0],special:[34.0,6.5],sign:[4.0,16.4]}
 };
 const FIELD_POI={
   spring:{start:['15_','지역 이정표'],camp:['14_','야영지'],ruin:['13_','무너진 폐허'],special:['12_','버섯 군락']},
