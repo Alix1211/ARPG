@@ -145,7 +145,8 @@ function villageNpc(shop,name,title,line,x,y,market){
 }
 let fieldVillageReturn=null;
 async function prepareFieldVillage(theme,returnState){
-  theme=theme in FIELD_INFO?theme:'spring';fieldVillageReturn=returnState||fieldVillageReturn;
+  theme=theme in FIELD_INFO?theme:'spring';fieldTheme=theme;fieldVillageReturn=returnState||fieldVillageReturn;
+  if(fieldVillageReturn){fieldLegs=Math.max(1,fieldVillageReturn.legs||FIELD_TIER[theme]||1);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
   const bg=await makeFieldVillageGround(theme);
   const b1=fieldBuilding('cottage_thatch','마을집',5.7,7.2,4.0,'bld',theme);b1.noSpot=1;
   const b2=fieldBuilding('house_blue','마을집',26.3,7.2,4.0,'bld',theme);b2.noSpot=1;
