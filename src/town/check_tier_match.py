@@ -86,7 +86,7 @@ def static_checks():
     print('승인표 180장+신규4장 / 몬스터 V2 53종 4방향 아틀라스 정상')
 
 
-def check_spawn(ms, tier, dungeon=False, floor=0):
+def check_spawn(ms, tier, dungeon=False, floor=0, cave=False):
     assert ms, (tier, floor)
     allowed = set(DATA['dungeonPools' if dungeon else 'fieldPools'][tier-1])
     allowed.update(DATA['dungeonElites' if dungeon else 'fieldElites'][tier-1])
@@ -107,7 +107,7 @@ def check_spawn(ms, tier, dungeon=False, floor=0):
         role = m['bossRole'] if m['rank'] == 'boss' else m['rank']
         rank = DATA['ranks'][role]
         part = (floor-1) % 3 if floor else 0
-        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100
+        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100*(2 if cave else 1)
         assert m['maxHp'] == expected_hp, (m, expected_hp)
         assert m['exp'] == math.floor(2*DATA['scales']['exp'][tier-1]*rank['exp']+.5)*100, m
         assert m['rank'] == DATA['monsters'][m['type']]['rank'], m
@@ -206,7 +206,7 @@ async def runtime_checks():
         await pg.evaluate("__DUN.setTheme('cave')")
         for floor in [1,7,15,21]:
             ms = await pg.evaluate("async f=>{await __DUN.go(f);__DUN.respawn();return __FD.debugMonsters();}", floor)
-            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor)
+            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor, cave=True)
         await pg.evaluate("__DUN.setTheme('ruins')")
         for tier in range(2,8):
             mimic = None
