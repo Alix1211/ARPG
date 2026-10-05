@@ -34,7 +34,7 @@ function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
 function pathPointY(x){ const t = Math.max(0, Math.min(1, (x - 3) / 53)); return 20 - 12 * t + Math.sin(t * Math.PI * 2) * 3.1; }
 function nearMainPath(x,y, pad){ return Math.abs(y - pathPointY(x)) < (pad || 2.2); }
-function inTownReserve(x,y){ return x > 8 && x < 17 && y > 4 && y < 12; }
+function inTownReserve(x,y){ return fieldLeg===fieldLegs && x > 44 && x < 56 && y > 8 && y < 17; }
 
 async function makeFieldGround(theme, withVillage=false){
   const w = 60 * TS, h = 40 * TS, c = document.createElement('canvas'); c.width = w; c.height = h;
