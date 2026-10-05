@@ -32,7 +32,7 @@ function questNpcAction(n){
     if(s&&['talk','deliver'].includes(s.type)&&n.no===s.npc&&questMapMatches(s))return {q,step:s,start:false};
   }
   for(const q of ALL_QUESTS)if(mainQuestState.active[q.id]&&q.start.npc===n.no)return {q,step:questStep(q),start:false,waiting:true};
-  for(const q of ALL_QUESTS)if(questAvailable(q)&&q.start.npc===n.no&&questMapMatches(q.start))return {q,start:true};
+  for(const q of ALL_QUESTS)if(questAvailable(q)&&q.start.npc===n.no&&(questMapMatches(q.start)||n.questStartAlias===q.start.map))return {q,start:true};
   return null;
 }
 function questMarker(n){const a=questNpcAction(n);return a?(a.start?'!':'?'):'';}
@@ -57,17 +57,18 @@ function questMiniTargets(){
       const p=questPoint(s);if(p)add(p.x,p.y,q.id,'point');
     }
   }
-  if(!activeMain&&MAP==='town'){
+  if(!activeMain){
     const next=MAIN_QUESTS.find(q=>questAvailable(q));
     if(next){
-      const n=questNpc(next.start.npc);if(n)add(n.x,n.y,next.id,'start');
+      const n=questNpc(next.start.npc);
+      if(n&&(questMapMatches(next.start)||n.questStartAlias===next.start.map))add(n.x,n.y,next.id,'start');
     }
   }
   return out;
 }
 function questAccept(id){
   const q=questDef(id),n=q&&questNpc(q.start.npc);
-  if(!q||!questAvailable(q)||!questMapMatches(q.start)||!n||Math.hypot(P.x-n.x,P.y-n.y)>90)return false;
+  if(!q||!questAvailable(q)||!n||!(questMapMatches(q.start)||n.questStartAlias===q.start.map)||Math.hypot(P.x-n.x,P.y-n.y)>90)return false;
   const reward=JSON.parse(JSON.stringify(q.reward||{}));
   reward.exp=Math.max(1,Math.round(expNeed(P.lv)*(reward.expRatio||(questKind(q)==='main'?.32:.18))));
   mainQuestState.active[id]={step:0,progress:0,reward};questSave();questCheckVisit();return true;
