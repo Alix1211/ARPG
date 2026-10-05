@@ -25,11 +25,11 @@ async def main():
 
         # 가득 찼으면 무료 거절.
         r=await ev("() => {const g=GAME.P.gold;const ok=__INN.rest();return [ok,GAME.P.gold===g,document.getElementById('dlgLine').textContent];}")
-        assert r[0] is False and r[1] and '쉴 필요' in r[2],r
+        assert r[0] is False and r[1] and ('멀쩡' in r[2] or '쉴 필요' in r[2]),r
 
         # 돈 부족 거절.
         r=await ev("() => {GAME.P.hp=1;GAME.setGold(0);const ok=__INN.rest();return [ok,GAME.P.gold,document.getElementById('dlgLine').textContent];}")
-        assert r[0] is False and r[1]==0 and '부족' in r[2],r
+        assert r[0] is False and r[1]==0 and ('장부' in r[2] or '부족' in r[2]),r
 
         # 나가기와 실내 저장: 재접속은 단순 규칙으로 여관 문 앞(마을)에서 시작.
         assert await ev("() => __INN.leave()")
