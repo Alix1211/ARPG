@@ -185,7 +185,7 @@ function villageNpc(shop,name,title,line,x,y,market){
 let fieldVillageReturn=null;
 async function prepareFieldVillage(theme,returnState){
   theme=theme in FIELD_INFO?theme:'spring';fieldTheme=theme;fieldVillageReturn=returnState||fieldVillageReturn;
-  if(fieldVillageReturn){fieldLegs=Math.max(1,fieldVillageReturn.legs||FIELD_TIER[theme]||1);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
+  if(fieldVillageReturn){const minLegs=(FIELD_TIER[theme]||1)+1;fieldLegs=Math.max(minLegs,fieldVillageReturn.legs||0);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
   const bg=await makeFieldVillageGround(theme);
   const b1=fieldBuilding('cottage_thatch','마을집',5.7,7.2,4.0,'bld',theme);b1.noSpot=1;
   const b2=fieldBuilding('house_blue','마을집',26.3,7.2,4.0,'bld',theme);b2.noSpot=1;
@@ -220,7 +220,7 @@ async function leaveFieldVillage(){
 async function prepareField(theme, leg, legs){
   const t0 = performance.now();
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
-  fieldLegs = Math.max(1, legs || FIELD_TIER[fieldTheme] || 1); fieldLeg = Math.max(1, Math.min(leg || fieldLegs, fieldLegs));
+  const minLegs=(FIELD_TIER[fieldTheme]||1)+1; fieldLegs=Math.max(minLegs,legs||0); fieldLeg=Math.max(1,Math.min(leg||1,fieldLegs));
   const lg = fieldLeg, ls = fieldLegs, th = fieldTheme, isLast = lg === ls;
   const bg=await makeFieldGround(th,isLast),props=randomFieldProps(th,isLast,bg),start=bg.start,end=bg.end;
   const ex=[];
@@ -261,8 +261,8 @@ function regionUnlockInfo(theme){
   return {open:P.lv>=level||completed.includes(quest),level,quest};
 }
 function regionBtnHtml(r){
-  const n=FIELD_TIER[r[0]]||1,u=regionUnlockInfo(r[0]);
-  return r[1]+'<small>'+r[2]+' · 길 '+n+'칸'+(u.open?'':' · 잠김 (Lv'+u.level+' 또는 이야기 진행)')+'</small>';
+  const n=(FIELD_TIER[r[0]]||1)+1,u=regionUnlockInfo(r[0]);
+  return r[1]+'<small>'+r[2]+' · '+(n-1)+'개 야외길 + 마지막 거점'+(u.open?'':' · 잠김 (Lv'+u.level+' 또는 이야기 진행)')+'</small>';
 }
 function fillRegionGrid(mode){
   const gr=$('regionGrid'); gr.innerHTML='';
