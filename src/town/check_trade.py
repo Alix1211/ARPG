@@ -50,25 +50,31 @@ async def main():
         g_after_sell=await pg.evaluate("() => GAME.P.gold")
         assert g_after_sell > 1000, (g_after_buy,g_after_sell)
 
-        # 모든 필드에 상인협회 + 여관이 있고, 협회 지역키가 맞는지
+        # 모든 필드 마지막 칸에는 작은 마을 입구가 있고, 내부 마을이 같은 구조로 열린다.
         for th in THEMES:
             await pg.evaluate("(th) => __FD.enter(th)", th)
             await pg.wait_for_timeout(650)
             st=await pg.evaluate("() => __FD.state()")
             assert st['map']=='field' and st['theme']==th, st
             assert len(st['village'])==2, (th,st['village'])
-            assoc=[x for x in st['village'] if x['kind']=='trade']
-            assert len(assoc)==1 and assoc[0]['market']==th, (th,st['village'])
+            ent=[x for x in st['village'] if x['kind']=='field_village']
+            assert len(ent)==1 and ent[0]['market']==th, (th,st['village'])
 
-        # 실제 필드 협회 건물 앞에서 상호작용하면 거래창이 열린다.
-        v=await pg.evaluate("() => __FD.state().village.find(x=>x.kind==='trade')")
+        # 실제 필드 마을 입구로 들어가 교역상에게 말을 걸면 새 상점형 교역창이 열린다.
+        v=await pg.evaluate("() => __FD.state().village.find(x=>x.kind==='field_village')")
         await pg.evaluate("(v) => { GAME.P.x=v.x; GAME.P.y=v.y; }", v)
         await pg.wait_for_timeout(120)
         near=await pg.evaluate("() => GAME.near() && ({kind:GAME.near().kind,market:GAME.near().market})")
-        assert near and near['kind']=='trade' and near['market']=='swamp', near
-        await pg.evaluate("() => GAME.act()")
-        await pg.wait_for_timeout(80)
+        assert near and near['kind']=='field_village' and near['market']=='swamp', near
+        await pg.evaluate("() => GAME.act()"); await pg.wait_for_timeout(900)
+        assert await pg.evaluate("() => __FD.state().map")=='fieldvillage'
+        await pg.evaluate("() => { GAME.P.x=22.8*48; GAME.P.y=11*48+6; }"); await pg.wait_for_timeout(150)
+        near=await pg.evaluate("() => GAME.near() && ({kind:GAME.near().kind,shop:GAME.near().npc&&GAME.near().npc.shop})")
+        assert near and near['kind']=='npc' and near['shop']=='trade', near
+        await pg.evaluate("() => GAME.act()"); await pg.wait_for_timeout(80)
+        await pg.click('#dlgTrade'); await pg.wait_for_timeout(120)
         assert await pg.evaluate("() => document.getElementById('trade').classList.contains('on')")
+        assert await pg.evaluate("() => !!document.getElementById('tradeCargoList') && !!document.getElementById('tradeBuyTab') && !!document.getElementById('tradeSellTab')")
 
         assert not errs, errs
         print('trade ok', q, g_after_buy, g_after_sell)
