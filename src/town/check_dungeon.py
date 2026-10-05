@@ -41,10 +41,16 @@ async def main():
 
         # 필드 동굴 1층에서 위로 나오면 성 밖 던전 입구가 아니라 들어왔던 필드로 돌아간다.
         await ev("() => __FD.enter('summer',2)"); await pg.wait_for_timeout(900)
-        await ev("() => { GAME.P.x=50*48; GAME.P.y=10*48; enterDungeonFromHere(); }"); await pg.wait_for_timeout(900)
+        await ev("() => __DUN.restoreEntry('cave',{theme:'summer',leg:2,legs:2,x:50*48,y:10*48,dir:'front'})")
+        ok=await ev("() => __DUN.go(1)"); assert ok is True,ok
+        await pg.wait_for_timeout(900)
         st=await ev("() => __DUN.state()")
         assert st['map']=='dungeon' and st['theme']=='cave' and st['floor']==1,st
-        await ev("() => previousDungeonFloor()"); await pg.wait_for_timeout(1000)
+        su=await ev("() => __DUN.spots().find(s=>s[0]==='stairs_up')")
+        assert su,su
+        await ev("(s)=>{__P.x=s[1];__P.y=s[2];}",su)
+        await pg.wait_for_timeout(120)
+        await pg.keyboard.press('e'); await pg.wait_for_timeout(1000)
         fs=await ev("() => __FD.state()")
         assert fs['map']=='field' and fs['theme']=='summer' and fs['leg']==2,fs
 
