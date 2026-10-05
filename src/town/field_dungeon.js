@@ -159,19 +159,36 @@ function ensureRegionUI(){
   document.body.append(o);
   o.addEventListener('click',e=>{ if(e.target===o) closeRegionSelect(); });
 }
-function regionBtnHtml(r){ const n=FIELD_TIER[r[0]]||1; return r[1]+'<small>'+r[2]+' · 길 '+n+'칸</small>'; }
+function regionUnlockInfo(theme){
+  const tier=FIELD_TIER[theme]||1;
+  if(tier<=1)return {open:true,level:1,quest:null};
+  const level=(tier-1)*10,quest='MAIN_'+String((tier-1)*10).padStart(3,'0');
+  const completed=window.QUEST&&QUEST.state?QUEST.state().completed:[];
+  return {open:P.lv>=level||completed.includes(quest),level,quest};
+}
+function regionBtnHtml(r){
+  const n=FIELD_TIER[r[0]]||1,u=regionUnlockInfo(r[0]);
+  return r[1]+'<small>'+r[2]+' · 길 '+n+'칸'+(u.open?'':' · 잠김 (Lv'+u.level+' 또는 이야기 진행)')+'</small>';
+}
 function fillRegionGrid(mode){
   const gr=$('regionGrid'); gr.innerHTML='';
-  $('regionNote').textContent = mode==='village' ? '목적지 티어와 같은 수의 길(필드)을 지나갑니다. 지나는 길의 몬스터도 목적지 티어입니다.' : '시험판에서는 7개 지역을 모두 열어 두었습니다. 목적지 티어만큼 길(필드)을 지나갑니다.';
+  $('regionNote').textContent = mode==='village' ? '이동 가능한 지역만 선택할 수 있습니다. 다음 지역은 레벨 또는 이야기 진행으로 열립니다.' : '봄 초원부터 시작합니다. 다음 지역은 10레벨 단위 또는 이야기 진행으로 순서대로 열립니다.';
   if (mode==='village'){ const b=document.createElement('button'); b.type='button'; b.dataset.theme='town'; b.innerHTML='큰 마을<small>바로 돌아갑니다</small>'; b.onclick=()=>{ closeRegionSelect(); returnFromField(); }; gr.append(b); }
-  for (const r of FIELD_THEMES){ const b=document.createElement('button'); b.type='button'; b.dataset.theme=r[0]; b.innerHTML=regionBtnHtml(r); if(mode==='village'&&r[0]===fieldTheme) b.disabled=true; b.onclick=()=>selectRegion(r[0],b); gr.append(b); }
+  for (const r of FIELD_THEMES){
+    const b=document.createElement('button'),u=regionUnlockInfo(r[0]); b.type='button'; b.dataset.theme=r[0]; b.innerHTML=regionBtnHtml(r);
+    if(!u.open||(mode==='village'&&r[0]===fieldTheme)) b.disabled=true;
+    b.onclick=()=>selectRegion(r[0],b); gr.append(b);
+  }
 }
 function openRegionSelect(mode){ closeAll(); ensureRegionUI(); fillRegionGrid(mode); panel='region'; $('regionPick').classList.add('on'); }
 function closeRegionSelect(silent){ const o=$('regionPick'); if(o) o.classList.remove('on'); if(panel==='region') panel=null; }
 async function selectRegion(theme, btn){
+  const unlock=regionUnlockInfo(theme);
+  if(!unlock.open){say('아직 갈 수 없는 지역입니다. Lv'+unlock.level+' 또는 이야기 진행이 필요합니다.');return false;}
   ensureRegionUI(); const bs=[...$('regionGrid').querySelectorAll('button')]; bs.forEach(x=>x.disabled=true); const keep=btn&&btn.innerHTML; if(btn) btn.textContent='길을 확인하는 중…';
   try { const m=await prepareField(theme,1); closeRegionSelect(); travel('field',m.spawn,'side'); }
-  finally { bs.forEach(x=>{x.disabled=false;}); if(btn&&keep) btn.innerHTML=keep; }
+  finally { fillRegionGrid(MAP==='field'?'village':'field'); if(btn&&keep) btn.innerHTML=keep; }
+  return true;
 }
 function returnFromField(){ travel('out',[2.2*TS,11.4*TS],'side'); }
 
@@ -730,5 +747,5 @@ window.__FD={
   testSpawn(id,dx,dy){const m=createMonster(id,P.x+dx,P.y+dy);m.stun=99;monsters.push(m);return monsters.indexOf(m);},   // 연출 확인용
   testOp(i,op,a){const m=monsters[i];if(!m)return false;if(op==='hit')hitMonster(m,[a||1,0],true,1);else if(op==='kill')killMonster(m);else if(op==='act')monAct(m,a,.5,1,0);else if(op==='clear'){for(const x of monsters)x.removed=true;}else if(op==='go'){m.stun=0;}return true;},
   hurtTest(v){rawPlayerDamage(v);return P.hp;},   // 검사용: 방어 계산 후 직접 피해
-  respawn:()=>spawnFieldMonsters(fieldTheme),rest:restAtCamp,prepareField,openRegionSelect
+  respawn:()=>spawnFieldMonsters(fieldTheme),rest:restAtCamp,prepareField,openRegionSelect,regionUnlocked:t=>regionUnlockInfo(t)
 };
