@@ -364,7 +364,7 @@ inn_props = [
     _inn_prop('cabinet','int_36',12.0,6.75,1.35,.78,.48),
 ]
 _toby = next(n for n in npcs if n['no'] == 5)
-inn_npcs = [dict(k='npc_05', no=5, name='토비', title='여관 주인', x=9.5*TS, y=3.02*TS,
+inn_npcs = [dict(k='npc_05', no=5, name='토비', title='여관 주인', x=9.5*TS, y=4.35*TS,
                  w=_toby['w'], h=_toby['h'], line='어서 와요~ 잠깐 쉬었다 가세요.', shop='inn', at=None)]
 INN_BACK = [7.0*TS, 15.85*TS]
 INN = dict(
@@ -472,7 +472,14 @@ for k, name, cx, by, wt, col, kind in outmap.OUT_PROPS:
     oprops.append(dict(k=key, path=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, cw=col[0] if col else 0, cd=(col[1] if col else 0) * TS,
                        tree=kind == 'tree', kind=kind))
 onpcs = []
+_liner = next(n for n in npcs if n['no'] == 1)
 for k, name, title, cx, by, hh, line, act in outmap.OUT_NPCS:
+    if k == 'guard_cap':
+        # 성 안쪽 라이너와 동일 인물. 퀘스트 접근성을 위해 성 밖 갈림길에도 중복 배치한다.
+        onpcs.append(dict(k=_liner['k'], no=1, name='라이너', title='성문 경비병', x=cx*TS, y=by*TS,
+                          w=_liner['w'], h=_liner['h'], line='성 안에서도 봤겠지만, 밖에선 길부터 확인하십시오.',
+                          shop=None, go=None, at=None, questStartAlias='town'))
+        continue
     im = Image.open(R + f'npc_guard/{k}.png').convert('RGBA'); w = hh * im.width / im.height
     if k not in assets: assets[k] = enc(im.resize((round(w * SCALE), round(hh * SCALE)), Image.LANCZOS), 88)
     pt = im.copy(); pt.thumbnail((520, 600), Image.LANCZOS); PORT[k] = enc(pt, 88)
