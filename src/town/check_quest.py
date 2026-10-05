@@ -203,6 +203,12 @@ async def main():
 
         assert await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_')).length")==10
 
+        # 메인 레벨은 권장치일 뿐 하드게이트가 아니다. Lv1에서도 MAIN_002 완료 뒤 MAIN_003 시작 NPC가 미니맵에 잡혀야 한다.
+        await ev("""() => {QUEST.loadData({schema:3,active:{},completed:['MAIN_001','MAIN_002'],items:{},visited:[],flags:{}});GAME.P.lv=1;}""")
+        await town()
+        mini=await ev('() => QUEST.minimapTargets()')
+        assert any(x['id']=='MAIN_003' and x['kind']=='start' for x in mini),mini
+
         # 새 장면/보스 타입 단독 회귀 확인: 임의 상태를 주입하고 실제 엔진으로 진행.
         await ev("""() => QUEST.loadData({schema:3,active:{MAIN_015:{step:0,progress:0,reward:{gold:1,exp:1}}},completed:Array.from({length:14},(_,i)=>'MAIN_'+String(i+1).padStart(3,'0')),items:{},visited:[],flags:{}})""")
         await ev('() => {GAME.P.lv=70;}')
