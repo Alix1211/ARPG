@@ -23,17 +23,19 @@ async def main():
             if ti>1:
                 assert len(st['village'])==0 and st['dungeons']==0,(theme,'intermediate',st)
                 assert st['fieldSize']=={'w':48,'h':48},(theme,'outdoor-size',st)
-                assert st['routePoints']>=7 and st['branches']==2,(theme,'outdoor-route',st)
-                assert st['routeLength']>st['routeDirect']*1.25,(theme,'route-too-straight',st)
+                assert st['outdoorDungeon'] is True,(theme,'outdoor-dungeon',st)
+                assert st['rooms']>=8,(theme,'room-count',st)
+                assert st['walkableCells']>=300,(theme,'walkable-area',st)
                 await pg.evaluate("([t,l]) => __FD.enter(t,l)",[theme,ti]);await pg.wait_for_timeout(700)
                 last=await pg.evaluate("() => __FD.state()")
             else:
                 last=st
             assert last['leg']==ti and len(last['village'])==2 and last['dungeons']==1,(theme,'last',last)
             assert last['fieldSize']=={'w':60,'h':40},(theme,'fixed-last-size',last)
+            assert last['outdoorDungeon'] is False,(theme,'last-must-be-fixed',last)
             assert all(v['x']>44*48 for v in last['village']),(theme,last['village'])
-        a=await enter(pg,'spring'); layout_a=a['layout']; serial_a=a['serial']
-        b=await enter(pg,'spring')
+        a=await enter(pg,'summer'); layout_a=a['layout']; serial_a=a['serial']
+        b=await enter(pg,'summer')
         assert b['serial']>serial_a, (a,b)
         assert b['layout']!=layout_a, (layout_a,b['layout'])
         before=await pg.evaluate("() => ({lv:GAME.P.lv, exp:GAME.P.exp, stat:GAME.P.statPts||0, skill:GAME.P.skillPts||0})")
@@ -58,6 +60,6 @@ async def main():
         out=await pg.evaluate("() => __FD.state()")
         assert out['map']=='out', out
         assert not errs, errs
-        print('field 7 themes + final village/cave + leg exits ok; build ms=',timings)
+        print('48x48 outdoor dungeon fields + fixed final village/cave + leg exits ok; build ms=',timings)
         await browser.close()
 asyncio.run(main())
