@@ -200,13 +200,13 @@ async def runtime_checks():
             check_spawn(ms, tier)
         for floor in list(range(1,22))+[24]:
             ms = await pg.evaluate("async f=>{await __DUN.go(f);const old=GAME.P.lv;GAME.P.lv=1;__DUN.respawn();GAME.P.lv=old;return __FD.debugMonsters();}", floor)
-            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor, cave=True)
+            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor)
             assert not (await pg.evaluate('__DUN.state()'))['blocked'], floor
         # 다른 작업에서 추가된 자연 동굴에서도 큰 군집이 벽/소품에 겹치지 않는다.
         await pg.evaluate("__DUN.setTheme('cave')")
         for floor in [1,7,15,21]:
             ms = await pg.evaluate("async f=>{await __DUN.go(f);__DUN.respawn();return __FD.debugMonsters();}", floor)
-            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor)
+            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor, cave=True)
         await pg.evaluate("__DUN.setTheme('ruins')")
         for tier in range(2,8):
             mimic = None
