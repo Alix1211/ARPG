@@ -64,7 +64,8 @@ async def main():
             assert await ev("() => GUILD.startExam()"),(rank,boss)
             ex=await ev("() => GUILD.state().exam")
             assert ex and ex['bossId']==boss and ex['targetRank']==rank+1,(rank,ex)
-            assert await ev("() => GAME.P.gold")==g0-fee
+            g1=await ev("() => GAME.P.gold")
+            assert g1==g0-fee,(rank,g0,fee,g1,ex)
             # 다른 보스는 통과가 아니다.
             await ev("() => GUILD.onKill({dead:true,type:'rabbit',rank:'normal'})")
             assert await ev("() => GUILD.state().exam.status")=='active'
