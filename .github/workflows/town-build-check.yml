@@ -124,6 +124,7 @@ jobs:
             src/town/check_trade.py
             src/town/check_mount.py
             src/town/check_guild.py
+            src/town/check_guild_rank.py
             src/town/check_quest.py
             src/town/check_dungeon.py
             src/town/check_chest.py
