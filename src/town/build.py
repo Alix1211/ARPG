@@ -444,19 +444,37 @@ for th in FIELD_THEMES:
         assets[key] = enc(im, 86)
         FIELD_PROPS[th].append(dict(key=key, name=stem))
 
+# 2026-10-05: 전 몬스터 53종 V2 화풍 통일 아틀라스.
+# 게임 수치/AI는 tier_match.json을 그대로 쓰고, 방향 그림만 새 아틀라스에서 자른다.
+with open(os.path.join(HERE, 'data/monster_visual_v2.json'), encoding='utf-8') as f:
+    MONV2 = json.load(f)
+if set(MONV2['rows']) != set(CATALOG['monsters']):
+    miss=set(CATALOG['monsters'])-set(MONV2['rows']); extra=set(MONV2['rows'])-set(CATALOG['monsters'])
+    raise ValueError(f'몬스터 V2 매핑 불일치 missing={sorted(miss)} extra={sorted(extra)}')
+V2_CELL = int(MONV2['cell'])
+V2_PARTS = {}
+for i,fn in enumerate(MONV2['parts'],1):
+    V2_PARTS[i] = Image.open(os.path.join(ROOT, 'source_sheets', 'monster_v2', fn)).convert('RGBA')
+
 MON3 = {}
 for name,d in CATALOG['monsters'].items():
     images={}
-    for direction,path in d['images'].items():
-        im=Image.open(os.path.join(ROOT,path)).convert('RGBA')
+    ref=MONV2['rows'][name]; atlas=V2_PARTS[int(ref['part'])]; row=int(ref['row'])
+    for col,direction in enumerate(MONV2['columns']):
+        im=atlas.crop((col*V2_CELL,row*V2_CELL,(col+1)*V2_CELL,(row+1)*V2_CELL))
         box=im.getchannel('A').getbbox()
-        if not box: raise ValueError('빈 몬스터 이미지: '+path)
+        if not box: raise ValueError('빈 몬스터 V2 셀: '+name+'/'+direction)
         im=im.crop(box); im.thumbnail((240,240),Image.LANCZOS)
         images[direction]=enc(im,86)
-    # main의 실물 좌우 방향 보정은 무리장 별칭에도 적용한다.
-    source=os.path.basename(d['images']['front'])
-    if source in [x+'_front.png' for x in ('wolf','bear','darkmage','demon','dragon','lich','rogue')] and 'left' in images and 'right' in images:
-        images['left'],images['right']=images['right'],images['left']
+    # 미믹의 잠든 상자 모습 같은 보조 이미지는 기존 소품 자산을 유지한다.
+    # 전투 중 보이는 몬스터 본체(front/back/left/right)는 모두 V2다.
+    for direction,path in d['images'].items():
+        if direction in ('front','back','left','right'): continue
+        im=Image.open(os.path.join(ROOT,path)).convert('RGBA')
+        box=im.getchannel('A').getbbox()
+        if not box: raise ValueError('빈 몬스터 보조 이미지: '+path)
+        im=im.crop(box); im.thumbnail((240,240),Image.LANCZOS)
+        images[direction]=enc(im,86)
     MON3[name]=images
 MON1 = {}
 
