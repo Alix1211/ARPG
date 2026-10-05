@@ -5,9 +5,11 @@ import math
 import re
 from pathlib import Path
 from playwright.async_api import async_playwright
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = json.loads((ROOT / 'src/town/data/tier_match.json').read_text())
+VIS = json.loads((ROOT / 'src/town/data/monster_visual_v2.json').read_text())
 DOC = (ROOT / 'docs/tasks/tier_match.md').read_text()
 GEAR = {g['id']: g for g in DATA['gear']}
 THEMES = ['spring', 'summer', 'autumn', 'winter', 'ice', 'volcano', 'swamp']
@@ -56,6 +58,23 @@ def static_checks():
         assert (m['tier']-1)*10 < m['minLevel'] <= m['tier']*10, m
         for path in m['images'].values():
             assert 'monsters_v1' not in path and (ROOT/path).is_file(), path
+    # V2 전면 교체: 53종 모두 새 아틀라스 행이 있어야 하고, 각 셀은 실제 그림이어야 한다.
+    assert set(VIS['rows']) == set(DATA['monsters']) and len(VIS['rows']) == 53
+    cell = int(VIS['cell'])
+    assert VIS['columns'] == ['front','back','left','right']
+    part_imgs = {}
+    for i, fn in enumerate(VIS['parts'], 1):
+        path = ROOT / 'source_sheets' / 'monster_v2' / fn
+        assert path.is_file(), path
+        im = Image.open(path).convert('RGBA')
+        assert im.width == cell * 4 and im.height % cell == 0, (path, im.size)
+        part_imgs[i] = im
+    for ident, ref in VIS['rows'].items():
+        part, row = int(ref['part']), int(ref['row'])
+        assert part in part_imgs and 0 <= row < part_imgs[part].height // cell, (ident, ref)
+        for col in range(4):
+            a = part_imgs[part].crop((col*cell,row*cell,(col+1)*cell,(row+1)*cell)).getchannel('A')
+            assert a.getbbox(), (ident, ref, col)
     for key in ['fieldPools', 'fieldElites', 'dungeonPools', 'dungeonElites']:
         for tier, pool in enumerate(DATA[key], 1):
             assert all(DATA['monsters'][ident]['tier'] == tier for ident in pool), (key, tier)
@@ -64,7 +83,7 @@ def static_checks():
         assert DATA['monsters'][group['leader']]['rank'] == 'boss'
         assert sum(m['max'] for m in group['members']) <= 6
         assert all(DATA['monsters'][m['id']]['tier'] == group['tier'] for m in group['members'])
-    print('승인표 180장+신규4장: 이름·이미지 불일치 0건 / 몬스터53종 정상')
+    print('승인표 180장+신규4장 / 몬스터 V2 53종 4방향 아틀라스 정상')
 
 
 def check_spawn(ms, tier, dungeon=False, floor=0):
