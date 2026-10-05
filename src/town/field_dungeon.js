@@ -15,6 +15,7 @@ for (const n in A.monsters1) mon1[n] = load(A.monsters1[n]);
 const monsters = [], dropsLoot = [], enemyShots = [], enemyHazards = [];
 const dropImgs = {};
 const FIELD_TIER={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
+// 2026-10-06: 7지역 야외 필드/최종 거점 완성형
 const FIELD_LAYOUT={
   spring:{start:[2.5,16],end:[47.1,7],curve:[13,14,27,22],village:[39.4,10.8,43.1,12.8],cave:[44,4.2],camp:[15.5,24],ruin:[28.5,18.5],special:[36,24],sign:[4.2,15.4]},
   summer:{start:[2.5,18],end:[47.1,9],curve:[12,11,27,24],village:[38.7,12.6,42.7,14.5],cave:[43.7,5.0],camp:[13.5,24.8],ruin:[25.5,8.0],special:[33.5,23.8],sign:[4.0,17.4]},
