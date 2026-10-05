@@ -51,8 +51,8 @@ async def main():
         assert g_after_sell > 1000, (g_after_buy,g_after_sell)
 
         # 모든 필드 마지막 칸에는 작은 마을 입구가 있고, 내부 마을이 같은 구조로 열린다.
-        for th in THEMES:
-            await pg.evaluate("(th) => __FD.enter(th)", th)
+        for ti,th in enumerate(THEMES,1):
+            await pg.evaluate("([th,leg]) => __FD.enter(th,leg)", [th,ti+1])
             await pg.wait_for_timeout(650)
             st=await pg.evaluate("() => __FD.state()")
             assert st['map']=='field' and st['theme']==th, st
