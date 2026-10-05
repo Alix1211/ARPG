@@ -104,7 +104,10 @@ const STN = { atk:'공격력',matk:'마법 공격력',atkPct:'물리 공격',mat
 const PCTSTAT=new Set(['atkPct','matkPct','as','crit','critDmg','fire','ice','skill','ms','coin','find']);
 const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
-const BAG=42,bag=new Array(BAG).fill(null);
+const BAG_PAGE=42,BAG_MAX_PAGES=5,BAG=BAG_PAGE*BAG_MAX_PAGES,bag=new Array(BAG).fill(null);
+const BAG_UPGRADE=[10000,30000,50000,100000];let bagPages=1,bagPage=0;
+const bagLimit=()=>bagPages*BAG_PAGE;
+function bagFreeIndex(){for(let i=0;i<bagLimit();i++)if(!bag[i])return i;return -1;}
 const STASH=56,stash=new Array(STASH).fill(null);
 const eq={w1:null,w2:null,head:null,body:null,hands:null,feet:null,neck:null,ring1:null,ring2:null};
 let cur='w1';
@@ -347,6 +350,7 @@ function slotEl(it, x, y, w, h, onTap, selected){
     s.style.setProperty('--rc', RARC[it.rar]); s.classList.add('has');
     if (it.requiredLevel && G.P && it.requiredLevel > G.P.lv){ s.classList.add('lvlock'); s.append(el('span', 'lvtag', 'Lv' + it.requiredLevel)); }
     if(it.unid)s.append(el('span','unidtag','?'));
+    if(it.locked)s.append(el('span','locktag','🔒'));
   }
   if (selected) s.classList.add('sel');
   s.addEventListener('click', onTap);
@@ -434,13 +438,14 @@ function render(){
   } else {
     R.style.backgroundImage = `url(${K['01']})`;
     {const t=el('div', 'btitle', '가방');if(SCR.portal||SCR.ident){const s=el('span','',`  · 포탈 스크롤 ${SCR.portal} · 감정 스크롤 ${SCR.ident}`);s.style.cssText='font-size:12px;font-weight:700;color:#e3d2a8';t.append(s);}R.append(t);}
-    bag.forEach((it, i) => {
-      const x = INV.x + (i % 7) * INV.px, y = INV.y + Math.floor(i / 7) * INV.py;
+    bagPage=Math.max(0,Math.min(bagPages-1,bagPage));const start=bagPage*BAG_PAGE;
+    for(let j=0;j<BAG_PAGE;j++){const i=start+j,it=bag[i];
+      const x=INV.x+(j%7)*INV.px,y=INV.y+Math.floor(j/7)*INV.py;
       const cell=slotEl(it,x,y,INV.w,INV.h,()=>tapBag(i),pickSel&&pickSel.from==='bag'&&pickSel.i===i);bindItemSlot(cell,{from:'bag',i});
-      if(tab==='shop'&&it){const price=el('small','slotprice',__SHOP.price(it)+(__SHOP.rate(it)>1.05?'▲':__SHOP.rate(it)<.95?'▼':''));cell.append(price);}R.append(cell);
-    });
+      if(tab==='shop'&&it){const price=el('small','slotprice',it.locked?'잠금':__SHOP.price(it)+(__SHOP.rate(it)>1.05?'▲':__SHOP.rate(it)<.95?'▼':''));cell.append(price);}R.append(cell);
+    }
     const gl = el('div', 'bgold', `금화 ${Pp.gold}`); R.append(gl);
-    const cnt = el('div', 'bcnt', `${bag.filter(Boolean).length} / ${BAG}`); R.append(cnt);R.append(sortButtons('bag'));
+    const cnt = el('div', 'bcnt', `${bag.slice(0,bagLimit()).filter(Boolean).length} / ${bagLimit()}`); R.append(cnt);R.append(bagPageDots(),sortButtons('bag'));
   }
 }
 function tapBag(i){
@@ -532,8 +537,8 @@ function showInfo(it, from){
     } else if (it.kind === 'ring'){
       for (const s of ['ring1', 'ring2']){ const b = el('button', 'btn', s === 'ring1' ? '왼손 반지' : '오른손 반지'); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
     } else { const b = el('button', 'btn', '장착'); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, it.kind); row.append(b); }
-    const d = el('button', 'btn ghost', '버리기'); d.type = 'button';
-    d.onclick = () => { if (d.dataset.ok){ bag[pickSel.i] = null; pickSel = null; I.classList.remove('on'); render(); } else { d.dataset.ok = 1; d.textContent = '정말 버리기'; } };
+    const d = el('button', 'btn ghost', it.locked?'잠금 해제 후 버리기':'버리기'); d.type = 'button';d.disabled=!!it.locked;
+    d.onclick = () => { if(it.locked)return; if (d.dataset.ok){ bag[pickSel.i] = null; pickSel = null; I.classList.remove('on'); render();saveGame(); } else { d.dataset.ok = 1; d.textContent = '정말 버리기'; } };
     row.append(d);
   } else {
     const b = el('button', 'btn', '벗기'); b.type = 'button'; b.onclick = () => unequip(pickSel.slot); row.append(b);
@@ -559,20 +564,25 @@ function unequip(s){
 let itemDrag=null,itemClickUntil=0;
 const kindOrder=it=>{const list=it.kind==='weapon'?['sword','spear','gauntlet','bow','staff']:['head','body','hands','feet','ring','neck','material','potion','junk'],i=list.indexOf(it.kind==='weapon'?it.wt:it.kind);return i<0?99:(it.kind==='weapon'?i:5+i);};
 function sortInventory(where,by){
-  const a=where==='stash'?stash:bag;
+  const a=where==='stash'?stash:bag,n=where==='stash'?a.length:bagLimit();
   const tier=(x,y)=>(y.tier||1)-(x.tier||1)||(y.rar||0)-(x.rar||0)||kindOrder(x)-kindOrder(y);
   const cmp=by==='price'?(x,y)=>__SHOP.baseValue(y)-__SHOP.baseValue(x):by==='kind'?(x,y)=>kindOrder(x)-kindOrder(y)||tier(x,y):tier;
-  const filled=a.filter(Boolean).map((it,i)=>({it,i})).sort((x,y)=>cmp(x.it,y.it)||x.i-y.i).map(x=>x.it);
-  a.splice(0,a.length,...filled,...Array(a.length-filled.length).fill(null));pickSel=null;$('iinfo').classList.remove('on');if(tab==='shop')__SHOP.clearSelection();render();saveGame();
+  const filled=a.slice(0,n).filter(Boolean).map((it,i)=>({it,i})).sort((x,y)=>cmp(x.it,y.it)||x.i-y.i).map(x=>x.it);
+  a.splice(0,n,...filled,...Array(n-filled.length).fill(null));pickSel=null;$('iinfo').classList.remove('on');if(tab==='shop')__SHOP.clearSelection();render();saveGame();
 }
 function sortButtons(where){
   const bar=el('div','inventorySort');for(const [key,label] of [['tier','티어'],['price','가격'],['kind','종류']]){const b=el('button','btn',label);b.type='button';b.dataset.sort=key;b.onclick=()=>sortInventory(where,key);bar.append(b);}return bar;
 }
+function bagPageDots(){const bar=el('div','bagPages');for(let i=0;i<bagPages;i++){const b=el('button','bagDot');b.type='button';b.classList.toggle('on',i===bagPage);b.setAttribute('aria-label','가방 '+(i+1)+'페이지');b.onclick=()=>{bagPage=i;pickSel=null;$('iinfo').classList.remove('on');render();};bar.append(b);}return bar;}
+let bagSwipe=null;const bagPaneEl=$('bagPane');
+bagPaneEl.addEventListener('pointerdown',e=>{if(!$('char').classList.contains('on')||bagPages<2)return;bagSwipe={x:e.clientX,y:e.clientY};});
+bagPaneEl.addEventListener('pointerup',e=>{if(!bagSwipe)return;const dx=e.clientX-bagSwipe.x,dy=e.clientY-bagSwipe.y;bagSwipe=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4){cancelItemDrag();itemClickUntil=performance.now()+450;bagPage=Math.max(0,Math.min(bagPages-1,bagPage+(dx<0?1:-1)));pickSel=null;$('iinfo').classList.remove('on');render();e.preventDefault();}});
+
 function inventoryItem(ref){return ref.from==='eq'?eq[ref.slot]:ref.from==='goods'?ref.it:(ref.from==='stash'?stash:bag)[ref.i];}
 function inventoryDrop(source,target){
   if(!source||!target)return false;const it=inventoryItem(source);if(!it)return false;
   if(source.from==='goods')return target.from==='bag'&&__SHOP.buyAt(source.it,target.i);
-  if(target.from==='merchant'||target.from==='goods')return source.from==='bag'&&__SHOP.sellAt(source.i);
+  if(target.from==='merchant'||target.from==='goods'){if(source.from==='bag'&&it.locked){G.say('잠긴 아이템입니다.');return false;}return source.from==='bag'&&__SHOP.sellAt(source.i);}
   if(source.from==='eq'){
     if(target.from!=='bag'||!eq[source.slot])return false;
     const other=bag[target.i];if(other&&(!slotOk(other,source.slot)||!canEquip(other)))return false;
@@ -589,21 +599,23 @@ function inventoryDrop(source,target){
   }
   if(!eq[cur])cur=eq.w1?'w1':eq.w2?'w2':'w1';pickSel=null;$('iinfo').classList.remove('on');render();syncHud();saveGame();return true;
 }
-function cancelItemDrag(){if(!itemDrag)return;itemDrag.node.classList.remove('dragging');if(itemDrag.ghost)itemDrag.ghost.remove();itemDrag=null;}
+function cancelItemDrag(){if(!itemDrag)return;if(itemDrag.holdTimer)clearTimeout(itemDrag.holdTimer);itemDrag.node.classList.remove('dragging');if(itemDrag.ghost)itemDrag.ghost.remove();itemDrag=null;}
 function bindItemSlot(node,ref){
   node.dataset.inventory=ref.from;if(ref.i!=null)node.dataset.index=ref.i;if(ref.slot)node.dataset.eq=ref.slot;node._inventoryRef=ref;
   node.addEventListener('click',e=>{if(performance.now()<itemClickUntil){e.stopImmediatePropagation();e.preventDefault();}},true);
   node.addEventListener('pointerdown',e=>{
-    if(e.button!==0||!inventoryItem(ref))return;cancelItemDrag();itemDrag={ref,node,pid:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false};node.setPointerCapture(e.pointerId);
+    if(e.button!==0||!inventoryItem(ref))return;cancelItemDrag();itemDrag={ref,node,pid:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false,long:false};node.setPointerCapture(e.pointerId);
+    if(ref.from==='bag')itemDrag.holdTimer=setTimeout(()=>{const d=itemDrag,it=d&&inventoryItem(d.ref);if(!d||d.ref!==ref||d.moved||!it)return;it.locked=!it.locked;d.long=true;itemClickUntil=performance.now()+550;G.say(it.locked?'아이템을 잠갔습니다.':'아이템 잠금을 풀었습니다.');saveGame();},550);
   });
 }
 addEventListener('pointermove',e=>{
   const d=itemDrag;if(!d||e.pointerId!==d.pid)return;const dist=Math.hypot(e.clientX-d.x,e.clientY-d.y);
-  if(!d.moved&&(dist>=8||(performance.now()-d.t>=200&&dist>=2))){d.moved=true;d.node.classList.add('dragging');const im=el('img','itemGhost');const it=inventoryItem(d.ref);im.src=A.icons[it.icon||it.ic];d.ghost=im;document.body.append(im);$('iinfo').classList.remove('on');}
+  if(!d.moved&&(dist>=8||(performance.now()-d.t>=200&&dist>=2))){d.moved=true;if(d.holdTimer){clearTimeout(d.holdTimer);d.holdTimer=0;}d.node.classList.add('dragging');const im=el('img','itemGhost');const it=inventoryItem(d.ref);im.src=A.icons[it.icon||it.ic];d.ghost=im;document.body.append(im);$('iinfo').classList.remove('on');}
   if(d.moved){e.preventDefault();d.ghost.style.left=e.clientX+'px';d.ghost.style.top=e.clientY+'px';}
 },{passive:false});
 addEventListener('pointerup',e=>{
   const d=itemDrag;if(!d||e.pointerId!==d.pid)return;
+  if(d.long){cancelItemDrag();render();return;}
   if(d.moved){const at=document.elementFromPoint(e.clientX,e.clientY),cell=at&&at.closest('[data-inventory]');const target=cell?cell._inventoryRef:at&&at.closest('#shop')?{from:'merchant'}:null;itemClickUntil=performance.now()+500;cancelItemDrag();inventoryDrop(d.ref,target);}else{const ref=d.ref;cancelItemDrag();dblTap(ref);}
 });
 // 더블클릭(모바일은 두 번 탭): 상점에선 사기·팔기, 창고에선 넣기·빼기, 평소엔 장비 착용·해제
@@ -637,18 +649,19 @@ function stashInfo(from,i){
 }
 
 window.UI = {
-  addPotion(k,n){POT[k]+=n;syncPot();},
+  addPotion(k,n){POT[k]+=n;syncPot();},potions:()=>({hp:POT.hp,mp:POT.mp}),
   addScroll(k,n){const had=SCR[k]|0;SCR[k]=Math.min(SCR_MAX,had+n);syncMmBtn();if($('char').classList.contains('on'))render();return SCR[k]-had;},
   scrolls:()=>({portal:SCR.portal,ident:SCR.ident}),scrollMax:SCR_MAX,
   useScroll(k){if(!(SCR[k]>0))return false;SCR[k]--;syncMmBtn();if($('char').classList.contains('on'))render();saveGame();return true;},
   make,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
-  merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=BAG||bag[i])return false;bag[i]=it;return true;},add(it){const i=bag.indexOf(null);if(i<0)return false;bag[i]=it;return true;},
+  merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=bagLimit()||bag[i])return false;bag[i]=it;return true;},add(it){const i=bagFreeIndex();if(i<0)return false;bag[i]=it;return true;},
+  bagPages:()=>bagPages,bagPage:()=>bagPage,bagUpgradePrice:()=>BAG_UPGRADE[bagPages-1]||0,expandBag(){if(bagPages>=BAG_MAX_PAGES)return false;bagPages++;bagPage=bagPages-1;render();saveGame();return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},
   dragDebug:()=>drag?{id:drag.id,from:drag.from,moved:drag.moved}:null,quickDropIndex,
   refresh(){syncHud();if($('char').classList.contains('on'))render();},
-  bagFull:()=>bag.indexOf(null)<0,
-  bagItems:()=>bag.map((it,i)=>it?{i,it}:null).filter(Boolean),
+  bagFull:()=>bagFreeIndex()<0,
+  bagItems:()=>bag.slice(0,bagLimit()).map((it,i)=>it?{i,it}:null).filter(Boolean),
   removeBagAt(i){
     if (i < 0 || i >= BAG || !bag[i]) return null;
     const it = bag[i]; bag[i] = null; pickSel = null; $('iinfo').classList.remove('on');
@@ -667,13 +680,14 @@ function saveGame(){
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
-      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
+      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
   }catch(e){}
 }
 function loadGame(){
   let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null');}catch(e){}
   if(!d||d.v!==3)return null;
+  bagPages=Math.max(1,Math.min(BAG_MAX_PAGES,d.bagPages|0||1));bagPage=Math.max(0,Math.min(bagPages-1,d.bagPage|0));
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
   for(let i=0;i<STASH;i++)stash[i]=d.stash&&d.stash[i]||null;
   for(const k in eq)eq[k]=d.eq&&d.eq[k]||null;
