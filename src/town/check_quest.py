@@ -178,6 +178,12 @@ async def main():
         await ev('''() => {GUILD.open();for(const q of GUILD.state().board.slice(0,5))GUILD.accept(q.id);GAME.closeAll();}''')
         assert await pg.locator('#questTrack .qtrack').count()==5
         assert await pg.locator('#mainQuestTrack .mainQtrack').count()==1
+        # 현재 진행 단계의 NPC만 미니맵 목표로 노출된다.
+        mini=await ev('() => QUEST.minimapTargets()')
+        assert len(mini)==1 and mini[0]['kind']=='npc',mini
+        target_no=await ev("() => A.mainQuests.quests[0].steps[0].npc")
+        target_pos=await ev("no => {const n=A.npcs.find(n=>n.no===no);return [n.x,n.y]}",target_no)
+        assert abs(mini[0]['x']-target_pos[0])<1 and abs(mini[0]['y']-target_pos[1])<1,(mini,target_pos)
 
         # 초반 001~010은 실제 맵/현장 포인트/던전/대화 흐름으로 전부 플레이한다.
         for n in range(1,11):
