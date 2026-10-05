@@ -460,7 +460,8 @@ const GOODS = {
     ...['head','body','hands','feet'].map((k,i)=>shopGear('knight_'+k+'_02',[40,70,30,30][i]))],
   general:[{ic:'php',name:'체력 물약',slot:'물약',price:20,potion:'hp'},{ic:'pmp',name:'마나 물약',slot:'물약',price:20,potion:'mp'},
     {ic:'scr_portal',name:'타운 포탈 스크롤',slot:'스크롤',desc:'대기시간 무시 · 최대 20장',price:100,scroll:'portal'},
-    {ic:'scr_ident',name:'감정 스크롤',slot:'스크롤',desc:'어디서나 감정 · 최대 20장',price:100,scroll:'ident'}],
+    {ic:'scr_ident',name:'감정 스크롤',slot:'스크롤',desc:'어디서나 감정 · 최대 20장',price:100,scroll:'ident'},
+    {ic:'bag',name:'튼튼한 배낭',slot:'가방 확장',desc:'구매할 때마다 가방 1페이지 추가',price:10000,backpack:1}],
   pawn:[shopGear('acc_0_01',120),shopGear('acc_1_01',150)]
 };
 let sel = null, shopNpc = null, shopMode = 'buy';
@@ -503,7 +504,9 @@ function goodsCat(it){
   if (it.potion || it.scroll) return 'potion';
   return sellCat(it.spec || {kind:'junk'});
 }
-function buyPrice(it){const d=1-.02*((P.lifeSkills&&P.lifeSkills.discount)||0);return Math.max(1,Math.round((it.price||1)*Math.max(.90,d)));}
+function buyPrice(it){if(it&&it.backpack&&window.UI)return UI.bagUpgradePrice()||0;const d=1-.02*((P.lifeSkills&&P.lifeSkills.discount)||0);return Math.max(1,Math.round((it.price||1)*Math.max(.90,d)));}
+function goodsOwned(it){if(it.potion){const p=UI.potions();return p[it.potion]||0;}if(it.scroll)return UI.scrolls()[it.scroll]||0;if(it.backpack)return UI.bagPages();return 0;}
+function buyManyCount(it,want){if(it.scroll)return Math.max(0,Math.min(want,UI.scrollMax-goodsOwned(it)));return it.potion?want:1;}
 function baseSellValue(it){
   if (!it) return 1;
   let v = 10;
@@ -564,16 +567,19 @@ function renderShop(){
 }
 function clearShopInfo(msg){
   sel = null; $('infoIc').src = ''; $('infoName').textContent = msg || ''; $('infoSlot').textContent = '';
-  $('infoPrice').textContent = ''; $('buy').textContent = shopMode === 'sell' ? '팔기' : '사기'; $('buy').disabled = true;
+  $('infoPrice').textContent = ''; $('buy').textContent = shopMode === 'sell' ? '팔기' : '사기'; $('buy').disabled = true;if($('buy10'))$('buy10').hidden=true;if($('sellAll'))$('sellAll').hidden=shopMode!=='sell';
 }
 function pickBuy(it, c, price){
   if (shopMode !== 'buy') return;
   saleConfirm=null;price = price || buyPrice(it); sel = { mode:'buy', it, price };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
   $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
-  $('infoSlot').textContent = it.slot + ' · ' + (it.desc || '일반');
-  $('infoPrice').textContent = '금화 ' + price;
-  $('buy').textContent = '사기'; $('buy').disabled = P.gold < price; $('shopSay').textContent = '';
+  const owned=(it.potion||it.scroll)?` · 보유 ${goodsOwned(it)}개`:it.backpack?` · ${goodsOwned(it)}/5페이지`:'';
+  $('infoSlot').textContent = it.slot + ' · ' + (it.desc || '일반') + owned;
+  $('infoPrice').textContent = it.backpack&&price<=0?'최대 확장 완료':'금화 ' + price;
+  $('buy').textContent = it.backpack?'배낭 사기':'1개 사기'; $('buy').disabled = price<=0||P.gold < price; $('shopSay').textContent = '';
+  const b10=$('buy10');if(b10){const n=buyManyCount(it,10);b10.hidden=!(it.potion||it.scroll);b10.textContent=n===10?'10개 사기':`${n}개 사기`;b10.disabled=n<1||P.gold<price*n;}
+  const sa=$('sellAll');if(sa)sa.hidden=true;
 }
 function pickSell(idx, it, c){
   shopMode='sell';
@@ -584,31 +590,35 @@ function pickSell(idx, it, c){
   const names = {weapon:'무기',armor:'방어구',accessory:'장신구',material:'재료',potion:'물약',junk:'잡템'};
   $('infoSlot').textContent = (names[sellCat(it)] || '물건') + ' · ' + ['일반','마법','희귀','전설'][it.rar || 0];
   $('infoPrice').textContent = '금화 ' + price + rateMark(rate);
-  $('buy').textContent = '팔기'; $('buy').disabled = false; $('shopSay').textContent = '';
+  $('buy').textContent = '팔기'; $('buy').disabled = !!it.locked; $('shopSay').textContent = it.locked?'잠긴 아이템입니다.':'';
+  const b10=$('buy10');if(b10)b10.hidden=true;const sa=$('sellAll');if(sa)sa.hidden=false;
 }
 $('tabBuy').addEventListener('click', () => setShopMode('buy'));
 $('tabSell').addEventListener('click', () => setShopMode('sell'));
 
 let saleConfirm=null;
 function sellAt(idx){
-  const row=UI.bagItems().find(x=>x.i===idx);if(!row)return false;
+  const row=UI.bagItems().find(x=>x.i===idx);if(!row)return false;if(row.it.locked){$('shopSay').textContent='잠긴 아이템입니다.';return false;}
   if((row.it.rar||0)>=2&&saleConfirm!==row.it.id){saleConfirm=row.it.id;pickSell(idx,row.it,null);$('buy').textContent='확인 후 팔기';$('shopSay').textContent='희귀 이상 장비입니다. 한 번 더 눌러 팔아 주세요.';return false;}
   const price=sellPrice(row.it),rate=sellRate(row.it);saleConfirm=null;
   UI.removeBagAt(idx);setGold(P.gold+price);sel=null;UI.refresh();renderShop();UI.save();
   if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:row.it.kind,price,count:1});
   $('shopSay').textContent='금화 '+price+'닢을 받았습니다.';return true;
 }
-function buyAt(it,idx){
+function buyAt(it,idx,want=1){
   if(!(GOODS[shopNpc.shop]||[]).includes(it))return false;
-  const price=buyPrice(it);if(P.gold<price){$('shopSay').textContent='금화가 부족합니다.';return false;}
-  if(it.scroll){if(UI.scrolls()[it.scroll]>=UI.scrollMax){$('shopSay').textContent='스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.';return false;}}
-  else if(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx)){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
-  if(it.scroll)UI.addScroll(it.scroll,1);
-  else if(it.potion)UI.addPotion(it.potion,1);
-  else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
-  setGold(P.gold-price);UI.refresh();UI.save();if(window.QUEST)QUEST.onEvent('shop_buy',{shop:shopNpc.shop,item:it.potion?'potion:'+it.potion:it.scroll?'scroll:'+it.scroll:(it.spec&&it.spec.kind?it.spec.kind:(it.slot||'item')),name:it.name,count:1});$('shopSay').textContent=it.name+'을(를) 샀습니다.';$('buy').disabled=P.gold<price;return true;
+  const price=buyPrice(it);
+  if(it.backpack){if(price<=0){$('shopSay').textContent='가방을 이미 최대로 확장했습니다.';return false;}if(P.gold<price){$('shopSay').textContent='금화가 부족합니다.';return false;}if(!UI.expandBag())return false;setGold(P.gold-price);UI.refresh();UI.save();$('shopSay').textContent='가방 한 페이지가 늘었습니다.';renderShop();return true;}
+  const n=buyManyCount(it,Math.max(1,want|0));if(n<1){$('shopSay').textContent=it.scroll?'스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.':'더 살 수 없습니다.';return false;}
+  const total=price*n;if(P.gold<total){$('shopSay').textContent='금화가 부족합니다.';return false;}
+  if(!it.potion&&!it.scroll&&(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx))){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
+  if(it.scroll)UI.addScroll(it.scroll,n);else if(it.potion)UI.addPotion(it.potion,n);else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
+  setGold(P.gold-total);UI.refresh();UI.save();if(window.QUEST)QUEST.onEvent('shop_buy',{shop:shopNpc.shop,item:it.potion?'potion:'+it.potion:it.scroll?'scroll:'+it.scroll:(it.spec&&it.spec.kind?it.spec.kind:(it.slot||'item')),name:it.name,count:n});$('shopSay').textContent=it.name+' '+n+'개를 샀습니다.';pickBuy(it,null,buyPrice(it));return true;
 }
 $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
+$('buy10').addEventListener('click',()=>{if(sel&&sel.mode==='buy')buyAt(sel.it,null,10);});
+let bulkSaleConfirm=false;
+$('sellAll').addEventListener('click',()=>{const rows=UI.bagItems().filter(r=>!r.it.locked);if(!rows.length){$('shopSay').textContent='일괄판매할 잠금 해제 아이템이 없습니다.';bulkSaleConfirm=false;return;}const total=rows.reduce((s,r)=>s+sellPrice(r.it),0);if(!bulkSaleConfirm){bulkSaleConfirm=true;$('sellAll').textContent='확인 후 일괄판매';$('shopSay').textContent=rows.length+'개 / '+total+'G 판매합니다. 한 번 더 눌러 주세요.';return;}bulkSaleConfirm=false;$('sellAll').textContent='일괄판매';for(const r of rows.slice().sort((a,b)=>b.i-a.i))UI.removeBagAt(r.i);setGold(P.gold+total);sel=null;UI.refresh();renderShop();UI.save();if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:'bulk',price:total,count:rows.length});$('shopSay').textContent=rows.length+'개를 팔아 '+total+'G를 받았습니다.';});
 window.__SHOP={goods:k=>GOODS[k],open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
 
 // ======================= 행인 =======================
