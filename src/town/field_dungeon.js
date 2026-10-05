@@ -315,7 +315,8 @@ function moveMonster(m,dx,dy){
   if(!monsterBlocked(m.x,m.y+dy)) m.y+=dy;
 }
 function faceMonster(m,dx,dy){
-  if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; } else m.face='front';
+  if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; }
+  else m.face=dy<0&&m.imgs.back?'back':'front';
 }
 function defeatPlayer(){
   if(tryRevivePlayer())return;
@@ -573,10 +574,11 @@ function monStyle(m){
   if(m.sty)return m.sty;
   const f=m.family||'',t=m.type||'';let s='waddle';
   if(f==='slime'||f==='mushroom')s='jelly';
-  else if(f==='rabbit'||f==='locust'||f==='mimic')s='hop';
+  else if(f==='rabbit'||f==='locust')s='hop';
   else if(f==='wasp'||f==='harpy'||f==='darkmage'||f==='lich'||f==='succubus'||f==='dragon'||(f.indexOf('elem_')===0&&f!=='elem_wood'&&t.indexOf('ice_guard')!==0&&t!=='fire_chief'))s='float';
   else if(f==='wolf'||f==='bear'||f==='beetle'||f==='spider')s='run';
-  m.heavy=f==='ogre'||f==='bear'||f==='dragon'||f==='gargoyle'||f==='elem_wood'||f==='demon'||t.indexOf('ice_guard')===0||t==='fire_chief'||!!m.boss;
+  else if(f==='mimic')s='waddle';   // V2에서는 상자에서 깨어난 지역 수호자형 외형
+  m.heavy=f==='ogre'||f==='bear'||f==='dragon'||f==='gargoyle'||f==='elem_wood'||f==='demon'||f==='mimic'||t.indexOf('ice_guard')===0||t==='fire_chief'||!!m.boss;
   return m.sty=s;
 }
 const MON_WHITE=new WeakMap();
