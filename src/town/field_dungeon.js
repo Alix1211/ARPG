@@ -202,6 +202,7 @@ let packSerial=0;
 function createMonster(id,x,y,opts={}){
   const d=MOBDEF[id],st=matchedMonsterStats(id,P.lv,opts.floor||0,opts.bossRole||'');
   st.hp*=NUM;st.dmg*=NUM;st.exp*=NUM;
+  if(opts.caveChallenge){st.hp*=2;st.dmg*=2;}
   const baseW=82*d.bodySize,w=baseW*(d.rank==='boss'?1.2:1);
   return {...st,monster:1,type:id,family:d.family,name:d.name,elite:d.rank==='elite',boss:d.rank==='boss',baseW,w,h:w,x,y,maxHp:st.hp,
     sp:d.sp*(1+(d.tier-1)*.025),ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',
@@ -516,16 +517,16 @@ function monsterTier(m){
 }
 function randomDropItem(m){
   if(!window.UI)return null;
-  const tier=monsterTier(m),r=Math.random();
+  const tier=monsterTier(m),r=Math.random(),magicBoost=m&&m.caveChallenge?2:1;
   if(r<.58){
     const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)];
-    return UI.make({kind:'weapon',wt,tier,rank:m&&m.rank,roll:true});
+    return UI.make({kind:'weapon',wt,tier,rank:m&&m.rank,roll:true,magicBoost});
   }
   if(r<.90){
     const kinds=['head','body','hands','feet'];
-    return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,rank:m&&m.rank,roll:true});
+    return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,rank:m&&m.rank,roll:true,magicBoost});
   }
-  return UI.make({kind:Math.random()<.55?'ring':'neck',tier,rank:m&&m.rank,roll:true});
+  return UI.make({kind:Math.random()<.55?'ring':'neck',tier,rank:m&&m.rank,roll:true,magicBoost});
 }
 function monsterExp(m){
   const tier=monsterTier(m),cap=tier*10,lv=P.lv||1;
@@ -595,8 +596,8 @@ function monPuff(m,x,y,n,vx,col,r0){
     fx.push({x:x+(Math.random()*10-5),y:y,vx:Math.cos(a)*sp+(vx||0),vy:Math.sin(a)*sp*.45-10,t:0,life:.42+Math.random()*.3,r:(r0||4)+Math.random()*3,c:col||'#cfc6b4'});}
 }
 function drawMonster(m,sdt){
-  const dts=sdt||.016,isRevive=m.dead&&m.reviveT>0,dying=m.dead&&!isRevive;
-  const img=m.imgs[m.face]||m.imgs.front; if(!img)return;
+  const dts=sdt||.016,isRevive=m.dead&&m.reviveT>0,dying=m.dead&&!isRevive,leftFace=m.face==='left';
+  const img=leftFace?(m.imgs.right||m.imgs.left||m.imgs.front):(m.imgs[m.face]||m.imgs.front); if(!img)return;
   m.age=(m.age||0)+dts;
   ctx.save();
   if(m.chargeWind>0){ctx.globalAlpha=1;ctx.strokeStyle='#ff6b42';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(m.x,m.y,34+Math.sin(T*18)*4,12,0,0,7);ctx.stroke();}
@@ -665,7 +666,7 @@ function drawMonster(m,sdt){
   // 그림자: 뛰어오르거나 떠 있으면 작고 옅어진다
   const hgt=Math.max(0,Math.min(.5,-yOff/dh*2.2));
   ctx.save();ctx.globalAlpha=Math.max(0,a)*(1-hgt);ctx.fillStyle='rgba(0,0,0,.27)';ctx.beginPath();ctx.ellipse(m.x+ox,m.y+oy*.6,m.w*.3*(1-hgt*.5),5*(1-hgt*.4),0,0,7);ctx.fill();ctx.restore();
-  const mirror=m.face==='left'&&(!MOBDEF[m.type].images.left||m.type==='swamp_mage');
+  const mirror=leftFace;
   ctx.save();ctx.translate(m.x+ox,m.y+oy+yOff);ctx.rotate(rot);if(mirror)ctx.scale(-1,1);ctx.scale(sx,sy);
   ctx.drawImage(img,-dw/2,-dh,dw,dh);
   if(flash>0){ctx.globalAlpha=Math.max(0,a)*flash;ctx.drawImage(monWhite(img),-dw/2,-dh,dw,dh);}
