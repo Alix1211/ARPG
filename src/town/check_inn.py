@@ -10,6 +10,7 @@ async def main():
         ev=pg.evaluate
         await pg.goto(URL);await pg.wait_for_timeout(1200)
 
+        assert await ev("() => A.inn.npcs.find(n=>n.no===5).y > 4*48"), '토비가 카운터 앞쪽에 있어야 함'
         assert await ev("() => __INN.enter()")
         await pg.wait_for_timeout(700)
         assert await ev("() => __INN.state().map==='inn'")
