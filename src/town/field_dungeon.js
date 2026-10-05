@@ -32,7 +32,7 @@ function fieldPropSize(name){
 }
 function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
-let fieldMapW=48,fieldMapH=32,fieldOutdoor=null;
+let fieldMapW=48,fieldMapH=32,fieldOutdoor=null; // 2026-10-06: 막힘 가독성/축소 거점 기준
 
 function inTownReserve(x,y){return fieldLeg===fieldLegs&&x>35&&x<47&&y>6&&y<15;}
 function outdoorFloor(bg,x,y){return !!(bg&&bg.grid&&bg.grid[y]&&bg.grid[y][x]);}
