@@ -34,15 +34,15 @@ async def main():
         assert await ev("() => __FD.mapInfo().blds")==0,'길 구간엔 마을이 없어야 함'
         assert await ev("() => __FD.mapInfo().exits")==2
 
-        # 오른쪽 끝 출구로 다음 칸으로.
-        await ev("() => __FD.warp(59.3,20)");await pg.wait_for_timeout(1500)
+        # 실제 메인 길의 오른쪽 위 끝 출구로 다음 칸으로.
+        await ev("() => __FD.warp(59.3,8)");await pg.wait_for_timeout(1500)
         s=await ev("() => __FD.state()");assert s['leg']==2 and s['legs']==3,s
-        await ev("() => __FD.warp(59.3,20)");await pg.wait_for_timeout(1500)
+        await ev("() => __FD.warp(59.3,8)");await pg.wait_for_timeout(1500)
         s=await ev("() => __FD.state()");assert s['leg']==3,s
         assert await ev("() => __FD.mapInfo().blds")==2,'마지막 칸에 마을'
-        assert await ev("() => __FD.mapInfo().exits")==1
-        # 마을 칸의 왼쪽 출구 = 목적지 선택창.
-        await ev("() => __FD.warp(0.5,20)");await pg.wait_for_timeout(500)
+        assert await ev("() => __FD.mapInfo().exits")==2
+        # 마지막 칸의 오른쪽 위 길 끝 = 목적지 선택창.
+        await ev("() => __FD.warp(59.3,8)");await pg.wait_for_timeout(500)
         assert await ev("() => document.getElementById('regionPick').classList.contains('on')")
         btns=await ev("() => [...document.querySelectorAll('#regionGrid button')].map(b=>[b.dataset.theme,b.disabled,b.textContent])")
         assert btns[0][0]=='town' and any(x[0]=='autumn' and x[1] for x in btns),btns
