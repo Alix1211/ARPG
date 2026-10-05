@@ -857,6 +857,16 @@ function drawMini(camX, camY){
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
   mx.fillStyle = '#e8f2ff'; if (MAP === 'town') for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
+  if(window.QUEST&&QUEST.minimapTargets){
+    const pulse=.5+.5*Math.sin(T*6.2),r=3.8+pulse*2.8;
+    for(const q of QUEST.minimapTargets()){
+      const x=q.x*sx,y=q.y*sy;
+      mx.save();mx.globalAlpha=.35+.65*pulse;
+      mx.fillStyle='#ff2419';mx.beginPath();mx.arc(x,y,r+4,0,7);mx.fill();
+      mx.globalAlpha=1;mx.fillStyle='#ff3328';mx.strokeStyle='#fff2df';mx.lineWidth=1.4;
+      mx.beginPath();mx.arc(x,y,r,0,7);mx.fill();mx.stroke();mx.restore();
+    }
+  }
   if (typeof drawEncounterMini === 'function') drawEncounterMini(mx, sx, sy);
   mx.strokeStyle = '#fff8'; mx.lineWidth = 2;
   mx.strokeRect(camX * sx, camY * sy, VW / Z * sx, VH / Z * sy);
