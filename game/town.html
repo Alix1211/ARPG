@@ -260,6 +260,30 @@ html.app #fs{display:none}
 #mainQuestTrack.on{display:block}.mainQtrack{padding:3px 4px}.mainQuestCard{border-color:#bc8c37}
 .inventory-open #mainQuestTrack{visibility:hidden}#dlgQuest[hidden]{display:none}#dlgMainRow{flex-wrap:wrap}.sideQuestCard{border-color:#7897b0}
 @media(max-height:480px){#questTrack{gap:0}.qtrack{min-height:18px;font-size:10px}#mainQuestTrack{top:216px;font-size:10px}}
+
+/* 폰 전용(세로 480 이하, 케인 시안 2026-10-05). 패드는 영향 없음 */
+@media(max-height:480px){
+#me{transform:scale(.85);transform-origin:left top}
+#questTrack{top:92px}#mainQuestTrack{top:196px}
+#mm{width:148px;height:126px;top:6px}
+#mmPortal{top:4px;width:34px;height:34px;right:max(2px,env(safe-area-inset-right))}
+#settingsBtn{top:8px;right:calc(max(10px,env(safe-area-inset-right)) + 156px)}
+#resetBtn{top:8px;right:calc(max(10px,env(safe-area-inset-right)) + 222px)}
+#fs{top:8px;right:calc(max(10px,env(safe-area-inset-right)) + 288px)}
+#place{top:194px;width:150px}
+.pot{position:fixed;width:34px!important;height:34px!important;margin:0!important;left:auto!important;top:136px!important}
+#potMp{right:calc(max(10px,env(safe-area-inset-right)) + 9px)}#potHp{right:calc(max(10px,env(safe-area-inset-right)) + 50px)}
+.pot b{min-width:15px;height:15px;font-size:9px;line-height:11px}
+#cluster{width:93px;height:93px;bottom:44px}
+#atkCap{font-size:11px}
+.sk{width:42px;height:42px;margin:-21px 0 0 -21px}
+.sk[data-i="0"]{left:9.75px!important;top:-19.5px!important}
+.sk[data-i="1"]{left:66.75px!important;top:-30px!important}
+.sk[data-i="2"]{left:-27.75px!important;top:17.25px!important}
+.sk[data-i="3"]{left:-24.75px!important;top:70.5px!important}
+.sk[data-i="4"]{left:11.25px!important;top:110.25px!important}
+#swap{width:40px;height:40px;margin:-20px 0 0 -20px;left:69px!important;top:112.5px!important}
+}
 </style>
 </head>
 <body>
@@ -303,7 +327,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-1235</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1005-1541</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
