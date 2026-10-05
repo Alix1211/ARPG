@@ -168,9 +168,9 @@ async function previousDungeonFloor(){
   if(dunFloor<=1){
     dunGrid=null;
     if(dunTheme==='cave'&&caveReturn&&typeof prepareField==='function'){
-      const q=caveReturn;
-      await prepareField(q.theme,q.leg,q.legs);
-      travel('field',[q.x,q.y+TS*.9],q.dir||'front');
+      const q=caveReturn;dunBusy=true;
+      try{await prepareField(q.theme,q.leg,q.legs);travel('field',[q.x,q.y+TS*.9],q.dir||'front');}
+      finally{dunBusy=false;}
       return;
     }
     travel('out',[27.3*TS,11.6*TS],'front');return;
