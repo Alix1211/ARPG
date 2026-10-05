@@ -3,7 +3,7 @@
 // 필드 코드(field_dungeon.js)의 몬스터·드랍·판정을 그대로 함께 쓴다.
 const combatMap = () => MAP === 'field' || MAP === 'dungeon';
 // 던전은 두 가지 모습: ruins(성 밖 입구, 석조) · cave(필드 동굴 입구, 자연 동굴). 들어온 입구에 따라 정해지고 층을 내려가도 유지된다.
-const DT = {}, DP = {}; let dunTheme = 'ruins';
+const DT = {}, DP = {}; let dunTheme = 'ruins', caveReturn = null;
 for (const th in A.dtiles){ DT[th] = {}; for (const k in A.dtiles[th]) DT[th][k] = load(A.dtiles[th][k]); }
 for (const th in A.dprops){ DP[th] = {}; for (const k in A.dprops[th]) DP[th][k] = load(A.dprops[th][k].src); }
 const DUN_MOBS=TIER_MATCH.dungeonPools;
@@ -75,7 +75,7 @@ async function prepareDungeon(floor){
   const paint = await paintDungeon(D);
   const props = [], dspots = [], torches = [];
   // 위층 계단(시작 방)과 아래층 계단(가장 먼 방)
-  props.push(dprop('stairs_up', D.start.cx, D.start.cy - 1, { name: floor === 1 ? '위로 (성 밖으로)' : '위로 (' + (floor - 1) + '층)', kind: 'stairs_up', flat: 1 }));
+  props.push(dprop('stairs_up', D.start.cx, D.start.cy - 1, { name: floor === 1 ? (dunTheme==='cave' ? '위로 (필드로)' : '위로 (성 밖으로)') : '위로 (' + (floor - 1) + '층)', kind: 'stairs_up', flat: 1 }));
   props.push(dprop('stairs_down', D.far.x+D.far.w-2, D.far.y+D.far.h-2, { name: '아래로 (' + (floor + 1) + '층)', kind: 'stairs_down', flat: 1 }));
   // 횃불: 벽 앞면에 띄엄띄엄
   for (let y = 1; y < dunH - 1; y++) for (let x = 1; x < dunW - 1; x++){
@@ -156,12 +156,25 @@ async function goDungeon(floor,fromAbove){
     return true;
   }finally{dunBusy=false;}
 }
-function enterDungeonFromOut(){closeAll();dunTheme='ruins';goDungeon(1);}
-function enterDungeonFromHere(){dunTheme='cave';goDungeon(1);}
+function enterDungeonFromOut(){closeAll();dunTheme='ruins';caveReturn=null;goDungeon(1);}
+function enterDungeonFromHere(){
+  const fs=window.__FD&&__FD.state?__FD.state():null;
+  caveReturn={theme:fs&&fs.theme?fs.theme:(typeof fieldTheme!=='undefined'?fieldTheme:'spring'),leg:fs&&fs.leg?fs.leg:1,legs:fs&&fs.legs?fs.legs:1,x:P.x,y:P.y,dir:P.dir||'front'};
+  dunTheme='cave';goDungeon(1);
+}
 function nextDungeonFloor(){if(!dunBusy)goDungeon(dunFloor+1);}
-function previousDungeonFloor(){
+async function previousDungeonFloor(){
   if(dunBusy)return;
-  if(dunFloor<=1){dunGrid=null;travel('out',[27.3*TS,11.6*TS],'front');return;}
+  if(dunFloor<=1){
+    dunGrid=null;
+    if(dunTheme==='cave'&&caveReturn&&typeof prepareField==='function'){
+      const q=caveReturn;dunBusy=true;
+      try{await prepareField(q.theme,q.leg,q.legs);travel('field',[q.x,q.y+TS*.9],q.dir||'front');}
+      finally{dunBusy=false;}
+      return;
+    }
+    travel('out',[27.3*TS,11.6*TS],'front');return;
+  }
   goDungeon(dunFloor-1,false);
 }
 function openDungeonChest(spot){
@@ -231,9 +244,10 @@ window.__DUN={
     return {id,closed,opened:!!m&&m.imgs.front===mobImageSet(id).front,blocked:!!m&&(pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5)),mobLv:m&&m.mobLv};
   },
   go:goDungeon,tier:()=>dungeonTier(dunFloor),floorTier:dungeonTier,
-  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor,theme:dunTheme}),
-  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunTheme=s.theme||'ruins';dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
-  state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
+  snapshotPortal:()=>({floor:dunFloor,grid:dunGrid,map:MAPS.dungeon,maxFloor:dunMaxFloor,theme:dunTheme,caveReturn:caveReturn?{...caveReturn}:null}),
+  preparePortalRestore:s=>{if(!s)return false;dunFloor=s.floor||1;dunTheme=s.theme||'ruins';caveReturn=s.caveReturn||null;dunGrid=s.grid||null;MAPS.dungeon=s.map||MAPS.dungeon;dunMaxFloor=s.maxFloor||dunMaxFloor;return true;},
+  restoreEntry:(theme,ret)=>{dunTheme=theme==='cave'?'cave':'ruins';caveReturn=ret||null;return true;},
+  state:()=>({map:MAP,floor:dunFloor,tier:dungeonTier(dunFloor),theme:dunTheme,caveReturn:caveReturn?{...caveReturn}:null,busy:dunBusy,monsters:monsters.filter(m=>!m.dead).length,chests:spots.filter(s=>s.kind==='chest').length,name:CUR.name,
     blocked:blocked(P.x,P.y),moves:[[16,0],[-16,0],[0,16],[0,-16]].filter(([dx,dy])=>!blocked(P.x+dx,P.y+dy)).length}),
   spots:()=>spots.map(s=>[s.kind,Math.round(s.x),Math.round(s.y)])
 };

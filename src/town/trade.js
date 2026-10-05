@@ -36,7 +36,7 @@ const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS, mou
 function mountNow(){ return TRADE_MOUNTS[Math.max(0,Math.min(tradeState.mount|0,TRADE_MOUNTS.length-1))]; }
 function cargoMax(){ return mountNow().slots; }
 function mountImg(m,h,extra){ const u=(typeof A!=='undefined'&&A.mounts)?A.mounts[m.id]:''; return u?'<img src="'+u+'" alt="'+m.name+'" style="height:'+h+'px;vertical-align:middle;'+(extra||'')+'">':m.icon; }
-let tradeRegion='town', tradeSel='wheat';
+let tradeRegion='town', tradeSel='wheat', tradeMode='buy';
 
 function tradeRegionDef(k){ return TRADE_REGIONS[k] || TRADE_REGIONS.town; }
 function tradeMod(region,id){ return tradeRegionDef(region).m[id] || 1; }
@@ -98,92 +98,103 @@ function buyMount(){
 }
 function tradeMsg(t){ const e=$('tradeSay'); if(e)e.textContent=t; }
 
+function tradeQtyMax(mode,id){
+  const cur=cargoEntry(id),q=tradeQuote(tradeRegion,id);
+  if(mode==='sell')return cur.qty||0;
+  if(!cur.qty&&cargoSlots()>=cargoMax())return 0;
+  return Math.max(0,Math.min(TRADE_STACK_MAX-cur.qty,Math.floor(P.gold/Math.max(1,q.buy))));
+}
+function bindTradePress(el,onTap,onHold){
+  let timer=0,held=false;
+  const clear=()=>{if(timer){clearTimeout(timer);timer=0;}};
+  el.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;held=false;clear();timer=setTimeout(()=>{held=true;timer=0;onHold();},520);});
+  el.addEventListener('pointerup',e=>{const was=held;clear();if(!was)onTap();});
+  el.addEventListener('pointercancel',clear);el.addEventListener('pointerleave',e=>{if(e.buttons)clear();});
+}
+function openTradeQty(mode,id){
+  tradeMode=mode;tradeSel=id;renderTrade();
+  const max=tradeQtyMax(mode,id);if(max<1){tradeMsg(mode==='buy'?'더 살 수 없습니다.':'팔 물건이 없습니다.');return false;}
+  const g=TRADE_BY_ID[id],q=tradeQuote(tradeRegion,id),o=$('tradeQty'),inp=$('tradeQtyInput');
+  $('tradeQtyTitle').textContent=(mode==='buy'?'구매 수량':'판매 수량')+' · '+g.name;
+  $('tradeQtyLine').textContent='1개 '+(mode==='buy'?q.buy:q.sell)+'G · 최대 '+max+'개';
+  inp.min=1;inp.max=max;inp.value=Math.min(10,max);o.classList.add('on');inp.focus();inp.select();return true;
+}
+function closeTradeQty(){const o=$('tradeQty');if(o)o.classList.remove('on');}
 function ensureTradeUI(){
   if($('trade'))return;
   const st=document.createElement('style');
   st.textContent=`
-#trade{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;background:#100b06b8}
-#trade.on{display:flex}
-#trade .tbox{width:min(980px,94vw);height:min(620px,88vh);background:#eadab8;border:4px solid #7b5228;border-radius:18px;box-shadow:0 15px 50px #000a;padding:14px;color:#402915;font-family:sans-serif;display:grid;grid-template-columns:1fr 285px;grid-template-rows:auto 1fr;gap:10px}
-#tradeHead{grid-column:1/3;display:flex;align-items:center;gap:12px;border-bottom:2px solid #b78a4d;padding-bottom:8px}
-#tradeHead b{font-size:21px} #tradeHead #tradeNote b{font-size:13px}
-#tradeHead #tradeNote{font-size:12px;color:#7b5a2e;line-height:1.35;flex:1}
-#tradeHead small{margin-left:auto;font-weight:900;color:#77511f}
-#tradeList{display:grid;grid-template-columns:repeat(5,minmax(92px,1fr));gap:7px;overflow:auto;align-content:start;padding-right:4px}
-.tgood{border:2px solid #b58a51;border-radius:11px;background:#f5e9cd;padding:6px;text-align:left;color:#4b321a;min-height:82px}
-.tgood.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}
-.tgood i{font-style:normal;font-size:25px;float:left;margin-right:5px}.tgood b{font-size:13px}.tgood small{display:block;clear:both;font-size:11px;margin-top:6px;line-height:1.35}
-.tgood .hi{color:#b32720}.tgood .lo{color:#24689c}
-#tradeInfo{border-left:2px solid #b78a4d;padding-left:12px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;overflow:auto}
-#tradeIcon{font-size:58px;line-height:70px} #tradeName{font-size:20px;font-weight:900} #tradePrice{font-weight:900;font-size:17px}
-#tradeStock{font-size:12px;line-height:1.55;color:#684c2c;min-height:62px}
-#tradeBtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
-#tradeBtns button,#tradeClose{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:7px;font-weight:900}
-#tradeBtns button:disabled{opacity:.35} #tradeClose{margin-top:auto;background:#e8d4ad;color:#50351d}
-#tradeSay{font-size:12px;color:#883d20;min-height:42px;line-height:1.4}
+#trade{position:fixed;inset:0;z-index:82;display:none;align-items:center;justify-content:center;background:#100b06c9;font-family:sans-serif}#trade.on{display:flex}
+#trade .tbox{width:min(1040px,96vw);height:min(650px,91vh);background:#eadab8;border:4px solid #7b5228;border-radius:16px;box-shadow:0 15px 50px #000a;padding:12px;color:#402915;display:grid;grid-template-rows:auto 1fr auto;gap:9px;box-sizing:border-box}
+#tradeHead{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px;border-bottom:2px solid #b78a4d;padding-bottom:8px}#tradeTitle{font-size:20px}
+#tradeTabs{display:flex;gap:5px}#tradeTabs button{border:2px solid #9a6b34;background:#d6bd8d;color:#4e3218;border-radius:8px;padding:6px 14px;font-weight:900}#tradeTabs button.on{background:#6f3e1f;color:#fff0ce}
+#tradeNote{font-size:11px;color:#77511f;line-height:1.3;overflow:hidden}#tradeHead small{font-weight:900;white-space:nowrap}
+#tradeColumns{display:grid;grid-template-columns:1.35fr .85fr;gap:10px;min-height:0}.tradePane{background:#f4e7c9;border:2px solid #b58a51;border-radius:11px;padding:8px;min-height:0;display:grid;grid-template-rows:auto 1fr}
+.tradePane h3{margin:0 0 6px;font-size:14px;display:flex;justify-content:space-between;align-items:center}.tradePane h3 small{font-size:10px;color:#76542d}
+#tradeList,#tradeCargoList{overflow:auto;align-content:start;display:grid;gap:5px;padding-right:2px}#tradeList{grid-template-columns:repeat(5,minmax(74px,1fr))}#tradeCargoList{grid-template-columns:repeat(3,minmax(78px,1fr))}
+.tgood,.tcargo{border:2px solid #b58a51;border-radius:8px;background:#fff4d9;color:#4b321a;min-height:58px;padding:5px;text-align:left;position:relative;overflow:hidden}.tgood.sel,.tcargo.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}.tgood.dim,.tcargo.dim{opacity:.55}
+.tgood i,.tcargo i{font-style:normal;font-size:21px;float:left;margin-right:4px}.tgood b,.tcargo b{font-size:11px;white-space:nowrap}.tgood small,.tcargo small{display:block;clear:both;font-size:9px;line-height:1.25;margin-top:3px}.tgood .hi{color:#b32720}.tgood .lo{color:#24689c}.tempty{border:1px dashed #bda77d;border-radius:8px;min-height:58px;opacity:.45}
+#tradeDetail{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-top:2px solid #b78a4d;padding-top:8px;min-height:86px}#tradeIcon{font-size:36px;width:45px;text-align:center}#tradeName{font-size:16px;font-weight:900}#tradePrice,#tradeStock,#tradeSeen{font-size:10px;line-height:1.35;color:#684c2c}
+#tradeActionBox{display:grid;grid-template-columns:130px 80px;gap:5px;align-items:center}#tradeAction,#tradeClose,#tradeMountBtn{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:8px;font-weight:900}#tradeClose{background:#e8d4ad;color:#50351d}#tradeAction:disabled{opacity:.35}
+#tradeHold{grid-column:1/3;text-align:center;font-size:9px;color:#7d6546}#tradeMount{grid-column:1/4;font-size:10px;color:#5a3d20;border-top:1px solid #c7a875;padding-top:4px;display:flex;gap:8px;align-items:center}#tradeMountTxt{flex:1}#tradeMountBtn{padding:5px 9px;width:auto}
+#tradeSay{grid-column:1/4;font-size:10px;color:#883d20;min-height:14px}
+#tradeQty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1a1009a8;z-index:3}#tradeQty.on{display:flex}#tradeQty .qbox{width:280px;background:#f1dfb8;border:3px solid #795026;border-radius:12px;padding:16px;text-align:center;box-shadow:0 12px 30px #0008}#tradeQtyTitle{font-weight:900;font-size:16px}#tradeQtyLine{font-size:11px;color:#725233;margin:6px 0 10px}#tradeQtyInput{width:110px;font-size:24px;text-align:center;padding:4px;border:2px solid #9b7447;border-radius:8px;background:#fff8e8}#tradeQty .qrow{display:flex;gap:6px;justify-content:center;margin-top:10px}#tradeQty button{border:2px solid #99642c;border-radius:7px;padding:7px 12px;font-weight:900;background:#6f3e1f;color:#fff0ce}#tradeQty button.ghost{background:#e8d4ad;color:#50351d}
 .tradeSummary{margin-top:52px;height:calc(100% - 52px);box-sizing:border-box;overflow:auto;background:linear-gradient(#f3e6c6,#e4cf9f);border:4px solid #7b5228;border-radius:16px;padding:18px 22px;color:#53391d}.tradeSummary h2{margin:0 0 10px}.tradeSummary p{font-size:13px;line-height:1.6}.tradeSummary strong{color:#9a541e}
-.tradeCargo{position:relative;width:100%;height:100%;padding:118px 0 0 80px;box-sizing:border-box;display:grid;grid-template-columns:repeat(7,61px);grid-auto-rows:62px;gap:5px;align-content:start;overflow:hidden}
-.tradeCargo h3{position:absolute;left:0;right:0;top:38px;margin:0;text-align:center;font-size:19px;color:#fff0ce;text-shadow:0 2px 3px #4a1a14}.tradeCargo .tc{border:2px solid #ab8251;border-radius:10px;background:#ead8b5;text-align:center;padding:3px;min-width:0;box-sizing:border-box;overflow:hidden}.tradeCargo .tc.lock{opacity:.28;background:#c9b48c}.tradeCargo .tc i{font-style:normal;font-size:22px}.tradeCargo .tc b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tradeCargo .tc small{font-size:9px;color:#725435}
+.tradeCargo{position:relative;width:100%;height:100%;padding:118px 0 0 80px;box-sizing:border-box;display:grid;grid-template-columns:repeat(7,61px);grid-auto-rows:62px;gap:5px;align-content:start;overflow:hidden}.tradeCargo h3{position:absolute;left:0;right:0;top:38px;margin:0;text-align:center;font-size:19px;color:#fff0ce;text-shadow:0 2px 3px #4a1a14}.tradeCargo .tc{border:2px solid #ab8251;border-radius:10px;background:#ead8b5;text-align:center;padding:3px;min-width:0;box-sizing:border-box;overflow:hidden}.tradeCargo .tc.lock{opacity:.28;background:#c9b48c}.tradeCargo .tc i{font-style:normal;font-size:22px}.tradeCargo .tc b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tradeCargo .tc small{font-size:9px;color:#725435}
 `;
   document.head.append(st);
-  const d=document.createElement('div'); d.id='trade';
-  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><span id="tradeHint"></span><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeList"></div><div id="tradeInfo"><div id="tradeIcon"></div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeBtns"><button data-tb="b1">1개 사기</button><button data-tb="b5">5개 사기</button><button data-tb="b10">10개 사기</button><button data-tb="s1">1개 팔기</button><button data-tb="s5">5개 팔기</button><button data-tb="sa">전부 팔기</button></div><div id="tradeSay"></div><button id="tradeClose">나가기</button></div></div>';
+  const d=document.createElement('div');d.id='trade';
+  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><div id="tradeTabs"><button id="tradeBuyTab" type="button">사기</button><button id="tradeSellTab" type="button">팔기</button></div><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeColumns"><section class="tradePane"><h3>이 마을 물품 <small>짧게 선택 · 길게 수량</small></h3><div id="tradeList"></div></section><section class="tradePane"><h3>내 화물 <small id="tradeHint"></small></h3><div id="tradeCargoList"></div></section></div><div id="tradeDetail"><div id="tradeIcon"></div><div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeSeen"></div></div><div id="tradeActionBox"><button id="tradeAction" type="button">1개 사기</button><button id="tradeClose" type="button">나가기</button><div id="tradeHold">길게 누르면 수량 선택</div></div><div id="tradeMount"><div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn">수레 구매</button></div><div id="tradeSay"></div></div><div id="tradeQty"><div class="qbox"><div id="tradeQtyTitle"></div><div id="tradeQtyLine"></div><input id="tradeQtyInput" type="number" inputmode="numeric" min="1"><div class="qrow"><button id="tradeQtyMax" type="button">최대</button><button id="tradeQtyOk" type="button">확인</button><button class="ghost" id="tradeQtyCancel" type="button">취소</button></div></div></div></div>';
   document.body.append(d);
-  const inf=$('tradeInfo'), cl=$('tradeClose');
-  const seen=document.createElement('div'); seen.id='tradeSeen'; seen.style.cssText='font-size:11px;line-height:1.5;color:#684c2c;width:100%;text-align:left';
-  const mt=document.createElement('div'); mt.id='tradeMount'; mt.style.cssText='width:100%;border-top:2px solid #b78a4d;padding-top:6px;font-size:12px;line-height:1.45;color:#50351d';
-  mt.innerHTML='<div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn" style="margin-top:4px;border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:6px;font-weight:900;width:100%">구매</button>';
-  inf.insertBefore(seen,cl); inf.insertBefore(mt,cl);
-  $('tradeMountBtn').onclick=()=>buyMount();
   d.addEventListener('click',e=>{if(e.target===d)closeTrade();});
-  $('tradeClose').onclick=()=>closeTrade();
-  $('tradeBtns').addEventListener('click',e=>{
-    const k=e.target.dataset.tb;if(!k)return;
-    const c=cargoEntry(tradeSel);
-    if(k==='b1')tradeBuy(tradeSel,1); else if(k==='b5')tradeBuy(tradeSel,5); else if(k==='b10')tradeBuy(tradeSel,10);
-    else if(k==='s1')tradeSell(tradeSel,1); else if(k==='s5')tradeSell(tradeSel,5); else if(k==='sa')tradeSell(tradeSel,c.qty);
-  });
+  $('tradeClose').onclick=()=>closeTrade();$('tradeBuyTab').onclick=()=>{tradeMode='buy';renderTrade();};$('tradeSellTab').onclick=()=>{tradeMode='sell';renderTrade();};
+  $('tradeMountBtn').onclick=()=>buyMount();
+  bindTradePress($('tradeAction'),()=>{const max=tradeQtyMax(tradeMode,tradeSel);if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,1):tradeSell(tradeSel,1);},()=>openTradeQty(tradeMode,tradeSel));
+  $('tradeQtyCancel').onclick=closeTradeQty;$('tradeQty').addEventListener('click',e=>{if(e.target.id==='tradeQty')closeTradeQty();});
+  $('tradeQtyMax').onclick=()=>{$('tradeQtyInput').value=tradeQtyMax(tradeMode,tradeSel);};
+  $('tradeQtyOk').onclick=()=>{const max=tradeQtyMax(tradeMode,tradeSel),n=Math.max(1,Math.min(max,parseInt($('tradeQtyInput').value,10)||1));closeTradeQty();if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,n):tradeSell(tradeSel,n);};
 }
 function openTrade(region){
-  closeAll(); ensureTradeUI(); tradeRegion=TRADE_REGIONS[region]?region:'town'; panel='trade'; $('trade').classList.add('on'); recordSeen(tradeRegion); renderTrade();
+  closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
 }
-function closeTrade(silent){
-  const d=$('trade'); if(d)d.classList.remove('on'); if(panel==='trade')panel=null;
-}
+function closeTrade(silent){closeTradeQty();const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
 function renderTrade(){
-  ensureTradeUI(); const R=tradeRegionDef(tradeRegion);
-  $('tradeTitle').textContent=R.name; $('tradeGold').textContent=P.gold;
-  $('tradeHint').textContent='화물 '+cargoSlots()+'/'+cargoMax()+'칸';
-  { // 이 마을의 성격: 싼 것 / 귀한 것(비싸게 사 주는 것)
-    const ent=Object.entries(R.m), nm=id=>TRADE_BY_ID[id]?TRADE_BY_ID[id].name:id;
-    const cheap=ent.filter(e=>e[1]<=.85).sort((a,b)=>a[1]-b[1]).slice(0,4).map(e=>nm(e[0])).join('·');
-    const dear=ent.filter(e=>e[1]>=1.12).sort((a,b)=>b[1]-a[1]).slice(0,4).map(e=>nm(e[0])).join('·');
-    $('tradeNote').innerHTML=tradeRegion==='town'?(dear?'수도 · 사치품을 비싸게 사 줍니다: <b>'+dear+'</b>':''):((cheap?'싼 것 <b>'+cheap+'</b>':'')+(cheap&&dear?' · ':'')+(dear?'귀한 것 <b>'+dear+'</b>':''));
-  }
-  const list=$('tradeList'); list.innerHTML='';
+  ensureTradeUI();const R=tradeRegionDef(tradeRegion),cargoIds=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
+  if(tradeMode==='sell'&&!cargoEntry(tradeSel).qty&&cargoIds.length)tradeSel=cargoIds[0];
+  $('tradeTitle').textContent=R.name;$('tradeGold').textContent=P.gold;$('tradeHint').textContent=cargoSlots()+'/'+cargoMax()+'칸';
+  $('tradeBuyTab').classList.toggle('on',tradeMode==='buy');$('tradeSellTab').classList.toggle('on',tradeMode==='sell');
+  const ent=Object.entries(R.m),nm=id=>TRADE_BY_ID[id]?TRADE_BY_ID[id].name:id;
+  const cheap=ent.filter(e=>e[1]<=.85).sort((a,b)=>a[1]-b[1]).slice(0,3).map(e=>nm(e[0])).join('·');
+  const dear=ent.filter(e=>e[1]>=1.12).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>nm(e[0])).join('·');
+  $('tradeNote').textContent=(cheap?'싼 것 '+cheap:'')+(cheap&&dear?' / ':'')+(dear?'비싸게 사는 것 '+dear:'');
+  const list=$('tradeList');list.innerHTML='';
   for(const g of TRADE_GOODS){
-    const q=tradeQuote(tradeRegion,g.id), c=cargoEntry(g.id), b=document.createElement('button');
-    b.className='tgood'+(tradeSel===g.id?' sel':''); b.type='button';
+    const q=tradeQuote(tradeRegion,g.id),cur=cargoEntry(g.id),card=document.createElement('button');card.type='button';
     const cls=q.mod>=1.18?'hi':q.mod<=.82?'lo':'';
-    b.innerHTML='<i>'+g.icon+'</i><b>'+g.name+'</b><small class="'+cls+'">사 '+q.buy+' / 팔 '+q.sell+(c.qty?' · '+c.qty+'개':'')+'</small>';
-    b.onclick=()=>{tradeSel=g.id;renderTrade();}; list.append(b);
+    card.className='tgood'+(tradeMode==='buy'&&tradeSel===g.id?' sel':'')+(tradeMode==='sell'?' dim':'');
+    card.innerHTML='<i>'+g.icon+'</i><b>'+g.name+'</b><small class="'+cls+'">사 '+q.buy+' / 팔 '+q.sell+(cur.qty?' · 보유 '+cur.qty:'')+'</small>';
+    bindTradePress(card,()=>{tradeMode='buy';tradeSel=g.id;renderTrade();},()=>openTradeQty('buy',g.id));list.append(card);
   }
-  const g=TRADE_BY_ID[tradeSel]||TRADE_GOODS[0], q=tradeQuote(tradeRegion,g.id), c=cargoEntry(g.id);
-  $('tradeIcon').textContent=g.icon; $('tradeName').textContent=g.name;
-  $('tradePrice').textContent='매입 '+q.buy+' · 매각 '+q.sell+' 골드';
-  const allProfit=c.qty?Math.round((q.sell-c.avg)*c.qty):0;
-  $('tradeStock').innerHTML='보유 <b>'+c.qty+'</b>개'+(c.qty?'<br>평균 매입 '+Math.round(c.avg)+' · 지금 전부 팔면 <b>'+(allProfit>=0?'+':'')+allProfit+'</b>':'<br>화물칸에 없습니다.');
-  const btn=[...$('tradeBtns').querySelectorAll('button')];
-  btn[0].disabled=P.gold<q.buy||c.qty>=TRADE_STACK_MAX; btn[1].disabled=P.gold<q.buy||c.qty>=TRADE_STACK_MAX;
-  btn[2].disabled=P.gold<q.buy||c.qty>=TRADE_STACK_MAX; btn[3].disabled=!c.qty; btn[4].disabled=c.qty<1; btn[5].disabled=!c.qty;
-  // 시세 수첩: 다녀온 다른 마을의 같은 품목 가격
-  const rows=[]; let best=null;
-  for(const r in tradeState.seen){ if(r===tradeRegion)continue; const e=tradeState.seen[r].q[g.id]; if(!e)continue; rows.push('<span>'+tradeRegionDef(r).short+' 사 '+e[0]+' / 팔 '+e[1]+'</span>'); if(!best||e[1]>best.s)best={r,s:e[1]}; }
-  $('tradeSeen').innerHTML=rows.length?('<b>수첩</b> · '+rows.join(' · ')+(best&&q.buy?'<br>가장 비싸게 파는 곳: '+tradeRegionDef(best.r).short+' ('+(best.s-q.buy>=0?'+':'')+(best.s-q.buy)+'/개)':'')):'<b>수첩</b> · 아직 다녀온 다른 마을이 없습니다.';
-  // 탈것
-  const m=mountNow(), nx=TRADE_MOUNTS[(tradeState.mount|0)+1], tier=REGION_TIER[tradeRegion]||0;
-  $('tradeMountTxt').innerHTML=mountImg(m,44)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?'<br>다음: '+mountImg(nx,22)+' '+nx.name+' '+nx.slots+'칸 · '+nx.price+'G'+(tier<nx.tier?' ('+nx.tier+'티어 마을부터)':''):'<br>최고 단계');
-  $('tradeMountBtn').style.display=nx?'':'none'; if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
+  const cargo=$('tradeCargoList');cargo.innerHTML='';
+  for(let i=0;i<cargoMax();i++){
+    const id=cargoIds[i];
+    if(!id){const empty=document.createElement('div');empty.className='tempty';cargo.append(empty);continue;}
+    const g=TRADE_BY_ID[id],cur=cargoEntry(id),q=tradeQuote(tradeRegion,id),card=document.createElement('button');card.type='button';
+    card.className='tcargo'+(tradeMode==='sell'&&tradeSel===id?' sel':'')+(tradeMode==='buy'?' dim':'');
+    card.innerHTML='<i>'+g.icon+'</i><b>'+g.name+' ×'+cur.qty+'</b><small>평균 '+Math.round(cur.avg)+'G · 팔 '+q.sell+'G</small>';
+    bindTradePress(card,()=>{tradeMode='sell';tradeSel=id;renderTrade();},()=>openTradeQty('sell',id));cargo.append(card);
+  }
+  const g=TRADE_BY_ID[tradeSel]||TRADE_GOODS[0],q=tradeQuote(tradeRegion,g.id),cur=cargoEntry(g.id);
+  $('tradeIcon').textContent=g.icon;$('tradeName').textContent=g.name;$('tradePrice').textContent='구매 '+q.buy+'G · 판매 '+q.sell+'G';
+  const allProfit=cur.qty?Math.round((q.sell-cur.avg)*cur.qty):0;
+  $('tradeStock').innerHTML='내 화물 <b>'+cur.qty+'</b>개'+(cur.qty?' · 평균 '+Math.round(cur.avg)+'G · 전부 팔면 '+(allProfit>=0?'+':'')+allProfit+'G':'');
+  const rows=[];let best=null;
+  for(const r in tradeState.seen){if(r===tradeRegion)continue;const e=tradeState.seen[r].q[g.id];if(!e)continue;rows.push(tradeRegionDef(r).short+' '+e[0]+'/'+e[1]);if(!best||e[1]>best.s)best={r,s:e[1]};}
+  $('tradeSeen').textContent=rows.length?'수첩 · '+rows.join(' · '):'수첩 · 다른 마을 시세 미확인';
+  const action=$('tradeAction'),max=tradeQtyMax(tradeMode,g.id);action.textContent=tradeMode==='buy'?'1개 사기':'1개 팔기';action.disabled=max<1;
+  const m=mountNow(),nx=TRADE_MOUNTS[(tradeState.mount|0)+1],tier=REGION_TIER[tradeRegion]||0;
+  $('tradeMountTxt').innerHTML=mountImg(m,30)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?' → '+mountImg(nx,20)+' '+nx.name+' '+nx.slots+'칸 / '+nx.price+'G':' · 최고 단계');
+  $('tradeMountBtn').style.display=nx?'':'none';if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
 }
 function tradeSaveData(){ return {cargo:tradeState.cargo,pressure:tradeState.pressure,resetAt:tradeState.resetAt,mount:tradeState.mount|0,seen:tradeState.seen}; }
 function tradeLoadData(d){

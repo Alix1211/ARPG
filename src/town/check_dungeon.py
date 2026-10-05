@@ -39,6 +39,15 @@ async def main():
         st=await ev("() => __DUN.state()")
         assert st['floor']==4 and st['blocked'] is False and st['moves']>=2,st
 
+        # 필드 동굴 1층에서 위로 나오면 성 밖 던전 입구가 아니라 들어왔던 필드로 돌아간다.
+        await ev("() => __FD.enter('summer',2)"); await pg.wait_for_timeout(900)
+        await ev("() => { GAME.P.x=50*48; GAME.P.y=10*48; enterDungeonFromHere(); }"); await pg.wait_for_timeout(900)
+        st=await ev("() => __DUN.state()")
+        assert st['map']=='dungeon' and st['theme']=='cave' and st['floor']==1,st
+        await ev("() => previousDungeonFloor()"); await pg.wait_for_timeout(1000)
+        fs=await ev("() => __FD.state()")
+        assert fs['map']=='field' and fs['theme']=='summer' and fs['leg']==2,fs
+
         # 테스트 비상탈출은 전투/층과 무관하게 즉시 큰 마을로 복귀.
         await pg.click('#settingsBtn')
         assert await ev("() => GAME.isPaused()")

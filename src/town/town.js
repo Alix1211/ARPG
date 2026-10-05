@@ -43,7 +43,7 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
-  if (b.k === 'watchtower' || hasNpc.has(b.k)) continue;
+  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k)) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
 for (const p of CUR.props){
@@ -73,6 +73,7 @@ for (const n of npcs){
   if (CUR.exits) exits.push(...CUR.exits);
   if (CUR.solids) solids.push(...CUR.solids);
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
+  if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
   if (window.__FD_READY && typeof afterDynamicBuild === 'function') afterDynamicBuild(id);
@@ -379,6 +380,7 @@ function act(){
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
+  if (near.kind === 'field_village' && window.__FD) return __FD.enterVillage(near.market || (CUR && CUR.market) || 'spring');
   if (near.kind === 'trade' && window.TRADE) return TRADE.open(near.market || (CUR && CUR.market) || 'town');
   if(near.kind==='town_portal')return returnTownPortal();
   if(MAP==='field'&&near.name==='야영지'&&typeof restAtCamp==='function')return restAtCamp();
@@ -408,7 +410,8 @@ function locationState(){
   if(MAP==='inn'&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
   if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
-  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;}
+  if(MAP==='fieldvillage'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;st.villageReturn=f.villageReturn||null;}
+  if(MAP==='dungeon'&&window.__DUN){const d=__DUN.state();st.floor=d.floor||1;st.dungeonTheme=d.theme||'ruins';st.caveReturn=d.caveReturn||null;}
   return st;
 }
 async function resumeLocation(st){
@@ -417,7 +420,10 @@ async function resumeLocation(st){
   try{
     if(map==='field'&&typeof prepareField==='function'){
       await prepareField(st.theme||'spring',st.leg,st.legs);buildWorld('field');
+    }else if(map==='fieldvillage'&&window.__FD&&__FD.prepareVillage){
+      await __FD.prepareVillage(st.theme||'spring',st.villageReturn||null);buildWorld('fieldvillage');
     }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
+      if(window.__DUN&&__DUN.restoreEntry)__DUN.restoreEntry(st.dungeonTheme||'ruins',st.caveReturn||null);
       await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
     }else if(map==='out'){
       buildWorld('out');
@@ -648,6 +654,23 @@ const vils = A.vils.map((v, i) => {
   return { ...v, x: st.x, y: st.y, home, tx: st.x, ty: st.y, wait: rand(0, 3), dir: 'front', flip: false, t: 0, moving: false,
     sp: v.name === 'kid' ? 95 : v.name === 'grandpa' ? 42 : rand(55, 70), stuck: 0, hidden: false, ph: rand(0, 7) };
 });
+const FVP=[[7,14],[10,17],[16,16],[22,17],[25,14],[12,9],[20,9],[16,19]].map(([x,y])=>({x:x*TS,y:y*TS}));
+const fvils=vils.slice(0,4).map((v,i)=>({...v,x:FVP[i].x,y:FVP[i].y,tx:FVP[i].x,ty:FVP[i].y,wait:rand(.5,2.5),hidden:false,goingHome:false,stuck:0}));
+function resetFieldVils(){
+  for(let i=0;i<fvils.length;i++){const p=FVP[i%FVP.length],v=fvils[i];v.x=p.x;v.y=p.y;v.tx=p.x;v.ty=p.y;v.wait=rand(.4,2.2);v.hidden=false;v.goingHome=false;v.stuck=0;}
+}
+function updFieldVils(dt){
+  for(const v of fvils){
+    if(v.wait>0){v.wait-=dt;v.moving=false;v.t=0;continue;}
+    const dx=v.tx-v.x,dy=v.ty-v.y,d=Math.hypot(dx,dy);
+    if(d<6){v.wait=rand(1,3.5);const n=FVP[Math.floor(rand(0,FVP.length))];v.tx=n.x+rand(-16,16);v.ty=n.y+rand(-12,12);continue;}
+    const sp=v.sp*.9,mx=dx/d*sp*dt,my=dy/d*sp*dt,ox=v.x,oy=v.y;
+    if(!vBlocked(v.x+mx,v.y))v.x+=mx;if(!vBlocked(v.x,v.y+my))v.y+=my;
+    const moved=Math.hypot(v.x-ox,v.y-oy);v.moving=moved>.2;v.t+=dt*(sp/60);
+    if(moved<sp*dt*.25){v.stuck+=dt;if(v.stuck>1){const n=FVP[Math.floor(rand(0,FVP.length))];v.tx=n.x;v.ty=n.y;v.stuck=0;}}else v.stuck=0;
+    if(Math.abs(dx)>Math.abs(dy)*1.2){v.dir='side';v.flip=dx>0;}else v.dir=dy<0?'back':'front';
+  }
+}
 function vBlocked(x, y){
   const r = 9;
   if (x < r || y < 30 || x > MWp - r || y > MHp - 6) return true;
@@ -881,6 +904,7 @@ function drawMini(camX, camY){
   mx.fillStyle = '#ffe08a';
   for (const n of npcs){ mx.beginPath(); mx.arc(n.x * sx, n.y * sy, 2.5, 0, 7); mx.fill(); }
   mx.fillStyle = '#e8f2ff'; if (MAP === 'town') for (const v of vils) if (!v.hidden){ mx.beginPath(); mx.arc(v.x * sx, v.y * sy, 2, 0, 7); mx.fill(); }
+  else if(MAP==='fieldvillage')for(const v of fvils){mx.beginPath();mx.arc(v.x*sx,v.y*sy,2,0,7);mx.fill();}
   if(window.QUEST&&QUEST.minimapTargets){
     const pulse=.5+.5*Math.sin(T*6.2),r=3.8+pulse*2.8;
     for(const q of QUEST.minimapTargets()){
@@ -956,6 +980,7 @@ function frame(now){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
+    else if(MAP==='fieldvillage')updFieldVils(dt);
   }
 
   if (INDOOR){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120a05'; ctx.fillRect(0, 0, cv.width, cv.height); }
@@ -969,6 +994,7 @@ function frame(now){
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
   if (MAP === 'town') for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
+  else if (MAP === 'fieldvillage') for (const v of fvils) list.push({vil:v,key:v.y});
   if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list);
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
