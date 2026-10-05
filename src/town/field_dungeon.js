@@ -24,6 +24,15 @@ const FIELD_LAYOUT={
   volcano:{start:[2.5,20],end:[44.5,8],curve:[12,13,29,25],village:[38.7,11.6,42.7,13.5],cave:[43.8,4.5],camp:[12.8,25.0],ruin:[26.5,8.5],special:[35.5,24.0],sign:[4.0,19.4]},
   swamp:{start:[2.5,17],end:[44.5,13],curve:[13,24,29,7],village:[38.4,14.8,42.4,16.8],cave:[43.8,18.2],camp:[13.3,7.5],ruin:[27.5,24.0],special:[34.0,6.5],sign:[4.0,16.4]}
 };
+const FIELD_POI={
+  spring:{start:['15_','지역 이정표'],camp:['14_','야영지'],ruin:['13_','무너진 폐허'],special:['12_','버섯 군락']},
+  summer:{start:['15_','부서진 울타리'],camp:['14_','숲속 천막'],ruin:['13_','덩굴 낀 폐허'],special:['12_','큰 버섯 군락']},
+  autumn:{start:['15_','버려진 수레'],camp:['14_','건초 더미'],ruin:['13_','낡은 허수아비'],special:['12_','호박 무더기']},
+  winter:{start:['13_','눈 덮인 이정표'],camp:['14_','꺼진 모닥불'],ruin:['15_','버려진 썰매'],special:['12_','눈사람']},
+  ice:{start:['15_','얼음 제단'],camp:['14_','고드름 바위'],ruin:['13_','얼어붙은 갑옷'],special:['12_','얼음 부유물']},
+  volcano:{start:['15_','불의 제단'],camp:['14_','용암 가장자리'],ruin:['13_','녹아붙은 갑옷'],special:['12_','검게 탄 묘비']},
+  swamp:{start:['14_','낡은 판자길'],camp:['15_','마녀의 솥'],ruin:['13_','가라앉은 기둥'],special:['12_','독버섯 군락']}
+};
 const PLAYER_STATUS={slow:0,stone:0,bleed:0,burn:0,bleedTick:0,burnTick:0};
 let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0, fieldLeg = 1, fieldLegs = 1, legBusy = false;
 
@@ -47,7 +56,7 @@ function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
 let fieldMapW=48,fieldMapH=32,fieldOutdoor=null; // 2026-10-06: 막힘 가독성/축소 거점 기준
 
-function inTownReserve(x,y){return fieldLeg===fieldLegs&&x>35&&x<47&&y>6&&y<15;}
+function inTownReserve(x,y){const L=FIELD_LAYOUT[fieldTheme]||FIELD_LAYOUT.spring;return fieldLeg===fieldLegs&&x>L.village[0]-4&&x<L.village[2]+4&&y>L.village[1]-5&&y<L.village[3]+4;}
 function outdoorFloor(bg,x,y){return !!(bg&&bg.grid&&bg.grid[y]&&bg.grid[y][x]);}
 function outdoorBoundary(bg,x,y){
   if(!bg||!bg.grid||outdoorFloor(bg,x,y))return false;
@@ -153,15 +162,16 @@ function fieldPropClear(x, y, meta, out){
   return true;
 }
 function randomFieldProps(theme,isLast=false,bg=null){
-  const visualTheme=theme,all=A.field.props[visualTheme]||[],out=[];
-  const cave=fieldPropMeta(visualTheme,'16_'),camp=fieldPropMeta(visualTheme,'14_'),ruin=fieldPropMeta(visualTheme,'13_'),sign=fieldPropMeta(visualTheme,'15_'),special=fieldPropMeta(visualTheme,'12_');
+  const visualTheme=theme,all=A.field.props[visualTheme]||[],out=[],poi=FIELD_POI[theme]||FIELD_POI.spring;
+  const cave=fieldPropMeta(visualTheme,'16_');
+  const startMeta=fieldPropMeta(visualTheme,poi.start[0]),campMeta=fieldPropMeta(visualTheme,poi.camp[0]),ruinMeta=fieldPropMeta(visualTheme,poi.ruin[0]),specialMeta=fieldPropMeta(visualTheme,poi.special[0]);
   if(isLast){
     const L=FIELD_LAYOUT[theme]||FIELD_LAYOUT.spring;
     for(const p of [
-      mkFieldProp(sign,L.sign[0],L.sign[1],'','지역 이정표'),
-      mkFieldProp(camp,L.camp[0],L.camp[1],'fire','야영지'),
-      mkFieldProp(ruin,L.ruin[0],L.ruin[1],'','무너진 폐허'),
-      mkFieldProp(special,L.special[0],L.special[1],'','이상한 흔적'),
+      mkFieldProp(startMeta,L.sign[0],L.sign[1],'',poi.start[1]),
+      mkFieldProp(campMeta,L.camp[0],L.camp[1],theme==='spring'||theme==='summer'?'fire':'',poi.camp[1]),
+      mkFieldProp(ruinMeta,L.ruin[0],L.ruin[1],'',poi.ruin[1]),
+      mkFieldProp(specialMeta,L.special[0],L.special[1],'',poi.special[1]),
       mkFieldProp(cave,L.cave[0],L.cave[1],'dungeon','필드 동굴 입구')
     ])if(p)out.push(p);
     const pool=all.filter(x=>!/^1[3-6]_/.test(x.name));let tries=0;
@@ -198,10 +208,10 @@ function randomFieldProps(theme,isLast=false,bg=null){
   const rooms=(bg&&bg.rooms||[]).filter(r=>r!==bg.startRoom&&r!==bg.farRoom);
   if(rooms.length){
     const r0=rooms[Math.floor(Math.random()*rooms.length)],r1=rooms[Math.floor(Math.random()*rooms.length)];
-    const c0=mkFieldProp(camp,r0.cx,r0.cy,'fire','야영지'),c1=mkFieldProp(ruin,r1.cx,r1.cy,'','무너진 폐허');
+    const c0=mkFieldProp(campMeta,r0.cx,r0.cy,theme==='spring'||theme==='summer'?'fire':'',poi.camp[1]),c1=mkFieldProp(ruinMeta,r1.cx,r1.cy,'',poi.ruin[1]);
     if(c0)out.push(c0);if(c1)out.push(c1);
   }
-  const sg=mkFieldProp(sign,bg.start.x+1.4,bg.start.y-.5,'','지역 이정표');if(sg)out.push(sg);
+  const sg=mkFieldProp(startMeta,bg.start.x+1.4,bg.start.y-.5,'',poi.start[1]);if(sg)out.push(sg);
   const softPool=all.filter(m=>isSoftName(m.name));let tries=0;
   while(out.length<250&&tries++<900){
     const x=2+Math.random()*44,y=2+Math.random()*44;if(!outdoorFloor(bg,Math.floor(x),Math.floor(y)))continue;
