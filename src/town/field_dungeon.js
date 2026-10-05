@@ -32,47 +32,74 @@ function fieldPropSize(name){
 }
 function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
-function pathPointY(x){ const t = Math.max(0, Math.min(1, (x - 3) / 53)); return 20 - 12 * t + Math.sin(t * Math.PI * 2) * 3.1; }
-function nearMainPath(x,y, pad){ return Math.abs(y - pathPointY(x)) < (pad || 2.2); }
-function inTownReserve(x,y){ return fieldLeg===fieldLegs && x > 44 && x < 56 && y > 8 && y < 17; }
-
-async function makeFieldGround(theme, withVillage=false){
-  const w = 60 * TS, h = 40 * TS, c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d'), t = fieldTiles[theme], ims = Object.values(t);
-  await waitImages(ims);
-  const base = t.grass || ims[0], flower = t.grass_flower || base;
-  for (let y = 0; y < 40; y++) for (let x = 0; x < 60; x++){
-    const im = Math.random() < 0.13 ? flower : base;
-    g.drawImage(im, x * TS, y * TS, TS + 1, TS + 1);
+let fieldRoute=[], fieldBranches=[], fieldMapW=60, fieldMapH=40;
+function routeDist(x,y,pts=fieldRoute){
+  let best=1e9;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i],vx=b.x-a.x,vy=b.y-a.y,q=vx*vx+vy*vy||1;
+    const t=Math.max(0,Math.min(1,((x-a.x)*vx+(y-a.y)*vy)/q)),px=a.x+vx*t,py=a.y+vy*t;
+    best=Math.min(best,Math.hypot(x-px,y-py));
   }
-  const dirt = t.dirt || t.path || base, path = t.path || dirt;
-  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(2.5 * TS, 20 * TS); g.bezierCurveTo(18 * TS, 17 * TS, 34 * TS, 27 * TS, 56.5 * TS, 8 * TS);
-  g.strokeStyle = fieldPattern(g, dirt); g.globalAlpha = 0.36; g.lineWidth = 150; g.stroke();
-  g.strokeStyle = fieldPattern(g, path); g.globalAlpha = 0.93; g.lineWidth = 86; g.stroke();
-  g.restore();
+  return best;
+}
+function nearMainPath(x,y,pad){ return routeDist(x,y)<(pad||2.2); }
+function inTownReserve(x,y){ return fieldLeg===fieldLegs && x > 44 && x < 56 && y > 8 && y < 17; }
+function outdoorRoute(isLast){
+  if(isLast)return [{x:2.5,y:20},{x:18,y:17},{x:34,y:27},{x:56.5,y:8}];
+  const ys=[38,10+Math.random()*7,31+Math.random()*10,8+Math.random()*9,29+Math.random()*11,7+Math.random()*8,8];
+  return ys.map((y,i)=>({x:[2.5,9,17,26,34,41,45.5][i],y}));
+}
+function routeLength(pts=fieldRoute){let n=0;for(let i=1;i<pts.length;i++)n+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);return n;}
+function drawFieldPath(g,pts,dirt,path,wide=1){
+  if(!pts.length)return;
+  g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(pts[0].x*TS,pts[0].y*TS);
+  for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x*TS,pts[i].y*TS);
+  g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.36;g.lineWidth=150*wide;g.stroke();
+  g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.93;g.lineWidth=86*wide;g.stroke();g.restore();
+}
+async function makeFieldGround(theme, withVillage=false){
+  const isLast=!!withVillage; fieldMapW=isLast?60:48;fieldMapH=isLast?40:48;fieldRoute=outdoorRoute(isLast);fieldBranches=[];
+  const w=fieldMapW*TS,h=fieldMapH*TS,c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d'),t=fieldTiles[theme],ims=Object.values(t);
+  await waitImages(ims);
+  const base=t.grass||ims[0],flower=t.grass_flower||base;
+  for(let y=0;y<fieldMapH;y++)for(let x=0;x<fieldMapW;x++){
+    const im=Math.random()<.13?flower:base;g.drawImage(im,x*TS,y*TS,TS+1,TS+1);
+  }
+  const dirt=t.dirt||t.path||base,path=t.path||dirt;
+  drawFieldPath(g,fieldRoute,dirt,path,1);
+
+  // 중간 필드는 큰 야외 던전처럼 샛길 2개를 낸다. 막다른 끝에는 야영지/폐허가 놓인다.
+  if(!isLast){
+    const anchors=[fieldRoute[2],fieldRoute[4]],dirs=[-1,1];
+    fieldBranches=anchors.map((a,i)=>{
+      const by=Math.max(4,Math.min(fieldMapH-4,a.y+dirs[i]*(8+Math.random()*5)));
+      const bx=Math.max(6,Math.min(fieldMapW-6,a.x+(Math.random()*5-2.5)));
+      return [{x:a.x,y:a.y},{x:(a.x+bx)/2,y:(a.y+by)/2+(Math.random()*4-2)},{x:bx,y:by}];
+    });
+    for(const br of fieldBranches)drawFieldPath(g,br,dirt,path,.68);
+  }
 
   // 작은 마을은 마지막 구간의 길 끝에만 둔다.
-  if(withVillage){
-    g.save(); g.lineCap='round'; g.lineJoin='round';
-    g.beginPath(); g.moveTo(47.2*TS,8.4*TS); g.bezierCurveTo(48.0*TS,9.6*TS,49.0*TS,10.9*TS,49.6*TS,12.0*TS);
-    g.strokeStyle=fieldPattern(g,dirt); g.globalAlpha=.42; g.lineWidth=92; g.stroke();
-    g.strokeStyle=fieldPattern(g,path); g.globalAlpha=.92; g.lineWidth=54; g.stroke();
-    g.globalAlpha=.78; g.fillStyle=fieldPattern(g,dirt);
-    g.beginPath(); g.ellipse(50.2*TS,12.2*TS,4.5*TS,2.8*TS,0,0,7); g.fill();
-    g.restore();
+  if(isLast){
+    g.save();g.lineCap='round';g.lineJoin='round';
+    g.beginPath();g.moveTo(47.2*TS,8.4*TS);g.bezierCurveTo(48.0*TS,9.6*TS,49.0*TS,10.9*TS,49.6*TS,12.0*TS);
+    g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.42;g.lineWidth=92;g.stroke();
+    g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.92;g.lineWidth=54;g.stroke();
+    g.globalAlpha=.78;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse(50.2*TS,12.2*TS,4.5*TS,2.8*TS,0,0,7);g.fill();g.restore();
   }
-  if (t.water && t.sand){
-    const spots = [[29,8,2.8,1.5],[48,29,2.4,1.3]];
-    for (const q of spots){
-      g.save(); g.beginPath(); g.ellipse(q[0]*TS,q[1]*TS,q[2]*TS,q[3]*TS,0,0,7); g.clip();
-      g.globalAlpha=.72; g.fillStyle=fieldPattern(g,t.sand); g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);
-      g.globalAlpha=.86; g.beginPath(); g.ellipse(q[0]*TS,q[1]*TS,q[2]*.76*TS,q[3]*.72*TS,0,0,7); g.clip();
-      g.fillStyle=fieldPattern(g,t.water); g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS); g.restore();
+  if(t.water&&t.sand){
+    const spots=isLast?[[29,8,2.8,1.5],[48,29,2.4,1.3]]:[[12,25,2.3,1.3],[37,20,2.6,1.4]];
+    for(const q of spots){
+      if(routeDist(q[0],q[1])<4)continue;
+      g.save();g.beginPath();g.ellipse(q[0]*TS,q[1]*TS,q[2]*TS,q[3]*TS,0,0,7);g.clip();
+      g.globalAlpha=.72;g.fillStyle=fieldPattern(g,t.sand);g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);
+      g.globalAlpha=.86;g.beginPath();g.ellipse(q[0]*TS,q[1]*TS,q[2]*.76*TS,q[3]*.72*TS,0,0,7);g.clip();
+      g.fillStyle=fieldPattern(g,t.water);g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);g.restore();
     }
   }
-  const mini = document.createElement('canvas'); mini.width = 360; mini.height = 240; mini.getContext('2d').drawImage(c,0,0,360,240);
-  return { ground:c, mini };
+  const mini=document.createElement('canvas');mini.width=360;mini.height=Math.round(360*fieldMapH/fieldMapW);mini.getContext('2d').drawImage(c,0,0,mini.width,mini.height);
+  return {ground:c,mini,w:fieldMapW,h:fieldMapH,route:fieldRoute.map(p=>({...p})),branches:fieldBranches.map(b=>b.map(p=>({...p})))};
 }
 function mkFieldProp(meta, x, y, kind, name){
   if (!meta) return null; const wt = fieldPropSize(meta.name), w = wt * TS, im = BI[meta.key], ar = im && im.naturalWidth ? im.naturalHeight / im.naturalWidth : 1;
@@ -91,23 +118,31 @@ function fieldPropClear(x, y, meta, out){
   return true;
 }
 function randomFieldProps(theme, isLast=false){
-  const all = A.field.props[theme] || [], out = [];
-  const cave = fieldPropMeta(theme,'16_'), camp = fieldPropMeta(theme,'14_'), ruin = fieldPropMeta(theme,'13_'), sign = fieldPropMeta(theme,'15_'), special = fieldPropMeta(theme,'12_');
-  for (const p of [
-    mkFieldProp(sign,4.5,19.4,'','지역 이정표'),
-    mkFieldProp(camp,20,31,'fire','야영지'),
-    mkFieldProp(ruin,38,23,'','무너진 폐허'),
-    mkFieldProp(special,46,31,'','이상한 흔적'),
-    isLast ? mkFieldProp(cave,54.2,4.8,'dungeon','필드 동굴 입구') : null
-  ]) if (p) out.push(p);
-  const pool = all.filter(x => !/^1[3-6]_/.test(x.name));
-  let tries = 0;
-  while (out.length < 52 && tries++ < 500){
-    const x = 2 + Math.random()*56, y = 2 + Math.random()*36;
-    if (nearMainPath(x,y,2.4) || (isLast&&x>44&&x<56&&y>8&&y<17) || Math.hypot(x-54.2,y-4.8)<4 || Math.hypot(x-3,y-20)<4 || Math.hypot(x-57.5,y-8)<4) continue;
-    const meta = pool[Math.floor(Math.random()*pool.length)]; if (!meta) break;
-    if (!fieldPropClear(x,y,meta,out)) continue;
-    const p = mkFieldProp(meta,x,y,'',null); if (p) out.push(p);
+  const all=A.field.props[theme]||[],out=[];
+  const cave=fieldPropMeta(theme,'16_'),camp=fieldPropMeta(theme,'14_'),ruin=fieldPropMeta(theme,'13_'),sign=fieldPropMeta(theme,'15_'),special=fieldPropMeta(theme,'12_');
+  const start=fieldRoute[0]||{x:3,y:20},end=fieldRoute[fieldRoute.length-1]||{x:56,y:8};
+  const b0=fieldBranches[0]&&fieldBranches[0][fieldBranches[0].length-1],b1=fieldBranches[1]&&fieldBranches[1][fieldBranches[1].length-1];
+  for(const p of isLast?[
+    mkFieldProp(sign,4.5,19.4,'','지역 이정표'),mkFieldProp(camp,20,31,'fire','야영지'),
+    mkFieldProp(ruin,38,23,'','무너진 폐허'),mkFieldProp(special,46,31,'','이상한 흔적'),
+    mkFieldProp(cave,54.2,4.8,'dungeon','필드 동굴 입구')
+  ]:[
+    mkFieldProp(sign,start.x+1.2,start.y-.7,'','지역 이정표'),
+    b0?mkFieldProp(camp,b0.x,b0.y,'fire','야영지'):null,
+    b1?mkFieldProp(ruin,b1.x,b1.y,'','무너진 폐허'):null,
+    mkFieldProp(special,Math.max(5,end.x-5),Math.min(fieldMapH-5,end.y+7),'','이상한 흔적')
+  ])if(p)out.push(p);
+  const pool=all.filter(x=>!/^1[3-6]_/.test(x.name));
+  let tries=0,target=isLast?52:68;
+  while(out.length<target&&tries++<900){
+    const x=2+Math.random()*(fieldMapW-4),y=2+Math.random()*(fieldMapH-4);
+    const nearBranch=fieldBranches.some(br=>routeDist(x,y,br)<1.8);
+    if(nearMainPath(x,y,2.3)||nearBranch||(isLast&&x>44&&x<56&&y>8&&y<17)||
+      Math.hypot(x-start.x,y-start.y)<4||Math.hypot(x-end.x,y-end.y)<4||
+      (isLast&&Math.hypot(x-54.2,y-4.8)<4))continue;
+    const meta=pool[Math.floor(Math.random()*pool.length)];if(!meta)break;
+    if(!fieldPropClear(x,y,meta,out))continue;
+    const p=mkFieldProp(meta,x,y,'',null);if(p)out.push(p);
   }
   return out;
 }
@@ -183,23 +218,23 @@ async function prepareField(theme, leg, legs){
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
   fieldLegs = Math.max(1, legs || FIELD_TIER[fieldTheme] || 1); fieldLeg = Math.max(1, Math.min(leg || fieldLegs, fieldLegs));
   const lg = fieldLeg, ls = fieldLegs, th = fieldTheme, isLast = lg === ls;
-  const bg = await makeFieldGround(th,isLast), props = randomFieldProps(th,isLast);
-  const ex = [];
-  if (lg > 1) ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,fn:()=>goLeg(th,lg-1,ls,'right')});
-  else ex.push({x0:0,x1:1.15*TS,y0:17.5*TS,y1:22.5*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'});
-  if (isLast) ex.push({x0:58.85*TS,x1:60*TS,y0:5.5*TS,y1:10.5*TS,fn:()=>askDestination()});
-  else ex.push({x0:58.85*TS,x1:60*TS,y0:5.5*TS,y1:10.5*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
-  const map = {
-    name:FIELD_INFO[th][1] + (ls > 1 ? ' ' + lg + '/' + ls : ''), market:th, map:{w:60,h:40,ts:TS,px:TS}, ground:bg.ground, mini:bg.mini,
-    blds:lg === ls ? makeFieldVillage(th) : [], props, npcs:[],
-    spawn:[3.2*TS,20*TS], exits:ex
+  const bg=await makeFieldGround(th,isLast),props=randomFieldProps(th,isLast),start=bg.route[0],end=bg.route[bg.route.length-1];
+  const ex=[];
+  if(lg>1)ex.push({x0:0,x1:1.15*TS,y0:(start.y-2.6)*TS,y1:(start.y+2.6)*TS,fn:()=>goLeg(th,lg-1,ls,'right')});
+  else ex.push({x0:0,x1:1.15*TS,y0:(start.y-2.6)*TS,y1:(start.y+2.6)*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'});
+  if(isLast)ex.push({x0:(bg.w-1.15)*TS,x1:bg.w*TS,y0:(end.y-2.6)*TS,y1:(end.y+2.6)*TS,fn:()=>askDestination()});
+  else ex.push({x0:(bg.w-1.15)*TS,x1:bg.w*TS,y0:(end.y-2.6)*TS,y1:(end.y+2.6)*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
+  const map={
+    name:FIELD_INFO[th][1]+(ls>1?' '+lg+'/'+ls:''),market:th,map:{w:bg.w,h:bg.h,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
+    blds:isLast?makeFieldVillage(th):[],props,npcs:[],
+    spawn:[(start.x+.7)*TS,start.y*TS],exits:ex,route:bg.route,branches:bg.branches
   };
   map.G = bg.ground; map.MINI = bg.mini;
   MAPS.field = map; fieldBuildMs = performance.now() - t0; return map;
 }
 async function goLeg(theme, leg, legs, side){
   if (legBusy || traveling) return false; legBusy = true;
-  try { const m = await prepareField(theme, leg, legs); travel('field', side === 'right' ? [56.8*TS,8*TS] : m.spawn, 'side'); return true; }
+  try { const m=await prepareField(theme,leg,legs),r=m.route||fieldRoute,end=r[r.length-1];travel('field',side==='right'?[(end.x-.8)*TS,end.y*TS]:m.spawn,'side');return true; }
   finally { legBusy = false; }
 }
 function askDestination(){
@@ -311,15 +346,15 @@ function spawnFieldMonsters(theme){
   // 32마리 예산(케인 2026-10-04: 필드 100% 상향) 안에서 군집을 교체 배치(부하를 일반 스폰에 중복 추가하지 않는다).
   const first=createMonster(pool[0],0,0);
   for(let tries=0;tries<400;tries++){
-    first.x=(7+Math.random()*48)*TS;first.y=(3+Math.random()*34)*TS;
+    first.x=(5+Math.random()*(fieldMapW-10))*TS;first.y=(3+Math.random()*(fieldMapH-6))*TS;
     if(spawnClear(first,monsters,true)){first.tx=first.homeX=first.x;first.ty=first.homeY=first.y;monsters.push(first);break;}
   }
   const pack=TIER_MATCH.groups.find(g=>g.tier===tier&&!g.dungeonOnly);
-  if(pack)for(let tries=0;tries<700;tries++)if(spawnPack(pack,(10+Math.random()*41)*TS,(7+Math.random()*26)*TS,{field:true}))break;
+  if(pack)for(let tries=0;tries<700;tries++)if(spawnPack(pack,(7+Math.random()*(fieldMapW-14))*TS,(6+Math.random()*(fieldMapH-12))*TS,{field:true}))break;
   for(let i=monsters.length;i<FIELD_MOB_N;i++){
     const id=elites.length&&(i===FIELD_MOB_N/2-2||i===FIELD_MOB_N-2)?elites[(fieldSerial+(i>FIELD_MOB_N/2?1:0))%elites.length]:pool[i%pool.length];
     for(let tries=0;tries<400;tries++){
-      const m=createMonster(id,(7+Math.random()*48)*TS,(3+Math.random()*34)*TS);
+      const m=createMonster(id,(5+Math.random()*(fieldMapW-10))*TS,(3+Math.random()*(fieldMapH-6))*TS);
       if(spawnClear(m,monsters,true)){monsters.push(m);break;}
     }
   }
@@ -793,7 +828,7 @@ window.__FD={
   goLeg,askDestination,
   mapInfo(){return {blds:MAPS.field.blds.length,exits:MAPS.field.exits.length,name:MAPS.field.name,map:MAP};},
   warp(tx,ty){P.x=tx*TS;P.y=ty*TS;return true;},
-  state(){return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,villageReturn:fieldVillageReturn?{...fieldVillageReturn}:null,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,dungeons:MAPS.field?MAPS.field.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
+  state(){const fm=MAPS.field||{},rt=fm.route||fieldRoute,st=rt[0]||{x:0,y:0},en=rt[rt.length-1]||st;return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,villageReturn:fieldVillageReturn?{...fieldVillageReturn}:null,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:fm.props?fm.props.length:0,dungeons:fm.props?fm.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:fm.props?fm.props.slice(4,12).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:fm.blds?fm.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[],fieldSize:fm.map?{w:fm.map.w,h:fm.map.h}:null,routePoints:rt.length,routeLength:Math.round(routeLength(rt)*10)/10,routeDirect:Math.round(Math.hypot(en.x-st.x,en.y-st.y)*10)/10,branches:(fm.branches||[]).length,start:{x:st.x,y:st.y},end:{x:en.x,y:en.y}};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
   debugTarget(dx,dy,freeze){
     const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;
