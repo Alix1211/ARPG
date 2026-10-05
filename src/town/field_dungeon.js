@@ -606,18 +606,18 @@ function drawMonster(m,sdt){
   // ── 걸음 위상·진행 방향 기울기 ──
   const dxm=m.x-(m.lx==null?m.x:m.lx),dym=m.y-(m.ly==null?m.y:m.ly),dist=Math.hypot(dxm,dym);m.lx=m.x;m.ly=m.y;
   const moving=!m.dead&&dist>.15;m.walkA=Math.max(0,Math.min(1,(m.walkA||0)+(moving?1:-1)*dts*7));
-  const stepF=sty==='run'?1.35:heavy?.8:1;
+  const stepF=sty==='run'?1.25:heavy?.62:1;
   m.walkPh=(m.walkPh||0)+dts*(moving?Math.min(16,6+m.sp/12)*stepF:2.4);
   const lt=Math.max(-1.4,Math.min(1.4,dxm/(dts*Math.max(40,m.sp))));m.lean=(m.lean||0)+(lt-(m.lean||0))*Math.min(1,dts*10);
   const wa=m.walkA,ph=m.walkPh+(m.x*.013),s1=Math.sin(ph),hop=Math.abs(s1);
   let yOff=0,rot=0,sx=1,sy=1,ox=m.vox||0,oy=m.voy||0,flash=0,fade=1,lift=0;
   { const kd=Math.exp(-dts*16);m.vox=(m.vox||0)*kd;m.voy=(m.voy||0)*kd; if(Math.abs(m.vox)<.05)m.vox=0; if(Math.abs(m.voy)<.05)m.voy=0; }
   const idleS=Math.sin(T*(sty==='jelly'?3.4:2.1)+m.x*.02)*(sty==='jelly'?.055:.022)*(1-wa);
-  if(sty==='jelly'){yOff=-hop*dh*.17*wa;sy+=idleS+(hop-.5)*.16*wa;}
+  if(sty==='jelly'){yOff=-hop*dh*.13*wa;const sq=(hop-.5)*.26*wa;sy+=idleS+sq;sx*=1-sq*.55;}
   else if(sty==='hop'){const a=m.family==='mimic'?.12:.2;yOff=-Math.pow(hop,.8)*dh*a*wa;sy+=idleS+(hop-.45)*.18*wa;}
-  else if(sty==='run'){yOff=-hop*dh*.045*wa;rot=m.lean*.13*wa+s1*.035*wa;sy+=idleS+(hop-.5)*.05*wa;}
-  else if(sty==='float'){lift=dh*(.075+.03*Math.sin(T*2.4+m.x*.03));yOff=-lift;rot=m.lean*.1*wa+Math.sin(T*1.7+m.y*.02)*.025;sy+=Math.sin(T*2.4+m.x*.03+1)*.02;}
-  else {const sw=heavy?.045:.06;rot=s1*sw*wa;yOff=-hop*dh*(heavy?.032:.05)*wa;sy+=idleS+(hop-.5)*.05*wa;}
+  else if(sty==='run'){yOff=-hop*dh*.035*wa;rot=m.lean*.075*wa+s1*.014*wa;sy+=idleS+(hop-.5)*.035*wa;if(m.family==='beetle'){const puff=Math.sin(T*4.6+m.x*.01)*.035;sx*=1+puff;sy*=1-puff*.55;}}
+  else if(sty==='float'){lift=dh*(.075+.026*Math.sin(T*2.4+m.x*.03));yOff=-lift;rot=m.lean*.045*wa+Math.sin(T*1.7+m.y*.02)*.012;sy+=Math.sin(T*2.4+m.x*.03+1)*.016;}
+  else {const sw=heavy?.028:.078;rot=s1*sw*wa;ox+=s1*m.w*(heavy?.008:.022)*wa;yOff=-hop*dh*(heavy?.024:.042)*wa;sy+=idleS+(hop-.5)*(heavy?.028:.045)*wa;}
   // 무거운 몹: 발이 땅에 닿을 때 먼지
   if(heavy&&sty!=='float'&&wa>.6&&!m.dead){const sg=s1<0;if(m.stepSg!=null&&m.stepSg!==sg)monPuff(m,m.x+(sg?-1:1)*m.w*.12,m.y-2,2,0,'#cdbf9f',3);m.stepSg=sg;}
   // ── 맞았을 때: 번쩍 + 맞은 반대로 젖혀지며 찌그러짐 ──
