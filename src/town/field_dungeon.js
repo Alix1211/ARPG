@@ -117,11 +117,63 @@ function fieldBuilding(k,name,x,y,wt,kind,market){
   return {k,name,x:x*TS,y:y*TS,w,h,door:0,kind:kind||'bld',market:market||null};
 }
 function makeFieldVillage(theme){
-  // 마지막 구간의 길 끝 쉼터. 동굴/다음 지역 출구와 겹치지 않게 길 아래쪽에 둔다.
-  return [
-    fieldBuilding('shop_tools','상인협회',48.6,12.0,3.7,'trade',theme),
-    fieldBuilding('house_blue','여관',52.1,14.3,3.5,'bld',theme),
-  ];
+  // 마지막 구간 우상단에는 마을 입구가 보이고, 실제 상점/교역은 별도 소형마을 내부에서 한다.
+  const gate=fieldBuilding('cottage_thatch',FIELD_INFO[theme][1]+' 작은 마을',49.3,12.0,4.4,'field_village',theme);
+  const house=fieldBuilding('house_red','마을 주택',53.1,14.2,3.7,'bld',theme);house.noSpot=1;
+  return [gate,house];
+}
+function villageProp(k,x,y,wt,name=null,kind=''){
+  const im=BI[k],ar=im&&im.naturalWidth?im.naturalHeight/im.naturalWidth:.8,w=wt*TS,h=w*ar;
+  return {k,name,x:x*TS,y:y*TS,w,h,cw:kind?0:.72,cd:kind?0:.34*TS,kind,shadow:true};
+}
+async function makeFieldVillageGround(theme){
+  const W=32,H=22,w=W*TS,h=H*TS,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const g=cv.getContext('2d'),t=fieldTiles[theme],ims=Object.values(t);await waitImages(ims);
+  const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base,path=t.path||dirt;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)g.drawImage(Math.random()<.16?flower:base,x*TS,y*TS,TS+1,TS+1);
+  g.save();g.lineCap='round';g.lineJoin='round';
+  g.globalAlpha=.55;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse(16*TS,12.2*TS,8.2*TS,4.8*TS,0,0,7);g.fill();
+  g.beginPath();g.moveTo(16*TS,21.5*TS);g.lineTo(16*TS,12*TS);g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.96;g.lineWidth=76;g.stroke();
+  g.beginPath();g.moveTo(8.5*TS,11.1*TS);g.bezierCurveTo(11*TS,12*TS,21*TS,12*TS,23.5*TS,11.1*TS);g.lineWidth=54;g.stroke();g.restore();
+  const mini=document.createElement('canvas');mini.width=256;mini.height=176;mini.getContext('2d').drawImage(cv,0,0,mini.width,mini.height);
+  return {ground:cv,mini};
+}
+function villageNpc(shop,name,title,line,x,y,market){
+  const base=MAPS.town.npcs.find(n=>n.shop===shop);
+  if(!base)return null;
+  return {...base,name,title,line,shop,market,x:x*TS,y:y*TS,at:null};
+}
+let fieldVillageReturn=null;
+async function prepareFieldVillage(theme,returnState){
+  theme=theme in FIELD_INFO?theme:'spring';fieldVillageReturn=returnState||fieldVillageReturn;
+  const bg=await makeFieldVillageGround(theme);
+  const b1=fieldBuilding('cottage_thatch','마을집',5.7,7.2,4.0,'bld',theme);b1.noSpot=1;
+  const b2=fieldBuilding('house_blue','마을집',26.3,7.2,4.0,'bld',theme);b2.noSpot=1;
+  const props=[
+    villageProp('fountain',16,13.0,3.5),
+    villageProp('stall_red',9.2,10.2,3.2),villageProp('stall_blue',22.8,10.2,3.2),
+    villageProp('bench_iron',12.2,15.6,1.7),villageProp('bench_iron',19.8,15.6,1.7),
+    villageProp('cart',5.3,13.9,2.1),villageProp('hay',27.1,14.2,1.6),
+    villageProp('flowerbed_wood',8.0,16.7,2.0),villageProp('flowerbed_wood',24.0,16.7,2.0),
+    villageProp('pot_flowers',12.2,8.4,1.0),villageProp('pot_flowers',19.8,8.4,1.0),
+    villageProp('tree_small',3.0,5.0,2.7),villageProp('tree_small',29.0,5.2,2.7)
+  ].filter(p=>BI[p.k]);
+  const general=villageNpc('general','마을 잡화상','잡화 노점','필요한 물건은 여기서 챙겨 가세요.',9.2,11.0,theme);
+  const trader=villageNpc('trade','마을 교역상','교역 노점','이 지역 물건 시세부터 보고 가시죠.',22.8,11.0,theme);
+  const map={name:FIELD_INFO[theme][1]+' 작은 마을',market:theme,map:{w:32,h:22,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
+    blds:[b1,b2],props,npcs:[general,trader].filter(Boolean),spawn:[16*TS,19.2*TS],
+    exits:[{x0:13.8*TS,x1:18.2*TS,y0:21.1*TS,y1:22*TS,fn:()=>leaveFieldVillage()}]};
+  map.G=bg.ground;map.MINI=bg.mini;MAPS.fieldvillage=map;return map;
+}
+async function enterFieldVillage(theme){
+  if(traveling)return false;
+  const fs=window.__FD&&__FD.state?__FD.state():null;
+  const ret={theme:fs&&fs.theme?fs.theme:fieldTheme,leg:fs&&fs.leg?fs.leg:fieldLeg,legs:fs&&fs.legs?fs.legs:fieldLegs,x:P.x,y:P.y,dir:P.dir||'front'};
+  const m=await prepareFieldVillage(theme||fieldTheme,ret);travel('fieldvillage',m.spawn,'back');return true;
+}
+async function leaveFieldVillage(){
+  if(traveling||!fieldVillageReturn)return false;
+  const q=fieldVillageReturn;await prepareField(q.theme,q.leg,q.legs);travel('field',[q.x,q.y+TS*.85],q.dir||'front');return true;
 }
 
 // 길 구간(leg): 목적지 티어와 같은 수의 필드를 이어서 지난다. 마지막 구간(leg===legs)에만 작은 마을이 있다.
