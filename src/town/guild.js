@@ -105,7 +105,7 @@ function guildMake(type,idx){
 function guildGenerate(){
   const types=['kill_any','kill_any','kill_type','kill_type','floor','delivery'];
   while(guildState.board.length<6){
-    const idx=guildState.seq+guildState.board.length,type=types[idx%types.length];
+    const idx=guildState.seq,type=types[(guildState.seq-1)%types.length];
     guildState.board.push(guildMake(type,idx));
   }
 }
