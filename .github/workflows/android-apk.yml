@@ -16,8 +16,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src/town/.enc_cache
+            src/town/.ground_cache.png
+            src/town/.ground_out_cache.png
+          key: town-build-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'src/town/outmap.py', 'assets/**') }}
+          restore-keys: |
+            town-build-${{ runner.os }}-
+      - name: 앱 안의 예비판도 최신 설정으로 만들기
+        run: |
+          pip install pillow numpy scipy
+          python src/town/build.py
       - name: 앱 만들기
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+        run: cd android && chmod +x gradlew && ./gradlew testDebugUnitTest assembleDebug --no-daemon
       - name: 받기 페이지에 올리기
         uses: softprops/action-gh-release@v2
         with:

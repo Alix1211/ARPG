@@ -43,6 +43,7 @@ jobs:
       - run: python src/town/check_camp.py
       - run: python src/town/check_pause.py
       - run: python src/town/check_sound.py
+      - run: python src/town/check_backup.py
       - run: python src/town/check_vfx.py
       - run: python src/town/check_equipcmp.py
       - run: python src/town/check_skills.py

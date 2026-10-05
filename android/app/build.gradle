@@ -32,6 +32,8 @@ android {
 
 dependencies {
     implementation 'androidx.webkit:webkit:1.12.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }
 
 // 인터넷이 안 될 때 쓸 예비 판: 빌드할 때 game/town.html 과 그림 파일(art_*.js)을 앱 안에 넣는다.
