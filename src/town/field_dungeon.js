@@ -502,6 +502,7 @@ function faceMonster(m,dx,dy){
 }
 function defeatPlayer(){
   if(tryRevivePlayer())return;
+  if(window.GUILD)GUILD.onDefeat();
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
   for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;P.shield=0;syncBars();
   say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
