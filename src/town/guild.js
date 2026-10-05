@@ -207,8 +207,8 @@ function guildExamRequirements(){
 function guildStartExam(){
   guildSyncDay();if(guildRank()>=6||guildState.exam)return false;
   const ex=guildExamInfo(),req=guildExamRequirements();if(!req.level.ok||!req.done.ok||!req.fee.ok){say('승급 시험 조건이 아직 모자랍니다.');guildExamPanelOpen=true;guildRender();return false;}
-  GAME.setGold(P.gold-req.fee);
-  guildState.exam={targetRank:ex.to,bossId:ex.bossId,bossName:GUILD_MOB_NAME[ex.bossId]||ex.bossId,floor:ex.floor,fee:req.fee,status:'active',startedAt:guildNow()};
+  GAME.setGold(P.gold-req.fee.fee);
+  guildState.exam={targetRank:ex.to,bossId:ex.bossId,bossName:GUILD_MOB_NAME[ex.bossId]||ex.bossId,floor:ex.floor,fee:req.fee.fee,status:'active',startedAt:guildNow()};
   guildAbandonArmed=0;guildExamPanelOpen=true;guildRender();if(window.UI&&UI.save)UI.save();
   say('시험비를 냈습니다. 환불은 없습니다.');return true;
 }
