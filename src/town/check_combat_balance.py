@@ -19,9 +19,10 @@ for pair in data['magicFloor']:
 for lv in sorted({r['lv'] for r in rows}):
     melee = [r for r in rows if r['lv'] == lv and r['wt'] in ('sword', 'spear', 'gauntlet')]
     seconds = sum(r['seconds'] for r in melee) / 3
-    # 평균 목표 6~10초, 공격 한 번/종별 반올림 차이 0.5초 허용.
-    assert 0.2 <= seconds <= 10.5, (lv, seconds)
-    # 이동·넉백·회피를 제외한 밀착 피격 상한. 회피 없이는 위험해야 한다.
+    # 2026-10-05 실플레이 기준: 기존 T2 동굴 7~8층 체감을 일반 기준으로 올려 몬스터 HP/공격을 2배로 재설정.
+    # 순수 평타·명중100% 시뮬레이션은 실제 스킬/회피 플레이보다 길고 위험하게 나온다.
+    assert 0.4 <= seconds <= 22.0, (lv, seconds)
+    # 이동·넉백·회피 없이 계속 맞는 상한. 사망 가능한 값도 정상이며 폭주 회귀만 막는다.
     loss = sum(r['hpLoss'] for r in melee) / 3
-    assert 1 <= loss <= 95, (lv, loss)
-print('balance ok: 근접 평균 6~10초 근방 / 밀착 피격 위험 확인')
+    assert 1 <= loss <= 340, (lv, loss)
+print('balance ok: 실플레이 재기준(일반 HP/공격 2배) 회귀 범위 확인')
