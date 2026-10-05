@@ -54,6 +54,8 @@ public final class MainActivity extends Activity {
     private volatile boolean restoringBackup = false, pickingBackup = false;
     private volatile String pendingRestore = null;
     private volatile boolean awaitingRestoreReload = false;
+    private volatile boolean checkingRemote = false;
+    private boolean skipRemoteOnce = false;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private boolean usingLocal = false, remoteOk = false;
     private long backAt = 0;
@@ -152,7 +154,7 @@ public final class MainActivity extends Activity {
                     for (String k : store.getAll().keySet()) if (k.startsWith("arpg_")) edit.remove(k);
                     for (Iterator<String> it = all.keys(); it.hasNext();) { String k = it.next(); edit.putString(k, all.getString(k)); }
                     if (!edit.commit()) throw new IllegalStateException();
-                    backupPrefs.edit().putBoolean("held", false).remove("error").apply();
+                    backupPrefs.edit().putBoolean("held", false).putBoolean("linkPending", false).remove("error").apply();
                     awaitingRestoreReload = true;
                     js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(text) + ")");
                 } catch (Exception e) { restoringBackup = false; js("window.onArpgBackupFail&&window.onArpgBackupFail('기기 저장을 갱신하지 못했습니다.')"); }
@@ -187,7 +189,8 @@ public final class MainActivity extends Activity {
             if (flags != (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)) throw new IllegalStateException();
             getContentResolver().takePersistableUriPermission(u, flags);
             backupPrefs.edit().putString("uri", u.toString()).putLong("backupAt", 0)
-                .putBoolean("held", req == REQ_LINK).remove("error").apply();
+                .putBoolean("held", req == REQ_LINK).putBoolean("linkPending", req == REQ_LINK).remove("error").apply();
+            skipRemoteOnce = true; // 새 파일은 첫 백업 전에 빈 파일 여부를 다시 검사하지 않는다.
             if (req == REQ_BACKUP) { queueBackup(true); backupNotice("연결했습니다. 저장할 때 자동으로 백업합니다."); }
             else backupNotice("기존 파일을 연결했습니다. 백업에서 불러오기를 눌러 이어 하세요. 불러오기 전에는 파일을 덮어쓰지 않습니다.");
         } catch (Exception e) { backupNotice("읽기·쓰기 권한을 유지할 수 없습니다. 파일을 다시 골라 주세요."); }
@@ -195,7 +198,7 @@ public final class MainActivity extends Activity {
 
     private void queueBackup(boolean force) {
         synchronized (backupLock) {
-            if (backupUri() == null || restoringBackup || pickingBackup || backupPrefs.getBoolean("held", false)) return;
+            if (backupUri() == null || restoringBackup || pickingBackup || checkingRemote || backupPrefs.getBoolean("held", false)) return;
             if (pendingBackup != null && !pendingBackup.isDone()) {
                 if (!force) return;
                 pendingBackup.cancel(false);
@@ -231,9 +234,46 @@ public final class MainActivity extends Activity {
         return all;
     }
 
+    static boolean newerBackup(JSONObject remote, JSONObject local) throws Exception {
+        if (!local.has("arpg_save_v3")) return true;
+        return new JSONObject(remote.getString("arpg_save_v3")).optLong("t", 0)
+            > new JSONObject(local.getString("arpg_save_v3")).optLong("t", 0);
+    }
+
+    private String readDocument(Uri u) throws Exception {
+        try (InputStream in = getContentResolver().openInputStream(u); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            if (in == null) throw new IllegalArgumentException();
+            byte[] buf = new byte[65536]; int n;
+            while ((n = in.read(buf)) != -1) { if (out.size() + n > MAX_BACKUP_BYTES) throw new IllegalArgumentException(); out.write(buf, 0, n); }
+            return out.toString("UTF-8");
+        }
+    }
+
+    // 문플로의 holdBackup/checkRemote 보호: 다른 기기의 더 최신 진행은 자동 저장으로 덮어쓰지 않는다.
+    private void checkRemoteBeforeSaving() {
+        final Uri u = backupUri();
+        if (u == null || pickingBackup || restoringBackup || checkingRemote || backupPrefs.getBoolean("linkPending", false)) return;
+        final JSONObject local;
+        try { local = snapshot(); } catch (Exception e) { return; }
+        checkingRemote = true;
+        backupIO.execute(() -> {
+            String notice = "";
+            try {
+                boolean newer = newerBackup(validBackup(readDocument(u)), local);
+                backupPrefs.edit().putBoolean("held", newer).remove("error").apply();
+                if (newer) notice = "다른 기기의 더 최신 백업이 있습니다. 백업에서 불러오기를 눌러 주세요. 파일은 덮어쓰지 않습니다.";
+            } catch (Exception e) {
+                backupPrefs.edit().putBoolean("held", true).putString("error", "연결 확인 필요").apply();
+                notice = "백업 파일을 확인하지 못했습니다. 인터넷 연결 후 앱을 다시 켜 주세요. 이 기기의 저장은 유지됩니다.";
+            } finally { checkingRemote = false; }
+            backupNotice(notice);
+            queueBackup(false);
+        });
+    }
+
     private void writeBackup() {
         Uri u = backupUri();
-        if (u == null || restoringBackup || pickingBackup || backupPrefs.getBoolean("held", false)) return;
+        if (u == null || restoringBackup || pickingBackup || checkingRemote || backupPrefs.getBoolean("held", false)) return;
         try {
             JSONObject all = snapshot();
             if (!all.has("arpg_save_v3")) return; // 처음 시작/초기화 직후에는 빈 저장으로 백업을 훼손하지 않는다.
@@ -256,13 +296,7 @@ public final class MainActivity extends Activity {
         synchronized (backupLock) { if (restoringBackup) return; restoringBackup = true; }
         backupIO.execute(() -> {
             try {
-                String text;
-                try (InputStream in = getContentResolver().openInputStream(u); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-                    if (in == null) throw new IllegalArgumentException();
-                    byte[] buf = new byte[65536]; int n;
-                    while ((n = in.read(buf)) != -1) { if (out.size() + n > MAX_BACKUP_BYTES) throw new IllegalArgumentException(); out.write(buf, 0, n); }
-                    text = out.toString("UTF-8");
-                }
+                String text = readDocument(u);
                 JSONObject all = validBackup(text);
                 pendingRestore = all.toString();
                 // 웹의 엄격한 JSON 검사까지 통과한 뒤 applyBackup에서 기기 저장을 교체한다.
@@ -293,9 +327,13 @@ public final class MainActivity extends Activity {
     }
 
     @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) hideBars(); }
-    @Override protected void onResume() { super.onResume(); hideBars(); requestHighestRefreshRate(); if (game != null) game.onResume(); }
+    @Override protected void onResume() {
+        super.onResume(); hideBars(); requestHighestRefreshRate();
+        if (skipRemoteOnce) skipRemoteOnce = false; else checkRemoteBeforeSaving();
+        if (game != null) { game.resumeTimers(); game.onResume(); }
+    }
     @Override protected void onPause() {
-        if (game != null) { game.evaluateJavascript("try{UI.save()}catch(e){}", r -> queueBackup(true)); game.onPause(); }
+        if (game != null) { game.evaluateJavascript("try{UI.save()}catch(e){}", r -> queueBackup(true)); game.onPause(); game.pauseTimers(); }
         super.onPause();
     }
 

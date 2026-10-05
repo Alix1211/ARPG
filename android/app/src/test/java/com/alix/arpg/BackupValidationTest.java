@@ -30,4 +30,12 @@ public class BackupValidationTest {
         rejected(new JSONObject().put("arpg_save_v3",save()).put("another_app","{}").toString());
         rejected(backup(save())+" ".repeat(8000001));
     }
+    @Test public void holdsNewerProgressFromAnotherDevice() throws Exception {
+        JSONObject original=new JSONObject(backup(save()));
+        JSONObject newer=new JSONObject(backup(save().replace("12345","12346")));
+        assertTrue(MainActivity.newerBackup(newer,original));
+        assertTrue(MainActivity.newerBackup(newer,new JSONObject()));
+        assertFalse(MainActivity.newerBackup(original,newer));
+        assertFalse(MainActivity.newerBackup(original,original));
+    }
 }

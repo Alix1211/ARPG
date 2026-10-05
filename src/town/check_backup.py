@@ -74,8 +74,11 @@ async def main():
         await ev("() => localStorage.setItem('arpg_obsolete_test','old')")
         await ev('(t) => onArpgRestore(t)',payload)
         assert await ev('() => mock.applies===1')
-        await ev('(t) => onArpgBackupApplied(t)',payload)
-        await pg.wait_for_function('window.UI && GAME.P.gold===987 && GAME.P.lv===7')
+        async with pg.expect_navigation():
+            await ev('(t) => onArpgBackupApplied(t)',payload)
+        await pg.wait_for_function('window.UI')
+        restored=await ev("() => ({gold:GAME.P.gold,lv:GAME.P.lv,native:JSON.parse(JSON.parse(localStorage.getItem('native_test_store')).arpg_save_v3).gold,stored:JSON.parse(localStorage.getItem('arpg_save_v3')).gold})")
+        assert restored['gold']==987 and restored['lv']==7,restored
         assert await ev("() => JSON.parse(localStorage.getItem('arpg_save_v3')).v===3 && !localStorage.getItem('arpg_obsolete_test')")
         assert await ev('() => AUDIO.settings.get().sfx===.21 && AUDIO.settings.get().bgm===.32 && !AUDIO.settings.get().vibration')
         # Phone-only red X: above the action row, independent of trade/quest/talk actions.
