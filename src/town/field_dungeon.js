@@ -15,6 +15,15 @@ for (const n in A.monsters1) mon1[n] = load(A.monsters1[n]);
 const monsters = [], dropsLoot = [], enemyShots = [], enemyHazards = [];
 const dropImgs = {};
 const FIELD_TIER={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
+const FIELD_LAYOUT={
+  spring:{start:[2.5,16],end:[44.5,7],curve:[13,14,27,22],village:[39.4,10.8,43.1,12.8],cave:[44,4.2],camp:[15.5,24],ruin:[28.5,18.5],special:[36,24],sign:[4.2,15.4]},
+  summer:{start:[2.5,18],end:[44.5,9],curve:[12,11,27,24],village:[38.7,12.6,42.7,14.5],cave:[43.7,5.0],camp:[13.5,24.8],ruin:[25.5,8.0],special:[33.5,23.8],sign:[4.0,17.4]},
+  autumn:{start:[2.5,14],end:[44.5,20],curve:[13,20,28,9],village:[38.8,17.0,42.8,19.0],cave:[43.8,23.5],camp:[14.0,7.0],ruin:[27.5,23.8],special:[34.5,8.0],sign:[4.0,13.4]},
+  winter:{start:[2.5,18],end:[44.5,6.5],curve:[15,23,29,12],village:[38.5,10.6,42.4,12.8],cave:[43.8,3.8],camp:[13.2,9.0],ruin:[27.0,24.0],special:[35.5,21.5],sign:[4.1,17.3]},
+  ice:{start:[2.5,13],end:[44.5,18],curve:[13,7,29,24],village:[38.5,16.0,42.5,18.0],cave:[43.7,22.0],camp:[14.0,24.0],ruin:[26.5,6.5],special:[35.0,9.0],sign:[4.0,12.4]},
+  volcano:{start:[2.5,20],end:[44.5,8],curve:[12,13,29,25],village:[38.7,11.6,42.7,13.5],cave:[43.8,4.5],camp:[12.8,25.0],ruin:[26.5,8.5],special:[35.5,24.0],sign:[4.0,19.4]},
+  swamp:{start:[2.5,17],end:[44.5,13],curve:[13,24,29,7],village:[38.4,14.8,42.4,16.8],cave:[43.8,18.2],camp:[13.3,7.5],ruin:[27.5,24.0],special:[34.0,6.5],sign:[4.0,16.4]}
+};
 const PLAYER_STATUS={slow:0,stone:0,bleed:0,burn:0,bleedTick:0,burnTick:0};
 let fieldTheme = 'spring', fieldSerial = 0, playerInv = 0, fieldBuildMs = 0, fieldLeg = 1, fieldLegs = 1, legBusy = false;
 
@@ -25,10 +34,14 @@ function fieldPropMeta(theme, prefix){
   return (A.field.props[theme] || []).find(x => x.name.startsWith(prefix)) || null;
 }
 function fieldPropSize(name){
-  if (name.includes('tree_big')) return 3.8; if (name.includes('tree_mid')) return 3.0; if (name.includes('tree_young')) return 2.3;
-  if (name.includes('cave')) return 3.6; if (name.includes('ruin')) return 2.6; if (name.includes('campfire')) return 1.5;
-  if (name.includes('log')) return 1.9; if (name.includes('rock_big')) return 1.8; if (name.includes('rocks')) return 1.5;
-  if (name.includes('bush')) return 1.4; return 1.15;
+  if(/tree_(big|maple|ginkgo|pine_big|willow|mangrove|burnt_big|frozen|crystal)/.test(name))return 3.7;
+  if(/tree_(mid|pine|bare|burnt|dead|vine)/.test(name))return 3.0;
+  if(/tree_young/.test(name))return 2.3;
+  if(name.includes('cave'))return 3.6;if(name.includes('ruin'))return 2.6;if(name.includes('campfire')||name.includes('tent'))return 1.7;
+  if(name.includes('log'))return 1.9;if(/rock_big|rock_lava|rock_ice/.test(name))return 1.9;if(name.includes('rocks')||name.includes('obsidian')||name.includes('ice_shards'))return 1.55;
+  if(name.includes('bush')||name.includes('fern')||name.includes('reeds'))return 1.45;
+  if(name.includes('ice_pillar')||name.includes('lava_edge')||name.includes('crater'))return 1.7;
+  return 1.15;
 }
 function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
@@ -41,7 +54,7 @@ function outdoorBoundary(bg,x,y){
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(outdoorFloor(bg,x+dx,y+dy))return true;
   return false;
 }
-function fixedFieldY(x){const t=Math.max(0,Math.min(1,(x-2.5)/42));return 16-9*t+Math.sin(t*Math.PI*2)*2.6;}
+function fixedFieldY(x){const L=FIELD_LAYOUT[fieldTheme]||FIELD_LAYOUT.spring,t=Math.max(0,Math.min(1,(x-L.start[0])/(L.end[0]-L.start[0])));return L.start[1]*(1-t)+L.end[1]*t+Math.sin(t*Math.PI*2)*2.6;}
 function nearMainPath(x,y,pad){
   if(fieldOutdoor&&fieldOutdoor.grid){
     const ix=Math.floor(x),iy=Math.floor(y),r=Math.ceil(pad||2);
@@ -55,25 +68,31 @@ async function makeFieldGround(theme,withVillage=false){
   if(isLast){
     // 마지막 거점은 이동용 큰 필드가 아니라 '작은 지역 거점'으로 사용한다.
     fieldMapW=48;fieldMapH=32;fieldOutdoor=null;
-    const W=48,H=32,w=W*TS,h=H*TS,c=document.createElement('canvas');c.width=w;c.height=h;
+    const W=48,H=32,L=FIELD_LAYOUT[theme]||FIELD_LAYOUT.spring,w=W*TS,h=H*TS,c=document.createElement('canvas');c.width=w;c.height=h;
     const g=c.getContext('2d'),t=fieldTiles[theme],ims=Object.values(t);await waitImages(ims);
     const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base,path=t.path||dirt;
     for(let y=0;y<H;y++)for(let x=0;x<W;x++)g.drawImage(Math.random()<.13?flower:base,x*TS,y*TS,TS+1,TS+1);
 
     // 입구 → 거점 → 다음 지역 출구. 기존 마지막 맵의 분위기는 유지하되 이동거리는 줄인다.
-    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(2.5*TS,16*TS);g.bezierCurveTo(13*TS,14*TS,27*TS,22*TS,44.5*TS,7*TS);
+    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(L.start[0]*TS,L.start[1]*TS);g.bezierCurveTo(L.curve[0]*TS,L.curve[1]*TS,L.curve[2]*TS,L.curve[3]*TS,L.end[0]*TS,L.end[1]*TS);
     g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.36;g.lineWidth=142;g.stroke();g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.93;g.lineWidth=82;g.stroke();g.restore();
-    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(36.6*TS,8.2*TS);g.bezierCurveTo(37.4*TS,9.1*TS,38.5*TS,10.2*TS,39.3*TS,11*TS);
+    const vx=L.village[0],vy=L.village[1];g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo((vx-2.4)*TS,(vy-2.0)*TS);g.bezierCurveTo((vx-1.7)*TS,(vy-1.2)*TS,(vx-.8)*TS,(vy-.3)*TS,vx*TS,vy*TS);
     g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.42;g.lineWidth=88;g.stroke();g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.92;g.lineWidth=52;g.stroke();
-    g.globalAlpha=.76;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse(40*TS,11.2*TS,4.1*TS,2.5*TS,0,0,7);g.fill();g.restore();
+    g.globalAlpha=.76;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse((vx+.6)*TS,(vy+.4)*TS,4.1*TS,2.5*TS,0,0,7);g.fill();g.restore();
 
-    if(t.water&&t.sand)for(const q of [[23,6.5,2.5,1.35],[37.5,24.3,2.2,1.2]]){
+    const pools={
+      spring:[[23,6.5,2.5,1.35],[37.5,24.3,2.2,1.2]],summer:[[20,7.0,2.5,1.4],[33.5,25.0,2.5,1.3]],
+      autumn:[[18,24.0,2.3,1.2],[33.5,5.8,2.1,1.1]],winter:[[22,6.0,2.6,1.4],[35,25,2.3,1.2]],
+      ice:[[18,7.0,2.8,1.5],[31,25,2.6,1.3]],volcano:[[20,7.0,2.7,1.4],[33,24.5,2.5,1.3]],
+      swamp:[[19,5.8,3.0,1.6],[31,25.0,3.2,1.7]]
+    }[theme]||[];
+    if(t.water&&t.sand)for(const q of pools){
       g.save();g.beginPath();g.ellipse(q[0]*TS,q[1]*TS,q[2]*TS,q[3]*TS,0,0,7);g.clip();g.globalAlpha=.72;g.fillStyle=fieldPattern(g,t.sand);
       g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);g.globalAlpha=.86;g.beginPath();g.ellipse(q[0]*TS,q[1]*TS,q[2]*.76*TS,q[3]*.72*TS,0,0,7);g.clip();
       g.fillStyle=fieldPattern(g,t.water);g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);g.restore();
     }
     const mini=document.createElement('canvas');mini.width=288;mini.height=192;mini.getContext('2d').drawImage(c,0,0,mini.width,mini.height);
-    return {ground:c,mini,w:W,h:H,start:{x:2.5,y:16},end:{x:44.5,y:7},grid:null,rooms:[]};
+    return {ground:c,mini,w:W,h:H,start:{x:L.start[0],y:L.start[1]},end:{x:L.end[0],y:L.end[1]},grid:null,rooms:[]};
   }
 
   // 중간 필드 = 던전의 방+복도 생성 규칙을 쓰되, 화면에서는 밝은 야외 지형으로 보인다.
@@ -137,17 +156,18 @@ function randomFieldProps(theme,isLast=false,bg=null){
   const visualTheme=theme,all=A.field.props[visualTheme]||[],out=[];
   const cave=fieldPropMeta(visualTheme,'16_'),camp=fieldPropMeta(visualTheme,'14_'),ruin=fieldPropMeta(visualTheme,'13_'),sign=fieldPropMeta(visualTheme,'15_'),special=fieldPropMeta(visualTheme,'12_');
   if(isLast){
+    const L=FIELD_LAYOUT[theme]||FIELD_LAYOUT.spring;
     for(const p of [
-      mkFieldProp(sign,4.2,15.4,'','지역 이정표'),
-      mkFieldProp(camp,15.5,24.0,'fire','야영지'),
-      mkFieldProp(ruin,28.5,18.5,'','무너진 폐허'),
-      mkFieldProp(special,36.0,24.0,'','이상한 흔적'),
-      mkFieldProp(cave,44.0,4.2,'dungeon','필드 동굴 입구')
+      mkFieldProp(sign,L.sign[0],L.sign[1],'','지역 이정표'),
+      mkFieldProp(camp,L.camp[0],L.camp[1],'fire','야영지'),
+      mkFieldProp(ruin,L.ruin[0],L.ruin[1],'','무너진 폐허'),
+      mkFieldProp(special,L.special[0],L.special[1],'','이상한 흔적'),
+      mkFieldProp(cave,L.cave[0],L.cave[1],'dungeon','필드 동굴 입구')
     ])if(p)out.push(p);
     const pool=all.filter(x=>!/^1[3-6]_/.test(x.name));let tries=0;
-    while(out.length<42&&tries++<520){
+    while(out.length<46&&tries++<620){
       const x=2+Math.random()*44,y=2+Math.random()*28;
-      if(nearMainPath(x,y,2.3)||(x>35&&x<47&&y>6&&y<15)||Math.hypot(x-44,y-4.2)<4||Math.hypot(x-2.5,y-16)<4||Math.hypot(x-44.5,y-7)<4)continue;
+      if(nearMainPath(x,y,2.3)||(x>L.village[0]-4&&x<L.village[2]+4&&y>L.village[1]-5&&y<L.village[3]+4)||Math.hypot(x-L.cave[0],y-L.cave[1])<4||Math.hypot(x-L.start[0],y-L.start[1])<4||Math.hypot(x-L.end[0],y-L.end[1])<4)continue;
       const meta=pool[Math.floor(Math.random()*pool.length)];if(!meta)break;if(!fieldPropClear(x,y,meta,out))continue;
       const p=mkFieldProp(meta,x,y,'',null);if(p)out.push(p);
     }
@@ -197,9 +217,10 @@ function fieldBuilding(k,name,x,y,wt,kind,market){
   return {k,name,x:x*TS,y:y*TS,w,h,door:0,kind:kind||'bld',market:market||null};
 }
 function makeFieldVillage(theme){
-  // 축소된 마지막 거점의 우상단 마을 입구. 실제 상점/교역은 별도 소형마을 내부에서 한다.
-  const gate=fieldBuilding('cottage_thatch',FIELD_INFO[theme][1]+' 작은 마을',39.4,10.8,4.2,'field_village',theme);
-  const house=fieldBuilding('house_red','마을 주택',43.1,12.8,3.5,'bld',theme);house.noSpot=1;
+  const L=FIELD_LAYOUT[theme]||FIELD_LAYOUT.spring;
+  // 지역별 마지막 거점 위치를 따로 둔다. 건물 기능은 같고 주변 지형·소품이 지역 분위기를 만든다.
+  const gate=fieldBuilding('cottage_thatch',FIELD_INFO[theme][1]+' 작은 마을',L.village[0],L.village[1],4.2,'field_village',theme);
+  const house=fieldBuilding('house_red','마을 주택',L.village[2],L.village[3],3.5,'bld',theme);house.noSpot=1;
   return [gate,house];
 }
 function villageProp(k,x,y,wt,name=null,kind=''){
@@ -223,6 +244,18 @@ function villageNpc(shop,name,title,line,x,y,market){
   if(!base)return null;
   return {...base,name,title,line,shop,market,x:x*TS,y:y*TS,at:null};
 }
+function themedVillageEdgeProps(theme){
+  const all=A.field.props[theme]||[],out=[],pick=(re)=>all.filter(m=>re.test(m.name));
+  const pool=pick(/tree|bush|fern|reeds|rock|obsidian|ice_shards|ice_pillar|stump|mangrove|lava_edge/);
+  if(!pool.length)return out;
+  const spots=[[2.0,4.5],[4.0,3.5],[28.0,4.2],[30.0,6.2],[2.4,17.5],[4.7,19.2],[27.8,18.5],[30,16.8],
+    [7,3.2],[12,2.7],[20,2.8],[25,3.3],[6,19.3],[11,20],[21,20],[26,19.5]];
+  for(let i=0;i<spots.length;i++){
+    const m=pool[(i*3+FIELD_TIER[theme])%pool.length],p=mkFieldProp(m,spots[i][0],spots[i][1],'',null);
+    if(p){p.cw=0;p.cd=0;out.push(p);}
+  }
+  return out;
+}
 let fieldVillageReturn=null;
 async function prepareFieldVillage(theme,returnState){
   theme=theme in FIELD_INFO?theme:'spring';fieldTheme=theme;fieldVillageReturn=returnState||fieldVillageReturn;
@@ -237,8 +270,9 @@ async function prepareFieldVillage(theme,returnState){
     villageProp('cart',5.3,13.9,2.1),villageProp('hay',27.1,14.2,1.6),
     villageProp('flowerbed_wood',8.0,16.7,2.0),villageProp('flowerbed_wood',24.0,16.7,2.0),
     villageProp('pot_flowers',12.2,8.4,1.0),villageProp('pot_flowers',19.8,8.4,1.0),
-    villageProp('tree_small',3.0,5.0,2.7),villageProp('tree_small',29.0,5.2,2.7)
-  ].filter(p=>BI[p.k]);
+    villageProp('tree_small',3.0,5.0,2.7),villageProp('tree_small',29.0,5.2,2.7),
+    ...themedVillageEdgeProps(theme)
+  ].filter(p=>p&&BI[p.k]);
   const general=villageNpc('general','마을 잡화상','잡화 노점','필요한 물건은 여기서 챙겨 가세요.',9.2,11.0,theme);
   const trader=villageNpc('trade','마을 교역상','교역 노점','이 지역 물건 시세부터 보고 가시죠.',22.8,11.0,theme);
   const map={name:FIELD_INFO[theme][1]+' 작은 마을',market:theme,map:{w:32,h:22,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
