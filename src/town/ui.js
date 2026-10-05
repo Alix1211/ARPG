@@ -637,7 +637,7 @@ function dblTap(ref){
 }
 function quickMove(ref){
   const it=inventoryItem(ref);if(!it)return;
-  const toBag=()=>{const i=bag.indexOf(null);if(i<0){G.say('가방이 가득 찼습니다.');return;}inventoryDrop(ref,{from:'bag',i});};
+  const toBag=()=>{const i=bagFreeIndex();if(i<0){G.say('가방이 가득 찼습니다.');return;}inventoryDrop(ref,{from:'bag',i});};
   if(ref.from==='goods'||ref.from==='stash'||ref.from==='eq'){toBag();return;}
   if(ref.from!=='bag')return;
   if(tab==='shop'){inventoryDrop(ref,{from:'merchant'});return;}
@@ -655,7 +655,7 @@ function renderStash(L){
   const grid=el('div','stashGrid');stash.forEach((it,i)=>{const b=slotEl(it,0,0,46,46,()=>stashInfo('stash',i),false);b.style.cssText='position:relative;width:100%;height:100%';bindItemSlot(b,{from:'stash',i});grid.append(b);});frame.append(grid,sortButtons('stash'));L.append(frame);
 }
 function stashInfo(from,i){
-  const a=from==='stash'?stash:bag,it=a[i];if(!it)return;pickSel={from,i};const I=$('iinfo');I.innerHTML='';I.append(el('div','iname',it.name),el('div','isub',`T${it.tier||1} · ${RARN[it.rar||0]}`));const b=el('button','btn',from==='bag'?'창고에 넣기':'가방으로 꺼내기');b.type='button';b.onclick=()=>{const to=from==='bag'?'stash':'bag',dest=to==='stash'?stash:bag,idx=dest.indexOf(null);if(idx<0){G.say(to==='stash'?'창고가 가득 찼습니다.':'가방이 가득 찼습니다.');return;}inventoryDrop({from,i},{from:to,i:idx});};I.append(b);I.classList.add('on');
+  const a=from==='stash'?stash:bag,it=a[i];if(!it)return;pickSel={from,i};const I=$('iinfo');I.innerHTML='';I.append(el('div','iname',it.name),el('div','isub',`T${it.tier||1} · ${RARN[it.rar||0]}`));const b=el('button','btn',from==='bag'?'창고에 넣기':'가방으로 꺼내기');b.type='button';b.onclick=()=>{const to=from==='bag'?'stash':'bag',idx=to==='stash'?stash.indexOf(null):bagFreeIndex();if(idx<0){G.say(to==='stash'?'창고가 가득 찼습니다.':'가방이 가득 찼습니다.');return;}inventoryDrop({from,i},{from:to,i:idx});};I.append(b);I.classList.add('on');
 }
 
 window.UI = {

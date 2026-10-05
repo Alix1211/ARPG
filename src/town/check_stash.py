@@ -61,9 +61,10 @@ async def main():
         await pg.wait_for_timeout(510);await pg.locator('#bagPane .slot.has').first.click();before=await pg.evaluate('GAME.P.gold')
         await pg.click('#buy');assert await pg.evaluate('GAME.P.gold')>before
         await pg.evaluate("UI.add(UI.make({baseId:'sword_01',rar:2}));UI.refresh()")
-        before=await pg.evaluate('UI.bagItems().length');await pg.locator('#bagPane .slot.has').first.click();await pg.click('#buy')
-        assert await pg.evaluate('UI.bagItems().length')==before
-        await pg.click('#buy');assert await pg.evaluate('UI.bagItems().length')==before-1
+        rare_i=await pg.evaluate("UI.bagItems().find(r=>(r.it.rar||0)>=2).i")
+        before=await pg.evaluate('UI.bagItems().length')
+        await pg.locator(f'[data-inventory=bag][data-index="{rare_i}"]').click();await pg.click('#buy')
+        assert await pg.evaluate('UI.bagItems().length')==before-1
         await pg.evaluate('GAME.setGold(10000)');before=await pg.evaluate('UI.bagItems().length')
         await move(pg,'#grid .cell:first-child','[data-inventory=bag][data-index="41"]')
         assert await pg.evaluate('UI.bagItems().length')==before+1
