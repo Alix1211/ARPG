@@ -357,7 +357,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-0137</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-0719</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -3220,16 +3220,16 @@ function fieldPropSize(name){
 }
 function isTreeName(n){ return n.includes('tree_'); }
 function isSoftName(n){ return n.includes('grass') || n.includes('flowers') || n.includes('mushroom'); }
-let fieldMapW=60,fieldMapH=40,fieldOutdoor=null;
+let fieldMapW=48,fieldMapH=32,fieldOutdoor=null; // 2026-10-06: 막힘 가독성/축소 거점 기준
 
-function inTownReserve(x,y){return fieldLeg===fieldLegs&&x>44&&x<56&&y>8&&y<17;}
+function inTownReserve(x,y){return fieldLeg===fieldLegs&&x>35&&x<47&&y>6&&y<15;}
 function outdoorFloor(bg,x,y){return !!(bg&&bg.grid&&bg.grid[y]&&bg.grid[y][x]);}
 function outdoorBoundary(bg,x,y){
   if(!bg||!bg.grid||outdoorFloor(bg,x,y))return false;
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(outdoorFloor(bg,x+dx,y+dy))return true;
   return false;
 }
-function fixedFieldY(x){const t=Math.max(0,Math.min(1,(x-3)/53));return 20-12*t+Math.sin(t*Math.PI*2)*3.1;}
+function fixedFieldY(x){const t=Math.max(0,Math.min(1,(x-2.5)/42));return 16-9*t+Math.sin(t*Math.PI*2)*2.6;}
 function nearMainPath(x,y,pad){
   if(fieldOutdoor&&fieldOutdoor.grid){
     const ix=Math.floor(x),iy=Math.floor(y),r=Math.ceil(pad||2);
@@ -3241,43 +3241,67 @@ function nearMainPath(x,y,pad){
 async function makeFieldGround(theme,withVillage=false){
   const isLast=!!withVillage;
   if(isLast){
-    fieldMapW=60;fieldMapH=40;fieldOutdoor=null;
-    const w=60*TS,h=40*TS,c=document.createElement('canvas');c.width=w;c.height=h;
+    // 마지막 거점은 이동용 큰 필드가 아니라 '작은 지역 거점'으로 사용한다.
+    fieldMapW=48;fieldMapH=32;fieldOutdoor=null;
+    const W=48,H=32,w=W*TS,h=H*TS,c=document.createElement('canvas');c.width=w;c.height=h;
     const g=c.getContext('2d'),t=fieldTiles[theme],ims=Object.values(t);await waitImages(ims);
     const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base,path=t.path||dirt;
-    for(let y=0;y<40;y++)for(let x=0;x<60;x++)g.drawImage(Math.random()<.13?flower:base,x*TS,y*TS,TS+1,TS+1);
-    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(2.5*TS,20*TS);g.bezierCurveTo(18*TS,17*TS,34*TS,27*TS,56.5*TS,8*TS);
-    g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.36;g.lineWidth=150;g.stroke();g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.93;g.lineWidth=86;g.stroke();g.restore();
-    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(47.2*TS,8.4*TS);g.bezierCurveTo(48*TS,9.6*TS,49*TS,10.9*TS,49.6*TS,12*TS);
-    g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.42;g.lineWidth=92;g.stroke();g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.92;g.lineWidth=54;g.stroke();
-    g.globalAlpha=.78;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse(50.2*TS,12.2*TS,4.5*TS,2.8*TS,0,0,7);g.fill();g.restore();
-    if(t.water&&t.sand)for(const q of [[29,8,2.8,1.5],[48,29,2.4,1.3]]){
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++)g.drawImage(Math.random()<.13?flower:base,x*TS,y*TS,TS+1,TS+1);
+
+    // 입구 → 거점 → 다음 지역 출구. 기존 마지막 맵의 분위기는 유지하되 이동거리는 줄인다.
+    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(2.5*TS,16*TS);g.bezierCurveTo(13*TS,14*TS,27*TS,22*TS,44.5*TS,7*TS);
+    g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.36;g.lineWidth=142;g.stroke();g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.93;g.lineWidth=82;g.stroke();g.restore();
+    g.save();g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(36.6*TS,8.2*TS);g.bezierCurveTo(37.4*TS,9.1*TS,38.5*TS,10.2*TS,39.3*TS,11*TS);
+    g.strokeStyle=fieldPattern(g,dirt);g.globalAlpha=.42;g.lineWidth=88;g.stroke();g.strokeStyle=fieldPattern(g,path);g.globalAlpha=.92;g.lineWidth=52;g.stroke();
+    g.globalAlpha=.76;g.fillStyle=fieldPattern(g,dirt);g.beginPath();g.ellipse(40*TS,11.2*TS,4.1*TS,2.5*TS,0,0,7);g.fill();g.restore();
+
+    if(t.water&&t.sand)for(const q of [[23,6.5,2.5,1.35],[37.5,24.3,2.2,1.2]]){
       g.save();g.beginPath();g.ellipse(q[0]*TS,q[1]*TS,q[2]*TS,q[3]*TS,0,0,7);g.clip();g.globalAlpha=.72;g.fillStyle=fieldPattern(g,t.sand);
       g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);g.globalAlpha=.86;g.beginPath();g.ellipse(q[0]*TS,q[1]*TS,q[2]*.76*TS,q[3]*.72*TS,0,0,7);g.clip();
       g.fillStyle=fieldPattern(g,t.water);g.fillRect((q[0]-q[2])*TS,(q[1]-q[3])*TS,q[2]*2*TS,q[3]*2*TS);g.restore();
     }
-    const mini=document.createElement('canvas');mini.width=360;mini.height=240;mini.getContext('2d').drawImage(c,0,0,360,240);
-    return {ground:c,mini,w:60,h:40,start:{x:2.5,y:20},end:{x:56.5,y:8},grid:null,rooms:[]};
+    const mini=document.createElement('canvas');mini.width=288;mini.height=192;mini.getContext('2d').drawImage(c,0,0,mini.width,mini.height);
+    return {ground:c,mini,w:W,h:H,start:{x:2.5,y:16},end:{x:44.5,y:7},grid:null,rooms:[]};
   }
 
-  // 중간 필드 = 기존 던전과 같은 방+복도 생성. 표현만 밝은 야외이며 어둠/횃불/계단은 없다.
+  // 중간 필드 = 던전의 방+복도 생성 규칙을 쓰되, 화면에서는 밝은 야외 지형으로 보인다.
   fieldMapW=48;fieldMapH=48;
   const D=genRoomLayout(48,48,12,{x:32,y:18,w:12,h:10});
   D.carve(1,D.start.cy-1,D.start.x,D.start.cy+1);
   D.carve(D.far.x+D.far.w-1,D.far.cy-1,46,D.far.cy+1);
-  const visualTheme='spring',t=fieldTiles[visualTheme],ims=Object.values(t);await waitImages(ims);
-  const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base;
+
+  const visualTheme=theme,t=fieldTiles[visualTheme],ims=Object.values(t);await waitImages(ims);
+  const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base,blockedTex=t.water||base;
+  const dark={
+    spring:'rgba(18,62,24,.42)',summer:'rgba(12,52,28,.46)',autumn:'rgba(68,43,20,.34)',
+    winter:'rgba(45,64,72,.26)',ice:'rgba(25,68,98,.28)',volcano:'rgba(50,18,10,.38)',swamp:'rgba(20,42,25,.44)'
+  }[visualTheme]||'rgba(20,55,25,.38)';
+  const liquidBlocked=visualTheme==='volcano'||visualTheme==='swamp'||visualTheme==='ice';
+
   const c=document.createElement('canvas');c.width=48*TS;c.height=48*TS;const g=c.getContext('2d');
   for(let y=0;y<48;y++)for(let x=0;x<48;x++){
-    const walk=D.g[y][x]===1;
-    const im=walk?(Math.random()<.18?flower:base):base;
-    g.drawImage(im,x*TS,y*TS,TS+1,TS+1);
-    if(!walk){g.fillStyle='rgba(25,70,24,.08)';g.fillRect(x*TS,y*TS,TS+1,TS+1);}
-    else if(Math.random()<.045){g.globalAlpha=.18;g.drawImage(dirt,x*TS,y*TS,TS+1,TS+1);g.globalAlpha=1;}
+    const walk=D.g[y][x]===1,boundary=!walk&&outdoorBoundary({grid:D.g},x,y);
+    if(walk){
+      g.drawImage(Math.random()<.18?flower:base,x*TS,y*TS,TS+1,TS+1);
+      if(Math.random()<.045){g.globalAlpha=.18;g.drawImage(dirt,x*TS,y*TS,TS+1,TS+1);g.globalAlpha=1;}
+    }else{
+      // 못 가는 셀은 반드시 한눈에 다른 지형으로 보이게 한다.
+      if(liquidBlocked&&!boundary){
+        g.drawImage(blockedTex,x*TS,y*TS,TS+1,TS+1);
+        g.fillStyle=dark;g.fillRect(x*TS,y*TS,TS+1,TS+1);
+      }else{
+        g.drawImage(base,x*TS,y*TS,TS+1,TS+1);
+        g.fillStyle=dark;g.fillRect(x*TS,y*TS,TS+1,TS+1);
+        if(boundary){g.fillStyle=visualTheme==='winter'||visualTheme==='ice'?'rgba(28,48,60,.16)':'rgba(5,25,8,.13)';g.fillRect(x*TS,y*TS,TS+1,TS+1);}
+      }
+    }
   }
+
   const mini=document.createElement('canvas');mini.width=288;mini.height=288;const mg=mini.getContext('2d');
-  mg.fillStyle='#315b2b';mg.fillRect(0,0,288,288);mg.fillStyle='#80b95b';
+  mg.fillStyle=visualTheme==='volcano'?'#492017':visualTheme==='ice'?'#315b72':visualTheme==='swamp'?'#273b2a':'#284b28';mg.fillRect(0,0,288,288);
+  mg.fillStyle=visualTheme==='winter'||visualTheme==='ice'?'#b8d1d1':visualTheme==='autumn'?'#b88b4e':'#80b95b';
   for(let y=0;y<48;y++)for(let x=0;x<48;x++)if(D.g[y][x])mg.fillRect(x*6,y*6,6,6);
+
   const bg={ground:c,mini,w:48,h:48,grid:D.g,rooms:D.rooms,start:{x:1.8,y:D.start.cy},end:{x:46.2,y:D.far.cy},startRoom:D.start,farRoom:D.far};
   fieldOutdoor=bg;return bg;
 }
@@ -3298,30 +3322,47 @@ function fieldPropClear(x, y, meta, out){
   return true;
 }
 function randomFieldProps(theme,isLast=false,bg=null){
-  const visualTheme=isLast?theme:'spring',all=A.field.props[visualTheme]||[],out=[];
+  const visualTheme=theme,all=A.field.props[visualTheme]||[],out=[];
   const cave=fieldPropMeta(visualTheme,'16_'),camp=fieldPropMeta(visualTheme,'14_'),ruin=fieldPropMeta(visualTheme,'13_'),sign=fieldPropMeta(visualTheme,'15_'),special=fieldPropMeta(visualTheme,'12_');
   if(isLast){
-    for(const p of [mkFieldProp(sign,4.5,19.4,'','지역 이정표'),mkFieldProp(camp,20,31,'fire','야영지'),mkFieldProp(ruin,38,23,'','무너진 폐허'),mkFieldProp(special,46,31,'','이상한 흔적'),mkFieldProp(cave,54.2,4.8,'dungeon','필드 동굴 입구')])if(p)out.push(p);
+    for(const p of [
+      mkFieldProp(sign,4.2,15.4,'','지역 이정표'),
+      mkFieldProp(camp,15.5,24.0,'fire','야영지'),
+      mkFieldProp(ruin,28.5,18.5,'','무너진 폐허'),
+      mkFieldProp(special,36.0,24.0,'','이상한 흔적'),
+      mkFieldProp(cave,44.0,4.2,'dungeon','필드 동굴 입구')
+    ])if(p)out.push(p);
     const pool=all.filter(x=>!/^1[3-6]_/.test(x.name));let tries=0;
-    while(out.length<52&&tries++<600){
-      const x=2+Math.random()*56,y=2+Math.random()*36;
-      if(nearMainPath(x,y,2.4)||(x>44&&x<56&&y>8&&y<17)||Math.hypot(x-54.2,y-4.8)<4||Math.hypot(x-3,y-20)<4||Math.hypot(x-57.5,y-8)<4)continue;
+    while(out.length<42&&tries++<520){
+      const x=2+Math.random()*44,y=2+Math.random()*28;
+      if(nearMainPath(x,y,2.3)||(x>35&&x<47&&y>6&&y<15)||Math.hypot(x-44,y-4.2)<4||Math.hypot(x-2.5,y-16)<4||Math.hypot(x-44.5,y-7)<4)continue;
       const meta=pool[Math.floor(Math.random()*pool.length)];if(!meta)break;if(!fieldPropClear(x,y,meta,out))continue;
       const p=mkFieldProp(meta,x,y,'',null);if(p)out.push(p);
     }
     return out;
   }
 
-  // 방/복도의 바깥 경계를 나무·수풀·바위로 보여 준다. 실제 충돌은 던전 그리드가 담당한다.
-  const boundaryPool=all.filter(m=>isTreeName(m.name)||m.name.includes('bush')||m.name.includes('rock'));
+  // 막힌 경계는 눈으로도 '벽'처럼 읽혀야 한다. 나무/수풀/바위/테마 지형을 거의 연속으로 배치한다.
+  const boundaryPool=all.filter(m=>/(tree|bush|rock|fern|reeds|obsidian|ice_shards|ice_pillar|lava_edge|crater|mangrove|stump)/.test(m.name));
   let boundaryCount=0;
-  for(let y=2;y<46;y++)for(let x=2;x<46;x++){
-    if(!outdoorBoundary(bg,x,y)||Math.random()>.48)continue;
-    if(Math.hypot(x-bg.start.x,y-bg.start.y)<3||Math.hypot(x-bg.end.x,y-bg.end.y)<3)continue;
+  for(let y=1;y<47;y++)for(let x=1;x<47;x++){
+    if(!outdoorBoundary(bg,x,y)||Math.random()>.80)continue;
+    if(Math.hypot(x-bg.start.x,y-bg.start.y)<3.2||Math.hypot(x-bg.end.x,y-bg.end.y)<3.2)continue;
     const meta=boundaryPool[Math.floor(Math.random()*boundaryPool.length)];if(!meta)continue;
-    const p=mkFieldProp(meta,x+.5,y+.8,'',null);if(p){p.cw=0;p.cd=0;out.push(p);boundaryCount++;}
-    if(boundaryCount>=105)break;
+    const p=mkFieldProp(meta,x+.5,y+.82,'',null);
+    if(p){p.cw=0;p.cd=0;out.push(p);boundaryCount++;}
+    if(boundaryCount>=190)break;
   }
+
+  // 경계 바로 뒤에도 듬성듬성 오브제를 더 넣어 '빈 검은 바닥'처럼 보이지 않게 한다.
+  let deepCount=0;
+  for(let tries=0;tries<700&&deepCount<55;tries++){
+    const x=2+Math.random()*44,y=2+Math.random()*44,ix=Math.floor(x),iy=Math.floor(y);
+    if(outdoorFloor(bg,ix,iy)||outdoorBoundary(bg,ix,iy))continue;
+    const meta=boundaryPool[Math.floor(Math.random()*boundaryPool.length)];if(!meta)break;
+    const p=mkFieldProp(meta,x,y,'',null);if(p){p.cw=0;p.cd=0;out.push(p);deepCount++;}
+  }
+
   const rooms=(bg&&bg.rooms||[]).filter(r=>r!==bg.startRoom&&r!==bg.farRoom);
   if(rooms.length){
     const r0=rooms[Math.floor(Math.random()*rooms.length)],r1=rooms[Math.floor(Math.random()*rooms.length)];
@@ -3330,7 +3371,7 @@ function randomFieldProps(theme,isLast=false,bg=null){
   }
   const sg=mkFieldProp(sign,bg.start.x+1.4,bg.start.y-.5,'','지역 이정표');if(sg)out.push(sg);
   const softPool=all.filter(m=>isSoftName(m.name));let tries=0;
-  while(out.length<130&&tries++<700){
+  while(out.length<250&&tries++<900){
     const x=2+Math.random()*44,y=2+Math.random()*44;if(!outdoorFloor(bg,Math.floor(x),Math.floor(y)))continue;
     if(Math.hypot(x-bg.start.x,y-bg.start.y)<4||Math.hypot(x-bg.end.x,y-bg.end.y)<4)continue;
     const meta=softPool[Math.floor(Math.random()*softPool.length)];if(!meta)break;
@@ -3344,9 +3385,9 @@ function fieldBuilding(k,name,x,y,wt,kind,market){
   return {k,name,x:x*TS,y:y*TS,w,h,door:0,kind:kind||'bld',market:market||null};
 }
 function makeFieldVillage(theme){
-  // 마지막 구간 우상단에는 마을 입구가 보이고, 실제 상점/교역은 별도 소형마을 내부에서 한다.
-  const gate=fieldBuilding('cottage_thatch',FIELD_INFO[theme][1]+' 작은 마을',49.3,12.0,4.4,'field_village',theme);
-  const house=fieldBuilding('house_red','마을 주택',53.1,14.2,3.7,'bld',theme);house.noSpot=1;
+  // 축소된 마지막 거점의 우상단 마을 입구. 실제 상점/교역은 별도 소형마을 내부에서 한다.
+  const gate=fieldBuilding('cottage_thatch',FIELD_INFO[theme][1]+' 작은 마을',39.4,10.8,4.2,'field_village',theme);
+  const house=fieldBuilding('house_red','마을 주택',43.1,12.8,3.5,'bld',theme);house.noSpot=1;
   return [gate,house];
 }
 function villageProp(k,x,y,wt,name=null,kind=''){
@@ -3414,7 +3455,7 @@ async function prepareField(theme, leg, legs){
   const ex=[];
   if(lg>1)ex.push({x0:1.05*TS,x1:2.4*TS,y0:(start.y-1.8)*TS,y1:(start.y+1.8)*TS,fn:()=>goLeg(th,lg-1,ls,'right')});
   else ex.push({x0:1.05*TS,x1:2.4*TS,y0:(start.y-1.8)*TS,y1:(start.y+1.8)*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'});
-  if(isLast)ex.push({x0:58.85*TS,x1:60*TS,y0:(end.y-2.6)*TS,y1:(end.y+2.6)*TS,fn:()=>askDestination()});
+  if(isLast)ex.push({x0:(bg.w-1.15)*TS,x1:bg.w*TS,y0:(end.y-2.6)*TS,y1:(end.y+2.6)*TS,fn:()=>askDestination()});
   else ex.push({x0:(bg.w-2.4)*TS,x1:(bg.w-1.05)*TS,y0:(end.y-1.8)*TS,y1:(end.y+1.8)*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
   const map={
     name:FIELD_INFO[th][1]+(ls>1?' '+lg+'/'+ls:''),market:th,map:{w:bg.w,h:bg.h,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
@@ -3496,7 +3537,7 @@ function spawnClear(m,placed=monsters,field=false){
   if(field){
     const x=m.x/TS,y=m.y/TS;
     if(CUR&&CUR.grid&&gridBlocked(m.x,m.y,m.w*.5))return false;
-    if(!CUR.grid&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-3,y-20)<7||Math.hypot(x-57.5,y-20)<7||Math.hypot(x-56,y-8)<5||Math.hypot(x-20,y-31)<5))return false;
+    if(!CUR.grid&&(nearMainPath(x,y,1.6)||inTownReserve(x,y)||Math.hypot(x-2.5,y-16)<6||Math.hypot(x-44.5,y-7)<5||Math.hypot(x-44,y-4.2)<5||Math.hypot(x-15.5,y-24)<4))return false;
   }
   if(pointInSolid(m.x,m.y,m.w*.5))return false;
   if(!field&&typeof gridBlocked==='function'&&gridBlocked(m.x,m.y,m.w*.5))return false;
