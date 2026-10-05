@@ -22,11 +22,15 @@ async def main():
             st=await enter(pg,theme); timings.append(st['buildMs']); assert st['tier']==ti,(theme,st)
             if ti>1:
                 assert len(st['village'])==0 and st['dungeons']==0,(theme,'intermediate',st)
+                assert st['fieldSize']=={'w':48,'h':48},(theme,'outdoor-size',st)
+                assert st['routePoints']>=7 and st['branches']==2,(theme,'outdoor-route',st)
+                assert st['routeLength']>st['routeDirect']*1.25,(theme,'route-too-straight',st)
                 await pg.evaluate("([t,l]) => __FD.enter(t,l)",[theme,ti]);await pg.wait_for_timeout(700)
                 last=await pg.evaluate("() => __FD.state()")
             else:
                 last=st
             assert last['leg']==ti and len(last['village'])==2 and last['dungeons']==1,(theme,'last',last)
+            assert last['fieldSize']=={'w':60,'h':40},(theme,'fixed-last-size',last)
             assert all(v['x']>44*48 for v in last['village']),(theme,last['village'])
         a=await enter(pg,'spring'); layout_a=a['layout']; serial_a=a['serial']
         b=await enter(pg,'spring')
@@ -43,7 +47,8 @@ async def main():
         assert (await pg.evaluate("() => __FD.state()"))['drops']>=1
         # 다구간 지역은 실제 길 끝(오른쪽 위)에서 다음 칸으로 넘어가고, 마지막 칸 끝에서 목적지를 고른다.
         await pg.evaluate("() => __FD.enter('summer',1)");await pg.wait_for_timeout(700)
-        await pg.evaluate("() => __FD.warp(59,8)");await pg.wait_for_timeout(1300)
+        mid=await pg.evaluate("() => __FD.state()")
+        await pg.evaluate("(p) => __FD.warp(p.x+.7,p.y)",mid['end']);await pg.wait_for_timeout(1300)
         leg2=await pg.evaluate("() => __FD.state()")
         assert leg2['theme']=='summer' and leg2['leg']==2,(leg2)
         assert len(leg2['village'])==2 and leg2['dungeons']==1,leg2
