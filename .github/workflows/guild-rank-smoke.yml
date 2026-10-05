@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'src/town/guild.js'
+      - 'src/town/check_guild_rank.py'
       - '.github/workflows/guild-rank-smoke.yml'
 
 jobs:
