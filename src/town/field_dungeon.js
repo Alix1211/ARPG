@@ -788,10 +788,11 @@ function autoAimMonster(){
 window.__FD_READY=true;
 window.__FD={
   async enter(theme,leg){const m=await prepareField(theme||'spring',leg);travel('field',m.spawn,'side');return true;},
+  prepareVillage:(theme,ret)=>prepareFieldVillage(theme,ret),enterVillage:enterFieldVillage,leaveVillage:leaveFieldVillage,
   goLeg,askDestination,
   mapInfo(){return {blds:MAPS.field.blds.length,exits:MAPS.field.exits.length,name:MAPS.field.name,map:MAP};},
   warp(tx,ty){P.x=tx*TS;P.y=ty*TS;return true;},
-  state(){return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,dungeons:MAPS.field?MAPS.field.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
+  state(){return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,villageReturn:fieldVillageReturn?{...fieldVillageReturn}:null,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:MAPS.field?MAPS.field.props.length:0,dungeons:MAPS.field?MAPS.field.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&pointInSolid(m.x,m.y,10)).length,layout:MAPS.field?MAPS.field.props.slice(5,11).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:MAPS.field?MAPS.field.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[]};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
   debugTarget(dx,dy,freeze){
     const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;
