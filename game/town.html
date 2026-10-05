@@ -357,7 +357,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-0027</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-0036</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -3374,7 +3374,7 @@ function villageNpc(shop,name,title,line,x,y,market){
 let fieldVillageReturn=null;
 async function prepareFieldVillage(theme,returnState){
   theme=theme in FIELD_INFO?theme:'spring';fieldTheme=theme;fieldVillageReturn=returnState||fieldVillageReturn;
-  if(fieldVillageReturn){fieldLegs=Math.max(1,fieldVillageReturn.legs||FIELD_TIER[theme]||1);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
+  if(fieldVillageReturn){const minLegs=(FIELD_TIER[theme]||1)+1;fieldLegs=Math.max(minLegs,fieldVillageReturn.legs||0);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
   const bg=await makeFieldVillageGround(theme);
   const b1=fieldBuilding('cottage_thatch','마을집',5.7,7.2,4.0,'bld',theme);b1.noSpot=1;
   const b2=fieldBuilding('house_blue','마을집',26.3,7.2,4.0,'bld',theme);b2.noSpot=1;
@@ -3409,7 +3409,7 @@ async function leaveFieldVillage(){
 async function prepareField(theme, leg, legs){
   const t0 = performance.now();
   fieldTheme = theme in FIELD_INFO ? theme : 'spring'; fieldSerial++;
-  fieldLegs = Math.max(1, legs || FIELD_TIER[fieldTheme] || 1); fieldLeg = Math.max(1, Math.min(leg || fieldLegs, fieldLegs));
+  const minLegs=(FIELD_TIER[fieldTheme]||1)+1; fieldLegs=Math.max(minLegs,legs||0); fieldLeg=Math.max(1,Math.min(leg||1,fieldLegs));
   const lg = fieldLeg, ls = fieldLegs, th = fieldTheme, isLast = lg === ls;
   const bg=await makeFieldGround(th,isLast),props=randomFieldProps(th,isLast,bg),start=bg.start,end=bg.end;
   const ex=[];
@@ -3450,8 +3450,8 @@ function regionUnlockInfo(theme){
   return {open:P.lv>=level||completed.includes(quest),level,quest};
 }
 function regionBtnHtml(r){
-  const n=FIELD_TIER[r[0]]||1,u=regionUnlockInfo(r[0]);
-  return r[1]+'<small>'+r[2]+' · 길 '+n+'칸'+(u.open?'':' · 잠김 (Lv'+u.level+' 또는 이야기 진행)')+'</small>';
+  const n=(FIELD_TIER[r[0]]||1)+1,u=regionUnlockInfo(r[0]);
+  return r[1]+'<small>'+r[2]+' · '+(n-1)+'개 야외길 + 마지막 거점'+(u.open?'':' · 잠김 (Lv'+u.level+' 또는 이야기 진행)')+'</small>';
 }
 function fillRegionGrid(mode){
   const gr=$('regionGrid'); gr.innerHTML='';
