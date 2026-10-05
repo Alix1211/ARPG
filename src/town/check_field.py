@@ -20,17 +20,15 @@ async def main():
         timings=[]
         for ti,theme in enumerate(THEMES,1):
             st=await enter(pg,theme); timings.append(st['buildMs']); assert st['tier']==ti,(theme,st)
-            if ti>1:
-                assert len(st['village'])==0 and st['dungeons']==0,(theme,'intermediate',st)
-                assert st['fieldSize']=={'w':48,'h':48},(theme,'outdoor-size',st)
-                assert st['outdoorDungeon'] is True,(theme,'outdoor-dungeon',st)
-                assert st['rooms']>=8,(theme,'room-count',st)
-                assert st['walkableCells']>=300,(theme,'walkable-area',st)
-                await pg.evaluate("([t,l]) => __FD.enter(t,l)",[theme,ti]);await pg.wait_for_timeout(700)
-                last=await pg.evaluate("() => __FD.state()")
-            else:
-                last=st
-            assert last['leg']==ti and len(last['village'])==2 and last['dungeons']==1,(theme,'last',last)
+            assert len(st['village'])==0 and st['dungeons']==0,(theme,'intermediate',st)
+            assert st['fieldSize']=={'w':48,'h':48},(theme,'outdoor-size',st)
+            assert st['outdoorDungeon'] is True,(theme,'outdoor-dungeon',st)
+            assert st['rooms']>=8,(theme,'room-count',st)
+            assert st['walkableCells']>=300,(theme,'walkable-area',st)
+            assert st['legs']==ti+1,(theme,'random-plus-final-count',st)
+            await pg.evaluate("([t,l]) => __FD.enter(t,l)",[theme,ti+1]);await pg.wait_for_timeout(700)
+            last=await pg.evaluate("() => __FD.state()")
+            assert last['leg']==ti+1 and len(last['village'])==2 and last['dungeons']==1,(theme,'last',last)
             assert last['fieldSize']=={'w':60,'h':40},(theme,'fixed-last-size',last)
             assert last['outdoorDungeon'] is False,(theme,'last-must-be-fixed',last)
             assert all(v['x']>44*48 for v in last['village']),(theme,last['village'])
@@ -52,8 +50,10 @@ async def main():
         mid=await pg.evaluate("() => __FD.state()")
         await pg.evaluate("(p) => __FD.warp(p.x+.7,p.y)",mid['end']);await pg.wait_for_timeout(1300)
         leg2=await pg.evaluate("() => __FD.state()")
-        assert leg2['theme']=='summer' and leg2['leg']==2,(leg2)
-        assert len(leg2['village'])==2 and leg2['dungeons']==1,leg2
+        assert leg2['theme']=='summer' and leg2['leg']==2 and leg2['outdoorDungeon'] is True,(leg2)
+        await pg.evaluate("(p) => __FD.warp(p.x+.7,p.y)",leg2['end']);await pg.wait_for_timeout(1300)
+        leg3=await pg.evaluate("() => __FD.state()")
+        assert leg3['leg']==3 and len(leg3['village'])==2 and leg3['dungeons']==1,leg3
         await pg.evaluate("() => __FD.warp(59,8)");await pg.wait_for_timeout(300)
         assert await pg.evaluate("() => document.getElementById('regionPick').classList.contains('on')")
         await pg.click("#regionGrid button[data-theme=town]"); await pg.wait_for_timeout(900)
