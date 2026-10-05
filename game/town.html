@@ -367,7 +367,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-0845</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-0847</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -5101,8 +5101,8 @@ function guildExamRequirements(){
 function guildStartExam(){
   guildSyncDay();if(guildRank()>=6||guildState.exam)return false;
   const ex=guildExamInfo(),req=guildExamRequirements();if(!req.level.ok||!req.done.ok||!req.fee.ok){say('승급 시험 조건이 아직 모자랍니다.');guildExamPanelOpen=true;guildRender();return false;}
-  GAME.setGold(P.gold-req.fee);
-  guildState.exam={targetRank:ex.to,bossId:ex.bossId,bossName:GUILD_MOB_NAME[ex.bossId]||ex.bossId,floor:ex.floor,fee:req.fee,status:'active',startedAt:guildNow()};
+  GAME.setGold(P.gold-req.fee.fee);
+  guildState.exam={targetRank:ex.to,bossId:ex.bossId,bossName:GUILD_MOB_NAME[ex.bossId]||ex.bossId,floor:ex.floor,fee:req.fee.fee,status:'active',startedAt:guildNow()};
   guildAbandonArmed=0;guildExamPanelOpen=true;guildRender();if(window.UI&&UI.save)UI.save();
   say('시험비를 냈습니다. 환불은 없습니다.');return true;
 }
