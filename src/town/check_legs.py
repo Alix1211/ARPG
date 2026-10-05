@@ -11,6 +11,20 @@ async def main():
         ev=pg.evaluate
         await pg.goto(URL);await pg.wait_for_timeout(900)
 
+        # 실제 플레이 UI는 봄만 기본 개방. 여름 이후는 레벨/메인 진행으로 잠긴다.
+        await ev("() => {GAME.P.lv=1; __FD.openRegionSelect('field');}")
+        await pg.wait_for_timeout(150)
+        btns=await ev("() => [...document.querySelectorAll('#regionGrid button')].map(b=>[b.dataset.theme,b.disabled,b.textContent])")
+        assert next(x for x in btns if x[0]=='spring')[1] is False,btns
+        assert all(next(x for x in btns if x[0]==t)[1] for t in ['summer','autumn','winter','ice','volcano','swamp']),btns
+        await ev("() => GAME.closeAll()")
+        assert not await ev("() => __FD.regionUnlocked('summer').open")
+        await ev("() => {GAME.P.lv=10;}")
+        assert await ev("() => __FD.regionUnlocked('summer').open")
+        assert not await ev("() => __FD.regionUnlocked('autumn').open")
+        # 이하 이동 구조 검사는 디버그 직접진입과 고레벨 UI를 사용한다.
+        await ev("() => {GAME.P.lv=70;}")
+
         # 1티어는 길 1칸(= 마을 필드), 3티어는 길 3칸.
         await ev("() => __FD.enter('spring',1)");await pg.wait_for_timeout(900)
         s=await ev("() => __FD.state()");assert s['leg']==1 and s['legs']==1,s
