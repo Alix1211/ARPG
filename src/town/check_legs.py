@@ -42,7 +42,8 @@ async def main():
         assert await ev("() => __FD.mapInfo().blds")==2,'마지막 칸에 마을'
         assert await ev("() => __FD.mapInfo().exits")==2
         # 마지막 칸의 오른쪽 위 길 끝 = 목적지 선택창.
-        await ev("() => __FD.warp(59.3,8)");await pg.wait_for_timeout(500)
+        s=await ev("() => __FD.state()")
+        await ev("(p) => __FD.warp(p.x+.8,p.y)",s['end']);await pg.wait_for_timeout(500)
         assert await ev("() => document.getElementById('regionPick').classList.contains('on')")
         btns=await ev("() => [...document.querySelectorAll('#regionGrid button')].map(b=>[b.dataset.theme,b.disabled,b.textContent])")
         assert btns[0][0]=='town' and any(x[0]=='autumn' and x[1] for x in btns),btns
