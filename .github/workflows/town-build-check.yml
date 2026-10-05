@@ -7,19 +7,24 @@ on:
       - 'src/town/**'
       - 'src/story/quests.json'
       - '.github/workflows/town-build-check.yml'
+
 concurrency:
   group: town-build-main
   cancel-in-progress: true
+
 permissions:
   contents: write
+
 jobs:
-  build-check:
+  fast-publish:
+    name: Fast build & publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
       - uses: actions/cache@v4
         with:
           path: |
@@ -29,42 +34,16 @@ jobs:
           key: town-build-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'src/town/outmap.py', 'assets/**') }}
           restore-keys: |
             town-build-${{ runner.os }}-
-      - run: pip install pillow numpy scipy playwright
-      - run: python -m playwright install --with-deps chromium
-      - run: python src/town/build.py
-      - run: python src/town/check_tier_match.py
-      - run: python src/town/check.py
-      - run: python src/town/check2.py
-      - run: python src/town/check_walk.py
-      - run: python src/town/check_move_atk.py
-      - run: python src/town/check_control.py
-      - run: python src/town/check_combat.py
-      - run: python src/town/check_combat_balance.py
-      - run: python src/town/check_camp.py
-      - run: python src/town/check_pause.py
-      - run: python src/town/check_sound.py
-      - run: python src/town/check_backup.py
-      - run: python src/town/check_vfx.py
-      - run: python src/town/check_equipcmp.py
-      - run: python src/town/check_skills.py
-      - run: python src/town/check_skill.py
-      - run: python src/town/check_growth.py
-      - run: python src/town/check_stash.py
-      - run: python src/town/check_sell.py
-      - run: python src/town/check_pot.py
-      - run: python src/town/check_save.py
-      - run: python src/town/check_reset.py
-      - run: python src/town/check_resume.py
-      - run: python src/town/check_inn.py
-      - run: python src/town/check_identify.py
-      - run: python src/town/check_field.py
-      - run: python src/town/check_legs.py
-      - run: python src/town/check_trade.py
-      - run: python src/town/check_mount.py
-      - run: python src/town/check_guild.py
-      - run: python src/town/check_quest.py
-      - run: python src/town/check_dungeon.py
-      - run: python src/town/check_chest.py
+      - name: Install build dependencies
+        run: pip install pillow numpy scipy
+      - name: JavaScript syntax check
+        shell: bash
+        run: |
+          for f in src/town/*.js; do
+            node --check "$f"
+          done
+      - name: Build town
+        run: python src/town/build.py
       - name: Publish built town.html
         shell: bash
         run: |
@@ -74,7 +53,7 @@ jobs:
           fi
           git fetch origin main
           if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
-            echo "main moved during build; skip publish"
+            echo "main moved during build; newer run will publish"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -82,3 +61,88 @@ jobs:
           git add -A game/
           git commit -m "빌드: town.html 최신화"
           git push origin HEAD:main
+
+  full-regression:
+    name: Full regression (non-blocking publish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src/town/.enc_cache
+            src/town/.ground_cache.png
+            src/town/.ground_out_cache.png
+          key: town-build-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'src/town/outmap.py', 'assets/**') }}
+          restore-keys: |
+            town-build-${{ runner.os }}-
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('.github/workflows/town-build-check.yml') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+      - name: Install test dependencies
+        run: |
+          pip install pillow numpy scipy playwright
+          python -m playwright install --with-deps chromium
+      - name: Build town for regression
+        run: python src/town/build.py
+      - name: Run all regression checks and report all failures
+        shell: bash
+        run: |
+          tests=(
+            src/town/check_tier_match.py
+            src/town/check.py
+            src/town/check2.py
+            src/town/check_walk.py
+            src/town/check_move_atk.py
+            src/town/check_control.py
+            src/town/check_combat.py
+            src/town/check_combat_balance.py
+            src/town/check_camp.py
+            src/town/check_pause.py
+            src/town/check_sound.py
+            src/town/check_backup.py
+            src/town/check_vfx.py
+            src/town/check_equipcmp.py
+            src/town/check_skills.py
+            src/town/check_skill.py
+            src/town/check_growth.py
+            src/town/check_stash.py
+            src/town/check_sell.py
+            src/town/check_pot.py
+            src/town/check_save.py
+            src/town/check_reset.py
+            src/town/check_resume.py
+            src/town/check_inn.py
+            src/town/check_identify.py
+            src/town/check_field.py
+            src/town/check_legs.py
+            src/town/check_trade.py
+            src/town/check_mount.py
+            src/town/check_guild.py
+            src/town/check_quest.py
+            src/town/check_dungeon.py
+            src/town/check_chest.py
+          )
+          failures=()
+          for t in "${tests[@]}"; do
+            echo "::group::$t"
+            if python "$t"; then
+              echo "PASS $t"
+            else
+              failures+=("$t")
+              echo "FAIL $t"
+            fi
+            echo "::endgroup::"
+          done
+          echo "Regression failures: ${#failures[@]}"
+          if [ ${#failures[@]} -gt 0 ]; then
+            printf ' - %s\n' "${failures[@]}"
+            exit 1
+          fi
