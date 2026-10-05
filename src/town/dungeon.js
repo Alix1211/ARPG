@@ -109,12 +109,13 @@ function spawnDungeonMonsters(){
   const arena=M.farRoom,cx=(arena.x+arena.w/2)*TS,cy=(arena.y+arena.h/2)*TS;
   const floorBoss=dunFloor%3===0?TIER_MATCH.floorBosses[tier-1]:null;
   const group=TIER_MATCH.groups.find(g=>g.tier===tier&&g.leader===floorBoss)||TIER_MATCH.groups.find(g=>g.tier===tier);
+  const caveChallenge=dunTheme==='cave';
   if(floorBoss){
     if(group&&group.leader===floorBoss){
-      if(!spawnPack(group,cx,cy,{floor:dunFloor,bossRole:'floor'}))throw Error('층 우두머리 군집 배치 실패');
-    }else monsters.push(createMonster(floorBoss,cx,cy,{floor:dunFloor,bossRole:'floor'}));
+      if(!spawnPack(group,cx,cy,{floor:dunFloor,bossRole:'floor',caveChallenge}))throw Error('층 우두머리 군집 배치 실패');
+    }else monsters.push(createMonster(floorBoss,cx,cy,{floor:dunFloor,bossRole:'floor',caveChallenge}));
   }else if(group){
-    if(!spawnPack(group,cx,cy,{floor:dunFloor}))throw Error('던전 군집 배치 실패');
+    if(!spawnPack(group,cx,cy,{floor:dunFloor,caveChallenge}))throw Error('던전 군집 배치 실패');
   }
   for(const room of M.rooms){
     if(room===M.startRoom||room===arena)continue;
@@ -122,7 +123,7 @@ function spawnDungeonMonsters(){
     for(let i=0;i<n;i++){
       const id=elites.length&&i===n-1?elites[Math.floor(Math.random()*elites.length)]:pool[Math.floor(Math.random()*pool.length)];
       for(let tries=0;tries<150;tries++){
-        const m=createMonster(id,(room.x+1+Math.random()*(room.w-2))*TS,(room.y+1.5+Math.random()*(room.h-2))*TS,{floor:dunFloor});
+        const m=createMonster(id,(room.x+1+Math.random()*(room.w-2))*TS,(room.y+1.5+Math.random()*(room.h-2))*TS,{floor:dunFloor,caveChallenge});
         if(spawnClear(m)){monsters.push(m);break;}
       }
     }
@@ -143,7 +144,7 @@ async function goDungeon(floor,fromAbove){
   if(dunBusy||traveling)return false;
   dunBusy=true;
   try{
-    say(floor===1?'어둡고 축축하다… 돈 냄새가 난다.':'지하 '+floor+'층');
+    say(floor===1?(dunTheme==='cave'?'공기가 다르네… 여기 몬스터는 훨씬 세겠어.':'어둡고 축축하다… 돈 냄새가 난다.'):'지하 '+floor+'층');
     if(window.CHATTER)CHATTER.floor(floor);
     const m=await prepareDungeon(floor);
     // 계단 바로 위/타일 경계 대신 방 중심의 안전 바닥에서 시작.
@@ -172,7 +173,7 @@ function openDungeonChest(spot){
     const chestSolid=solidIndex>=0?solids.splice(solidIndex,1)[0]:null;
     const id=src.mimicId||TIER_MATCH.mimics[dungeonTier(dunFloor)-1];
     if(!id)throw Error('미믹 티어 누락');
-    const m=createMonster(id,p.x,p.y,{floor:dunFloor});
+    const m=createMonster(id,p.x,p.y,{floor:dunFloor,caveChallenge:dunTheme==='cave'});
     let placed=spawnClear(m);
     for(let ring=1;ring<=5&&!placed;ring++)for(let step=0;step<16;step++){
       const a=step*Math.PI/8;m.x=p.x+Math.cos(a)*TS*ring;m.y=p.y+Math.sin(a)*TS*ring;
@@ -188,7 +189,7 @@ function openDungeonChest(spot){
   p.opened = 1; p.img = BI.d_chest_open || p.img; spots.splice(spots.indexOf(spot), 1);
   const gold = 15 + Math.floor(Math.random() * 20) * dunFloor;
   dropsLoot.push({ kind: 'gold', x: p.x - 12, y: p.y + 14, amount: gold, ph: 0 });
-  if (Math.random() < 0.7){ const it = randomDropItem({tier:dungeonTier(dunFloor)}); if (it) dropsLoot.push({ kind:'item', x:p.x+14, y:p.y+14, item:it, ph:1 }); }
+  if (Math.random() < 0.7){ const it = randomDropItem({tier:dungeonTier(dunFloor),caveChallenge:dunTheme==='cave'}); if (it) dropsLoot.push({ kind:'item', x:p.x+14, y:p.y+14, item:it, ph:1 }); }
   say('금화 냄새!');
 }
 // ---- 어둠과 불빛 (화면 좌표) ----
