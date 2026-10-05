@@ -36,6 +36,27 @@ function questNpcAction(n){
   return null;
 }
 function questMarker(n){const a=questNpcAction(n);return a?(a.start?'!':'?'):'';}
+function questMiniTargets(){
+  const out=[],seen=new Set();
+  const add=(x,y,id,kind)=>{
+    if(!Number.isFinite(x)||!Number.isFinite(y))return;
+    const k=Math.round(x)+':'+Math.round(y);
+    if(seen.has(k))return;seen.add(k);
+    out.push({x,y,id,kind});
+  };
+  for(const q of ALL_QUESTS){
+    if(!mainQuestState.active[q.id])continue;
+    const s=questStep(q);if(!s)continue;
+    if(['talk','deliver'].includes(s.type)&&questMapMatches(s)){
+      const n=questNpc(s.npc);if(n)add(n.x,n.y,q.id,'npc');
+      continue;
+    }
+    if(s.point&&questMapMatches(s.point)){
+      const p=questPoint(s);if(p)add(p.x,p.y,q.id,'point');
+    }
+  }
+  return out;
+}
 function questAccept(id){
   const q=questDef(id),n=q&&questNpc(q.start.npc);
   if(!q||!questAvailable(q)||!questMapMatches(q.start)||!n||Math.hypot(P.x-n.x,P.y-n.y)>90)return false;
@@ -281,6 +302,6 @@ window.QUEST={isDialog:()=>panel==='dlg'&&!!questDialog,accept:questAccept,colle
   decorateDialog:questDecorateDialog,marker:questMarker,openList:()=>{GUILD.open();questRender();},
   saveData:()=>({schema:3,...JSON.parse(JSON.stringify(mainQuestState))}),loadData:questLoad,
   state:()=>({active:Object.fromEntries(Object.entries(mainQuestState.active).map(([id,a])=>[id,{step:a.step,progress:a.progress}])),completed:mainQuestState.completed.slice(),items:{...mainQuestState.items},flags:{...mainQuestState.flags}}),
-  points:()=>spots.filter(s=>s.kind==='questclue').map(s=>({id:s.questId,x:s.x,y:s.y,type:s.questType})),nextDialog:questNextDialog,nextSpecial:questNextSpecial,
+  points:()=>spots.filter(s=>s.kind==='questclue').map(s=>({id:s.questId,x:s.x,y:s.y,type:s.questType})),minimapTargets:questMiniTargets,nextDialog:questNextDialog,nextSpecial:questNextSpecial,
   lists:()=>({main:MAIN_QUESTS.map(q=>q.id),side:SIDE_QUESTS.map(q=>q.id)})};
 $('mainQuestTrack').onclick=()=>QUEST.openList();
