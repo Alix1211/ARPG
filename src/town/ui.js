@@ -40,7 +40,7 @@ const AFFIX = [
 ];
 const AFFIX_BY=Object.fromEntries(AFFIX.map(a=>[a.id,a]));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function rarityForTier(tier, rank='normal'){
+function rarityForTier(tier, rank='normal', magicBoost=1){
   tier=clamp(tier||1,1,7);
   const table=[[62,31,7,0],[56,32,12,0],[50,33,17,0],[45,34,20,1],[40,34,23,3],[35,34,26,5],[30,34,28,8]];
   const w=table[tier-1].slice();
@@ -50,6 +50,10 @@ function rarityForTier(tier, rank='normal'){
   const bonus=scent*1.2+greed*.6;
   if(bonus>0){const shift=Math.min(w[0]-20,bonus);w[0]-=shift;w[2]+=shift*.75;w[3]+=shift*.25;}
   w[0]-=shift;w[2]+=shift-legend;w[3]+=legend;
+  if(magicBoost>1){
+    const magic=w[1]+w[2]+w[3],total=w[0]+magic,target=Math.min(.95,(magic/Math.max(1,total))*magicBoost);
+    if(target>0&&magic>0)w[0]=magic*(1-target)/target;
+  }
   let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<w.length;i++){r-=w[i];if(r<0)return i;}return 0;
 }
 function rollAffix(it, used){
@@ -68,7 +72,7 @@ function finalizeName(it){
 function make(spec){
   const base=gearBase(spec),tier=base.tier,g=base.powerGrade,roll=!!spec.roll;
   const it={id:seq++,baseId:base.id,kind:base.kind,icon:base.icon,requiredLevel:base.requiredLevel,
-    rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier,spec.rank):0),tier,g,st:{},aff:[]};
+    rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier,spec.rank,spec.magicBoost||1):0),tier,g,st:{},aff:[]};
   const mul=GRADE_MUL[g-1];
   if(base.kind==='weapon'){
     it.wt=base.wt;const key=base.wt==='staff'?'matk':'atk';
@@ -379,15 +383,18 @@ function render(){
   } else if(tab==='skill'){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
     const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
-    pane.append(el('div','skhead',`전투 스킬 · 보유 ${Pp.skillPts||0}P`),el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 배운 액티브는 퀵슬롯으로 끌어 놓을 수 있습니다.'));
+    const skhead=el('div','skhead'+((Pp.skillPts||0)>0?' pointpulse':''),`전투 스킬 · 보유 ${Pp.skillPts||0}P`);
+    pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 액티브는 퀵슬롯으로 끌어 놓을 수 있습니다.'));
     for(const [gname,ids] of SKG){
       const row=el('div','skrow');row.append(el('b','',gname));
       for(const id of ids){
-        const wrap=el('div','skcwrap'),rank=skillRank(id),impl=IMPLEMENTED.has(id);
-        const c=el('button','skc'+(impl&&rank>0?'':' lock'));c.type='button';c.title=SKN[id]?SKN[id]+' · '+SKD[id]+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
+        const wrap=el('div','skcwrap'),rank=skillRank(id),impl=IMPLEMENTED.has(id),pre=G.skillPrereq?G.skillPrereq(id):{id:null,ok:true},preOk=rank>0||pre.ok;
+        const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock'));c.type='button';
+        const preTxt=pre.id&&!preOk?` · 선행 ${SKN[pre.id]||pre.id} Lv3 필요`:'';
+        c.title=SKN[id]?SKN[id]+' · '+SKD[id]+preTxt+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
         if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
         wrap.append(c,el('span','skrank',impl?`Lv${rank}/5`:'-'));
-        if(impl){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5;plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
+        if(impl){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5||!preOk;plus.title=!preOk?`선행 스킬 ${SKN[pre.id]||pre.id} Lv3 필요`:'';plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
         row.append(wrap);
       }
       pane.append(row);
@@ -429,8 +436,11 @@ function render(){
     const expMax=Pp.lv>=70?1:G.expNeed(Pp.lv),bars=[[Pp.hp,d.maxHp,106],[Pp.mp,d.maxMp,141],[Pp.lv>=70?1:Pp.exp,expMax,176]];
     bars.forEach(([v,m,y],i)=>{const t=el('div','sbar');t.style.top=(y-1)+'px';const f=el('i','b'+i);f.style.width=Math.max(0,Math.min(100,v/m*100))+'%';t.append(f);t.append(el('span','',i===2?(Pp.lv>=70?'MAX LEVEL':`경험치 ${v} / ${m}`):`${v} / ${m}`));L.append(t);});
     d.rows.forEach(([key,n,v,sub],i)=>{const r=el('div','srow');r.style.top=(232+i*47.7)+'px';r.append(el('b','',n),el('em','',v),el('small','',sub));if(key){const plus=el('button','statplus','+');plus.type='button';plus.disabled=(Pp.statPts||0)<1;plus.onclick=()=>G.investStat(key);r.append(plus);}L.append(r);});
-    const lv=el('div','slv',`${Pp.name||'루크레아'} · Lv${Pp.lv} · T${G.levelTier(Pp.lv)} · 능력 ${Pp.statPts||0}P · 스킬 ${Pp.skillPts||0}P · 생활 ${Pp.lifePts||0}P`);L.append(lv);
+    const lv=el('div','slv');lv.append(document.createTextNode(`${Pp.name||'루크레아'} · Lv${Pp.lv} · T${G.levelTier(Pp.lv)} · `));
+    lv.append(el('span',(Pp.statPts||0)>0?'pointpulse':'',`능력 ${Pp.statPts||0}P`),document.createTextNode(' · '),el('span',(Pp.skillPts||0)>0?'pointpulse':'',`스킬 ${Pp.skillPts||0}P`),document.createTextNode(` · 생활 ${Pp.lifePts||0}P`));L.append(lv);
   }
+  $('tabSt').classList.toggle('pointpulse',(Pp.statPts||0)>0);
+  $('tabSk').classList.toggle('pointpulse',(Pp.skillPts||0)>0);
   // 오른쪽: 일반 가방 / 무역품 화물칸
   const R = $('bagPane'); R.innerHTML = '';
   if (tab === 'trade' && window.TRADE){
