@@ -25,20 +25,20 @@ async def main():
         # 이하 이동 구조 검사는 디버그 직접진입과 고레벨 UI를 사용한다.
         await ev("() => {GAME.P.lv=70;}")
 
-        # 1티어는 길 1칸(= 마을 필드), 3티어는 길 3칸.
+        # 각 티어는 랜덤 야외 필드 N개 + 마지막 고정맵 1개.
         await ev("() => __FD.enter('spring',1)");await pg.wait_for_timeout(900)
-        s=await ev("() => __FD.state()");assert s['leg']==1 and s['legs']==1,s
-        assert await ev("() => __FD.mapInfo().blds")==2
+        s=await ev("() => __FD.state()");assert s['leg']==1 and s['legs']==2 and s['outdoorDungeon'],s
+        assert await ev("() => __FD.mapInfo().blds")==0
         await ev("() => __FD.enter('autumn',1)");await pg.wait_for_timeout(900)
-        s=await ev("() => __FD.state()");assert s['leg']==1 and s['legs']==3 and s['tier']==3,s
+        s=await ev("() => __FD.state()");assert s['leg']==1 and s['legs']==4 and s['tier']==3,s
         assert await ev("() => __FD.mapInfo().blds")==0,'길 구간엔 마을이 없어야 함'
         assert await ev("() => __FD.mapInfo().exits")==2
 
-        # 실제 메인 길의 오른쪽 위 끝 출구로 다음 칸으로.
-        await ev("() => __FD.warp(59.3,8)");await pg.wait_for_timeout(1500)
-        s=await ev("() => __FD.state()");assert s['leg']==2 and s['legs']==3,s
-        await ev("() => __FD.warp(59.3,8)");await pg.wait_for_timeout(1500)
-        s=await ev("() => __FD.state()");assert s['leg']==3,s
+        # 실제 랜덤 필드 출구를 따라 다음 칸으로.
+        for expected in [2,3,4]:
+            cur=await ev("() => __FD.state()")
+            await ev("(p) => __FD.warp(p.x+.7,p.y)",cur['end']);await pg.wait_for_timeout(1500)
+            s=await ev("() => __FD.state()");assert s['leg']==expected and s['legs']==4,s
         assert await ev("() => __FD.mapInfo().blds")==2,'마지막 칸에 마을'
         assert await ev("() => __FD.mapInfo().exits")==2
         # 마지막 칸의 오른쪽 위 길 끝 = 목적지 선택창.
@@ -46,16 +46,18 @@ async def main():
         assert await ev("() => document.getElementById('regionPick').classList.contains('on')")
         btns=await ev("() => [...document.querySelectorAll('#regionGrid button')].map(b=>[b.dataset.theme,b.disabled,b.textContent])")
         assert btns[0][0]=='town' and any(x[0]=='autumn' and x[1] for x in btns),btns
-        assert any('길 7칸' in x[2] for x in btns),btns
+        assert any('7개 야외길 + 마지막 거점' in x[2] for x in btns),btns
         # 목적지 고르기: 7티어 → 첫 칸에서 시작.
         await pg.click("#regionGrid button[data-theme=swamp]");await pg.wait_for_timeout(1500)
-        s=await ev("() => __FD.state()");assert s['theme']=='swamp' and s['leg']==1 and s['legs']==7,s
+        s=await ev("() => __FD.state()");assert s['theme']=='swamp' and s['leg']==1 and s['legs']==8,s
         # 첫 칸 왼쪽 끝 = 큰 마을 바깥으로.
-        await ev("() => __FD.warp(0.5,20)");await pg.wait_for_timeout(1200)
+        s=await ev("() => __FD.state()")
+        await ev("(p) => __FD.warp(p.x-.7,p.y)",s['start']);await pg.wait_for_timeout(1200)
         assert await ev("() => __FD.mapInfo().map")=='out',await ev("() => __FD.mapInfo().map")
         # 두 번째 칸에서 왼쪽 끝 = 첫 칸으로 되돌아감.
         await ev("() => __FD.enter('autumn',2)");await pg.wait_for_timeout(900)
-        await ev("() => __FD.warp(0.5,20)");await pg.wait_for_timeout(1500)
+        s=await ev("() => __FD.state()")
+        await ev("(p) => __FD.warp(p.x-.7,p.y)",s['start']);await pg.wait_for_timeout(1500)
         s=await ev("() => __FD.state()");assert s['leg']==1,s
 
         assert not errs,errs
