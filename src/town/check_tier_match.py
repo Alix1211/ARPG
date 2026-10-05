@@ -86,7 +86,7 @@ def static_checks():
     print('승인표 180장+신규4장 / 몬스터 V2 53종 4방향 아틀라스 정상')
 
 
-def check_spawn(ms, tier, dungeon=False, floor=0):
+def check_spawn(ms, tier, dungeon=False, floor=0, cave=False):
     assert ms, (tier, floor)
     allowed = set(DATA['dungeonPools' if dungeon else 'fieldPools'][tier-1])
     allowed.update(DATA['dungeonElites' if dungeon else 'fieldElites'][tier-1])
@@ -107,7 +107,7 @@ def check_spawn(ms, tier, dungeon=False, floor=0):
         role = m['bossRole'] if m['rank'] == 'boss' else m['rank']
         rank = DATA['ranks'][role]
         part = (floor-1) % 3 if floor else 0
-        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100
+        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100*(2 if cave else 1)
         assert m['maxHp'] == expected_hp, (m, expected_hp)
         assert m['exp'] == math.floor(2*DATA['scales']['exp'][tier-1]*rank['exp']+.5)*100, m
         assert m['rank'] == DATA['monsters'][m['type']]['rank'], m
@@ -200,7 +200,7 @@ async def runtime_checks():
             check_spawn(ms, tier)
         for floor in list(range(1,22))+[24]:
             ms = await pg.evaluate("async f=>{await __DUN.go(f);const old=GAME.P.lv;GAME.P.lv=1;__DUN.respawn();GAME.P.lv=old;return __FD.debugMonsters();}", floor)
-            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor)
+            check_spawn(ms, min(7, math.ceil(floor/3)), True, floor, cave=True)
             assert not (await pg.evaluate('__DUN.state()'))['blocked'], floor
         # 다른 작업에서 추가된 자연 동굴에서도 큰 군집이 벽/소품에 겹치지 않는다.
         await pg.evaluate("__DUN.setTheme('cave')")
