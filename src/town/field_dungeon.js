@@ -238,7 +238,7 @@ function spawnPack(config,cx,cy,opts={}){
       const row=Math.floor(j/3),column=j%3,count=Math.min(3,formation.length-row*3),gap=82*MOBDEF[id].bodySize*1.15;
       x=cx+(ranged?1:-1)*(radius+row*gap);y=cy+(column-(count-1)/2)*gap;
     }
-    local.push(createMonster(id,x,y,{floor:opts.floor||0,packId,packLeader:false,packX:cx,packY:cy,packRadius:radius+240,skillCd:1.4+i*.36}));
+    local.push(createMonster(id,x,y,{floor:opts.floor||0,caveChallenge:!!opts.caveChallenge,packId,packLeader:false,packX:cx,packY:cy,packRadius:radius+240,skillCd:1.4+i*.36}));
   }
   const field=opts.field||false;
   for(let i=0;i<local.length;i++)if(!spawnClear(local[i],monsters.concat(local.slice(0,i)),field))return false;
