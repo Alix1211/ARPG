@@ -95,6 +95,7 @@ function companionWarp(){
   const [tx,ty]=COMPANION_DEF[companionState.active].kind==='sword'?companionDesiredFront():companionDesired();
   const q=nearestSafePosition(tx,ty);
   companionState.x=q[0];companionState.y=q[1];companionState.stuck=0;companionState.lastX=q[0];companionState.lastY=q[1];
+  companionState.navPath=null;companionState.navWait=0;companionState.progressX=q[0];companionState.progressY=q[1];
 }
 function companionSave(){
   if(!companionState.active)return null;
@@ -176,11 +177,54 @@ function companionPickTarget(){
   }
   companionTarget=best;return best;
 }
+function companionClearStep(x,y,tx,ty){
+  const n=Math.max(1,Math.ceil(Math.hypot(tx-x,ty-y)/8));
+  for(let i=1;i<=n;i++)if(blocked(x+(tx-x)*i/n,y+(ty-y)*i/n))return false;
+  return true;
+}
+function companionDetour(tx,ty){
+  const c=companionState,step=24,margin=10;
+  const gx=Math.round((tx-c.x)/step),gy=Math.round((ty-c.y)/step);
+  const xmin=Math.min(0,gx)-margin,xmax=Math.max(0,gx)+margin;
+  const ymin=Math.min(0,gy)-margin,ymax=Math.max(0,gy)+margin;
+  const nodes=[{x:0,y:0,parent:-1}],seen=new Set(['0,0']);
+  let end=-1;
+  // 직선이 막힐 때만 제한된 우회 탐색. 각 구간 충돌도 확인해 모서리 관통을 막는다.
+  for(let i=0;i<nodes.length&&i<1800;i++){
+    const p=nodes[i],x=c.x+p.x*step,y=c.y+p.y*step;
+    if(Math.hypot(x-tx,y-ty)<=step&&companionClearStep(x,y,tx,ty)){end=i;break;}
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+      const nx=p.x+dx,ny=p.y+dy,key=nx+','+ny;
+      if(nx<xmin||nx>xmax||ny<ymin||ny>ymax||seen.has(key))continue;
+      if(companionClearStep(x,y,c.x+nx*step,c.y+ny*step)){seen.add(key);nodes.push({x:nx,y:ny,parent:i});}
+    }
+  }
+  if(end<0)return [];
+  const route=[[tx,ty]];
+  for(let i=end;i>0;i=nodes[i].parent)route.push([c.x+nodes[i].x*step,c.y+nodes[i].y*step]);
+  return route.reverse();
+}
 function companionMoveTo(tx,ty,speed,dt){
+  const c=companionState,isSword=COMPANION_DEF[c.active].kind==='sword';
+  if(isSword){
+    if(companionClearStep(c.x,c.y,tx,ty))c.navPath=null;
+    else{
+      const changed=!c.navGoal||Math.hypot(tx-c.navGoal[0],ty-c.navGoal[1])>72;
+      if(c.navWait<=0||changed){c.navPath=companionDetour(tx,ty);c.navGoal=[tx,ty];c.navWait=.8;}
+      while(c.navPath&&c.navPath.length&&Math.hypot(c.navPath[0][0]-c.x,c.navPath[0][1]-c.y)<5)c.navPath.shift();
+      if(c.navPath&&c.navPath.length){[tx,ty]=c.navPath[0];}
+    }
+  }
+  return companionStepTo(tx,ty,speed,dt);
+}
+function companionStepTo(tx,ty,speed,dt){
   const c=companionState,dx=tx-c.x,dy=ty-c.y,dd=Math.hypot(dx,dy);if(dd<2)return false;
-  const sx=dx/dd*speed*dt,sy=dy/dd*speed*dt,ox=c.x,oy=c.y;
-  if(!blocked(c.x+sx,c.y))c.x+=sx;
-  if(!blocked(c.x,c.y+sy))c.y+=sy;
+  const travel=Math.min(dd,speed*dt),sx=dx/dd*travel,sy=dy/dd*travel,ox=c.x,oy=c.y;
+  if(companionClearStep(c.x,c.y,c.x+sx,c.y+sy)){c.x+=sx;c.y+=sy;}
+  else{
+    if(companionClearStep(c.x,c.y,c.x+sx,c.y))c.x+=sx;
+    if(companionClearStep(c.x,c.y,c.x,c.y+sy))c.y+=sy;
+  }
   const mx=c.x-ox,my=c.y-oy,moved=Math.hypot(mx,my)>.08;
   if(Math.abs(mx)>Math.abs(my)*.8){c.dir='side';c.flip=mx<0;}else if(Math.abs(my)>.05)c.dir=my<0?'back':'front';
   if(moved){c.t+=dt;c.moving=true;}
@@ -233,6 +277,7 @@ function companionAttack(m){
 function updateCompanion(dt){
   const c=companionState;if(!c.active||dt<=0)return;
   c.moving=false;
+  c.navWait=Math.max(0,(c.navWait||0)-dt);
   const d=COMPANION_DEF[c.active];
   if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionWarp();}
   if(!c.expired){
@@ -270,7 +315,14 @@ function updateCompanion(dt){
     else{c.t=0;c.dir=P.dir||c.dir;c.flip=!!P.flip;}
   }
   // 공격/재사용 대기/전방 대기는 길막이 아니다. 연속 이동 실패만 구조 대상으로 삼는다.
-  if(attemptedMove&&!moved)c.stuck+=dt;else c.stuck=0;
+  if(attemptedMove&&d.kind==='sword'){
+    if(!Number.isFinite(c.progressX)){c.progressX=c.lastX;c.progressY=c.lastY;}
+    if(Math.hypot(c.x-c.progressX,c.y-c.progressY)>=24){c.stuck=0;c.progressX=c.x;c.progressY=c.y;}
+    else c.stuck+=dt;
+  }else{
+    c.stuck=attemptedMove&&!moved?c.stuck+dt:0;
+    c.progressX=c.x;c.progressY=c.y;
+  }
   // 검사 전투 중에는 6초 이상 완전히 막힌 경우에만 구조용 워프. 몹을 치다 말고 복귀하지 않게 한다.
   const stuckLimit=d.kind==='sword'?d.stuckCombat:(target?d.stuckCombat:2.2);
   if(c.stuck>stuckLimit)companionWarp();
@@ -287,9 +339,7 @@ function drawCompanion(c,dt){
   const idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
-  ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
-  const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
-  ctx.restore();
+  if(c.active==='hero')drawCompanionFx(0,true);
   if(c.active==='hero'){
     // 카엘렌은 항상 검을 들고 있는 것이 보이게 한다.
     const resting=d==='side'?(c.flip?Math.PI*.88:Math.PI*.12):(d==='back'?-Math.PI*.42:Math.PI*.42);
@@ -303,10 +353,16 @@ function drawCompanion(c,dt){
     ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(12,-1);ctx.lineTo(49,-1);ctx.stroke();
     ctx.restore();
   }
+  // 검과 검 잔광을 먼저 그리고 몸을 덮어 그려 손/몸 뒤에 들어가게 한다.
+  ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+  const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
+  ctx.restore();
 }
-function drawCompanionFx(dt){
+function drawCompanionFx(dt,behind=false){
   for(let i=companionFx.length-1;i>=0;i--){
-    const f=companionFx[i];f.t+=dt;const k=Math.max(0,1-f.t/f.life);if(k<=0){companionFx.splice(i,1);continue;}
+    const f=companionFx[i];if(!behind)f.t+=dt;
+    const k=Math.max(0,1-f.t/f.life);if(k<=0){if(!behind)companionFx.splice(i,1);continue;}
+    const sword=f.kind==='slash'||f.kind==='swordflash';if(sword!==behind)continue;
     ctx.save();ctx.globalCompositeOperation='lighter';
     if(f.kind==='laser'){
       ctx.lineCap='round';ctx.strokeStyle='rgba(45,120,255,'+(.42*k)+')';ctx.lineWidth=16*k;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();

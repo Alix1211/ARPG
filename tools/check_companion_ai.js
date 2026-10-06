@@ -5,11 +5,11 @@ const sandbox={console};sandbox.window=sandbox;
 vm.createContext(sandbox);
 vm.runInContext(`
 const A={companions:{}},P={x:1000,y:1000,dir:'side',flip:false,lv:1,gold:10000};
-let MAP='field',wall=false,warpCount=0;
+let MAP='field',wall=false,warpCount=0,obstacle=null;
 const monsters=[],npcs=[],sprites=[],spots=[],solids=[],pops=[],sfx=[];
 const DAYLEN=480,BI={};
 function load(s){return s;}function combatMap(){return MAP==='field';}
-function blocked(){return wall;}function monsterBlocked(){return true;}
+function blocked(x,y){return wall||!!(obstacle&&obstacle(x,y));}function monsterBlocked(){return true;}
 function nearestSafePosition(x,y){warpCount++;return [x,y];}
 function setGold(v){P.gold=v;}function basicDamage(){return 100;}
 function $(id){return null;}function say(){}function killMonster(m){m.dead=true;}
@@ -22,7 +22,7 @@ function buildWorld(){npcs.length=sprites.length=spots.length=solids.length=0;
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/town/companion.js'),'utf8'),sandbox);
 function run(code){return vm.runInContext(code,sandbox);}
 run(`function setup(id,x,y,mx,my){
-  MAP='field';wall=false;P.x=1000;P.y=1000;monsters.length=0;
+  MAP='field';wall=false;obstacle=null;P.x=1000;P.y=1000;monsters.length=0;
   COMPANION.loadData({active:id,remaining:480,damage:1,x,y});
   if(mx!=null)monsters.push({x:mx,y:my,h:60,hp:10000});
   warpCount=0;
@@ -65,3 +65,23 @@ assert(run("npcs.length===0&&spots.length===0&&solids.length===0&&COMPANION.stat
 run(`COMPANION.onDefeat();COMPANION.ensureTownTests();`);assert.equal(run('npcs.length'),0);
 run('COMPANION.setTownTestsEnabled(true);');assert.equal(run('npcs.length'),2);
 console.log('companion AI ok: engagement, rescue, rear support, effects, test visibility');
+
+// 벽을 돌아 살아 있는 교전 대상에게 도착한다. 모서리를 뚫거나 워프하지 않는다.
+run(`setup('hero',1100,1000,1500,1000);
+  obstacle=(x,y)=>x>=1170&&x<=1230&&y>=850&&y<=1150;
+  let crossedWall=false;
+  for(let i=0;i<300;i++){COMPANION.debugTick(.016);if(blocked(companionState.x,companionState.y))crossedWall=true;}`);
+assert(run('warpCount===0&&!crossedWall&&monsters[0].hp<10000'),JSON.stringify(run('({warpCount,crossedWall,c:companionState,hp:monsters[0].hp})')));
+// 좁은 구간의 작은 왕복 움직임도 진행 없는 끼임으로 판정한다.
+run(`setup('hero',1300,1000,1600,1000);wall=true;
+  for(let i=0;i<62;i++){companionState.x=1300+(i%2)*2;COMPANION.debugTick(.1);}`);
+assert.equal(run('warpCount'),1);
+// 검/검 궤적은 몸보다 먼저, 후면 패스에서는 시간 진행 없이 딱 한 번 렌더한다.
+run(`setup('hero',1100,1000,1140,1000);COMPANION.debugTick(.1);
+  const drawCalls=[],ctx=new Proxy({}, {get:(o,k)=>o[k]||((...args)=>drawCalls.push(k)),set:(o,k,v)=>(o[k]=v,true)});
+  COMPANION_IMG.hero={fr:{front:[{naturalWidth:100,naturalHeight:100}],side:[{naturalWidth:100,naturalHeight:100}]}};
+  drawCompanion(companionState,0);`);
+assert(run("drawCalls.indexOf('stroke')<drawCalls.indexOf('drawImage')&&companionFx.every(f=>f.t===0)"));
+run('drawCalls.length=0;drawCompanionFx(.016);');
+assert(run("!drawCalls.includes('stroke')&&companionFx.every(f=>f.t===.016)"));
+console.log('companion detour + behind-body sword ok');
