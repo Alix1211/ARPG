@@ -5,7 +5,7 @@
 
 const COMPANION_DEF={
   // 카엘렌: 플레이어 뒤를 붙는 추종자가 아니라 먼저 적을 물고 버티는 전방 검사.
-  hero:{name:'카엘렌',title:'검사 · 파티 테스트',kind:'sword',range:74,aggro:620,pursuit:760,attackCd:.68,speed:252,warpIdle:680,warpCombat:1250,stuckCombat:6.0},
+  hero:{name:'카엘렌',title:'검사 · 파티 테스트',kind:'sword',range:74,aggro:620,pursuit:760,attackCd:.68,speed:252,warpIdle:680,warpCombat:1250,stuckCombat:1.8},
   // 러스티: 플레이어 주변을 유지하는 후방 지원 사수.
   knight:{name:'러스티',title:'이계의 용병 · 총병',kind:'gun',range:390,aggro:370,pursuit:470,attackCd:.72,speed:205,warpIdle:520,warpCombat:700,stuckCombat:3.0}
 };
@@ -183,14 +183,14 @@ function companionClearStep(x,y,tx,ty){
   return true;
 }
 function companionDetour(tx,ty){
-  const c=companionState,step=24,margin=10;
+  const c=companionState,step=20,margin=12;
   const gx=Math.round((tx-c.x)/step),gy=Math.round((ty-c.y)/step);
   const xmin=Math.min(0,gx)-margin,xmax=Math.max(0,gx)+margin;
   const ymin=Math.min(0,gy)-margin,ymax=Math.max(0,gy)+margin;
   const nodes=[{x:0,y:0,parent:-1}],seen=new Set(['0,0']);
   let end=-1;
   // 직선이 막힐 때만 제한된 우회 탐색. 각 구간 충돌도 확인해 모서리 관통을 막는다.
-  for(let i=0;i<nodes.length&&i<1800;i++){
+  for(let i=0;i<nodes.length&&i<2200;i++){
     const p=nodes[i],x=c.x+p.x*step,y=c.y+p.y*step;
     if(Math.hypot(x-tx,y-ty)<=step&&companionClearStep(x,y,tx,ty)){end=i;break;}
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
@@ -204,15 +204,32 @@ function companionDetour(tx,ty){
   for(let i=end;i>0;i=nodes[i].parent)route.push([c.x+nodes[i].x*step,c.y+nodes[i].y*step]);
   return route.reverse();
 }
+function companionNudgeTarget(tx,ty){
+  const c=companionState;let best=null,score=1e9;
+  for(const r of [22,34,48]){
+    for(let i=0;i<16;i++){
+      const a=i*Math.PI/8,nx=c.x+Math.cos(a)*r,ny=c.y+Math.sin(a)*r;
+      if(!companionClearStep(c.x,c.y,nx,ny))continue;
+      const sc=Math.hypot(tx-nx,ty-ny)+Math.abs(Math.sin(a))*4;
+      if(sc<score){score=sc;best=[nx,ny];}
+    }
+    if(best)break;
+  }
+  return best;
+}
 function companionMoveTo(tx,ty,speed,dt){
   const c=companionState,isSword=COMPANION_DEF[c.active].kind==='sword';
   if(isSword){
     if(companionClearStep(c.x,c.y,tx,ty))c.navPath=null;
     else{
-      const changed=!c.navGoal||Math.hypot(tx-c.navGoal[0],ty-c.navGoal[1])>72;
-      if(c.navWait<=0||changed){c.navPath=companionDetour(tx,ty);c.navGoal=[tx,ty];c.navWait=.8;}
+      const changed=!c.navGoal||Math.hypot(tx-c.navGoal[0],ty-c.navGoal[1])>56;
+      if(c.navWait<=0||changed){c.navPath=companionDetour(tx,ty);c.navGoal=[tx,ty];c.navWait=.25;}
       while(c.navPath&&c.navPath.length&&Math.hypot(c.navPath[0][0]-c.x,c.navPath[0][1]-c.y)<5)c.navPath.shift();
-      if(c.navPath&&c.navPath.length){[tx,ty]=c.navPath[0];}
+      if(c.navPath&&c.navPath.length)[tx,ty]=c.navPath[0];
+      else{
+        const n=companionNudgeTarget(tx,ty);
+        if(n)[tx,ty]=n;
+      }
     }
   }
   return companionStepTo(tx,ty,speed,dt);
@@ -314,17 +331,19 @@ function updateCompanion(dt){
     if(dd>28){attemptedMove=true;moved=companionMoveTo(want[0],want[1],d.speed,dt);}
     else{c.t=0;c.dir=P.dir||c.dir;c.flip=!!P.flip;}
   }
-  // 공격/재사용 대기/전방 대기는 길막이 아니다. 연속 이동 실패만 구조 대상으로 삼는다.
+  // 공격 중에는 끼임으로 보지 않는다. 실제 이동을 시도했는데 제자리인 시간만 센다.
   if(attemptedMove&&d.kind==='sword'){
     if(!Number.isFinite(c.progressX)){c.progressX=c.lastX;c.progressY=c.lastY;}
-    if(Math.hypot(c.x-c.progressX,c.y-c.progressY)>=24){c.stuck=0;c.progressX=c.x;c.progressY=c.y;}
-    else c.stuck+=dt;
+    if(Math.hypot(c.x-c.progressX,c.y-c.progressY)>=18){
+      c.stuck=0;c.stuckRepath=false;c.progressX=c.x;c.progressY=c.y;
+    }else c.stuck+=dt;
   }else{
     c.stuck=attemptedMove&&!moved?c.stuck+dt:0;
-    c.progressX=c.x;c.progressY=c.y;
+    c.stuckRepath=false;c.progressX=c.x;c.progressY=c.y;
   }
-  // 검사 전투 중에는 6초 이상 완전히 막힌 경우에만 구조용 워프. 몹을 치다 말고 복귀하지 않게 한다.
   const stuckLimit=d.kind==='sword'?d.stuckCombat:(target?d.stuckCombat:2.2);
+  // 0.45초 제자리면 먼저 즉시 새 길을 찾고, 그래도 1.8초 이상 못 움직일 때만 구조 워프.
+  if(d.kind==='sword'&&c.stuck>.45&&!c.stuckRepath){c.navPath=null;c.navWait=0;c.stuckRepath=true;}
   if(c.stuck>stuckLimit)companionWarp();
   c.lastX=c.x;c.lastY=c.y;
 }
@@ -339,12 +358,15 @@ function drawCompanion(c,dt){
   const idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
+
+  // 루크레아와 같은 순서: 검 궤적/검 -> 몸. 평상시에는 별도 검을 꺼내지 않는다.
   if(c.active==='hero')drawCompanionFx(0,true);
-  if(c.active==='hero'){
-    // 카엘렌은 항상 검을 들고 있는 것이 보이게 한다.
-    const resting=d==='side'?(c.flip?Math.PI*.88:Math.PI*.12):(d==='back'?-Math.PI*.42:Math.PI*.42);
-    const ang=c.atkT>0?c.attackAngle+(1-c.atkT/.22)*2.1-1.05:resting;
-    const bx=c.x+(d==='side'?(c.flip?-16:16):15),by=c.y-43;
+  ctx.save();
+  if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+  if(c.active==='hero'&&c.atkT>0&&d!=='front'){
+    const p=Math.max(0,Math.min(1,1-c.atkT/.22));
+    const ang=d==='side'?(-1.85+p*3.55):(-1.45+p*2.9);
+    const bx=d==='side'?c.x+22:c.x+4,by=d==='side'?c.y-34:c.y-58;
     ctx.save();ctx.translate(bx,by);ctx.rotate(ang);
     ctx.strokeStyle='rgba(40,28,18,.95)';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-9,0);ctx.lineTo(9,0);ctx.stroke();
     ctx.strokeStyle='#d7ad65';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(8,-9);ctx.lineTo(8,9);ctx.stroke();
@@ -353,9 +375,8 @@ function drawCompanion(c,dt){
     ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(12,-1);ctx.lineTo(49,-1);ctx.stroke();
     ctx.restore();
   }
-  // 검과 검 잔광을 먼저 그리고 몸을 덮어 그려 손/몸 뒤에 들어가게 한다.
-  ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
-  const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
+  const kick=c.atkT>0?(c.atkT/.22)*4:0;
+  ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
   ctx.restore();
 }
 function drawCompanionFx(dt,behind=false){
