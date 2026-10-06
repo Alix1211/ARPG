@@ -5,7 +5,7 @@
     const all=typeof text==='string'?JSON.parse(text):text;
     if(!object(all)||Object.keys(all).some(k=>!k.startsWith('arpg_')||typeof all[k]!=='string'))throw Error('bundle');
     const s=JSON.parse(all.arpg_save_v3);
-    if(!object(s)||s.v!==3||!Number.isInteger(s.lv)||s.lv<1||s.lv>70||
+    if(!object(s)||s.v!==3||s.release!==1||!Number.isInteger(s.lv)||s.lv<1||s.lv>70||
        !['gold','hp','mp'].every(k=>Number.isFinite(s[k]))||!object(s.stats)||!Array.isArray(s.bag)||!object(s.eq)||
        (s.t!==undefined&&(!Number.isSafeInteger(s.t)||s.t<0)))throw Error('save');
     return all;
