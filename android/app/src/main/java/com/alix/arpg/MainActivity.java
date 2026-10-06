@@ -63,6 +63,11 @@ public final class MainActivity extends Activity {
     private volatile boolean awaitingRestoreReload = false;
     private volatile boolean checkingRemote = false;
     private volatile boolean pageReady = false, foreground = false;
+    // 이번 실행에서 드라이브 파일을 읽어 확인했는지, 파일과 맞춘 마지막 저장 시각, 동기화 중 밀린 저장 여부.
+    // 저장(쓰기)은 확인이 끝난 뒤에는 읽기 없이 쓰기만 한다. 읽기는 시작·복귀·재연결 때만 한다.
+    private volatile boolean sessionSynced = false, writeDirty = false;
+    private volatile long syncedT = -1;
+    private static final int READ_WAIT_SECONDS = 15, WRITE_WAIT_SECONDS = 30;
     private ConnectivityManager connectivity;
     private ConnectivityManager.NetworkCallback networkCallback;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -240,14 +245,15 @@ public final class MainActivity extends Activity {
 
     private void queueBackup(boolean force) {
         synchronized (backupLock) {
-            if (backupUri() == null || restoringBackup || pickingBackup || checkingRemote) return;
+            if (backupUri() == null || restoringBackup || pickingBackup) return;
+            if (checkingRemote) { writeDirty = true; return; } // 동기화·쓰기 중 생긴 저장은 끝난 뒤 한 번 다시 올린다
             if (pendingBackup != null && !pendingBackup.isDone()) {
                 if (!force) return;
                 pendingBackup.cancel(false);
             }
             pendingBackup = backupIO.schedule(() -> {
                 synchronized (backupLock) { pendingBackup = null; }
-                requestSync(false);
+                writeBackup();
             }, force ? 0 : 5, TimeUnit.SECONDS);
         }
     }
@@ -310,7 +316,55 @@ public final class MainActivity extends Activity {
     private String readDocumentTimed(Uri u) throws Exception {
         documentBusy = true;
         Future<String> read = documentIO.submit(() -> { try { return readDocument(u); } finally { documentBusy = false; } });
-        try { return read.get(6, TimeUnit.SECONDS); } finally { read.cancel(true); }
+        try { return read.get(READ_WAIT_SECONDS, TimeUnit.SECONDS); } finally { read.cancel(true); }
+    }
+    // 쓰기는 시간이 지나도 취소하지 않는다. "wt"로 비운 뒤 끊으면 끊긴 파일이 남기 때문이다.
+    private void writeDocument(Uri u, String text) throws Exception {
+        documentBusy = true;
+        Future<?> write = documentIO.submit(() -> {
+            try (OutputStream out = getContentResolver().openOutputStream(u, "wt")) {
+                if (out == null) throw new IllegalStateException();
+                out.write(text.getBytes(StandardCharsets.UTF_8));
+            } catch (Exception e) { throw new IllegalStateException(e); }
+            finally { documentBusy = false; }
+        });
+        write.get(WRITE_WAIT_SECONDS, TimeUnit.SECONDS);
+    }
+    // 비었거나 깨진 파일은 null. 호출하는 쪽이 이 기기의 유효한 저장으로 덮어써 복구한다.
+    static JSONObject parseRemote(String raw) {
+        try {
+            if (raw == null || raw.trim().isEmpty()) return null;
+            JSONObject remote = validBackup(raw);
+            return saveTime(remote) < 0 ? null : remote;
+        } catch (Exception e) { return null; }
+    }
+
+    // 저장 때는 읽지 않고 쓰기만 한다. 이번 실행에서 아직 파일을 확인하지 못했으면 먼저 읽어 확인한다.
+    private void writeBackup() {
+        if (!sessionSynced) { requestSync(false); return; }
+        final Uri u = backupUri();
+        synchronized (backupLock) {
+            if (u == null || !pageReady || pickingBackup || restoringBackup || checkingRemote) return;
+            if (!isOnline() || documentBusy) { writeDirty = true; return; }
+            checkingRemote = true;
+        }
+        backupIO.execute(() -> {
+            try {
+                JSONObject local;
+                synchronized (backupLock) { local = snapshot(); }
+                long t = saveTime(local);
+                if (t < 0 || t <= syncedT) return;
+                writeDocument(u, local.toString());
+                syncedT = t;
+                backupPrefs.edit().putLong("backupAt", System.currentTimeMillis()).remove("error").apply();
+            } catch (Exception e) {
+                backupPrefs.edit().putString("error", "동기화 대기").apply();
+            } finally {
+                checkingRemote = false;
+                if (writeDirty) { writeDirty = false; queueBackup(false); }
+                backupNotice("");
+            }
+        });
     }
 
     // 시작/복귀/재연결/저장 때 모두 읽기→t 비교→적용 또는 쓰기 순서로 처리한다.
@@ -327,10 +381,8 @@ public final class MainActivity extends Activity {
         backupIO.execute(() -> {
             boolean reload = false;
             try {
-                String raw = readDocumentTimed(u);
-                JSONObject remote = raw.trim().isEmpty() && backupPrefs.getBoolean("newFile", false)
-                    ? null : validBackup(raw);
-                if (remote != null && saveTime(remote) < 0) throw new IllegalArgumentException();
+                String raw = readDocumentTimed(u); // 읽기 자체가 실패하면 오류로 끝낸다(파일은 건드리지 않음)
+                JSONObject remote = parseRemote(raw); // 빈 파일·깨진 파일은 null → 아래에서 이 기기 저장으로 복구
                 JSONObject local;
                 synchronized (backupLock) {
                     local = snapshot(); // 읽기를 기다리는 동안 생긴 로컬 진행까지 포함해 다시 비교한다.
@@ -343,18 +395,9 @@ public final class MainActivity extends Activity {
                         js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(chosen.toString()) + ")");
                     }
                 }
-                if (!reload && saveTime(local) > saveTime(remote)) {
-                    final String text = local.toString();
-                    documentBusy = true;
-                    Future<?> write = documentIO.submit(() -> {
-                        try (OutputStream out = getContentResolver().openOutputStream(u, "wt")) {
-                            if (out == null) throw new IllegalStateException();
-                            out.write(text.getBytes(StandardCharsets.UTF_8));
-                        } catch (Exception e) { throw new IllegalStateException(e); }
-                        finally { documentBusy = false; }
-                    });
-                    try { write.get(6, TimeUnit.SECONDS); } finally { write.cancel(true); }
-                }
+                if (!reload && saveTime(local) > saveTime(remote)) writeDocument(u, local.toString());
+                sessionSynced = true;
+                syncedT = Math.max(saveTime(local), saveTime(remote));
                 backupPrefs.edit().putLong("backupAt", System.currentTimeMillis())
                     .putBoolean("held", false).putBoolean("linkPending", false).putBoolean("newFile", false).remove("error").apply();
             } catch (Exception e) {
@@ -362,6 +405,7 @@ public final class MainActivity extends Activity {
             } finally {
                 checkingRemote = false;
                 if (!reload) js("window.onArpgSyncDone&&window.onArpgSyncDone()");
+                if (!reload && writeDirty) { writeDirty = false; queueBackup(false); }
                 backupNotice("");
             }
         });

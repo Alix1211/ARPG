@@ -49,6 +49,20 @@ public class BackupValidationTest {
         assertSame(app,MainActivity.latestBackup(device,app,device)); // 더 오래된 Drive
         assertSame(app,MainActivity.latestBackup(app,new JSONObject(app.toString()))); // 동일 t
     }
+    @Test public void brokenOrEmptyDriveFileIsTreatedAsMissingSoItCanBeRepaired() throws Exception {
+        assertNull(MainActivity.parseRemote(""));
+        assertNull(MainActivity.parseRemote("   "));
+        assertNull(MainActivity.parseRemote(null));
+        assertNull(MainActivity.parseRemote("{\"arpg_save_v3\":\"{\\\"v\\\":3,\\\"t\\\":")); // 쓰다 끊긴 파일
+        assertNull(MainActivity.parseRemote(backup(save().replace("12345","-1"))));
+        JSONObject ok=MainActivity.parseRemote(backup(save()));
+        assertNotNull(ok);
+        assertEquals(12345,MainActivity.saveTime(ok));
+        // 깨진 파일(null)과 이 기기의 유효한 저장을 비교하면 항상 이 기기 저장이 선택된다(복구).
+        JSONObject local=new JSONObject(backup(save()));
+        assertSame(local,MainActivity.latestBackup(local,MainActivity.parseRemote("")));
+        assertTrue(MainActivity.saveTime(local)>MainActivity.saveTime(null));
+    }
     @Test public void invalidStoreCannotBeatValidProgress() throws Exception {
         JSONObject good=new JSONObject(backup(save()));
         JSONObject invalid=new JSONObject(backup(save().replace("\"lv\":7","\"lv\":71").replace("12345","99999")));
