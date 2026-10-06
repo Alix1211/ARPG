@@ -27,7 +27,24 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const solids = [], spots = [], sprites = [], trees = [], npcs = [], dummies = [], exits = [];
 let lamps = [];
 let townPortalReturn=null,portalArrivalUntil=0;
+let lastVisitedTown={map:'town'};
 const TOWN_PORTAL_X=26.15*TS,TOWN_PORTAL_Y=19.15*TS;
+const VILLAGE_PORTAL_X=16*TS,VILLAGE_PORTAL_Y=17.5*TS;
+function portalAnchor(id=MAP){return id==='fieldvillage'?[VILLAGE_PORTAL_X,VILLAGE_PORTAL_Y]:[TOWN_PORTAL_X,TOWN_PORTAL_Y];}
+function normalizeTownHome(h){
+  if(h&&h.map==='fieldvillage'&&h.theme)return {map:'fieldvillage',theme:h.theme,villageReturn:h.villageReturn?JSON.parse(JSON.stringify(h.villageReturn)):null};
+  return {map:'town'};
+}
+function lastVisitedTownState(){return JSON.parse(JSON.stringify(lastVisitedTown));}
+function loadLastVisitedTown(h){lastVisitedTown=normalizeTownHome(h);return lastVisitedTownState();}
+function markTownArrival(id){
+  if(id==='town')lastVisitedTown={map:'town'};
+  else if(id==='fieldvillage'&&window.__FD){
+    const st=__FD.state();lastVisitedTown=normalizeTownHome({map:'fieldvillage',theme:st.theme||'spring',villageReturn:st.villageReturn||null});
+  }else return false;
+  if(window.UI&&UI.save)UI.save();
+  return true;
+}
 function buildWorld(id){
   MAP = id; CUR = MAPS[id]; G = CUR.G; MINI = CUR.MINI; MWp = CUR.map.w * TS; MHp = CUR.map.h * TS;
   for (const L of [solids, spots, sprites, trees, npcs, dummies, exits]) L.length = 0;
@@ -66,9 +83,10 @@ for (const n of npcs){
   sprites.push(n);
   spots.push({ name: n.name, x: n.x, y: n.y + 6, r: 50, kind: 'npc', npc: n });
 }
-  if(id==='town'&&townPortalReturn){
-    sprites.push({portal:true,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,w:112,h:98,key:TOWN_PORTAL_Y-2});
-    spots.push({name:'귀환 포탈',x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,r:58,kind:'town_portal'});
+  if((id==='town'||id==='fieldvillage')&&townPortalReturn){
+    const [px,py]=portalAnchor(id);
+    sprites.push({portal:true,x:px,y:py,w:112,h:98,key:py-2});
+    spots.push({name:'귀환 포탈',x:px,y:py,r:58,kind:'town_portal'});
   }
   if (CUR.exits) exits.push(...CUR.exits);
   if (CUR.solids) solids.push(...CUR.solids);
@@ -121,7 +139,7 @@ function nearestSafePosition(x,y){
   }
   return [x,y];
 }
-function setGold(v){ P.gold = v; $('gold').textContent = '금화 ' + v; $('shopGold').textContent = v; }
+function setGold(v){ const old=P.gold;P.gold = v; $('gold').textContent = '금화 ' + v; $('shopGold').textContent = v;if(window.TELEMETRY)TELEMETRY.gold(v-old); }
 setGold(P.gold);
 
 const LEVEL_CAP=70;
@@ -208,12 +226,17 @@ function investLife(key){
   const d=LIFE_DEF[key],cur=lifeRank(key);if(!d||P.lv<d.unlock||cur<1||cur>=d.max||P.lifePts<1)return false;
   P.lifeSkills[key]=cur+1;P.lifePts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
 }
-function portalTransition(id,pos,dir,onArrive){
+function portalTransition(id,pos,dir,onArrive,prepare){
   if(traveling)return false;traveling=true;closeAll();
   const f=$('fade');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
-  setTimeout(()=>{
-    buildWorld(id);P.x=pos[0];P.y=pos[1];P.dir=dir||'front';P.atk=null;
+  setTimeout(async()=>{
+    let dest=id,p=pos;
+    try{if(prepare)await prepare();}
+    catch(e){dest='town';p=[23*TS,22.2*TS];lastVisitedTown={map:'town'};}
+    buildWorld(dest);p=typeof p==='function'?p():p;P.x=p[0];P.y=p[1];P.dir=dir||'front';P.atk=null;
     const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(dest==='town'||dest==='fieldvillage')markTownArrival(dest);
+    if(window.TELEMETRY)TELEMETRY.enter(locationState());
     if(onArrive)onArrive();
     setTimeout(()=>{
       f.classList.remove('on');
@@ -225,7 +248,7 @@ function portalTransition(id,pos,dir,onArrive){
 let portalScrollConfirm=0;
 function useTownPortal(){
   const r=lifeRank('townPortal'),sc=window.UI&&UI.scrolls?UI.scrolls().portal:0;
-  if(MAP==='town'||MAP==='inn'){say('이미 마을에 있습니다.');return false;}
+  if(MAP==='town'||MAP==='inn'||MAP==='fieldvillage'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r||0]*60000;
   let byScroll=false;
   if(!r||(P.portalReadyAt||0)>now){
@@ -240,11 +263,16 @@ function useTownPortal(){
   };
   if(byScroll){UI.useScroll('portal');portalScrollConfirm=0;say(['아까워라… 100골드가 연기가 됐네!','포탈 스크롤이라니… 내 100골드…!','급하니까 어쩔 수 없지… 아깝다!'][Math.floor(Math.random()*3)]);}
   else P.portalReadyAt=now+cd;
-  const ok=portalTransition('town',[23*TS,22.2*TS],'front',()=>{portalArrivalUntil=performance.now()+1700;});
+  const home=normalizeTownHome(lastVisitedTown);
+  const prep=home.map==='fieldvillage'&&window.__FD&&__FD.prepareVillage?()=>__FD.prepareVillage(home.theme,home.villageReturn||null):null;
+  const pos=home.map==='fieldvillage'?()=>MAPS.fieldvillage.spawn:[23*TS,22.2*TS];
+  const dest=home.map==='fieldvillage'&&prep?'fieldvillage':'town';
+  const ok=portalTransition(dest,pos,'front',()=>{portalArrivalUntil=performance.now()+1700;},prep);
+  if(ok&&window.TELEMETRY)TELEMETRY.portal(home);
   if(window.UI&&UI.save)UI.save();return ok;
 }
 function returnTownPortal(){
-  if(MAP!=='town'||!townPortalReturn)return false;
+  if((MAP!=='town'&&MAP!=='fieldvillage')||!townPortalReturn)return false;
   const q=townPortalReturn;
   if(q.map==='dungeon'&&q.dungeon&&window.__DUN&&__DUN.preparePortalRestore)__DUN.preparePortalRestore(q.dungeon);
   window.__PORTAL_RUNTIME_RESTORE=true;
@@ -257,7 +285,7 @@ function returnTownPortal(){
   if(!ok){window.__PORTAL_RUNTIME_RESTORE=false;townPortalReturn=q;}
   return ok;
 }
-function portalState(){return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,returnFloor:townPortalReturn&&townPortalReturn.dungeon?townPortalReturn.dungeon.floor:null,x:TOWN_PORTAL_X,y:TOWN_PORTAL_Y,aura:portalArrivalUntil>performance.now()};}
+function portalState(){const [x,y]=portalAnchor(MAP);return {open:!!townPortalReturn,map:MAP,returnTo:townPortalReturn?townPortalReturn.map:null,returnFloor:townPortalReturn&&townPortalReturn.dungeon?townPortalReturn.dungeon.floor:null,x,y,aura:portalArrivalUntil>performance.now(),home:lastVisitedTownState()};}
 let levelNoticeTimer=0;
 function showLevelNotice(txt){
   const n=$('levelNotice');if(!n)return;
@@ -266,7 +294,7 @@ function showLevelNotice(txt){
 }
 function gainExp(amount){
   amount=Math.max(0,Math.round(amount||0));if(!amount||P.lv>=LEVEL_CAP)return false;
-  P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
+  const oldLv=P.lv;P.exp=(P.exp||0)+amount;let ups=0,addStat=0,addSkill=0,addLife=0;
   while(P.lv<LEVEL_CAP&&P.exp>=expNeed(P.lv)){
     P.exp-=expNeed(P.lv);P.lv++;ups++;
     const sp=P.lv%10===0?10:5;P.statPts+=sp;addStat+=sp;
@@ -277,6 +305,7 @@ function gainExp(amount){
   if(P.lv>=LEVEL_CAP)P.exp=0;
   const lv=$('lvTxt');if(lv)lv.textContent=P.lv;
   if(ups){
+    if(window.TELEMETRY)TELEMETRY.levelUp(oldLv,P.lv);
     syncLifeUnlocks(false);
     showLevelNotice('LEVEL UP!  Lv'+P.lv+' · 능력 +'+addStat+'P · 스킬 +'+addSkill+'P'+(addLife?' · 생활 +'+addLife+'P':''));
     say(['좋아, 더 강해졌네!','좋았어! 포인트부터 잘 써야지.','한 단계 올랐네. 어디에 투자할까?'][P.lv%3]);
@@ -402,6 +431,8 @@ function travel(id,pos,dir){
   setTimeout(()=>{
     buildWorld(id);P.x=pos[0];P.y=pos[1];P.dir=dir||'front';P.atk=null;
     const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(id==='town'||id==='fieldvillage')markTownArrival(id);
+    if(window.TELEMETRY)TELEMETRY.enter(locationState());
     setTimeout(()=>{f.classList.remove('on');traveling=false;},120);
   },320);
   return true;
@@ -432,7 +463,9 @@ async function resumeLocation(st){
     }
     P.x=Number.isFinite(st.x)?st.x:P.x;P.y=Number.isFinite(st.y)?st.y:P.y;P.dir=dir;P.atk=null;
     const safe=nearestSafePosition(P.x,P.y);P.x=safe[0];P.y=safe[1];
+    if(map==='town'||map==='fieldvillage')markTownArrival(map);
     if(map==='dungeon'&&window.GUILD&&window.__DUN)GUILD.onDungeonFloor(__DUN.state().floor||1);
+    if(window.TELEMETRY)TELEMETRY.enter(locationState());
     return true;
   }catch(e){
     buildWorld('town');P.x=23*TS;P.y=22.2*TS;P.dir='front';return false;
@@ -475,18 +508,35 @@ $('dlgTrade').addEventListener('click', () => {
 
 // 가게 물건 (가안 가격)
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
-function shopGear(baseId,price){
-  const b=GEAR_BASE[baseId];return {ic:b.icon,name:b.name,slot:`T${b.tier} · 착용 Lv${b.requiredLevel}`,price,spec:{baseId:b.id,kind:b.kind}};
+function shopGear(base,price){
+  const b=typeof base==='string'?GEAR_BASE[base]:base;return {ic:b.icon,name:b.name,slot:`T${b.tier} · 착용 Lv${b.requiredLevel}`,price,requiredLevel:b.requiredLevel,spec:{baseId:b.id,kind:b.kind}};
 }
 const GOODS = {
-  arms:[...['sword','spear','gauntlet','bow','staff'].flatMap(t=>[shopGear(t+'_01',30),shopGear(t+'_02',75)]),
-    ...['head','body','hands','feet'].map((k,i)=>shopGear('knight_'+k+'_02',[40,70,30,30][i]))],
   general:[{ic:'php',name:'체력 물약',slot:'물약',price:20,potion:'hp'},{ic:'pmp',name:'마나 물약',slot:'물약',price:20,potion:'mp'},
     {ic:'scr_portal',name:'타운 포탈 스크롤',slot:'스크롤',desc:'대기시간 무시 · 최대 20장',price:100,scroll:'portal'},
     {ic:'scr_ident',name:'감정 스크롤',slot:'스크롤',desc:'어디서나 감정 · 최대 20장',price:100,scroll:'ident'},
-    {ic:'bag',name:'튼튼한 배낭',slot:'가방 확장',desc:'구매할 때마다 가방 1페이지 추가',price:10000,backpack:1}],
-  pawn:[shopGear('acc_0_01',120),shopGear('acc_1_01',150)]
+    {ic:'bag',name:'튼튼한 배낭',slot:'가방 확장',desc:'구매할 때마다 가방 1페이지 추가',price:10000,backpack:1}]
 };
+let shopStockTier=0,shopStock={arms:[],pawn:[]};
+function shopBase(tier,kind,wt){
+  let pool=TIER_MATCH.gear.filter(b=>b.tier===tier&&b.kind===kind&&(!wt||b.wt===wt));
+  const primary=pool.filter(b=>b.primary);if(primary.length)pool=primary;
+  return pool.sort((a,b)=>(a.requiredLevel||1)-(b.requiredLevel||1)||(a.powerGrade||1)-(b.powerGrade||1))[0]||null;
+}
+function shopGearPrice(b){
+  const g=Math.max(1,b.powerGrade||1),mul=b.kind==='weapon'?30:['body','ring','neck'].includes(b.kind)?35:20;
+  return Math.max(20,Math.round(mul*g*g));
+}
+function refreshShopStock(){
+  const tier=levelTier(P.lv);if(shopStockTier===tier)return;
+  shopStockTier=tier;
+  shopStock.arms=[
+    ...['sword','spear','gauntlet','bow','staff'].map(w=>shopBase(tier,'weapon',w)),
+    ...['head','body','hands','feet'].map(k=>shopBase(tier,k))
+  ].filter(Boolean).map(b=>shopGear(b,shopGearPrice(b)));
+  shopStock.pawn=['ring','neck'].map(k=>shopBase(tier,k)).filter(Boolean).map(b=>shopGear(b,shopGearPrice(b)));
+}
+function shopGoods(kind){if(kind==='general')return GOODS.general;refreshShopStock();return shopStock[kind]||[];}
 let sel = null, shopNpc = null, shopMode = 'buy';
 const SELL_BASE = {
   weapon: {1:30, 2:75},
@@ -575,7 +625,7 @@ function renderShop(){
   $('shopSay').textContent = '';
   const g = $('grid'); g.innerHTML = '';
   {
-    const list = GOODS[shopNpc.shop] || [];
+    const list = shopGoods(shopNpc.shop);
     list.forEach((it, i) => {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
       const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
@@ -628,7 +678,7 @@ function sellAt(idx){
   $('shopSay').textContent='금화 '+price+'닢을 받았습니다.';return true;
 }
 function buyAt(it,idx,want=1){
-  if(!(GOODS[shopNpc.shop]||[]).includes(it))return false;
+  if(!shopGoods(shopNpc.shop).includes(it))return false;
   const price=buyPrice(it);
   if(it.backpack){if(price<=0){$('shopSay').textContent='가방을 이미 최대로 확장했습니다.';return false;}if(P.gold<price){$('shopSay').textContent='금화가 부족합니다.';return false;}if(!UI.expandBag())return false;setGold(P.gold-price);UI.refresh();UI.save();$('shopSay').textContent='가방 한 페이지가 늘었습니다.';renderShop();return true;}
   const n=buyManyCount(it,Math.max(1,want|0));if(n<1){$('shopSay').textContent=it.scroll?'스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.':'더 살 수 없습니다.';return false;}
@@ -641,7 +691,7 @@ $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){cons
 $('buy10').addEventListener('click',()=>{if(sel&&sel.mode==='buy')buyAt(sel.it,null,10);});
 let bulkSaleConfirm=false;
 $('sellAll').addEventListener('click',()=>{const rows=UI.bagItems().filter(r=>!r.it.locked);if(!rows.length){$('shopSay').textContent='일괄판매할 잠금 해제 아이템이 없습니다.';bulkSaleConfirm=false;return;}const total=rows.reduce((s,r)=>s+sellPrice(r.it),0);if(!bulkSaleConfirm){bulkSaleConfirm=true;$('sellAll').textContent='확인 후 일괄판매';$('shopSay').textContent=rows.length+'개 / '+total+'G 판매합니다. 한 번 더 눌러 주세요.';return;}bulkSaleConfirm=false;$('sellAll').textContent='일괄판매';for(const r of rows.slice().sort((a,b)=>b.i-a.i))UI.removeBagAt(r.i);setGold(P.gold+total);sel=null;UI.refresh();renderShop();UI.save();if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:'bulk',price:total,count:rows.length});$('shopSay').textContent=rows.length+'개를 팔아 '+total+'G를 받았습니다.';});
-window.__SHOP={goods:k=>GOODS[k],open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
+window.__SHOP={goods:k=>shopGoods(k),tier:()=>levelTier(P.lv),open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
 
 // ======================= 행인 =======================
 const WP = [[14.5,14],[18,13.6],[28,13.6],[31.5,14],[14.5,19.9],[20,20.7],[26,20.7],[31.5,19.9],[23,13.9],[19.6,16.4],[26.4,16.4],
@@ -741,6 +791,7 @@ window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, ques
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, skillPrereq, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
+  lastVisitedTown:lastVisitedTownState,loadLastVisitedTown,markTownArrival,
   isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings', setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
@@ -1336,6 +1387,7 @@ function drink(k){
   if (k === 'hp' ? P.hp >= P.maxHp : P.mp >= P.maxMp){ say(k === 'hp' ? '체력이 가득합니다… 아까워요' : '마나가 가득합니다… 아까워요'); return false; }
   const v = Math.round((k === 'hp' ? P.maxHp : P.maxMp) * 0.4);
   if (k === 'hp') P.hp = Math.min(P.maxHp, P.hp + v); else P.mp = Math.min(P.maxMp, P.mp + v);
+  if(window.TELEMETRY)TELEMETRY.potion(k);
   potCd = 1; syncBars(); pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: k === 'hp', mana: k === 'mp' });
   return true;
 }
