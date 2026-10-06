@@ -686,7 +686,8 @@ const SKEY='arpg_save_v3';
 try{localStorage.removeItem('arpg_save_v1');localStorage.removeItem('arpg_save_v2');}catch(e){}
 let RESETTING=false;
 function saveGame(){
-  if(RESETTING||window.ARPG_BACKUP_RESTORING||window.ARPG_SYNC_CHECKING)return;
+  if(RESETTING||window.ARPG_BACKUP_RESTORING)return;
+  if(window.ARPG_SYNC_CHECKING){window.ARPG_SYNC_DIRTY=true;return;}
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
