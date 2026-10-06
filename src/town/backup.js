@@ -58,7 +58,7 @@
     const all=JSON.parse(text);
     if(!all||Array.isArray(all)||typeof all!=='object'||Object.keys(all).some(k=>!k.startsWith('arpg_')||typeof all[k]!=='string'))throw Error();
     const s=JSON.parse(all.arpg_save_v3),obj=v=>v&&typeof v==='object'&&!Array.isArray(v);
-    if(s.v!==3||!Number.isInteger(s.lv)||s.lv<1||s.lv>70||!['gold','hp','mp'].every(k=>Number.isFinite(s[k]))||!obj(s.stats)||!Array.isArray(s.bag)||!obj(s.eq))throw Error();
+    if(s.v!==3||s.release!==1||!Number.isInteger(s.lv)||s.lv<1||s.lv>70||!['gold','hp','mp'].every(k=>Number.isFinite(s[k]))||!obj(s.stats)||!Array.isArray(s.bag)||!obj(s.eq))throw Error();
     return all;
   }
   window.onArpgRestore=text=>{
