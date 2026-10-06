@@ -5,8 +5,13 @@ on:
     paths:
       - 'src/town/check_quest_full.py'
       - 'src/town/quest.js'
+      - 'src/town/field_dungeon.js'
       - 'src/story/quests.json'
       - '.github/workflows/quest-full-check.yml'
+
+concurrency:
+  group: quest-full-main
+  cancel-in-progress: true
 
 jobs:
   quest:
