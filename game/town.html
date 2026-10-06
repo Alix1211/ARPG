@@ -367,7 +367,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-1204</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-1406</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -3461,23 +3461,21 @@ async function makeFieldGround(theme,withVillage=false){
   const liquidBlocked=visualTheme==='volcano'||visualTheme==='swamp'||visualTheme==='ice';
 
   const c=document.createElement('canvas');c.width=48*TS;c.height=48*TS;const g=c.getContext('2d');
+  const shade=document.createElement('canvas');shade.width=c.width;shade.height=c.height;const sg=shade.getContext('2d');
   for(let y=0;y<48;y++)for(let x=0;x<48;x++){
     const walk=D.g[y][x]===1,boundary=!walk&&outdoorBoundary({grid:D.g},x,y);
     if(walk){
       g.drawImage(Math.random()<.18?flower:base,x*TS,y*TS,TS+1,TS+1);
       if(Math.random()<.045){g.globalAlpha=.18;g.drawImage(dirt,x*TS,y*TS,TS+1,TS+1);g.globalAlpha=1;}
     }else{
-      // 못 가는 셀은 반드시 한눈에 다른 지형으로 보이게 한다.
-      if(liquidBlocked&&!boundary){
-        g.drawImage(blockedTex,x*TS,y*TS,TS+1,TS+1);
-        g.fillStyle=dark;g.fillRect(x*TS,y*TS,TS+1,TS+1);
-      }else{
-        g.drawImage(base,x*TS,y*TS,TS+1,TS+1);
-        g.fillStyle=dark;g.fillRect(x*TS,y*TS,TS+1,TS+1);
-        if(boundary){g.fillStyle=visualTheme==='winter'||visualTheme==='ice'?'rgba(28,48,60,.16)':'rgba(5,25,8,.13)';g.fillRect(x*TS,y*TS,TS+1,TS+1);}
-      }
+      // 통행 판정은 기존 grid 그대로 두고, 막힘 영역의 시각 경계만 맵 생성 시 1회 부드럽게 섞는다.
+      if(liquidBlocked&&!boundary)g.drawImage(blockedTex,x*TS,y*TS,TS+1,TS+1);
+      else g.drawImage(base,x*TS,y*TS,TS+1,TS+1);
+      sg.fillStyle=dark;sg.fillRect(x*TS,y*TS,TS+1,TS+1);
     }
   }
+  const soft=document.createElement('canvas');soft.width=c.width;soft.height=c.height;const fg=soft.getContext('2d');
+  fg.filter='blur(15px)';fg.drawImage(shade,0,0);fg.filter='none';g.drawImage(soft,0,0);
 
   const mini=document.createElement('canvas');mini.width=288;mini.height=288;const mg=mini.getContext('2d');
   mg.fillStyle=visualTheme==='volcano'?'#492017':visualTheme==='ice'?'#315b72':visualTheme==='swamp'?'#273b2a':'#284b28';mg.fillRect(0,0,288,288);
