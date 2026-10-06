@@ -108,9 +108,12 @@ async def main():
         ap=await auto.new_page();await ap.goto(URL);await ap.wait_for_function('window.UI')
         assert await ap.evaluate('() => mock.syncs===1 && window.ARPG_SYNC_CHECKING && GAME.P.gold===333')
         await ap.evaluate('() => {GAME.setGold(444);UI.save();}')
-        assert await ap.evaluate("() => JSON.parse(localStorage.getItem('arpg_save_v3')).t===100")
-        await ap.evaluate('() => {onArpgSyncDone();UI.save();}')
-        assert await ap.evaluate("() => JSON.parse(JSON.parse(localStorage.getItem('native_test_store')).arpg_save_v3).gold===444")
+        assert await ap.evaluate("() => JSON.parse(localStorage.getItem('arpg_save_v3')).t===100 && window.ARPG_SYNC_DIRTY")
+        # 동기화가 끝나면 보류했던 현재 진행을 한 번만 저장한다. 전체화면 저장 안내는 없어야 한다.
+        await ap.evaluate('() => onArpgSyncDone()')
+        await ap.wait_for_timeout(50)
+        assert await ap.evaluate("() => JSON.parse(JSON.parse(localStorage.getItem('native_test_store')).arpg_save_v3).gold===444 && !window.ARPG_SYNC_DIRTY")
+        assert await ap.locator('text=최신 저장 확인 중…').count()==0
         await ap.evaluate("() => {mock.status.online=true;dispatchEvent(new Event('online'));}")
         assert await ap.evaluate('() => mock.syncs===2')
         await ap.click('#settingsBtn');await ap.click('#restoreBackup')
