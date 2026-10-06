@@ -9,6 +9,7 @@ async def main():
         pg=await b.new_page(viewport={'width':1280,'height':720})
         errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         ev=pg.evaluate
+        pg.set_default_timeout(3000)
         await pg.goto(URL); await pg.wait_for_timeout(600)
 
         async def town():
@@ -22,7 +23,7 @@ async def main():
                     return
                 if await ev("() => document.getElementById('dlgQuest').hidden"):
                     await ev("() => GAME.closeAll()"); return
-                await pg.click('#dlgQuest')
+                await ev("() => document.getElementById('dlgQuest').click()")
                 await pg.wait_for_timeout(2)
             raise AssertionError('dialogue did not close')
 
@@ -33,7 +34,7 @@ async def main():
             await ev('() => GAME.act()')
             assert await ev("() => document.getElementById('dlg').classList.contains('on')"),('dialog not open',no,expect_id)
             assert not await ev("() => document.getElementById('dlgQuest').hidden"),('quest button hidden',no,expect_id)
-            await pg.click('#dlgQuest')
+            await ev("() => document.getElementById('dlgQuest').click()")
             await close_quest_dialog()
 
         async def go_field(theme,leg=1):
@@ -113,6 +114,7 @@ async def main():
                 raise AssertionError(('unhandled',qid,step))
 
         async def run_quest(qid,start_npc,max_steps=20):
+            print('RUN',qid,flush=True)
             await talk(start_npc,qid)
             assert await ev("id=>!!QUEST.state().active[id]",qid),('not accepted',qid)
             for _ in range(max_steps):
@@ -124,6 +126,7 @@ async def main():
                 assert done or after is None or after['step']!=before['step'] or after['progress']!=before['progress'],('no progress',qid,before,after)
             assert await ev("id=>QUEST.state().completed.includes(id)",qid),('not completed',qid)
             assert not await ev("id=>!!QUEST.state().active[id]",qid),('still active after completion',qid)
+            print('OK ',qid,flush=True)
 
         # 메인 1~70: 실제 순차 수락/진행/완료
         await ev("""() => {localStorage.removeItem('arpg_save_v3');QUEST.loadData(null);GAME.P.lv=70;GAME.P.exp=0;GAME.setGold(999999);}""")
