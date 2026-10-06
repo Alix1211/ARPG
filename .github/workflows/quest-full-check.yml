@@ -3,20 +3,30 @@ on:
   push:
     branches: [main]
     paths:
+      - 'game/town.html'
       - 'src/town/check_quest_full.py'
-      - 'src/town/quest.js'
-      - 'src/town/field_dungeon.js'
-      - 'src/story/quests.json'
       - '.github/workflows/quest-full-check.yml'
+  workflow_dispatch:
 
 concurrency:
-  group: quest-full-main
-  cancel-in-progress: true
+  group: quest-full-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   quest:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: main-001-018, mf: 1, mt: 18, sf: 0, st: 0}
+          - {name: main-019-036, mf: 19, mt: 36, sf: 0, st: 0}
+          - {name: main-037-053, mf: 37, mt: 53, sf: 0, st: 0}
+          - {name: main-054-070, mf: 54, mt: 70, sf: 0, st: 0}
+          - {name: side-001-023, mf: 0, mt: 0, sf: 1, st: 23}
+          - {name: side-024-045, mf: 0, mt: 0, sf: 24, st: 45}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,18 +34,18 @@ jobs:
           python-version: '3.12'
       - uses: actions/cache@v4
         with:
-          path: |
-            src/town/.enc_cache
-            src/town/.ground_cache.png
-            src/town/.ground_out_cache.png
-            ~/.cache/ms-playwright
-          key: quest-full-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'src/town/outmap.py', 'assets/**') }}
+          path: ~/.cache/ms-playwright
+          key: quest-pw-${{ runner.os }}-${{ hashFiles('.github/workflows/quest-full-check.yml') }}
           restore-keys: |
-            quest-full-${{ runner.os }}-
-            town-build-${{ runner.os }}-
+            playwright-chromium-${{ runner.os }}-
+            quest-pw-${{ runner.os }}-
       - run: |
-          pip install pillow numpy scipy playwright
+          pip install playwright
           python -m playwright install --with-deps chromium
-      - run: |
-          python src/town/build.py
-          python src/town/check_quest_full.py
+      - name: Play quest chunk
+        env:
+          QUEST_MAIN_FROM: ${{ matrix.mf }}
+          QUEST_MAIN_TO: ${{ matrix.mt }}
+          QUEST_SIDE_FROM: ${{ matrix.sf }}
+          QUEST_SIDE_TO: ${{ matrix.st }}
+        run: python src/town/check_quest_full.py
