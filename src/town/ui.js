@@ -691,7 +691,9 @@ function saveGame(){
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
-      location:G.locationState?G.locationState():null,trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
+      location:G.locationState?G.locationState():null,lastVisitedTown:G.lastVisitedTown?G.lastVisitedTown():null,
+      telemetry:window.TELEMETRY?TELEMETRY.saveData():null,
+      trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
   }catch(e){}
 }
 function loadGame(){
@@ -713,6 +715,9 @@ function loadGame(){
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);if(window.QUEST)QUEST.loadData(d.quests);return d;
 }
 const saved=loadGame();
+if(G.loadLastVisitedTown)G.loadLastVisitedTown(saved&&saved.lastVisitedTown||null);
+if(window.TELEMETRY)TELEMETRY.loadData(saved&&saved.telemetry||null);
+if(!saved&&window.TELEMETRY)TELEMETRY.enter(G.locationState());
 // 테스트용: 구현된 액티브 스킬을 전부 배운 상태(1랭크)로 만든다(포인트는 건드리지 않음 — 저장 검사와 충돌). 정식 시작 전에 false로 바꿀 것.
 const TEST_UNLOCK_ALL_SKILLS=false;
 if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}}
