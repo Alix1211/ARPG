@@ -1078,7 +1078,12 @@ function frame(now){
     if (s.title){ // 사람: 그림자 + 숨쉬기
       ctx.fillStyle = 'rgba(0,0,0,.26)'; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.w * 0.28, 6, 0, 0, 7); ctx.fill();
       const br = 1 + Math.sin(T * 2.2 + s.ph) * 0.014;
-      ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br); continue;
+      ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br);
+      if(s.companion){
+        ctx.save();ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(20,14,8,.9)';ctx.fillStyle='#ffe58a';
+        const tt='TEST · '+s.name;ctx.strokeText(tt,s.x,s.y-s.h-10);ctx.fillText(tt,s.x,s.y-s.h-10);ctx.restore();
+      }
+      continue;
     }
     if (s.shadow){ ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(s.x + s.w * 0.10, s.y + 4, Math.max(8, s.w * 0.28), Math.max(3, s.w * 0.08), 0.22, 0, 7); ctx.fill(); }
     if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
