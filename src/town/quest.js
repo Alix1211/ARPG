@@ -170,6 +170,21 @@ function questCheckVisit(){
   }
   if(changed)questSave();
 }
+function questSafePosition(x,y){
+  let xy=nearestSafePosition(x,y);
+  if(typeof walkableAt!=='function'||walkableAt(xy[0],xy[1]))return xy;
+  // 랜덤 야외/던전에서 옛 고정 좌표가 벽 속에 들어가면 가장 가까운 실제 통행 셀로 옮긴다.
+  if(CUR&&CUR.grid){
+    let best=null,bd=Infinity;
+    for(let gy=1;gy<CUR.grid.length-1;gy++)for(let gx=1;gx<CUR.grid[gy].length-1;gx++){
+      if(!CUR.grid[gy][gx])continue;
+      const px=(gx+.5)*TS,py=(gy+.5)*TS;if(!walkableAt(px,py))continue;
+      const d=(px-x)*(px-x)+(py-y)*(py-y);if(d<bd){bd=d;best=[px,py];}
+    }
+    if(best)return best;
+  }
+  return xy;
+}
 function questPoint(s){
   if(!s.point||!questMapMatches(s.point))return null;
   const p=s.point,n=p.nearNpc&&questNpc(p.nearNpc);
@@ -179,11 +194,12 @@ function questPoint(s){
   else if(p.tile)base=[p.tile[0]*TS,p.tile[1]*TS];
   else if(p.world)base=[p.world[0],p.world[1]];
   else if(p.nearSpot){
-    const z=spots.find(x=>x.kind!=='questclue'&&x.name===p.nearSpot);if(!z)return null;base=[z.x,z.y];
+    const z=spots.find(x=>x.kind!=='questclue'&&(x.name===p.nearSpot||(x.data&&Array.isArray(x.data.aliases)&&x.data.aliases.includes(p.nearSpot))));
+    if(!z)return null;base=[z.x,z.y];
   }else if(p.spotPrefix){
     const z=spots.find(x=>x.kind!=='questclue'&&x.name&&x.name.startsWith(p.spotPrefix));if(!z)return null;base=[z.x,z.y];
   }else base=CUR.spawn||[P.x,P.y];
-  const off=p.offset||p.spawnOffset||[0,0],xy=nearestSafePosition(base[0]+off[0],base[1]+off[1]);
+  const off=p.offset||p.spawnOffset||[0,0],xy=questSafePosition(base[0]+off[0],base[1]+off[1]);
   return {x:xy[0],y:xy[1]};
 }
 function questRefreshWorld(){
