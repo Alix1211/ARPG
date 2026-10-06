@@ -38,13 +38,17 @@ async def main():
             await close_quest_dialog()
 
         async def go_field(theme,leg=1):
-            assert await ev("([t,l])=>__FD.enter(t,l)",[theme,leg])
+            cur=await ev("() => window.__FD?__FD.state():null")
+            if not cur or cur.get('map')!='field' or cur.get('theme')!=theme or cur.get('leg')!=leg:
+                assert await ev("([t,l])=>__FD.enter(t,l)",[theme,leg])
             await ev("() => QUEST.tick()")
             st=await ev("() => __FD.state()")
             assert st['map']=='field' and st['theme']==theme and st['leg']==leg,(theme,leg,st)
 
         async def go_dungeon(floor):
-            assert await ev("f=>__DUN.go(f)",floor)
+            cur=await ev("() => window.__DUN?__DUN.state():null")
+            if not cur or cur.get('map')!='dungeon' or cur.get('floor')!=floor:
+                assert await ev("f=>__DUN.go(f)",floor)
             await ev("() => QUEST.tick()")
             st=await ev("() => __DUN.state()")
             assert st['map']=='dungeon' and st['floor']==floor,(floor,st)
@@ -64,8 +68,8 @@ async def main():
 
         async def point_action(qid,step):
             need=int(step.get('need') or 1) if step['type']=='collect' else 1
+            await ensure_map(step)
             for _ in range(need):
-                await ensure_map(step)
                 pts=await ev("id=>QUEST.points().filter(p=>p.id===id)",qid)
                 assert pts,('no quest point',qid,step['type'],step.get('point'))
                 pt=pts[0]
