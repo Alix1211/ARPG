@@ -120,23 +120,21 @@ async function makeFieldGround(theme,withVillage=false){
   const liquidBlocked=visualTheme==='volcano'||visualTheme==='swamp'||visualTheme==='ice';
 
   const c=document.createElement('canvas');c.width=48*TS;c.height=48*TS;const g=c.getContext('2d');
+  const shade=document.createElement('canvas');shade.width=c.width;shade.height=c.height;const sg=shade.getContext('2d');
   for(let y=0;y<48;y++)for(let x=0;x<48;x++){
     const walk=D.g[y][x]===1,boundary=!walk&&outdoorBoundary({grid:D.g},x,y);
     if(walk){
       g.drawImage(Math.random()<.18?flower:base,x*TS,y*TS,TS+1,TS+1);
       if(Math.random()<.045){g.globalAlpha=.18;g.drawImage(dirt,x*TS,y*TS,TS+1,TS+1);g.globalAlpha=1;}
     }else{
-      // 못 가는 셀은 반드시 한눈에 다른 지형으로 보이게 한다.
-      if(liquidBlocked&&!boundary){
-        g.drawImage(blockedTex,x*TS,y*TS,TS+1,TS+1);
-        g.fillStyle=dark;g.fillRect(x*TS,y*TS,TS+1,TS+1);
-      }else{
-        g.drawImage(base,x*TS,y*TS,TS+1,TS+1);
-        g.fillStyle=dark;g.fillRect(x*TS,y*TS,TS+1,TS+1);
-        if(boundary){g.fillStyle=visualTheme==='winter'||visualTheme==='ice'?'rgba(28,48,60,.16)':'rgba(5,25,8,.13)';g.fillRect(x*TS,y*TS,TS+1,TS+1);}
-      }
+      // 통행 판정은 기존 grid 그대로 두고, 막힘 영역의 시각 경계만 맵 생성 시 1회 부드럽게 섞는다.
+      if(liquidBlocked&&!boundary)g.drawImage(blockedTex,x*TS,y*TS,TS+1,TS+1);
+      else g.drawImage(base,x*TS,y*TS,TS+1,TS+1);
+      sg.fillStyle=dark;sg.fillRect(x*TS,y*TS,TS+1,TS+1);
     }
   }
+  const soft=document.createElement('canvas');soft.width=c.width;soft.height=c.height;const fg=soft.getContext('2d');
+  fg.filter='blur(15px)';fg.drawImage(shade,0,0);fg.filter='none';g.drawImage(soft,0,0);
 
   const mini=document.createElement('canvas');mini.width=288;mini.height=288;const mg=mini.getContext('2d');
   mg.fillStyle=visualTheme==='volcano'?'#492017':visualTheme==='ice'?'#315b72':visualTheme==='swamp'?'#273b2a':'#284b28';mg.fillRect(0,0,288,288);
