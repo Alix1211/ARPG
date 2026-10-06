@@ -17,7 +17,7 @@ async def main():
         errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         ev=pg.evaluate
         pg.set_default_timeout(3000)
-        await pg.goto(URL); await pg.wait_for_timeout(600)
+        await pg.goto(URL); await pg.wait_for_timeout(1400)
 
         async def town():
             if await ev("() => document.getElementById('place').dataset.map")!='마을':
@@ -39,6 +39,7 @@ async def main():
             ok=await ev('''no=>{const n=A.npcs.find(n=>n.no===no);if(!n)return false;GAME.P.x=n.x;GAME.P.y=n.y+16;return true;}''',no)
             assert ok,('missing npc',no,expect_id)
             await ev('() => GAME.act()')
+            await pg.wait_for_timeout(25)
             assert await ev("() => document.getElementById('dlg').classList.contains('on')"),('dialog not open',no,expect_id)
             assert not await ev("() => document.getElementById('dlgQuest').hidden"),('quest button hidden',no,expect_id)
             await ev("() => document.getElementById('dlgQuest').click()")
