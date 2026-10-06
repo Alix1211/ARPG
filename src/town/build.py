@@ -508,6 +508,19 @@ for name,d in CATALOG['monsters'].items():
         im=im.crop(box); im.thumbnail((240,240),Image.LANCZOS)
         images[direction]=enc(im,86)
     MON3[name]=images
+# 케인 제공 숲 거미 4방향 시트(앞/뒤/좌/우). V2의 잘못된 딱정벌레형 그림만 교체한다.
+_spider_sheet = Image.open(os.path.join(ROOT, 'source_sheets', 'spider_forest_4dir.webp')).convert('RGBA')
+_spider_dirs = {}
+_spider_cell = _spider_sheet.width // 4
+for _i, _dir in enumerate(('front','back','left','right')):
+    _im = _spider_sheet.crop((_i*_spider_cell, 0, (_i+1)*_spider_cell, _spider_sheet.height))
+    _box = _im.getchannel('A').getbbox()
+    if _box: _im = _im.crop(_box)
+    _im.thumbnail((240,240), Image.LANCZOS)
+    _spider_dirs[_dir] = enc(_im, 88)
+MON3['spider'] = dict(_spider_dirs)
+MON3['spider_chief'] = dict(_spider_dirs)
+
 MON1 = {}
 
 # ---- 성 밖 갈림길 들판 ----

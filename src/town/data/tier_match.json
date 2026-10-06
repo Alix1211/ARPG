@@ -3017,7 +3017,8 @@
       "sp": 58,
       "ranged": 1,
       "range": 175,
-      "shotStatus": "slow"
+      "shotStatus": "slow",
+      "skill": "ice_magic"
     },
     "darkmage": {
       "id": "darkmage",
@@ -3096,7 +3097,8 @@
       "sp": 58,
       "ranged": 1,
       "range": 175,
-      "shotStatus": "slow"
+      "shotStatus": "slow",
+      "skill": "ice_magic"
     },
     "elem_fire": {
       "id": "elem_fire",
@@ -3115,7 +3117,8 @@
       "sp": 58,
       "ranged": 1,
       "range": 175,
-      "shotStatus": "burn"
+      "shotStatus": "burn",
+      "skill": "fire_magic"
     },
     "orc": {
       "id": "orc",
@@ -3212,7 +3215,8 @@
       "sp": 58,
       "ranged": 1,
       "range": 175,
-      "shotStatus": "burn"
+      "shotStatus": "burn",
+      "skill": "fire_magic"
     },
     "dragon": {
       "id": "dragon",
@@ -3233,7 +3237,8 @@
       "sp": 60,
       "ranged": 1,
       "range": 230,
-      "shotStatus": "burn"
+      "shotStatus": "burn",
+      "skill": "fire_magic"
     },
     "slime_toxic": {
       "id": "slime_toxic",
@@ -3613,8 +3618,24 @@
     }
   ],
   "scales": {
-    "hp": [0.1678, 0.49, 0.7644, 1.1962, 1.8665, 2.9141, 4.5488],
-    "attack": [1.2, 2.205, 3.6382, 5.7881, 9.1163, 14.3582, 22.6141],
+    "hp": [
+      0.1678,
+      0.49,
+      0.7644,
+      1.1962,
+      1.8665,
+      2.9141,
+      4.5488
+    ],
+    "attack": [
+      1.2,
+      2.205,
+      3.6382,
+      5.7881,
+      9.1163,
+      14.3582,
+      22.6141
+    ],
     "exp": [
       1,
       2.5,

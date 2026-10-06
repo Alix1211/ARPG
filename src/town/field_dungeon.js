@@ -394,6 +394,7 @@ function createMonster(id,x,y,opts={}){
   return {...st,monster:1,type:id,family:d.family,name:d.name,elite:d.rank==='elite',boss:d.rank==='boss',baseW,w,h:w,x,y,maxHp:st.hp,
     sp:d.sp*(1+(d.tier-1)*.025),ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',
     shotStatus:d.shotStatus||'',touchStatus:d.touchStatus||'',skillCd:.7+Math.random()*1.5,
+    magicLeft:(d.tier>=5&&['lightning','fire_magic','ice_magic'].includes(d.skill||''))?(d.rank==='normal'?2:3):0,
     imgs:mobImageSet(id),face:'front',flip:false,state:'wander',tx:x,ty:y,wait:Math.random()*2,cd:Math.random(),
     hurt:0,stun:0,dead:false,death:0,homeX:x,homeY:y,...opts};
 }
@@ -596,7 +597,9 @@ function specialMonsterAI(m,dx,dy,d,dt){
     monAct(m,'wind',.44,dx,dy);m.skillCd=2.1;return true;
   }
   if(m.skill==='charge'&&d<225){const q=d||1;m.chargeDx=dx/q;m.chargeDy=dy/q;m.chargeWind=.42;m.skillCd=3.5;return true;}
-  if(m.skill==='lightning'&&d<270){enemyHazards.push({kind:'lightning',x:P.x,y:P.y-25,t:0,delay:.65,life:1.0,r:38,dmg:Math.round(m.dmg*1.25),done:false});if(typeof SFX!=='undefined')SFX.play('lightning');monAct(m,'wind',.77,dx,dy);m.skillCd=2.8+Math.random()*.7;return true;}
+  if(m.skill==='lightning'&&d<270&&(!(m.tier>=5)||m.magicLeft>0)){if(m.tier>=5)m.magicLeft--;enemyHazards.push({kind:'lightning',x:P.x,y:P.y-25,t:0,delay:.65,life:1.0,r:38,dmg:Math.round(m.dmg*1.25),done:false});if(typeof SFX!=='undefined')SFX.play('lightning');monAct(m,'wind',.77,dx,dy);m.skillCd=3.8+Math.random()*1.1;return true;}
+  if(m.skill==='fire_magic'&&m.magicLeft>0&&d<285){m.magicLeft--;enemyShot(m,dx,dy,205,'burn','burn',1.12);if(typeof SFX!=='undefined')SFX.play('fire');monAct(m,'shoot',.52,dx,dy);m.skillCd=4.1+Math.random()*1.1;pops.push({x:m.x,y:m.y-m.h,t:0,txt:'화염 마법!',enemy:true});return true;}
+  if(m.skill==='ice_magic'&&m.magicLeft>0&&d<270){m.magicLeft--;enemyShot(m,dx,dy,190,'slow','slow',.92);if(typeof SFX!=='undefined')SFX.play('ice');monAct(m,'shoot',.56,dx,dy);m.skillCd=4.3+Math.random()*1.1;pops.push({x:m.x,y:m.y-m.h,t:0,txt:'빙결 마법!',enemy:true});return true;}
   if(m.skill==='petrify'&&d<230){enemyShot(m,dx,dy,185,'stone','stone',.75);monAct(m,'shoot',.34,dx,dy);m.skillCd=3.0;return true;}
   if(m.skill==='radial'&&d<235){
     for(let i=0;i<8;i++){const a=i*Math.PI/4;enemyShots.push({x:m.x,y:m.y-m.h*.5,vx:Math.cos(a)*220,vy:Math.sin(a)*220,t:0,life:1.55,dmg:Math.max(1,Math.round(m.dmg*.8)),kind:'feather',done:false});}

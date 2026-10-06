@@ -90,19 +90,16 @@ const SFX = (() => {
     syncVolume(){
       const volume=AUDIO_SETTINGS.get().sfx;
       if(out)out.gain.value=.55*volume;
-      for(const voices of Object.values(fileVoices))for(const a of voices){a.volume=.7*volume;if(!volume)a.pause();}
+      // 파일 효과음도 같은 WebAudio gain을 통과하므로 별도 HTML 오디오 볼륨 동기화가 필요 없다.
     },
     play(name){
       if (!this.on || document.hidden) return; init(); if (!ac || ac.state !== 'running') return;
       const now = ac.currentTime; if (last[name] && now - last[name] < 0.035) return; last[name] = now;   // 같은 소리 겹침 방지
       if (this.files[name]){
-        const voices = fileVoices[name] || (fileVoices[name] = []);
-        let a = voices.find(v => v.paused || v.ended);
-        if (!a && voices.length < 4){ a = new Audio(this.files[name]); a.preload = 'auto'; voices.push(a); }
-        if (!a) a = voices[0];
-        a.pause(); a.currentTime = 0; a.volume = 0.7 * AUDIO_SETTINGS.get().sfx;
-        a.play().catch(() => {});
-        return;
+        const fire=buf=>{if(!buf||!out)return;const src=ac.createBufferSource();src.buffer=buf;src.connect(out);src.start();};
+        if(fileBuffers[name]){fire(fileBuffers[name]);return;}
+        if(!fileLoading[name])fileLoading[name]=fetch(this.files[name]).then(r=>r.arrayBuffer()).then(b=>ac.decodeAudioData(b)).then(b=>{fileBuffers[name]=b;return b;}).catch(()=>null);
+        fileLoading[name].then(fire);return;
       }
       if (S[name]) S[name](now + 0.005);
     },
