@@ -1,0 +1,36 @@
+name: quest-full-check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/town/check_quest_full.py'
+      - 'src/town/quest.js'
+      - 'src/story/quests.json'
+      - '.github/workflows/quest-full-check.yml'
+
+jobs:
+  quest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src/town/.enc_cache
+            src/town/.ground_cache.png
+            src/town/.ground_out_cache.png
+            ~/.cache/ms-playwright
+          key: quest-full-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'src/town/outmap.py', 'assets/**') }}
+          restore-keys: |
+            quest-full-${{ runner.os }}-
+            town-build-${{ runner.os }}-
+      - run: |
+          pip install pillow numpy scipy playwright
+          python -m playwright install --with-deps chromium
+      - run: |
+          python src/town/build.py
+          python src/town/check_quest_full.py
