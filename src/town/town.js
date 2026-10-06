@@ -79,6 +79,10 @@ for (const p of CUR.props){
 }
 for (const n of CUR.npcs){
   if(n.companionTest&&window.COMPANION&&!COMPANION.townTestsEnabled())continue;
+  if(n.companionResident){
+    const qs=window.QUEST&&QUEST.state?QUEST.state():null;
+    if(!qs||!qs.flags||!qs.flags.rusty_hireable)continue;
+  }
   if(n.companion&&window.COMPANION&&COMPANION.isActive(n.companion))continue;
   npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
 }

@@ -12,43 +12,60 @@ async def main():
 
         assert await ev("() => !!window.COMPANION")
         assert await ev("() => ['hero','knight'].every(id=>A.companions[id]&&['front','back','side'].every(d=>A.companions[id].fr[d].length===5))")
-        assert await ev("() => A.npcs.filter(n=>n.companion).length===2")
+        assert not await ev("() => COMPANION.townTestsEnabled()")
+        d=await ev("() => COMPANION.diagnostics()")
+        assert d['n']==0 and d['s']==0 and d['p']==0,d
+        assert not await ev("() => {GAME.setGold(1000);return COMPANION.hire('hero');}")
+        assert not await ev("() => {GAME.setGold(1000);return COMPANION.hire('knight');}")
 
-        r=await ev("""() => { GAME.setGold(1000); const before=GAME.P.gold; const base=COMPANION.previewDamage(); const fee=COMPANION.fee('knight'); const ok=COMPANION.hire('knight'); const s=COMPANION.state(); return {ok,before,after:GAME.P.gold,fee,active:s.active,damage:s.damage,base}; }""")
-        assert r['ok'] and r['active']=='knight' and r['after']==r['before']-r['fee'],r
-        assert r['damage']==r['base'],r
+        r=await ev("""() => {COMPANION.syncStory({active:{MAIN_015:{step:1}}},'field');return COMPANION.state();}""")
+        assert r['active']=='hero' and r['mode']=='story' and r['storyQuest']=='MAIN_015',r
+        r=await ev("""() => {COMPANION.syncStory({active:{}},'field');return COMPANION.state();}""")
+        assert r['active'] is None,r
 
-        r=await ev("""() => { const before=GAME.P.gold,fee=COMPANION.fee('hero'); const ok=COMPANION.hire('hero'); return {ok,before,after:GAME.P.gold,fee,state:COMPANION.state()}; }""")
-        assert r['ok'] and r['state']['active']=='hero' and r['after']==r['before']-r['fee'],r
+        assert await ev("() => __INN.enter()")
+        await pg.wait_for_timeout(700)
+        d=await ev("() => COMPANION.diagnostics()")
+        assert d['n']==0,d
+        assert await ev("() => __INN.leave()")
+        await pg.wait_for_timeout(700)
+        await ev("""() => QUEST.loadData({schema:3,active:{},completed:['MAIN_023'],items:{},visited:[],flags:{rusty_hireable:true}})""")
+        assert await ev("() => __INN.enter()")
+        await pg.wait_for_timeout(700)
+        d=await ev("() => COMPANION.diagnostics()")
+        assert d['n']==1 and d['p']==1,d
+
+        r=await ev("""() => {GAME.setGold(1000);const before=GAME.P.gold,fee=COMPANION.fee('knight'),base=COMPANION.previewDamage();
+          const ok=COMPANION.hire('knight'),st=COMPANION.state();return {ok,before,after:GAME.P.gold,fee,base,st};}""")
+        assert r['ok'] and r['st']['active']=='knight' and r['st']['mode']=='hire' and r['after']==r['before']-r['fee'],r
+        assert r['st']['damage']==r['base'],r
+
+        remain=await ev("() => COMPANION.state().remaining")
+        r=await ev("""() => {COMPANION.syncStory({active:{MAIN_015:{step:1}}},'field');const a=COMPANION.state();
+          COMPANION.syncStory({active:{}},'inn');return {during:a,after:COMPANION.state()};}""")
+        assert r['during']['active']=='hero' and r['during']['mode']=='story',r
+        assert r['after']['active']=='knight' and r['after']['mode']=='hire' and abs(r['after']['remaining']-remain)<.01,r
 
         await ev("() => UI.save()")
         raw=await ev("() => JSON.parse(localStorage.getItem('arpg_save_v3')).companion")
-        assert raw and raw['active']=='hero' and raw['damage']>0,raw
-        await pg.reload();await pg.wait_for_timeout(1300)
-        assert await ev("() => COMPANION.state().active==='hero'")
+        assert raw and raw['v']==2 and raw['active']=='knight' and raw['mode']=='hire',raw
 
-        r=await ev("() => {COMPANION.debugExpire();return COMPANION.debugTick(.016);}")
-        assert r['active'] is None,r
-
-        await ev("() => {GAME.setGold(1000);COMPANION.hire('knight');}")
         g=await ev("() => GAME.P.gold")
         await ev("() => COMPANION.onDefeat()")
         r=await ev("() => ({active:COMPANION.state().active,gold:GAME.P.gold})")
         assert r['active'] is None and r['gold']==g,r
 
-        # 시험용 광장 NPC는 그림뿐 아니라 상호작용/충돌까지 제거, 재생성으로 부활하지 않음.
-        await ev("() => COMPANION.setTownTestsEnabled(false)")
-        await pg.wait_for_timeout(100)
-        d=await ev("() => COMPANION.diagnostics()")
-        assert d['n']==0 and d['s']==0 and d['p']==0,d
-        await ev("() => {COMPANION.ensureTownTests();COMPANION.onDefeat();}")
-        assert await ev("() => COMPANION.diagnostics().n===0")
+        assert await ev("() => __INN.leave()")
+        await pg.wait_for_timeout(700)
         await ev("() => COMPANION.setTownTestsEnabled(true)")
         d=await ev("() => COMPANION.diagnostics()")
         assert d['n']==2 and d['p']==2,d
+        await ev("() => COMPANION.setTownTestsEnabled(false)")
+        d=await ev("() => COMPANION.diagnostics()")
+        assert d['n']==0 and d['p']==0,d
 
         assert not errs,errs
-        print('companion ok')
+        print('companion final ok: hidden tests, story join/leave, inn unlock, paid Rusty')
         await b.close()
 
 asyncio.run(main())

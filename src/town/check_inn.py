@@ -15,7 +15,7 @@ async def main():
         await pg.wait_for_timeout(700)
         assert await ev("() => __INN.state().map==='inn'")
         assert await ev("() => __INN.open()")
-        assert await ev("() => !document.getElementById('dlgInnRow').hidden && !document.getElementById('dlgChat').disabled && document.getElementById('dlgMerc').disabled")
+        assert await ev("() => !document.getElementById('dlgInnRow').hidden && !document.getElementById('dlgChat').disabled && document.getElementById('dlgMerc').hidden")
 
         # 돈 충분: 레벨×8 차감, HP/MP 완전회복.
         r=await ev("""() => { GAME.P.lv=5;GAME.setGold(500);GAME.P.hp=1;GAME.P.mp=1;const c=__INN.cost(),ok=__INN.rest();return [ok,c,GAME.P.gold]; }""")

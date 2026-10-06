@@ -23,7 +23,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/town/companion.js'),
 function run(code){return vm.runInContext(code,sandbox);}
 run(`function setup(id,x,y,mx,my){
   MAP='field';wall=false;obstacle=null;P.x=1000;P.y=1000;monsters.length=0;
-  COMPANION.loadData({active:id,remaining:480,damage:1,x,y});
+  COMPANION.loadData({v:2,active:id,mode:'hire',remaining:480,damage:1,x,y});
   if(mx!=null)monsters.push({x:mx,y:my,h:60,hp:10000});
   warpCount=0;
 }`);

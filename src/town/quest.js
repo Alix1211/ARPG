@@ -8,7 +8,8 @@ const questDef=id=>ALL_QUESTS.find(q=>q.id===id);
 const questKind=q=>(q&&q.kind)||((q&&String(q.id).startsWith('MAIN_'))?'main':'side');
 const questStep=q=>q&&mainQuestState.active[q.id]?q.steps[mainQuestState.active[q.id].step]:null;
 const questNpc=no=>npcs.find(n=>n.no===no||n.k==='npc_'+String(no).padStart(2,'0'));
-function questSave(){questUiDirty=true;questRefreshWorld();questRender();if(window.UI&&UI.save)UI.save();}
+function questSyncCompanion(){if(window.COMPANION&&COMPANION.syncStory)COMPANION.syncStory(mainQuestState);}
+function questSave(){questUiDirty=true;questRefreshWorld();questRender();questSyncCompanion();if(window.UI&&UI.save)UI.save();}
 function questAvailable(q){
   const s=q.start||{},main=questKind(q)==='main';
   return !mainQuestState.completed.includes(q.id)&&!mainQuestState.active[q.id]&&(main||P.lv>=(s.level||1))&&
@@ -321,9 +322,9 @@ function questLoad(d){
     mainQuestState.visited=(Array.isArray(d.visited)?d.visited:[]).filter(x=>typeof x==='string');
     mainQuestState.flags=d.flags&&typeof d.flags==='object'?{...d.flags}:{};
   }
-  questWorldKey='';questUiDirty=true;questRefreshWorld();questRender();
+  questWorldKey='';questUiDirty=true;questRefreshWorld();questRender();questSyncCompanion();
 }
-window.QUEST={isDialog:()=>panel==='dlg'&&!!questDialog,accept:questAccept,collect:questCollect,onKill:questOnKill,onEvent:questOnEvent,onWorld:()=>{questWorldKey='';questRefreshWorld();},tick:questTick,draw:questDraw,
+window.QUEST={isDialog:()=>panel==='dlg'&&!!questDialog,accept:questAccept,collect:questCollect,onKill:questOnKill,onEvent:questOnEvent,onWorld:()=>{questWorldKey='';questRefreshWorld();questSyncCompanion();},tick:questTick,draw:questDraw,
   decorateDialog:questDecorateDialog,marker:questMarker,openList:()=>{GUILD.open();questRender();},
   saveData:()=>({schema:3,...JSON.parse(JSON.stringify(mainQuestState))}),loadData:questLoad,
   state:()=>({active:Object.fromEntries(Object.entries(mainQuestState.active).map(([id,a])=>[id,{step:a.step,progress:a.progress}])),completed:mainQuestState.completed.slice(),items:{...mainQuestState.items},flags:{...mainQuestState.flags}}),

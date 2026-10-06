@@ -1,17 +1,25 @@
 'use strict';
-// 테스트 동행 2인: 러스티(총/실제 용병), 카엘렌(검/향후 파티원).
-// 공통 테스트 규칙: 비용 선불, 고용 시점 플레이어 기본공격×1.15 고정, 사망 없음,
-// 길을 잃으면 플레이어 근처 워프, 한 게임 하루(현재 8분) 만료 후 모험 중에는 유지하고 다음 마을/패배 때 복귀.
+// 정식 동행 시스템.
+// 러스티: 메인 진행으로 해금된 뒤 여관에서 하루 단위로 고용하는 용병.
+// 카엘렌: 유료 용병이 아니라 기존 메인 시나리오의 정해진 구간에만 합류/이탈하는 파티 조력자.
 
 const COMPANION_DEF={
   // 카엘렌: 플레이어 뒤를 붙는 추종자가 아니라 먼저 적을 물고 버티는 전방 검사.
-  hero:{name:'카엘렌',title:'검사 · 파티 테스트',kind:'sword',range:74,aggro:620,pursuit:760,attackCd:.68,speed:252,warpIdle:680,warpCombat:1250,stuckCombat:1.8},
+  hero:{name:'카엘렌',title:'떠돌이 검사',kind:'sword',range:74,aggro:620,pursuit:760,attackCd:.68,speed:252,warpIdle:680,warpCombat:1250,stuckCombat:1.8},
   // 러스티: 플레이어 주변을 유지하는 후방 지원 사수.
-  knight:{name:'러스티',title:'이계의 용병 · 총병',kind:'gun',range:390,aggro:370,pursuit:470,attackCd:.72,speed:205,warpIdle:520,warpCombat:700,stuckCombat:3.0}
+  knight:{name:'러스티',title:'이계의 용병',kind:'gun',range:390,aggro:370,pursuit:470,attackCd:.72,speed:205,warpIdle:520,warpCombat:700,stuckCombat:3.0}
 };
-// 광장 시험 배치만 끌 수 있다. 전투 자산/세이브/향후 정식 합류 규칙과 분리한다.
-let companionTownTestsEnabled=true;
+// 정식판 기본값은 광장 시험 인원 비노출.
+let companionTownTestsEnabled=false;
 let companionTarget=null;
+let companionParkedHire=null;
+const STORY_COMPANION_WINDOWS=[
+  {quest:'MAIN_015',id:'hero',from:1,to:3,maps:['field']},
+  {quest:'MAIN_023',id:'knight',from:1,to:4,maps:['field']},
+  {quest:'MAIN_035',id:'hero',from:1,to:2,maps:['field']},
+  {quest:'MAIN_047',id:'knight',from:1,to:3,maps:['town','field']},
+  {quest:'MAIN_056',id:'hero',from:1,to:5,maps:['field','dungeon']},
+];
 const COMPANION_IMG={};
 for(const id in (A.companions||{})){
   const src=A.companions[id],fr={};
@@ -19,13 +27,13 @@ for(const id in (A.companions||{})){
   COMPANION_IMG[id]={...src,fr};
 }
 const companionFx=[];
-let companionState={active:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
+let companionState={active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
 
 function companionFee(id){
   if(!COMPANION_DEF[id])return 0;
   return Math.max(50,Math.round(((P.lv||1)*25)/10)*10);
 }
-function companionStateCopy(){return JSON.parse(JSON.stringify(companionState));}
+function companionStateCopy(){const o=JSON.parse(JSON.stringify(companionState));o.parkedHire=companionParkedHire?{...companionParkedHire}:null;return o;}
 function companionIsActive(id){return !!companionState.active&&(!id||companionState.active===id);}
 function companionSetTownTests(enabled){
   companionTownTestsEnabled=!!enabled;
@@ -78,8 +86,7 @@ function companionButtonText(n){
   return (COMPANION_DEF[n.companion].kind==='gun'?'고용 ':'동행 ')+fee+'G';
 }
 function companionSetNpcHidden(id,hidden){
-  if(MAP!=='town')return;
-  hidden=hidden||!companionTownTestsEnabled;
+  if(MAP==='town')hidden=hidden||!companionTownTestsEnabled;
   for(const n of npcs)if(n.companion===id)n.hide=!!hidden;
   for(let i=spots.length-1;i>=0;i--){
     const s=spots[i];if(s.kind==='npc'&&s.npc&&s.npc.companion===id&&hidden)spots.splice(i,1);
@@ -97,60 +104,88 @@ function companionWarp(){
   companionState.x=q[0];companionState.y=q[1];companionState.stuck=0;companionState.lastX=q[0];companionState.lastY=q[1];
   companionState.navPath=null;companionState.navWait=0;companionState.progressX=q[0];companionState.progressY=q[1];
 }
+function companionPack(c){
+  if(!c||!c.active)return null;
+  return {active:c.active,mode:c.mode||'hire',storyQuest:c.storyQuest||null,remaining:Math.max(0,+c.remaining||0),expired:!!c.expired,
+    damage:Math.max(1,Math.round(+c.damage||1)),x:+c.x||0,y:+c.y||0,dir:c.dir||'front',flip:!!c.flip};
+}
 function companionSave(){
-  if(!companionState.active)return null;
-  return {v:1,active:companionState.active,remaining:Math.max(0,companionState.remaining),expired:!!companionState.expired,
-    damage:Math.max(1,Math.round(companionState.damage||1)),x:companionState.x,y:companionState.y,dir:companionState.dir,flip:!!companionState.flip};
+  if(!companionState.active&&!companionParkedHire)return null;
+  const out={v:2,...(companionPack(companionState)||{active:null,mode:null})};
+  if(companionParkedHire)out.parkedHire={...companionParkedHire};
+  return out;
+}
+function companionEmpty(){
+  return {active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:0,lastY:0,expireSaid:false};
+}
+function companionActivate(id,mode,extra={}){
+  const q=nearestSafePosition(P.x-48,P.y+18);
+  companionTarget=null;companionFx.length=0;
+  companionState={active:id,mode,storyQuest:extra.storyQuest||null,remaining:mode==='hire'?Math.max(0,+extra.remaining||DAYLEN):0,
+    expired:mode==='hire'&&!!extra.expired,damage:Math.max(1,Math.round(+extra.damage||basicDamage()*1.15)),
+    x:q[0],y:q[1],dir:P.dir||'front',flip:!!P.flip,t:0,cd:.15,atkT:0,lastMap:MAP,stuck:0,lastX:q[0],lastY:q[1],expireSaid:false};
+  companionSetNpcHidden(id,true);
+  return true;
 }
 function companionLoad(d){
-  companionTarget=null;companionFx.length=0;
+  companionTarget=null;companionFx.length=0;companionParkedHire=null;
+  if(d&&d.parkedHire&&d.parkedHire.active==='knight')companionParkedHire={...d.parkedHire,mode:'hire'};
   const id=d&&d.active;
-  if(!id||!COMPANION_DEF[id]){
-    companionState={active:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
-    return false;
-  }
-  companionState={active:id,remaining:Math.max(0,+d.remaining||0),expired:!!d.expired,damage:Math.max(1,Math.round(+d.damage||1)),
+  // 정식판 이전 광장 테스트 계약(v1/무모드)은 이어받지 않는다.
+  if(!id||!COMPANION_DEF[id]||!d.mode){companionState=companionEmpty();return false;}
+  companionState={active:id,mode:d.mode==='story'?'story':'hire',storyQuest:d.storyQuest||null,
+    remaining:Math.max(0,+d.remaining||0),expired:!!d.expired,damage:Math.max(1,Math.round(+d.damage||1)),
     x:Number.isFinite(+d.x)?+d.x:P.x-48,y:Number.isFinite(+d.y)?+d.y:P.y+18,dir:['front','back','side'].includes(d.dir)?d.dir:'front',flip:!!d.flip,
     t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:+d.x||P.x,lastY:+d.y||P.y,expireSaid:false};
-  if(MAP==='town')companionSetNpcHidden(id,true);
-  return true;
+  companionSetNpcHidden(id,true);return true;
 }
 function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
-  companionTarget=null;
-  companionState={active:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:0,lastY:0,expireSaid:false};
-  companionFx.length=0;
-  if(MAP==='town')buildWorld('town');
-  if(!silent)say(reason==='defeat'?'동행 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. 동행인이 돌아갔습니다.');
-  if(window.UI&&UI.save)UI.save();
-  return true;
+  companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;
+  if(MAP==='town'||MAP==='inn')buildWorld(MAP);
+  if(!silent)say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. 러스티가 여관으로 돌아갔습니다.');
+  if(window.UI&&UI.save)UI.save();return true;
 }
 function companionHire(id){
-  const d=COMPANION_DEF[id];if(!d)return false;
-  if(companionState.active===id){
-    if($('dlgLine'))$('dlgLine').textContent=d.name+'이(가) 이미 같이 움직이고 있습니다.';
-    return false;
-  }
+  const d=COMPANION_DEF[id];if(!d||id!=='knight')return false;
+  const qs=window.QUEST&&QUEST.state?QUEST.state():null;
+  if(MAP!=='inn'||!qs||!qs.flags||!qs.flags.rusty_hireable){if($('dlgLine'))$('dlgLine').textContent='아직 정식으로 고용할 수 없습니다.';return false;}
+  if(companionState.active){if($('dlgLine'))$('dlgLine').textContent=companionState.active===id?'러스티가 이미 같이 움직이고 있습니다.':'지금은 다른 동행과 함께 움직이고 있습니다.';return false;}
   const fee=companionFee(id);
-  if(P.gold<fee){
-    if($('dlgLine'))$('dlgLine').textContent=d.name+'이(가) 금화 주머니를 한 번 보고는 시선을 돌렸습니다. “먼저 계산부터.”';
-    return false;
+  if(P.gold<fee){if($('dlgLine'))$('dlgLine').textContent='러스티가 금화 주머니를 한 번 보고는 시선을 돌렸습니다. “선불 부족.”';return false;}
+  setGold(P.gold-fee);companionActivate(id,'hire',{remaining:DAYLEN,damage:Math.max(1,Math.round(basicDamage()*1.15))});
+  if($('dlgLine'))$('dlgLine').textContent='러스티가 장비를 확인했습니다. “하루치 선불 확인. 귀환 조건 확인.”';
+  const bt=$('dlgTrade');if(bt){bt.textContent='동행 중';bt.disabled=true;}
+  if(window.UI&&UI.save)UI.save();return true;
+}
+function companionHireFromDialog(n){return n&&n.companion==='knight'?companionHire('knight'):false;}
+function companionStoryWanted(qs,map=MAP){
+  for(const w of STORY_COMPANION_WINDOWS){const x=qs&&qs.active&&qs.active[w.quest];if(x&&x.step>=w.from&&x.step<w.to&&w.maps.includes(map))return w;}
+  return null;
+}
+function companionStartStory(w){
+  if(!w)return false;
+  if(companionState.active===w.id&&companionState.mode==='story'&&companionState.storyQuest===w.quest)return false;
+  if(companionState.active&&companionState.mode==='hire'&&!companionParkedHire){
+    const h=companionPack(companionState);companionParkedHire=h?{active:h.active,remaining:h.remaining,expired:h.expired,damage:h.damage}:null;
   }
-  const old=companionState.active;
-  companionTarget=null;companionFx.length=0;
-  if(old)companionSetNpcHidden(old,false);
-  setGold(P.gold-fee);
-  const q=nearestSafePosition(P.x-48,P.y+18);
-  companionState={active:id,remaining:DAYLEN,expired:false,damage:Math.max(1,Math.round(basicDamage()*1.15)),
-    x:q[0],y:q[1],dir:P.dir||'front',flip:!!P.flip,t:0,cd:.15,atkT:0,lastMap:MAP,stuck:0,lastX:q[0],lastY:q[1],expireSaid:false};
-  companionSetNpcHidden(id,true);
-  if($('dlgLine'))$('dlgLine').textContent=d.name+'이(가) 장비를 챙겼습니다. “하루치 선불 확인. 중간에 쓰러져도 환불은 없습니다.”';
-  const b=$('dlgTrade');if(b){b.textContent='동행 중';b.disabled=true;}
-  if(window.UI&&UI.save)UI.save();
+  companionState=companionEmpty();companionActivate(w.id,'story',{storyQuest:w.quest,damage:Math.max(1,Math.round(basicDamage()*1.15))});return true;
+}
+function companionStopStory(){
+  if(companionState.mode!=='story')return false;
+  companionTarget=null;companionFx.length=0;companionState=companionEmpty();
+  if(companionParkedHire){const h=companionParkedHire;companionParkedHire=null;companionActivate('knight','hire',{remaining:h.remaining,expired:h.expired,damage:h.damage});}
   return true;
 }
-function companionHireFromDialog(n){return n&&n.companion?companionHire(n.companion):false;}
-function companionOnPlayerDefeat(){if(companionState.active)companionReturn('defeat',true);}
+function companionSyncStory(qs,map=MAP){
+  const w=companionStoryWanted(qs,map);if(w)return companionStartStory(w);
+  if(companionState.mode==='story')return companionStopStory();return false;
+}
+function companionOnPlayerDefeat(){
+  if(!companionState.active)return;
+  if(companionState.mode==='hire')companionReturn('defeat',true);
+  else{companionParkedHire=null;companionTarget=null;companionFx.length=0;companionState=companionEmpty();}
+}
 
 function companionLOS(x1,y1,x2,y2){
   const n=Math.max(2,Math.ceil(Math.hypot(x2-x1,y2-y1)/38));
@@ -297,18 +332,18 @@ function updateCompanion(dt){
   c.navWait=Math.max(0,(c.navWait||0)-dt);
   const d=COMPANION_DEF[c.active];
   if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionWarp();}
-  if(!c.expired){
+  if(c.mode==='hire'&&!c.expired){
     c.remaining=Math.max(0,c.remaining-dt);
     if(c.remaining<=0){
       c.expired=true;
       if(!c.expireSaid){
         c.expireSaid=true;
-        say('동행 하루가 끝났습니다. 모험 중에는 계속 함께하고, 다음 마을에서 돌아갑니다.');
+        say('고용 시간이 끝났습니다. 모험 중에는 계속 함께하고, 다음 마을에서 러스티가 여관으로 돌아갑니다.');
         if(window.UI&&UI.save)UI.save();
       }
     }
   }
-  if(c.expired&&(MAP==='town'||MAP==='fieldvillage')){companionReturn('expired');return;}
+  if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='fieldvillage')){companionReturn('expired');return;}
   c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;
@@ -410,14 +445,14 @@ function drawCompanionFx(dt,behind=false){
     ctx.restore();
   }
 }
-function companionDebugExpire(){if(companionState.active){companionState.remaining=0;companionState.expired=true;companionState.expireSaid=true;}return companionStateCopy();}
+function companionDebugExpire(){if(companionState.active&&companionState.mode==='hire'){companionState.remaining=0;companionState.expired=true;companionState.expireSaid=true;}return companionStateCopy();}
 function companionDebugTick(dt){updateCompanion(dt);return companionStateCopy();}
 
 window.COMPANION={
   fee:companionFee,previewDamage:()=>Math.max(1,Math.round(basicDamage()*1.15)),buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
   ensureTownTests:companionEnsureTownTests,diagnostics:companionDiagnostics,
   townTestsEnabled:()=>companionTownTestsEnabled,setTownTestsEnabled:companionSetTownTests,
-  saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,
+  saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,syncStory:companionSyncStory,
   onDefeat:companionOnPlayerDefeat,debugExpire:companionDebugExpire,debugTick:companionDebugTick
 };
 window.updateCompanion=updateCompanion;

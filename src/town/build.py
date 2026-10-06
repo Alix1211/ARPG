@@ -266,11 +266,11 @@ _shadow=Image.open(R+'npc_hd/npc_35.png' if os.path.exists(R+'npc_hd/npc_35.png'
 _shadow.thumbnail((520,560),Image.LANCZOS)
 STORY_CHARS['shadow']=dict(name='???',title='',port=enc(_shadow,88))
 
-# ---- 테스트 동행 캐릭터 걷기 프레임(검사/총병) ----
+# ---- 동행 캐릭터 걷기 프레임(카엘렌 스토리 합류 / 러스티 여관 용병) ----
 COMPANIONS={}
 for sid,nm,title,folder in [
-    ('hero','카엘렌','검사 · 파티 테스트','hero'),
-    ('knight','러스티','이계의 용병 · 총병','knight'),
+    ('hero','카엘렌','떠돌이 검사','hero'),
+    ('knight','러스티','이계의 용병','knight'),
 ]:
     fr={}
     for d in ['front','back','side']:
@@ -394,7 +394,10 @@ inn_props = [
 ]
 _toby = next(n for n in npcs if n['no'] == 5)
 inn_npcs = [dict(k='npc_05', no=5, name='토비', title='여관 주인', x=9.5*TS, y=4.35*TS,
-                 w=_toby['w'], h=_toby['h'], line='왔네요. 불가 쪽 자리는 따뜻해요. 아까 누가 젖은 장갑을 올려놔서 냄새는 조금 나지만요.', shop='inn', at=None)]
+                 w=_toby['w'], h=_toby['h'], line='왔네요. 불가 쪽 자리는 따뜻해요. 아까 누가 젖은 장갑을 올려놔서 냄새는 조금 나지만요.', shop='inn', at=None),
+             dict(k='companion_knight', no=0, name='러스티', title='이계의 용병', x=4.15*TS, y=7.72*TS,
+                  w=100, h=100, line='러스티가 장비 상태를 확인하다 고개를 듭니다. “고용 요청이면 선불. 탄약은 자체 조달.”',
+                  shop=None, at=None, companion='knight', companionResident=True)]
 INN_BACK = [7.0*TS, 15.85*TS]
 INN = dict(
     map=dict(w=INN_W,h=INN_H,ts=TS,px=PX), ground=enc(inn_ground,86),
