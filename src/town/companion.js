@@ -122,10 +122,10 @@ function companionMoveTo(tx,ty,speed,dt){
   const sx=dx/dd*speed*dt,sy=dy/dd*speed*dt,ox=c.x,oy=c.y;
   if(!blocked(c.x+sx,c.y))c.x+=sx;
   if(!blocked(c.x,c.y+sy))c.y+=sy;
-  const mx=c.x-ox,my=c.y-oy;
+  const mx=c.x-ox,my=c.y-oy,moved=Math.hypot(mx,my)>.08;
   if(Math.abs(mx)>Math.abs(my)*.8){c.dir='side';c.flip=mx<0;}else if(Math.abs(my)>.05)c.dir=my<0?'back':'front';
-  c.t+=dt;
-  return Math.hypot(mx,my)>.08;
+  if(moved){c.t+=dt;c.moving=true;}
+  return moved;
 }
 function companionDesired(){
   let x=P.x-48,y=P.y+18;
@@ -161,6 +161,7 @@ function companionAttack(m){
 }
 function updateCompanion(dt){
   const c=companionState;if(!c.active||dt<=0)return;
+  c.moving=false;
   const d=COMPANION_DEF[c.active];
   if(c.lastMap!==MAP){c.lastMap=MAP;companionWarp();}
   if(!c.expired){
@@ -205,7 +206,7 @@ function appendCompanionSprite(list){
 function drawCompanion(c,dt){
   const src=COMPANION_IMG[c.active];if(!src||!src.fr)return;
   const d=c.dir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
-  const moving=c.t>0&&Math.hypot(c.x-c.lastX,c.y-c.lastY)>.02;
+  const moving=!!c.moving;
   const idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
@@ -230,7 +231,7 @@ function companionDebugExpire(){if(companionState.active){companionState.remaini
 function companionDebugTick(dt){updateCompanion(dt);return companionStateCopy();}
 
 window.COMPANION={
-  fee:companionFee,buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
+  fee:companionFee,previewDamage:()=>Math.max(1,Math.round(basicDamage()*1.15)),buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
   saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,
   onDefeat:companionOnPlayerDefeat,debugExpire:companionDebugExpire,debugTick:companionDebugTick
 };
