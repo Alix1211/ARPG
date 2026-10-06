@@ -367,7 +367,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-1725</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-1735</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1522,6 +1522,7 @@ function frame(now){
     if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
     else ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
+  if(typeof drawTownTestCompanionsForced==='function')drawTownTestCompanionsForced();
   if(window.QUEST)QUEST.draw();
   if(!DUN&&!INDOOR)drawLeaves();
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
@@ -4361,6 +4362,22 @@ function companionDiagnostics(){
   const imgs=ns.map(n=>n.img&&n.img.complete&&n.img.naturalWidth>0?1:0).join('');
   return {n:ns.length,s:ss.length,p:ps.length,img:imgs||'--',active:companionState.active||'-',map:MAP};
 }
+function drawTownTestCompanionsForced(){
+  if(MAP!=='town')return;
+  for(const id of ['hero','knight']){
+    if(companionState.active===id)continue;
+    const n=npcs.find(x=>x.companion===id);if(!n||!n.img||!n.img.complete||!n.img.naturalWidth)continue;
+    const h=118,w=h*(n.img.naturalWidth/n.img.naturalHeight);
+    ctx.save();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(255,220,90,.22)';ctx.strokeStyle='rgba(255,230,120,.95)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(n.x,n.y+2,34,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.drawImage(n.img,n.x-w/2,n.y-h,w,h);
+    ctx.font='900 13px sans-serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='rgba(30,20,10,.95)';ctx.fillStyle='#fff09a';
+    const label='TEST · '+n.name;ctx.strokeText(label,n.x,n.y-h-12);ctx.fillText(label,n.x,n.y-h-12);
+    ctx.restore();
+  }
+}
 function companionButtonText(n){
   if(!n||!n.companion||!COMPANION_DEF[n.companion])return '동행';
   if(companionState.active===n.companion)return '동행 중';
@@ -4579,6 +4596,7 @@ window.updateCompanion=updateCompanion;
 window.appendCompanionSprite=appendCompanionSprite;
 window.drawCompanion=drawCompanion;
 window.drawCompanionFx=drawCompanionFx;
+window.drawTownTestCompanionsForced=drawTownTestCompanionsForced;
 window.onCompanionPlayerDefeat=companionOnPlayerDefeat;
 
 // ======================= 던전 (Claude, 2026-10-03) =======================
