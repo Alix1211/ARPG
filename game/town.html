@@ -367,7 +367,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-1717</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1006-1725</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1463,6 +1463,15 @@ function frame(now){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
     if(typeof updateCompanion==='function')updateCompanion(sdt);
+    if(window.COMPANION&&COMPANION.ensureTownTests)COMPANION.ensureTownTests();
+    if(window.COMPANION&&COMPANION.diagnostics){
+      const ds=Math.floor(performance.now()/1000);
+      if(window.__COMP_DIAG_SEC!==ds){
+        window.__COMP_DIAG_SEC=ds;
+        const d=COMPANION.diagnostics(),v=$('ver');
+        if(v){if(!v.dataset.base)v.dataset.base=v.textContent;v.textContent=v.dataset.base+' · C '+d.n+'/'+d.s+'/'+d.p+' I'+d.img+' A'+d.active;}
+      }
+    }
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
     else if(MAP==='fieldvillage')updFieldVils(dt);
   }
@@ -4329,6 +4338,29 @@ function companionFee(id){
 }
 function companionStateCopy(){return JSON.parse(JSON.stringify(companionState));}
 function companionIsActive(id){return !!companionState.active&&(!id||companionState.active===id);}
+function companionEnsureTownTests(){
+  if(MAP!=='town')return;
+  for(const id of ['hero','knight']){
+    if(companionState.active===id)continue;
+    let n=npcs.find(x=>x.companion===id);
+    if(!n){
+      const base=(A.npcs||[]).find(x=>x.companion===id);
+      if(base){n={...base,img:BI[base.k],ph:Math.random()*7,key:base.y};npcs.push(n);}
+    }
+    if(!n)continue;
+    n.hide=false;
+    if(!sprites.includes(n))sprites.push(n);
+    if(!spots.some(x=>x.kind==='npc'&&x.npc===n))spots.push({name:n.name,x:n.x,y:n.y+6,r:50,kind:'npc',npc:n});
+    if(!solids.some(x=>x._companion===id)){const q={x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1,_companion:id};solids.push(q);}
+  }
+}
+function companionDiagnostics(){
+  const ids=['hero','knight'],ns=ids.map(id=>npcs.find(n=>n.companion===id)).filter(Boolean);
+  const ss=ids.map(id=>sprites.find(n=>n.companion===id)).filter(Boolean);
+  const ps=ids.map(id=>spots.find(x=>x.kind==='npc'&&x.npc&&x.npc.companion===id)).filter(Boolean);
+  const imgs=ns.map(n=>n.img&&n.img.complete&&n.img.naturalWidth>0?1:0).join('');
+  return {n:ns.length,s:ss.length,p:ps.length,img:imgs||'--',active:companionState.active||'-',map:MAP};
+}
 function companionButtonText(n){
   if(!n||!n.companion||!COMPANION_DEF[n.companion])return '동행';
   if(companionState.active===n.companion)return '동행 중';
@@ -4539,6 +4571,7 @@ function companionDebugTick(dt){updateCompanion(dt);return companionStateCopy();
 
 window.COMPANION={
   fee:companionFee,previewDamage:()=>Math.max(1,Math.round(basicDamage()*1.15)),buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
+  ensureTownTests:companionEnsureTownTests,diagnostics:companionDiagnostics,
   saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,
   onDefeat:companionOnPlayerDefeat,debugExpire:companionDebugExpire,debugTick:companionDebugTick
 };
