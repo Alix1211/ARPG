@@ -6,7 +6,7 @@ import static org.junit.Assert.*;
 
 public class BackupValidationTest {
     private String save() {
-        return "{\"v\":3,\"t\":12345,\"lv\":7,\"gold\":987,\"hp\":4500,\"mp\":3400,\"stats\":{},\"bag\":[],\"eq\":{},\"stash\":[]}";
+        return "{\"v\":3,\"release\":1,\"t\":12345,\"lv\":7,\"gold\":987,\"hp\":4500,\"mp\":3400,\"stats\":{},\"bag\":[],\"eq\":{},\"stash\":[]}";
     }
     private String backup(String save) throws Exception {
         return new JSONObject().put("arpg_save_v3", save).put("arpg_audio_settings", "{\"sfx\":0.2}").toString();
@@ -22,6 +22,8 @@ public class BackupValidationTest {
     }
     @Test public void rejectsWrongFileAndTypes() throws Exception {
         rejected("not json");rejected("{}");rejected("[]");
+        rejected(backup(save().replace(",\"release\":1",""))); // 정식판 이전 테스트 세이브
+        rejected(backup(save().replace("\"release\":1","\"release\":0")));
         rejected(backup(save().replace("\"v\":3","\"v\":2")));
         rejected(backup(save().replace("\"lv\":7","\"lv\":71")));
         rejected(backup(save().replace("\"lv\":7","\"lv\":7.5")));
