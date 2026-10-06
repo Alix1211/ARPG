@@ -6,14 +6,17 @@
   let busy=false;
   const automatic=typeof bridge.syncBackup==='function';
   if(automatic)el('restoreBackup').textContent='지금 동기화';
-  const cover=document.createElement('div');
-  cover.textContent='최신 저장 확인 중…';
-  cover.style.cssText='position:fixed;inset:0;z-index:1000;background:#17120de6;color:#fff;display:none;align-items:center;justify-content:center;font:700 18px sans-serif';
-  document.body.append(cover);
+  // 자동 동기화는 백그라운드에서 처리한다. 플레이 화면을 덮는 저장 안내는 띄우지 않는다.
   let syncTimer;
-  window.onArpgSyncDone=()=>{clearTimeout(syncTimer);window.ARPG_SYNC_CHECKING=false;cover.style.display='none';busy=false;refresh();};
+  window.onArpgSyncDone=()=>{
+    clearTimeout(syncTimer);window.ARPG_SYNC_CHECKING=false;busy=false;refresh();
+    if(window.ARPG_SYNC_DIRTY){
+      window.ARPG_SYNC_DIRTY=false;
+      setTimeout(()=>{try{if(window.UI)UI.save();}catch(e){}},0);
+    }
+  };
   window.onArpgSyncStart=()=>{
-    clearTimeout(syncTimer);busy=true;window.ARPG_SYNC_CHECKING=true;cover.style.display='flex';
+    clearTimeout(syncTimer);busy=true;window.ARPG_SYNC_CHECKING=true;
     syncTimer=setTimeout(window.onArpgSyncDone,8000);refresh();
   };
   function refresh(){
