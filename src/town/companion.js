@@ -45,6 +45,22 @@ function companionDiagnostics(){
   const imgs=ns.map(n=>n.img&&n.img.complete&&n.img.naturalWidth>0?1:0).join('');
   return {n:ns.length,s:ss.length,p:ps.length,img:imgs||'--',active:companionState.active||'-',map:MAP};
 }
+function drawTownTestCompanionsForced(){
+  if(MAP!=='town')return;
+  for(const id of ['hero','knight']){
+    if(companionState.active===id)continue;
+    const n=npcs.find(x=>x.companion===id);if(!n||!n.img||!n.img.complete||!n.img.naturalWidth)continue;
+    const h=118,w=h*(n.img.naturalWidth/n.img.naturalHeight);
+    ctx.save();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(255,220,90,.22)';ctx.strokeStyle='rgba(255,230,120,.95)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(n.x,n.y+2,34,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.drawImage(n.img,n.x-w/2,n.y-h,w,h);
+    ctx.font='900 13px sans-serif';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='rgba(30,20,10,.95)';ctx.fillStyle='#fff09a';
+    const label='TEST · '+n.name;ctx.strokeText(label,n.x,n.y-h-12);ctx.fillText(label,n.x,n.y-h-12);
+    ctx.restore();
+  }
+}
 function companionButtonText(n){
   if(!n||!n.companion||!COMPANION_DEF[n.companion])return '동행';
   if(companionState.active===n.companion)return '동행 중';
@@ -263,4 +279,5 @@ window.updateCompanion=updateCompanion;
 window.appendCompanionSprite=appendCompanionSprite;
 window.drawCompanion=drawCompanion;
 window.drawCompanionFx=drawCompanionFx;
+window.drawTownTestCompanionsForced=drawTownTestCompanionsForced;
 window.onCompanionPlayerDefeat=companionOnPlayerDefeat;
