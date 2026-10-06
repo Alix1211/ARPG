@@ -22,6 +22,29 @@ function companionFee(id){
 }
 function companionStateCopy(){return JSON.parse(JSON.stringify(companionState));}
 function companionIsActive(id){return !!companionState.active&&(!id||companionState.active===id);}
+function companionEnsureTownTests(){
+  if(MAP!=='town')return;
+  for(const id of ['hero','knight']){
+    if(companionState.active===id)continue;
+    let n=npcs.find(x=>x.companion===id);
+    if(!n){
+      const base=(A.npcs||[]).find(x=>x.companion===id);
+      if(base){n={...base,img:BI[base.k],ph:Math.random()*7,key:base.y};npcs.push(n);}
+    }
+    if(!n)continue;
+    n.hide=false;
+    if(!sprites.includes(n))sprites.push(n);
+    if(!spots.some(x=>x.kind==='npc'&&x.npc===n))spots.push({name:n.name,x:n.x,y:n.y+6,r:50,kind:'npc',npc:n});
+    if(!solids.some(x=>x._companion===id)){const q={x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1,_companion:id};solids.push(q);}
+  }
+}
+function companionDiagnostics(){
+  const ids=['hero','knight'],ns=ids.map(id=>npcs.find(n=>n.companion===id)).filter(Boolean);
+  const ss=ids.map(id=>sprites.find(n=>n.companion===id)).filter(Boolean);
+  const ps=ids.map(id=>spots.find(x=>x.kind==='npc'&&x.npc&&x.npc.companion===id)).filter(Boolean);
+  const imgs=ns.map(n=>n.img&&n.img.complete&&n.img.naturalWidth>0?1:0).join('');
+  return {n:ns.length,s:ss.length,p:ps.length,img:imgs||'--',active:companionState.active||'-',map:MAP};
+}
 function companionButtonText(n){
   if(!n||!n.companion||!COMPANION_DEF[n.companion])return '동행';
   if(companionState.active===n.companion)return '동행 중';
@@ -232,6 +255,7 @@ function companionDebugTick(dt){updateCompanion(dt);return companionStateCopy();
 
 window.COMPANION={
   fee:companionFee,previewDamage:()=>Math.max(1,Math.round(basicDamage()*1.15)),buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
+  ensureTownTests:companionEnsureTownTests,diagnostics:companionDiagnostics,
   saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,
   onDefeat:companionOnPlayerDefeat,debugExpire:companionDebugExpire,debugTick:companionDebugTick
 };
