@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../src/town/save_sync.js'),'utf8');
-function bundle(t,gold=1){return {arpg_save_v3:JSON.stringify({v:3,t,lv:1,gold,hp:10,mp:10,stats:{},bag:[],eq:{}}),arpg_audio_settings:JSON.stringify({sfx:gold})};}
+function bundle(t,gold=1){return {arpg_save_v3:JSON.stringify({v:3,release:1,t,lv:1,gold,hp:10,mp:10,stats:{},bag:[],eq:{}}),arpg_audio_settings:JSON.stringify({sfx:gold})};}
 function boot(local,native,automatic=true){
   const ctx={setTimeout:()=>0,document:{documentElement:{classList:{add(){}}}}};ctx.window=ctx;
   vm.createContext(ctx);
@@ -35,4 +35,5 @@ for(const [lt,nt,expected] of [[1,2,2],[3,2,3],[2,2,2]]){
 const old=boot(bundle(1),bundle(2),false);assert(!old.ctx.ARPG_SYNC_CHECKING);
 assert.throws(()=>old.ctx.ARPG_SAVE_SYNC.valid(bundle(-1)));
 assert.throws(()=>old.ctx.ARPG_SAVE_SYNC.valid(bundle('99999')));
+const preRelease=bundle(5);preRelease.arpg_save_v3=preRelease.arpg_save_v3.replace(',\"release\":1','');assert.throws(()=>old.ctx.ARPG_SAVE_SYNC.valid(preRelease));
 console.log('save sync ok: three-store freshness, atomic bundle, startup guard, offline save, reconnect, invalid rejection, legacy app');
