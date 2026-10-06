@@ -266,6 +266,22 @@ _shadow=Image.open(R+'npc_hd/npc_35.png' if os.path.exists(R+'npc_hd/npc_35.png'
 _shadow.thumbnail((520,560),Image.LANCZOS)
 STORY_CHARS['shadow']=dict(name='???',title='',port=enc(_shadow,88))
 
+# ---- 테스트 동행 캐릭터 걷기 프레임(검사/총병) ----
+COMPANIONS={}
+for sid,nm,title,folder in [
+    ('hero','카엘렌','검사 · 파티 테스트','hero'),
+    ('knight','러스티','이계의 용병 · 총병','knight'),
+]:
+    fr={}
+    for d in ['front','back','side']:
+        arr=[]
+        for i in range(5):
+            im=Image.open(R+f'characters/{folder}/{d}_{i}.png').convert('RGBA')
+            hh=172; ww=max(1,round(hh*im.width/im.height))
+            arr.append(enc(im.resize((ww,hh),Image.LANCZOS),88))
+        fr[d]=arr
+    COMPANIONS[sid]=dict(name=nm,title=title,fr=fr)
+
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
     ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
@@ -305,6 +321,19 @@ for no, name, title, where, side, line, shop in NPC:
     else:
         b = bpos[where]; x = b['x'] + b['door'] * b['w'] + side * (b['w'] * 0.28); y = b['y'] + 0.55 * TS
     npcs.append(dict(k=key, no=no, name=name, title=title, x=x, y=y, w=w, h=h, line=line, shop=shop, at=where if isinstance(where, str) else None))
+
+# 마을광장 임시 테스트 인원. 검증이 끝나면 배치만 숨기고 시스템은 유지한다.
+for _sid,_x,_line in [
+    ('hero',19.8,'검 손질은 끝났습니다. 같이 나가 보시죠. 비용은… 선불로 받겠습니다.'),
+    ('knight',26.2,'탄약은 제가 챙깁니다. 대신 하루치 계산은 출발 전에 끝내죠.'),
+]:
+    _src=R+f"characters/{_sid}/front_0.png"
+    _im=Image.open(_src).convert('RGBA'); _h=100; _w=_h*_im.width/_im.height
+    _key='companion_'+_sid
+    assets[_key]=enc(_im.resize((round(_w*SCALE),round(_h*SCALE)),Image.LANCZOS),88)
+    PORT[_key]=STORY_CHARS[_sid]['port']
+    npcs.append(dict(k=_key,no=0,name=COMPANIONS[_sid]['name'],title=COMPANIONS[_sid]['title'],
+                     x=_x*TS,y=19.55*TS,w=_w,h=_h,line=_line,shop=None,at=None,companion=_sid))
 
 # 퀘스트 장면에만 등장하는 NPC 초상도 미리 담는다. 마을 NPC로 배치하지는 않는다.
 _story_portrait_nos=set()
@@ -554,12 +583,12 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
-A = dict(mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
 js = source('tier_match.js') + '\n' + source('town.js')
-js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('telemetry.js') + '\n' + source('field_dungeon.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('backup.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js'))
+js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('telemetry.js') + '\n' + source('field_dungeon.js') + '\n' + source('companion.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('backup.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js'))
 html = source('shell.html')
 js += '\n' + source('ui.js')
 import time as _t
