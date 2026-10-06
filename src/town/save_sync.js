@@ -26,7 +26,7 @@
   const B=window.ArpgBridge;if(!B)return;
   document.documentElement.classList.add('app');
   window.ARPG_SYNC_CHECKING=typeof B.syncBackup==='function';
-  if(window.ARPG_SYNC_CHECKING)setTimeout(()=>{if(window.onArpgSyncDone)window.onArpgSyncDone();else window.ARPG_SYNC_CHECKING=false;},8000);
+  if(window.ARPG_SYNC_CHECKING)setTimeout(()=>{if(window.onArpgSyncDone)window.onArpgSyncDone();else window.ARPG_SYNC_CHECKING=false;},20000);
   try{
     const local=snapshot(),native=JSON.parse(B.load()||'{}');
     let chosen=latest(native,local); // 동일 t에서는 앱 내부 저장을 우선한다.

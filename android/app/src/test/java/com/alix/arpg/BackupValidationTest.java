@@ -63,6 +63,23 @@ public class BackupValidationTest {
         assertSame(local,MainActivity.latestBackup(local,MainActivity.parseRemote("")));
         assertTrue(MainActivity.saveTime(local)>MainActivity.saveTime(null));
     }
+    @Test public void decidesByLastSyncedVersionNotByNewestClock() {
+        // 폰(9레벨, 마지막 저장 21:09)과 패드(17레벨, 21:05)가 처음 맞출 때: 시각이 늦다고 덮어쓰지 않고 묻는다.
+        assertEquals(MainActivity.SYNC_ASK, MainActivity.decide(2109, 2105, -1));
+        assertEquals(MainActivity.SYNC_ASK, MainActivity.decide(2105, 2109, -1));
+        // 다른 기기만 진행(파일만 새로움) → 자동으로 가져옴
+        assertEquals(MainActivity.SYNC_APPLY, MainActivity.decide(100, 200, 100));
+        // 이 기기만 진행 → 자동으로 올림
+        assertEquals(MainActivity.SYNC_WRITE, MainActivity.decide(300, 100, 100));
+        // 둘 다 진행 → 물어봄
+        assertEquals(MainActivity.SYNC_ASK, MainActivity.decide(300, 200, 100));
+        // 같음 → 그대로
+        assertEquals(MainActivity.SYNC_NONE, MainActivity.decide(200, 200, 100));
+        // 파일이 없거나 깨짐 → 이 기기 저장으로 채움, 이 기기에 저장이 없으면 파일을 가져옴
+        assertEquals(MainActivity.SYNC_WRITE, MainActivity.decide(200, -1, -1));
+        assertEquals(MainActivity.SYNC_NONE, MainActivity.decide(-1, -1, -1));
+        assertEquals(MainActivity.SYNC_APPLY, MainActivity.decide(-1, 200, -1));
+    }
     @Test public void invalidStoreCannotBeatValidProgress() throws Exception {
         JSONObject good=new JSONObject(backup(save()));
         JSONObject invalid=new JSONObject(backup(save().replace("\"lv\":7","\"lv\":71").replace("12345","99999")));

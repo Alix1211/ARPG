@@ -9,6 +9,7 @@
   // 자동 동기화는 백그라운드에서 처리한다. 플레이 화면을 덮는 저장 안내는 띄우지 않는다.
   let syncTimer;
   window.onArpgSyncDone=()=>{
+    if(window.ARPG_SYNC_CONFLICT)return; // 고르는 중에는 저장을 막아 둔 채로 둔다
     clearTimeout(syncTimer);window.ARPG_SYNC_CHECKING=false;busy=false;refresh();
     if(window.ARPG_SYNC_DIRTY){
       window.ARPG_SYNC_DIRTY=false;
@@ -17,7 +18,31 @@
   };
   window.onArpgSyncStart=()=>{
     clearTimeout(syncTimer);busy=true;window.ARPG_SYNC_CHECKING=true;
-    syncTimer=setTimeout(window.onArpgSyncDone,8000);refresh();
+    syncTimer=setTimeout(window.onArpgSyncDone,20000);refresh();
+  };
+  // 두 기기 모두 진행이 바뀌었을 때: 자동으로 덮어쓰지 않고 나란히 보여 주고 고르게 한다(문플로 방식).
+  window.onArpgSyncConflict=(fileText,localText)=>{
+    clearTimeout(syncTimer);busy=true;window.ARPG_SYNC_CHECKING=true;window.ARPG_SYNC_CONFLICT=true;
+    const info=text=>{try{const s=JSON.parse(JSON.parse(text).arpg_save_v3);
+      return '레벨 '+s.lv+' · 금화 '+Number(s.gold).toLocaleString('ko-KR')+(s.t?' · '+new Date(s.t).toLocaleString('ko-KR'):'');}catch(e){return '알 수 없음';}};
+    let box=el('syncConflict');
+    if(!box){box=document.createElement('div');box.id='syncConflict';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
+      box.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(20,12,6,.55)';
+      document.body.appendChild(box);}
+    box.innerHTML='<div style="background:#efe0bd;border:3px solid #b07a35;border-radius:12px;padding:16px 18px;max-width:min(92vw,520px);color:#3b2412;font-size:15px;line-height:1.5;box-shadow:0 4px 0 #2c160a">'+
+      '<div style="font-weight:800;font-size:17px;margin-bottom:6px">다른 기기의 진행이 있습니다</div>'+
+      '<div>드라이브 파일: <b id="scFile"></b></div><div>이 기기: <b id="scLocal"></b></div>'+
+      '<div style="margin:6px 0 10px;font-size:13px">어느 쪽으로 이어서 할까요? 고르지 않은 쪽 진행은 사라집니다.</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="scUseFile" type="button">드라이브 진행으로 이어서 하기</button>'+
+      '<button class="btn ghost" id="scUseLocal" type="button">이 기기 진행으로 파일 덮어쓰기</button></div></div>';
+    el('scFile').textContent=info(fileText);el('scLocal').textContent=info(localText);
+    const pick=useFile=>{
+      if(!confirm(useFile?'드라이브의 진행으로 바꿉니다. 이 기기의 진행은 사라집니다. 계속할까요?':'이 기기의 진행으로 드라이브 파일을 덮어씁니다. 드라이브의 진행은 사라집니다. 계속할까요?'))return;
+      box.remove();window.ARPG_SYNC_CONFLICT=false;
+      try{bridge.resolveConflict(useFile);}catch(e){window.onArpgSyncDone();}
+    };
+    el('scUseFile').onclick=()=>pick(true);el('scUseLocal').onclick=()=>pick(false);
+    refresh();
   };
   function refresh(){
     let s={};try{s=JSON.parse(bridge.backupStatus()||'{}');}catch(e){}

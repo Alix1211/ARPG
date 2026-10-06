@@ -66,7 +66,23 @@ public final class MainActivity extends Activity {
     // 이번 실행에서 드라이브 파일을 읽어 확인했는지, 파일과 맞춘 마지막 저장 시각, 동기화 중 밀린 저장 여부.
     // 저장(쓰기)은 확인이 끝난 뒤에는 읽기 없이 쓰기만 한다. 읽기는 시작·복귀·재연결 때만 한다.
     private volatile boolean sessionSynced = false, writeDirty = false;
-    private volatile long syncedT = -1;
+    // 충돌(두 기기 모두 바뀜)을 사람에게 묻는 중이면 그 사이 파일에 쓰지 않는다(문플로 방식).
+    private volatile boolean conflictPending = false;
+    private volatile String pendingConflict = null;
+    // baseT: 이 기기가 파일과 마지막으로 맞춘 저장의 t. 저장 시각끼리 겨루지 않고 이것과 비교한다.
+    private long baseT() { return backupPrefs.getLong("baseT", -1); }
+    private void setBaseT(long t) { backupPrefs.edit().putLong("baseT", t).apply(); }
+    static final int SYNC_NONE = 0, SYNC_WRITE = 1, SYNC_APPLY = 2, SYNC_ASK = 3;
+    // lt: 이 기기 저장의 t, rt: 파일 저장의 t(없거나 깨지면 -1), bt: 마지막으로 맞춘 t(모르면 -1)
+    static int decide(long lt, long rt, long bt) {
+        if (rt < 0) return lt >= 0 ? SYNC_WRITE : SYNC_NONE;   // 파일이 없거나 깨짐 → 이 기기 저장으로 채움
+        if (lt < 0) return SYNC_APPLY;                         // 이 기기에 저장이 없음 → 파일을 가져옴
+        if (lt == rt) return SYNC_NONE;
+        boolean localChanged = lt > bt, remoteChanged = rt > bt;
+        if (remoteChanged && !localChanged) return SYNC_APPLY; // 다른 기기만 진행 → 자동으로 가져옴
+        if (localChanged && !remoteChanged) return SYNC_WRITE; // 이 기기만 진행 → 자동으로 올림
+        return SYNC_ASK;                                       // 둘 다 바뀌었거나 알 수 없음 → 물어봄
+    }
     private static final int READ_WAIT_SECONDS = 15, WRITE_WAIT_SECONDS = 30;
     private ConnectivityManager connectivity;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -162,6 +178,40 @@ public final class MainActivity extends Activity {
             }
         }
         @JavascriptInterface public void syncBackup() { requestSync(true); }
+        // 충돌 창에서 고른 결과. true = 파일(다른 기기) 진행으로, false = 이 기기 진행으로 파일 덮어쓰기
+        @JavascriptInterface public void resolveConflict(boolean useFile) {
+            final String text = pendingConflict; final Uri u = backupUri();
+            if (text == null || u == null) { conflictPending = false; js("window.onArpgSyncDone&&window.onArpgSyncDone()"); return; }
+            pendingConflict = null;
+            backupIO.execute(() -> {
+                boolean reload = false;
+                try {
+                    JSONObject remote = parseRemote(text);
+                    if (useFile && remote != null) {
+                        synchronized (backupLock) {
+                            restoringBackup = true;
+                            try { replaceStore(remote); } catch (Exception e) { restoringBackup = false; throw e; }
+                            awaitingRestoreReload = true; reload = true;
+                        }
+                        setBaseT(saveTime(remote));
+                        js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(remote.toString()) + ")");
+                    } else {
+                        JSONObject local; synchronized (backupLock) { local = snapshot(); }
+                        if (saveTime(local) < 0) throw new IllegalStateException();
+                        writeDocument(u, local.toString());
+                        setBaseT(saveTime(local));
+                    }
+                    sessionSynced = true;
+                    backupPrefs.edit().putLong("backupAt", System.currentTimeMillis()).remove("error").apply();
+                } catch (Exception e) {
+                    backupPrefs.edit().putString("error", "동기화 대기").apply();
+                } finally {
+                    conflictPending = false;
+                    if (!reload) js("window.onArpgSyncDone&&window.onArpgSyncDone()");
+                    backupNotice("");
+                }
+            });
+        }
         @JavascriptInterface public void webReady() {
             pageReady = true;
             if (awaitingRestoreReload) { awaitingRestoreReload = false; restoringBackup = false; }
@@ -235,7 +285,7 @@ public final class MainActivity extends Activity {
             int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
             if (flags != (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)) throw new IllegalStateException();
             getContentResolver().takePersistableUriPermission(u, flags);
-            backupPrefs.edit().putString("uri", u.toString()).putLong("backupAt", 0)
+            backupPrefs.edit().putString("uri", u.toString()).putLong("backupAt", 0).putLong("baseT", -1)
                 .putBoolean("held", false).putBoolean("linkPending", false)
                 .putBoolean("newFile", req == REQ_BACKUP).remove("error").apply();
             requestSync(true);
@@ -341,6 +391,7 @@ public final class MainActivity extends Activity {
 
     // 저장 때는 읽지 않고 쓰기만 한다. 이번 실행에서 아직 파일을 확인하지 못했으면 먼저 읽어 확인한다.
     private void writeBackup() {
+        if (conflictPending) return;
         if (!sessionSynced) { requestSync(false); return; }
         final Uri u = backupUri();
         synchronized (backupLock) {
@@ -353,9 +404,9 @@ public final class MainActivity extends Activity {
                 JSONObject local;
                 synchronized (backupLock) { local = snapshot(); }
                 long t = saveTime(local);
-                if (t < 0 || t <= syncedT) return;
+                if (t < 0 || t <= baseT()) return;
                 writeDocument(u, local.toString());
-                syncedT = t;
+                setBaseT(t);
                 backupPrefs.edit().putLong("backupAt", System.currentTimeMillis()).remove("error").apply();
             } catch (Exception e) {
                 backupPrefs.edit().putString("error", "동기화 대기").apply();
@@ -371,7 +422,7 @@ public final class MainActivity extends Activity {
     private void requestSync(boolean gate) {
         final Uri u = backupUri();
         synchronized (backupLock) {
-            if (!pageReady || pickingBackup || restoringBackup || checkingRemote) return;
+            if (!pageReady || pickingBackup || restoringBackup || checkingRemote || conflictPending) return;
             if (u == null || !isOnline() || documentBusy) {
                 js("window.onArpgSyncDone&&window.onArpgSyncDone()");backupNotice("");return;
             }
@@ -379,33 +430,44 @@ public final class MainActivity extends Activity {
         }
         if (gate) js("window.onArpgSyncStart&&window.onArpgSyncStart()");
         backupIO.execute(() -> {
-            boolean reload = false;
+            boolean reload = false, ask = false;
             try {
                 String raw = readDocumentTimed(u); // 읽기 자체가 실패하면 오류로 끝낸다(파일은 건드리지 않음)
-                JSONObject remote = parseRemote(raw); // 빈 파일·깨진 파일은 null → 아래에서 이 기기 저장으로 복구
+                JSONObject remote = parseRemote(raw); // 빈 파일·깨진 파일은 null → 이 기기 저장으로 복구
                 JSONObject local;
+                long lt, rt = saveTime(remote);
+                int d;
                 synchronized (backupLock) {
-                    local = snapshot(); // 읽기를 기다리는 동안 생긴 로컬 진행까지 포함해 다시 비교한다.
-                    JSONObject chosen = latestBackup(local, remote);
-                    if (chosen == null) return;
-                    if (chosen == remote) {
+                    local = snapshot(); // 읽기를 기다리는 동안 생긴 로컬 진행까지 포함해 비교한다.
+                    lt = saveTime(local);
+                    d = decide(lt, rt, baseT());
+                    if (d == SYNC_APPLY) {
                         restoringBackup = true;
-                        try { replaceStore(chosen); } catch (Exception e) { restoringBackup = false; throw e; }
-                        awaitingRestoreReload = true;reload = true;
-                        js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(chosen.toString()) + ")");
+                        try { replaceStore(remote); } catch (Exception e) { restoringBackup = false; throw e; }
+                        awaitingRestoreReload = true; reload = true;
+                    } else if (d == SYNC_ASK) {
+                        ask = true; conflictPending = true; pendingConflict = remote.toString();
                     }
                 }
-                if (!reload && saveTime(local) > saveTime(remote)) writeDocument(u, local.toString());
+                if (d == SYNC_APPLY) {
+                    setBaseT(rt);
+                    js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(remote.toString()) + ")");
+                } else if (d == SYNC_ASK) {
+                    js("window.onArpgSyncConflict&&window.onArpgSyncConflict(" + JSONObject.quote(remote.toString()) + "," + JSONObject.quote(local.toString()) + ")");
+                    return;
+                } else if (d == SYNC_WRITE) {
+                    writeDocument(u, local.toString());
+                    setBaseT(lt);
+                } else if (lt >= 0) setBaseT(lt);
                 sessionSynced = true;
-                syncedT = Math.max(saveTime(local), saveTime(remote));
                 backupPrefs.edit().putLong("backupAt", System.currentTimeMillis())
                     .putBoolean("held", false).putBoolean("linkPending", false).putBoolean("newFile", false).remove("error").apply();
             } catch (Exception e) {
                 backupPrefs.edit().putString("error", "동기화 대기").apply();
             } finally {
                 checkingRemote = false;
-                if (!reload) js("window.onArpgSyncDone&&window.onArpgSyncDone()");
-                if (!reload && writeDirty) { writeDirty = false; queueBackup(false); }
+                if (!reload && !ask) js("window.onArpgSyncDone&&window.onArpgSyncDone()");
+                if (!reload && !ask && writeDirty) { writeDirty = false; queueBackup(false); }
                 backupNotice("");
             }
         });
