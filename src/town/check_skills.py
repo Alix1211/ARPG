@@ -37,7 +37,7 @@ async def main():
         for sid in SKILLS:
             await ev("() => __FD.enter('spring')");await pg.wait_for_timeout(900)
             await ev("""(id) => { GAME.clearCd(); GAME.P.hp=GAME.P.maxHp; GAME.P.mp=99999; GAME.P.skillLv[id]=1;
-              const st=__FD.state(); __P.dir='side'; __P.flip=false; __P.x=(st.start.x+1.1)*48; __P.y=st.start.y*48; __FD.debugTarget(110,0,true); }""",sid)
+              const st=__FD.state(); __P.dir='side'; __P.flip=false; __P.x=(st.start.x+1.1)*48; __P.y=st.start.y*48; __FD.debugTarget(id==='bolt1'?58:110,0,true); }""",sid)
             before=await ev("() => __FD.debugMonster()")
             assert before,sid
             kind={'bolt1':'bolt','sword3':'blade','spear2':'spear','bow1':'bow','fist2':'wave','bow2':'bow'}.get(sid,'')
