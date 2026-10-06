@@ -333,7 +333,7 @@ for _sid,_x,_line in [
     assets[_key]=enc(_im.resize((round(_w*SCALE),round(_h*SCALE)),Image.LANCZOS),88)
     PORT[_key]=STORY_CHARS[_sid]['port']
     npcs.append(dict(k=_key,no=0,name=COMPANIONS[_sid]['name'],title=COMPANIONS[_sid]['title'],
-                     x=_x*TS,y=22.35*TS,w=_w,h=_h,line=_line,shop=None,at=None,companion=_sid))
+                     x=_x*TS,y=22.35*TS,w=_w,h=_h,line=_line,shop=None,at=None,companion=_sid,companionTest=True))
 
 # 퀘스트 장면에만 등장하는 NPC 초상도 미리 담는다. 마을 NPC로 배치하지는 않는다.
 _story_portrait_nos=set()

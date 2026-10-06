@@ -78,6 +78,7 @@ for (const p of CUR.props){
   if (p.name) spots.push({ name: p.name, x: p.x, y: p.flat ? p.y - p.h / 2 : p.y + 16, r: p.r || (p.flat ? 40 : 46), kind: p.kind || 'prop', data: p, prop: s });
 }
 for (const n of CUR.npcs){
+  if(n.companionTest&&window.COMPANION&&!COMPANION.townTestsEnabled())continue;
   if(n.companion&&window.COMPANION&&COMPANION.isActive(n.companion))continue;
   npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
 }

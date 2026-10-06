@@ -9,6 +9,9 @@ const COMPANION_DEF={
   // 러스티: 플레이어 주변을 유지하는 후방 지원 사수.
   knight:{name:'러스티',title:'이계의 용병 · 총병',kind:'gun',range:390,aggro:370,pursuit:470,attackCd:.72,speed:205,warpIdle:520,warpCombat:700,stuckCombat:3.0}
 };
+// 광장 시험 배치만 끌 수 있다. 전투 자산/세이브/향후 정식 합류 규칙과 분리한다.
+let companionTownTestsEnabled=true;
+let companionTarget=null;
 const COMPANION_IMG={};
 for(const id in (A.companions||{})){
   const src=A.companions[id],fr={};
@@ -24,8 +27,13 @@ function companionFee(id){
 }
 function companionStateCopy(){return JSON.parse(JSON.stringify(companionState));}
 function companionIsActive(id){return !!companionState.active&&(!id||companionState.active===id);}
+function companionSetTownTests(enabled){
+  companionTownTestsEnabled=!!enabled;
+  if(MAP==='town')buildWorld('town');
+  return companionTownTestsEnabled;
+}
 function companionEnsureTownTests(){
-  if(MAP!=='town')return;
+  if(MAP!=='town'||!companionTownTestsEnabled)return;
   for(const id of ['hero','knight']){
     if(companionState.active===id)continue;
     let n=npcs.find(x=>x.companion===id);
@@ -48,10 +56,10 @@ function companionDiagnostics(){
   return {n:ns.length,s:ss.length,p:ps.length,img:imgs||'--',active:companionState.active||'-',map:MAP};
 }
 function drawTownTestCompanionsForced(){
-  if(MAP!=='town')return;
+  if(MAP!=='town'||!companionTownTestsEnabled)return;
   for(const id of ['hero','knight']){
     if(companionState.active===id)continue;
-    const n=npcs.find(x=>x.companion===id);if(!n||!n.img||!n.img.complete||!n.img.naturalWidth)continue;
+    const n=npcs.find(x=>x.companion===id);if(!n||n.hide||!n.img||!n.img.complete||!n.img.naturalWidth)continue;
     const h=118,w=h*(n.img.naturalWidth/n.img.naturalHeight);
     ctx.save();
     ctx.globalAlpha=1;
@@ -71,6 +79,7 @@ function companionButtonText(n){
 }
 function companionSetNpcHidden(id,hidden){
   if(MAP!=='town')return;
+  hidden=hidden||!companionTownTestsEnabled;
   for(const n of npcs)if(n.companion===id)n.hide=!!hidden;
   for(let i=spots.length-1;i>=0;i--){
     const s=spots[i];if(s.kind==='npc'&&s.npc&&s.npc.companion===id&&hidden)spots.splice(i,1);
@@ -82,10 +91,8 @@ function companionSetNpcHidden(id,hidden){
 }
 function companionWarp(){
   if(!companionState.active)return;
-  let tx=P.x-48,ty=P.y+18;
-  if(P.dir==='front'){tx=P.x+(P.flip?36:-36);ty=P.y-54;}
-  else if(P.dir==='back'){tx=P.x+(P.flip?-36:36);ty=P.y+58;}
-  else if(P.dir==='side'){tx=P.x+(P.flip?58:-58);ty=P.y+18;}
+  companionTarget=null;
+  const [tx,ty]=COMPANION_DEF[companionState.active].kind==='sword'?companionDesiredFront():companionDesired();
   const q=nearestSafePosition(tx,ty);
   companionState.x=q[0];companionState.y=q[1];companionState.stuck=0;companionState.lastX=q[0];companionState.lastY=q[1];
 }
@@ -95,6 +102,7 @@ function companionSave(){
     damage:Math.max(1,Math.round(companionState.damage||1)),x:companionState.x,y:companionState.y,dir:companionState.dir,flip:!!companionState.flip};
 }
 function companionLoad(d){
+  companionTarget=null;companionFx.length=0;
   const id=d&&d.active;
   if(!id||!COMPANION_DEF[id]){
     companionState={active:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
@@ -108,6 +116,7 @@ function companionLoad(d){
 }
 function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
+  companionTarget=null;
   companionState={active:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:0,lastY:0,expireSaid:false};
   companionFx.length=0;
   if(MAP==='town')buildWorld('town');
@@ -127,6 +136,7 @@ function companionHire(id){
     return false;
   }
   const old=companionState.active;
+  companionTarget=null;companionFx.length=0;
   if(old)companionSetNpcHidden(old,false);
   setGold(P.gold-fee);
   const q=nearestSafePosition(P.x-48,P.y+18);
@@ -149,6 +159,10 @@ function companionLOS(x1,y1,x2,y2){
 function companionPickTarget(){
   if(!companionState.active||!combatMap())return null;
   const c=companionState,d=COMPANION_DEF[c.active];let best=null,score=1e9;
+  // 이미 물고 있는 적은 인식 경계를 넘거나 다른 적이 가까워져도 전투를 이어간다.
+  if(d.kind==='sword'&&companionTarget&&monsters.includes(companionTarget)&&!companionTarget.dead&&!companionTarget.removed&&
+      Math.hypot(companionTarget.x-c.x,companionTarget.y-c.y)<=d.pursuit&&
+      Math.hypot(companionTarget.x-P.x,companionTarget.y-P.y)<=d.warpCombat)return companionTarget;
   for(const m of monsters){
     if(!m||m.dead||m.removed)continue;
     const pp=Math.hypot(m.x-P.x,m.y-P.y),cc=Math.hypot(m.x-c.x,m.y-c.y);
@@ -160,7 +174,7 @@ function companionPickTarget(){
     const scoreNow=d.kind==='sword'?(pp*.58+cc*.42):(cc+pp*.35);
     if(scoreNow<score){score=scoreNow;best=m;}
   }
-  return best;
+  companionTarget=best;return best;
 }
 function companionMoveTo(tx,ty,speed,dt){
   const c=companionState,dx=tx-c.x,dy=ty-c.y,dd=Math.hypot(dx,dy);if(dd<2)return false;
@@ -201,17 +215,17 @@ function companionHit(m,v,dx,dy,kb){
 }
 function companionAttack(m){
   const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1;
-  c.cd=d.attackCd;c.atkT=.22;
+  c.cd=d.attackCd;c.atkT=.22;c.attackAngle=Math.atan2(dy,dx);
   if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else c.dir=dy<0?'back':'front';
   if(d.kind==='gun'){
     const a=Math.atan2(dy,dx),mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
-    companionFx.push({kind:'muzzle',x:mx,y:my,a,t:0,life:.12});
+    companionFx.push({kind:'muzzle',x:mx,y:my,a,t:0,life:.18});
     companionFx.push({kind:'laser',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.22});
     companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.24});
     companionHit(m,c.damage,dx,dy,3);
   }else{
     const a=Math.atan2(dy,dx);
-    companionFx.push({kind:'slash',x:c.x+dx/dist*52,y:c.y-40+dy/dist*20,a,t:0,life:.30});
+    companionFx.push({kind:'slash',x:c.x,y:c.y-43,a,t:0,life:.30});
     companionFx.push({kind:'swordflash',x:c.x,y:c.y-43,a,t:0,life:.18});
     companionHit(m,c.damage,dx,dy,10);
   }
@@ -220,7 +234,7 @@ function updateCompanion(dt){
   const c=companionState;if(!c.active||dt<=0)return;
   c.moving=false;
   const d=COMPANION_DEF[c.active];
-  if(c.lastMap!==MAP){c.lastMap=MAP;companionWarp();}
+  if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionWarp();}
   if(!c.expired){
     c.remaining=Math.max(0,c.remaining-dt);
     if(c.remaining<=0){
@@ -235,30 +249,30 @@ function updateCompanion(dt){
   if(c.expired&&(MAP==='town'||MAP==='fieldvillage')){companionReturn('expired');return;}
   c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
-  let moved=false;
+  let moved=false,attemptedMove=false;
   if(d.kind==='sword'&&target){
     // 전투 중에는 플레이어에게 조금 멀어졌다고 복귀하지 않는다.
     // 카엘렌은 목표를 물고 앞에서 버티며, 정말 이탈했을 때만 워프한다.
     const dd=Math.hypot(target.x-c.x,target.y-c.y);
     if(distP>d.warpCombat){companionWarp();return;}
-    if(dd>d.range)moved=companionMoveTo(target.x,target.y,d.speed,dt);
+    if(dd>d.range){attemptedMove=true;moved=companionMoveTo(target.x,target.y,d.speed,dt);}
     else if(c.cd<=0)companionAttack(target);
   }else if(d.kind==='gun'&&target){
     if(distP>d.warpCombat){companionWarp();return;}
     const dd=Math.hypot(target.x-c.x,target.y-c.y);
     if(dd<=d.range&&c.cd<=0)companionAttack(target);
     const want=companionDesired(),fd=Math.hypot(c.x-want[0],c.y-want[1]);
-    if(fd>95)moved=companionMoveTo(want[0],want[1],d.speed,dt);
+    if(fd>95){attemptedMove=true;moved=companionMoveTo(want[0],want[1],d.speed,dt);}
   }else{
     if(distP>d.warpIdle){companionWarp();return;}
     const want=d.kind==='sword'?companionDesiredFront():companionDesired(),dd=Math.hypot(c.x-want[0],c.y-want[1]);
-    if(dd>28)moved=companionMoveTo(want[0],want[1],d.speed,dt);
+    if(dd>28){attemptedMove=true;moved=companionMoveTo(want[0],want[1],d.speed,dt);}
     else{c.t=0;c.dir=P.dir||c.dir;c.flip=!!P.flip;}
   }
-  const far=distP>(d.kind==='sword'?180:95);
-  if(!moved&&far)c.stuck+=dt;else c.stuck=Math.max(0,c.stuck-dt*2);
+  // 공격/재사용 대기/전방 대기는 길막이 아니다. 연속 이동 실패만 구조 대상으로 삼는다.
+  if(attemptedMove&&!moved)c.stuck+=dt;else c.stuck=0;
   // 검사 전투 중에는 6초 이상 완전히 막힌 경우에만 구조용 워프. 몹을 치다 말고 복귀하지 않게 한다.
-  const stuckLimit=target?(d.stuckCombat||4):2.2;
+  const stuckLimit=d.kind==='sword'?d.stuckCombat:(target?d.stuckCombat:2.2);
   if(c.stuck>stuckLimit)companionWarp();
   c.lastX=c.x;c.lastY=c.y;
 }
@@ -275,17 +289,20 @@ function drawCompanion(c,dt){
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
   ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
   const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
+  ctx.restore();
   if(c.active==='hero'){
     // 카엘렌은 항상 검을 들고 있는 것이 보이게 한다.
-    const ang=d==='side'?(c.flip?Math.PI*.88:Math.PI*.12):(d==='back'?-Math.PI*.42:Math.PI*.42);
+    const resting=d==='side'?(c.flip?Math.PI*.88:Math.PI*.12):(d==='back'?-Math.PI*.42:Math.PI*.42);
+    const ang=c.atkT>0?c.attackAngle+(1-c.atkT/.22)*2.1-1.05:resting;
     const bx=c.x+(d==='side'?(c.flip?-16:16):15),by=c.y-43;
     ctx.save();ctx.translate(bx,by);ctx.rotate(ang);
-    ctx.strokeStyle='rgba(40,28,18,.95)';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-7,0);ctx.lineTo(9,0);ctx.stroke();
-    ctx.strokeStyle='rgba(225,235,245,.98)';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(39,0);ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(10,-1);ctx.lineTo(38,-1);ctx.stroke();
+    ctx.strokeStyle='rgba(40,28,18,.95)';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-9,0);ctx.lineTo(9,0);ctx.stroke();
+    ctx.strokeStyle='#d7ad65';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(8,-9);ctx.lineTo(8,9);ctx.stroke();
+    ctx.fillStyle='#dceafa';ctx.strokeStyle='#455b73';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(10,-4);ctx.lineTo(46,-3);ctx.lineTo(55,0);ctx.lineTo(46,3);ctx.lineTo(10,4);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(12,-1);ctx.lineTo(49,-1);ctx.stroke();
     ctx.restore();
   }
-  ctx.restore();
 }
 function drawCompanionFx(dt){
   for(let i=companionFx.length-1;i>=0;i--){
@@ -308,8 +325,10 @@ function drawCompanionFx(dt){
       ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(54,0);ctx.stroke();
     }else{
       // 카엘렌 검 궤적: 루크레아의 강베기처럼 굵은 반달형 잔광.
-      ctx.strokeStyle='rgba(255,238,195,'+(.28*k)+')';ctx.lineWidth=18*k;ctx.lineCap='round';ctx.beginPath();ctx.arc(f.x,f.y,58,f.a-1.15,f.a+1.15);ctx.stroke();
-      ctx.strokeStyle='rgba(255,255,245,'+(.95*k)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(f.x,f.y,58,f.a-1.12,f.a+1.12);ctx.stroke();
+      const sweep=f.a+(1-k)*.45;
+      ctx.strokeStyle='rgba(255,238,195,'+(.28*k)+')';ctx.lineWidth=18*k;ctx.lineCap='round';ctx.beginPath();ctx.arc(f.x,f.y,66,sweep-1.15,sweep+1.15);ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,245,'+(.95*k)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(f.x,f.y,66,sweep-1.12,sweep+1.12);ctx.stroke();
+      ctx.strokeStyle='rgba(175,215,255,'+(.6*k)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(f.x,f.y,53,sweep-1.05,sweep+.95);ctx.stroke();
     }
     ctx.restore();
   }
@@ -320,6 +339,7 @@ function companionDebugTick(dt){updateCompanion(dt);return companionStateCopy();
 window.COMPANION={
   fee:companionFee,previewDamage:()=>Math.max(1,Math.round(basicDamage()*1.15)),buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
   ensureTownTests:companionEnsureTownTests,diagnostics:companionDiagnostics,
+  townTestsEnabled:()=>companionTownTestsEnabled,setTownTestsEnabled:companionSetTownTests,
   saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,
   onDefeat:companionOnPlayerDefeat,debugExpire:companionDebugExpire,debugTick:companionDebugTick
 };

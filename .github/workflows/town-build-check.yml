@@ -41,6 +41,7 @@ jobs:
           for f in src/town/*.js; do
             node --check "$f"
           done
+          node tools/check_companion_ai.js
       - name: Build town
         run: python src/town/build.py
       - name: Publish built town.html

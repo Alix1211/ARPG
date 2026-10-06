@@ -36,6 +36,17 @@ async def main():
         r=await ev("() => ({active:COMPANION.state().active,gold:GAME.P.gold})")
         assert r['active'] is None and r['gold']==g,r
 
+        # 시험용 광장 NPC는 그림뿐 아니라 상호작용/충돌까지 제거, 재생성으로 부활하지 않음.
+        await ev("() => COMPANION.setTownTestsEnabled(false)")
+        await pg.wait_for_timeout(100)
+        d=await ev("() => COMPANION.diagnostics()")
+        assert d['n']==0 and d['s']==0 and d['p']==0,d
+        await ev("() => {COMPANION.ensureTownTests();COMPANION.onDefeat();}")
+        assert await ev("() => COMPANION.diagnostics().n===0")
+        await ev("() => COMPANION.setTownTestsEnabled(true)")
+        d=await ev("() => COMPANION.diagnostics()")
+        assert d['n']==2 and d['p']==2,d
+
         assert not errs,errs
         print('companion ok')
         await b.close()
