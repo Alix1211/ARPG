@@ -39,16 +39,16 @@ assert(run('warpCount===0&&companionState.stuck===0&&monsters[0].hp<10000'));
 run(`monsters[0].x=1700;companionState.x=1650;monsters.push({x:1100,y:1000,h:60,hp:10000});`);
 assert(run('companionPickTarget()===monsters[0]'));
 run('monsters[0].dead=true;');assert(run('companionPickTarget()===monsters[1]'));
-// 실제 길막만 누적하고, 전투/평시 모두 6초는 기다린다.
+// 실제 길막만 누적하고, 짧은 우회 재탐색 뒤 약 1.8초에서 구조한다.
 for(const fighting of [false,true]){
   run(`setup('hero',1300,1000,${fighting?'1600,1000':'null,null'});wall=true;
-    for(let i=0;i<59;i++)COMPANION.debugTick(.1);`);
+    for(let i=0;i<16;i++)COMPANION.debugTick(.1);`);
   assert.equal(run('warpCount'),0);
-  run('for(let i=0;i<3;i++)COMPANION.debugTick(.1);');assert.equal(run('warpCount'),1);
+  run('for(let i=0;i<4;i++)COMPANION.debugTick(.1);');assert.equal(run('warpCount'),1);
 }
 // 이동이 재개되면 연속 길막 시계를 초기화한다.
 run(`setup('hero',1300,1000,1600,1000);wall=true;
-  for(let i=0;i<50;i++)COMPANION.debugTick(.1);wall=false;COMPANION.debugTick(.1);`);
+  for(let i=0;i<12;i++)COMPANION.debugTick(.1);wall=false;COMPANION.debugTick(.1);`);
 assert.equal(run('companionState.stuck'),0);
 // 정말 크게 이탈하면 구조하며, 카엘렌은 앞쪽 안전 위치로 배치.
 run(`setup('hero',2300,1000,2340,1000);COMPANION.debugTick(.1);`);
@@ -74,9 +74,9 @@ run(`setup('hero',1100,1000,1500,1000);
 assert(run('warpCount===0&&!crossedWall&&monsters[0].hp<10000'),JSON.stringify(run('({warpCount,crossedWall,c:companionState,hp:monsters[0].hp})')));
 // 좁은 구간의 작은 왕복 움직임도 진행 없는 끼임으로 판정한다.
 run(`setup('hero',1300,1000,1600,1000);wall=true;
-  for(let i=0;i<62;i++){companionState.x=1300+(i%2)*2;COMPANION.debugTick(.1);}`);
+  for(let i=0;i<20;i++){companionState.x=1300+(i%2)*2;COMPANION.debugTick(.1);}`);
 assert.equal(run('warpCount'),1);
-// 검/검 궤적은 몸보다 먼저, 후면 패스에서는 시간 진행 없이 딱 한 번 렌더한다.
+// 검/검 궤적은 공격 중에만 몸보다 먼저, 후면 패스에서는 시간 진행 없이 딱 한 번 렌더한다.
 run(`setup('hero',1100,1000,1140,1000);COMPANION.debugTick(.1);
   const drawCalls=[],ctx=new Proxy({}, {get:(o,k)=>o[k]||((...args)=>drawCalls.push(k)),set:(o,k,v)=>(o[k]=v,true)});
   COMPANION_IMG.hero={fr:{front:[{naturalWidth:100,naturalHeight:100}],side:[{naturalWidth:100,naturalHeight:100}]}};
