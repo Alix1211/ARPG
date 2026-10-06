@@ -324,8 +324,8 @@ for no, name, title, where, side, line, shop in NPC:
 
 # 마을광장 임시 테스트 인원. 검증이 끝나면 배치만 숨기고 시스템은 유지한다.
 for _sid,_x,_line in [
-    ('hero',19.8,'검 손질은 끝났습니다. 같이 나가 보시죠. 비용은… 선불로 받겠습니다.'),
-    ('knight',26.2,'탄약은 제가 챙깁니다. 대신 하루치 계산은 출발 전에 끝내죠.'),
+    ('hero',19.2,'검 손질은 끝났습니다. 같이 나가 보시죠. 비용은… 선불로 받겠습니다.'),
+    ('knight',26.8,'탄약은 제가 챙깁니다. 대신 하루치 계산은 출발 전에 끝내죠.'),
 ]:
     _src=R+f"characters/{_sid}/front_0.png"
     _im=Image.open(_src).convert('RGBA'); _h=100; _w=_h*_im.width/_im.height
@@ -333,7 +333,7 @@ for _sid,_x,_line in [
     assets[_key]=enc(_im.resize((round(_w*SCALE),round(_h*SCALE)),Image.LANCZOS),88)
     PORT[_key]=STORY_CHARS[_sid]['port']
     npcs.append(dict(k=_key,no=0,name=COMPANIONS[_sid]['name'],title=COMPANIONS[_sid]['title'],
-                     x=_x*TS,y=19.55*TS,w=_w,h=_h,line=_line,shop=None,at=None,companion=_sid))
+                     x=_x*TS,y=22.35*TS,w=_w,h=_h,line=_line,shop=None,at=None,companion=_sid))
 
 # 퀘스트 장면에만 등장하는 NPC 초상도 미리 담는다. 마을 NPC로 배치하지는 않는다.
 _story_portrait_nos=set()
