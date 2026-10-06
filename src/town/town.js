@@ -1008,7 +1008,7 @@ function drawPortalArrivalAura(){
 }
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
-  const simPaused=panel==='char'||panel==='settings'||!!window.ARPG_SYNC_CHECKING||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
+  const simPaused=panel==='char'||panel==='settings'||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
