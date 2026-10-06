@@ -10,15 +10,13 @@ async def main():
         errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
         ev=pg.evaluate
         await pg.goto(URL);await pg.wait_for_timeout(900)
-        assert await ev("() => !document.getElementById('resetBtn').hidden")
+        # 정식판에서는 테스트 초기화 버튼을 노출하지 않는다. 내부 reset 기능만 회귀 검사한다.
+        assert await ev("() => document.getElementById('resetBtn').hidden")
         await ev("() => { GAME.setGold(9999);UI.add(UI.make({baseId:'sword_01',rar:0}));UI.openStash();UI.inventoryDrop({from:'bag',i:UI.bagItems()[0].i},{from:'stash',i:0});GAME.closeAll(); UI.save(); }")
         assert await ev("() => JSON.parse(localStorage.getItem('arpg_save_v3')).gold")==9999
-        # 한 번 누르면 확인 문구만, 아직 지워지지 않는다.
-        await pg.click('#resetBtn');await pg.wait_for_timeout(200)
-        assert await ev("() => document.getElementById('resetBtn').textContent")=='정말 지울까요?'
+        # 숨겨진 개발용 초기화 API는 저장을 완전히 지우고 새 게임으로 돌아와야 한다.
         assert await ev("() => JSON.parse(localStorage.getItem('arpg_save_v3')).gold")==9999
-        # 두 번째 누르면 다시 시작(저장이 되살아나지 않아야 함).
-        await pg.click('#resetBtn');await pg.wait_for_timeout(1800)
+        await ev("() => UI.reset()");await pg.wait_for_timeout(1800)
         g=await ev("() => GAME.P.gold");assert g==300,g
         assert await ev("UI.stashItems().length")==0
         d=await ev("() => localStorage.getItem('arpg_save_v3')")
