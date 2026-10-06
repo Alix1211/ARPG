@@ -38,4 +38,23 @@ public class BackupValidationTest {
         assertFalse(MainActivity.newerBackup(original,newer));
         assertFalse(MainActivity.newerBackup(original,original));
     }
+    @Test public void choosesNewestOfThreeStoresWithoutChangingTimestamp() throws Exception {
+        JSONObject device=new JSONObject(backup(save()));
+        JSONObject app=new JSONObject(backup(save().replace("12345","12346")));
+        JSONObject drive=new JSONObject(backup(save().replace("12345","12347")));
+        assertSame(drive,MainActivity.latestBackup(device,app,drive));
+        assertSame(drive,MainActivity.latestBackup(drive,device,app));
+        assertEquals(12347,MainActivity.saveTime(drive));
+        assertSame(app,MainActivity.latestBackup(app,device)); // 오프라인
+        assertSame(app,MainActivity.latestBackup(device,app,device)); // 더 오래된 Drive
+        assertSame(app,MainActivity.latestBackup(app,new JSONObject(app.toString()))); // 동일 t
+    }
+    @Test public void invalidStoreCannotBeatValidProgress() throws Exception {
+        JSONObject good=new JSONObject(backup(save()));
+        JSONObject invalid=new JSONObject(backup(save().replace("\"lv\":7","\"lv\":71").replace("12345","99999")));
+        assertSame(good,MainActivity.latestBackup(invalid,good,null));
+        assertNull(MainActivity.latestBackup(invalid,new JSONObject()));
+        rejected(backup(save().replace("12345","-1")));
+        rejected(backup(save().replace("12345","\"99999\"")));
+    }
 }

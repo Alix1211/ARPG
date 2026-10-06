@@ -372,18 +372,7 @@ html.app #fs{display:none}
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
 // 인터넷 판과 앱 안에 든 예비 판은 저장 칸이 따로라서, 앱 쪽 기록으로 서로 이어 준다.
-(function(){ const B = window.ArpgBridge; if (!B) return;
-  document.documentElement.classList.add('app');
-  const ls = window.localStorage, set = Storage.prototype.setItem, rm = Storage.prototype.removeItem;
-  // 2026-10-03 장기 성장판: v1/v2 세이브는 완전 폐기하고 v3부터 시작.
-  try { for (const k of ['arpg_save_v1','arpg_save_v2']){ rm.call(ls,k); B.del(k); } } catch (e) {}
-  try { const m = JSON.parse(B.load() || '{}');
-    for (const k in m){ const cur = ls.getItem(k);
-      if (cur === null) set.call(ls, k, m[k]);
-      else if (k === 'arpg_save_v3'){ try { if ((JSON.parse(m[k]).t || 0) > (JSON.parse(cur).t || 0)) set.call(ls, k, m[k]); } catch (e) {} } } } catch (e) {}
-  Storage.prototype.setItem = function(k, v){ set.call(this, k, v); if (this === ls && /^arpg_/.test(k)) try { B.put(k, String(v)); } catch (e) {} };
-  Storage.prototype.removeItem = function(k){ rm.call(this, k); if (this === ls && /^arpg_/.test(k)) try { B.del(k); } catch (e) {} };
-})();
+/*SAVE_SYNC*/
 // 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
 for (const ev of ['contextmenu', 'selectstart', 'dragstart']) document.addEventListener(ev, e => e.preventDefault());
 window.addEventListener('error', e => { const d = document.getElementById('err'); d.style.display = 'block'; d.textContent = '오류: ' + e.message + ' (' + (e.lineno || '') + ')'; });

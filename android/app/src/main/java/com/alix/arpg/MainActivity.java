@@ -8,6 +8,9 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Color;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -34,6 +37,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -49,13 +54,17 @@ public final class MainActivity extends Activity {
     private SharedPreferences backupPrefs;
     private static final int REQ_BACKUP = 502, REQ_LINK = 505, MAX_BACKUP_BYTES = 8000000;
     private final ScheduledExecutorService backupIO = Executors.newSingleThreadScheduledExecutor();
+    private final ExecutorService documentIO = Executors.newSingleThreadExecutor();
+    private volatile boolean documentBusy = false;
     private final Object backupLock = new Object();
     private ScheduledFuture<?> pendingBackup;
     private volatile boolean restoringBackup = false, pickingBackup = false;
     private volatile String pendingRestore = null;
     private volatile boolean awaitingRestoreReload = false;
     private volatile boolean checkingRemote = false;
-    private boolean skipRemoteOnce = false;
+    private volatile boolean pageReady = false, foreground = false;
+    private ConnectivityManager connectivity;
+    private ConnectivityManager.NetworkCallback networkCallback;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private boolean usingLocal = false, remoteOk = false;
     private long backAt = 0;
@@ -105,10 +114,19 @@ public final class MainActivity extends Activity {
         });
         game.setWebChromeClient(new WebChromeClient());
         game.addJavascriptInterface(new Bridge(), "ArpgBridge");
+        connectivity = (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override public void onCapabilitiesChanged(Network n, NetworkCapabilities caps) {
+                if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) && foreground && pageReady)
+                    requestSync(true);
+            }
+            @Override public void onLost(Network n) { backupNotice(""); }
+        };
+        connectivity.registerDefaultNetworkCallback(networkCallback);
         setContentView(game);
         requestHighestRefreshRate();
         // 주소 끝에 시각을 붙여 게임 코드(town.html)는 늘 최신으로, 그림 파일(art_*.js)은 이름이 같으면 저장해 둔 것을 씀
-        game.loadUrl(REMOTE + "?t=" + System.currentTimeMillis());
+        if (isOnline()) game.loadUrl(REMOTE + "?t=" + System.currentTimeMillis()); else loadLocal();
         ui.postDelayed(() -> { if (!remoteOk) loadLocal(); }, 40000);   // 40초 안에 못 받으면 앱 안의 예비 판으로
     }
 
@@ -129,9 +147,25 @@ public final class MainActivity extends Activity {
             queueBackup(false);
         }
         @JavascriptInterface public boolean isApp() { return true; }
+        @JavascriptInterface public String reconcileLocal(String text) {
+            synchronized (backupLock) {
+                try {
+                    JSONObject chosen = latestBackup(snapshot(), new JSONObject(text));
+                    if (chosen != null && !restoringBackup) replaceStore(chosen);
+                    return chosen == null ? load() : chosen.toString();
+                } catch (Exception e) { return load(); }
+            }
+        }
+        @JavascriptInterface public void syncBackup() { requestSync(true); }
+        @JavascriptInterface public void webReady() {
+            pageReady = true;
+            if (awaitingRestoreReload) { awaitingRestoreReload = false; restoringBackup = false; }
+            requestSync(true);
+        }
         @JavascriptInterface public String backupStatus() {
             try { return new JSONObject().put("linked", backupUri() != null)
                 .put("at", backupPrefs.getLong("backupAt", 0)).put("held", backupPrefs.getBoolean("held", false))
+                .put("online", isOnline()).put("syncing", checkingRemote)
                 .put("error", backupPrefs.getString("error", "")).toString(); }
             catch (Exception e) { return "{}"; }
         }
@@ -150,10 +184,7 @@ public final class MainActivity extends Activity {
             backupIO.execute(() -> {
                 try {
                     JSONObject all = validBackup(text);
-                    SharedPreferences.Editor edit = store.edit();
-                    for (String k : store.getAll().keySet()) if (k.startsWith("arpg_")) edit.remove(k);
-                    for (Iterator<String> it = all.keys(); it.hasNext();) { String k = it.next(); edit.putString(k, all.getString(k)); }
-                    if (!edit.commit()) throw new IllegalStateException();
+                    synchronized (backupLock) { replaceStore(all); }
                     backupPrefs.edit().putBoolean("held", false).putBoolean("linkPending", false).remove("error").apply();
                     awaitingRestoreReload = true;
                     js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(text) + ")");
@@ -165,6 +196,17 @@ public final class MainActivity extends Activity {
     private void js(String code) { ui.post(() -> { if (game != null) game.evaluateJavascript(code, null); }); }
     private void backupNotice(String message) { js("window.onArpgBackup&&window.onArpgBackup(" + JSONObject.quote(message) + ")"); }
     private Uri backupUri() { String u = backupPrefs.getString("uri", null); return u == null ? null : Uri.parse(u); }
+    private boolean isOnline() {
+        if (connectivity == null) return false;
+        NetworkCapabilities caps = connectivity.getNetworkCapabilities(connectivity.getActiveNetwork());
+        return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+    }
+    private void replaceStore(JSONObject all) throws Exception {
+        SharedPreferences.Editor edit = store.edit();
+        for (String k : store.getAll().keySet()) if (k.startsWith("arpg_")) edit.remove(k);
+        for (Iterator<String> it = all.keys(); it.hasNext();) { String k = it.next(); edit.putString(k, all.getString(k)); }
+        if (!edit.commit()) throw new IllegalStateException();
+    }
 
     // 문플로와 같은 Storage Access Framework: 구글 로그인/API 키 없이 드라이브의 파일을 지정한다.
     private void pickDocument(boolean create) {
@@ -189,23 +231,23 @@ public final class MainActivity extends Activity {
             if (flags != (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)) throw new IllegalStateException();
             getContentResolver().takePersistableUriPermission(u, flags);
             backupPrefs.edit().putString("uri", u.toString()).putLong("backupAt", 0)
-                .putBoolean("held", req == REQ_LINK).putBoolean("linkPending", req == REQ_LINK).remove("error").apply();
-            skipRemoteOnce = true; // 새 파일은 첫 백업 전에 빈 파일 여부를 다시 검사하지 않는다.
-            if (req == REQ_BACKUP) { queueBackup(true); backupNotice("연결했습니다. 저장할 때 자동으로 백업합니다."); }
-            else backupNotice("기존 파일을 연결했습니다. 백업에서 불러오기를 눌러 이어 하세요. 불러오기 전에는 파일을 덮어쓰지 않습니다.");
+                .putBoolean("held", false).putBoolean("linkPending", false)
+                .putBoolean("newFile", req == REQ_BACKUP).remove("error").apply();
+            requestSync(true);
+            backupNotice("연결했습니다. 가장 최신 저장으로 자동 동기화합니다.");
         } catch (Exception e) { backupNotice("읽기·쓰기 권한을 유지할 수 없습니다. 파일을 다시 골라 주세요."); }
     }
 
     private void queueBackup(boolean force) {
         synchronized (backupLock) {
-            if (backupUri() == null || restoringBackup || pickingBackup || checkingRemote || backupPrefs.getBoolean("held", false)) return;
+            if (backupUri() == null || restoringBackup || pickingBackup || checkingRemote) return;
             if (pendingBackup != null && !pendingBackup.isDone()) {
                 if (!force) return;
                 pendingBackup.cancel(false);
             }
             pendingBackup = backupIO.schedule(() -> {
                 synchronized (backupLock) { pendingBackup = null; }
-                writeBackup();
+                requestSync(false);
             }, force ? 0 : 5, TimeUnit.SECONDS);
         }
     }
@@ -226,6 +268,11 @@ public final class MainActivity extends Activity {
             if (!k.startsWith("arpg_") || !(all.get(k) instanceof String)) throw new IllegalArgumentException();
         }
         JSONObject s = new JSONObject(all.getString("arpg_save_v3"));
+        for (String k : new String[]{"gold", "hp", "mp"})
+            if (!(s.get(k) instanceof Number) || !Double.isFinite(s.getDouble(k))) throw new IllegalArgumentException();
+        if (s.has("t") && (!(s.get("t") instanceof Number) || !Double.isFinite(s.getDouble("t"))
+            || s.getDouble("t") < 0 || s.getDouble("t") > 9007199254740991L
+            || s.getDouble("t") != s.getLong("t"))) throw new IllegalArgumentException();
         if (!(s.get("v") instanceof Number) || s.getDouble("v") != 3 || !(s.get("lv") instanceof Number)
             || s.getDouble("lv") != s.getInt("lv") || s.getInt("lv") < 1 || s.getInt("lv") > 70 || !(s.get("gold") instanceof Number)
             || !(s.get("hp") instanceof Number) || !(s.get("mp") instanceof Number)
@@ -235,9 +282,21 @@ public final class MainActivity extends Activity {
     }
 
     static boolean newerBackup(JSONObject remote, JSONObject local) throws Exception {
-        if (!local.has("arpg_save_v3")) return true;
-        return new JSONObject(remote.getString("arpg_save_v3")).optLong("t", 0)
-            > new JSONObject(local.getString("arpg_save_v3")).optLong("t", 0);
+        return saveTime(remote) > saveTime(local);
+    }
+    static long saveTime(JSONObject all) {
+        try { JSONObject checked = validBackup(all.toString());
+            JSONObject s = new JSONObject(checked.getString("arpg_save_v3"));
+            if (!s.has("t")) return 0;
+            if (!(s.get("t") instanceof Number) || !Double.isFinite(s.getDouble("t"))
+                || s.getDouble("t") < 0 || s.getDouble("t") != s.getLong("t")) return -1;
+            return s.getLong("t");
+        } catch (Exception e) { return -1; }
+    }
+    static JSONObject latestBackup(JSONObject... candidates) {
+        JSONObject best = null; long time = -1;
+        for (JSONObject c : candidates) { long t = saveTime(c); if (t > time) { best = c; time = t; } }
+        return best;
     }
 
     private String readDocument(Uri u) throws Exception {
@@ -248,46 +307,64 @@ public final class MainActivity extends Activity {
             return out.toString("UTF-8");
         }
     }
-
-    // 문플로의 holdBackup/checkRemote 보호: 다른 기기의 더 최신 진행은 자동 저장으로 덮어쓰지 않는다.
-    private void checkRemoteBeforeSaving() {
-        final Uri u = backupUri();
-        if (u == null || pickingBackup || restoringBackup || checkingRemote || backupPrefs.getBoolean("linkPending", false)) return;
-        final JSONObject local;
-        try { local = snapshot(); } catch (Exception e) { return; }
-        checkingRemote = true;
-        backupIO.execute(() -> {
-            String notice = "";
-            try {
-                boolean newer = newerBackup(validBackup(readDocument(u)), local);
-                backupPrefs.edit().putBoolean("held", newer).remove("error").apply();
-                if (newer) notice = "다른 기기의 더 최신 백업이 있습니다. 백업에서 불러오기를 눌러 주세요. 파일은 덮어쓰지 않습니다.";
-            } catch (Exception e) {
-                backupPrefs.edit().putBoolean("held", true).putString("error", "연결 확인 필요").apply();
-                notice = "백업 파일을 확인하지 못했습니다. 인터넷 연결 후 앱을 다시 켜 주세요. 이 기기의 저장은 유지됩니다.";
-            } finally { checkingRemote = false; }
-            backupNotice(notice);
-            queueBackup(false);
-        });
+    private String readDocumentTimed(Uri u) throws Exception {
+        documentBusy = true;
+        Future<String> read = documentIO.submit(() -> { try { return readDocument(u); } finally { documentBusy = false; } });
+        try { return read.get(6, TimeUnit.SECONDS); } finally { read.cancel(true); }
     }
 
-    private void writeBackup() {
-        Uri u = backupUri();
-        if (u == null || restoringBackup || pickingBackup || checkingRemote || backupPrefs.getBoolean("held", false)) return;
-        try {
-            JSONObject all = snapshot();
-            if (!all.has("arpg_save_v3")) return; // 처음 시작/초기화 직후에는 빈 저장으로 백업을 훼손하지 않는다.
-            String text = all.toString(); validBackup(text);
-            try (OutputStream out = getContentResolver().openOutputStream(u, "wt")) {
-                if (out == null) throw new IllegalStateException();
-                out.write(text.getBytes(StandardCharsets.UTF_8));
+    // 시작/복귀/재연결/저장 때 모두 읽기→t 비교→적용 또는 쓰기 순서로 처리한다.
+    private void requestSync(boolean gate) {
+        final Uri u = backupUri();
+        synchronized (backupLock) {
+            if (!pageReady || pickingBackup || restoringBackup || checkingRemote) return;
+            if (u == null || !isOnline() || documentBusy) {
+                js("window.onArpgSyncDone&&window.onArpgSyncDone()");backupNotice("");return;
             }
-            backupPrefs.edit().putLong("backupAt", System.currentTimeMillis()).remove("error").apply();
-            backupNotice("");
-        } catch (Exception e) {
-            backupPrefs.edit().putString("error", "백업 실패").apply();
-            backupNotice("백업하지 못했습니다. 인터넷 연결과 파일 권한을 확인해 주세요. 이 기기의 저장은 유지됩니다.");
+            checkingRemote = true;
         }
+        if (gate) js("window.onArpgSyncStart&&window.onArpgSyncStart()");
+        backupIO.execute(() -> {
+            boolean reload = false;
+            try {
+                String raw = readDocumentTimed(u);
+                JSONObject remote = raw.trim().isEmpty() && backupPrefs.getBoolean("newFile", false)
+                    ? null : validBackup(raw);
+                if (remote != null && saveTime(remote) < 0) throw new IllegalArgumentException();
+                JSONObject local;
+                synchronized (backupLock) {
+                    local = snapshot(); // 읽기를 기다리는 동안 생긴 로컬 진행까지 포함해 다시 비교한다.
+                    JSONObject chosen = latestBackup(local, remote);
+                    if (chosen == null) return;
+                    if (chosen == remote) {
+                        restoringBackup = true;
+                        try { replaceStore(chosen); } catch (Exception e) { restoringBackup = false; throw e; }
+                        awaitingRestoreReload = true;reload = true;
+                        js("window.onArpgBackupApplied&&window.onArpgBackupApplied(" + JSONObject.quote(chosen.toString()) + ")");
+                    }
+                }
+                if (!reload && saveTime(local) > saveTime(remote)) {
+                    final String text = local.toString();
+                    documentBusy = true;
+                    Future<?> write = documentIO.submit(() -> {
+                        try (OutputStream out = getContentResolver().openOutputStream(u, "wt")) {
+                            if (out == null) throw new IllegalStateException();
+                            out.write(text.getBytes(StandardCharsets.UTF_8));
+                        } catch (Exception e) { throw new IllegalStateException(e); }
+                        finally { documentBusy = false; }
+                    });
+                    try { write.get(6, TimeUnit.SECONDS); } finally { write.cancel(true); }
+                }
+                backupPrefs.edit().putLong("backupAt", System.currentTimeMillis())
+                    .putBoolean("held", false).putBoolean("linkPending", false).putBoolean("newFile", false).remove("error").apply();
+            } catch (Exception e) {
+                backupPrefs.edit().putString("error", "동기화 대기").apply();
+            } finally {
+                checkingRemote = false;
+                if (!reload) js("window.onArpgSyncDone&&window.onArpgSyncDone()");
+                backupNotice("");
+            }
+        });
     }
 
     private void readBackup() {
@@ -329,12 +406,20 @@ public final class MainActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) hideBars(); }
     @Override protected void onResume() {
         super.onResume(); hideBars(); requestHighestRefreshRate();
-        if (skipRemoteOnce) skipRemoteOnce = false; else checkRemoteBeforeSaving();
+        foreground = true;
+        requestSync(true);
         if (game != null) { game.resumeTimers(); game.onResume(); }
     }
     @Override protected void onPause() {
+        foreground = false;
         if (game != null) { game.evaluateJavascript("try{UI.save()}catch(e){}", r -> queueBackup(true)); game.onPause(); game.pauseTimers(); }
         super.onPause();
+    }
+    @Override protected void onDestroy() {
+        if (connectivity != null && networkCallback != null) connectivity.unregisterNetworkCallback(networkCallback);
+        pageReady = false;
+        backupIO.shutdown();documentIO.shutdown();
+        super.onDestroy();
     }
 
     // 뒤로 가기: 열린 창이 있으면 닫고, 없으면 두 번 눌러야 끝냄

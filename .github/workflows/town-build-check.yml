@@ -42,6 +42,7 @@ jobs:
             node --check "$f"
           done
           node tools/check_companion_ai.js
+          node tools/check_save_sync.js
       - name: Build town
         run: python src/town/build.py
       - name: Publish built town.html

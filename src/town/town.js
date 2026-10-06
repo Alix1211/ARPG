@@ -1008,14 +1008,14 @@ function drawPortalArrivalAura(){
 }
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
-  const simPaused=panel==='char'||panel==='settings',sdt=simPaused?0:dt;
+  const simPaused=panel==='char'||panel==='settings'||!!window.ARPG_SYNC_CHECKING||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
   const locked=typeof playerControlLocked==='function'&&playerControlLocked();
-  P.moving = !panel && !locked && mag > 0.15;
-  if (P.hold && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
+  P.moving = !simPaused && !panel && !locked && mag > 0.15;
+  if (P.hold && !simPaused && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
   if (P.moving){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;

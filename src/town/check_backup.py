@@ -97,6 +97,25 @@ async def main():
         assert not await pg.locator('#dlgCloseX').is_visible()
         assert await pg.locator('#dlgMainRow [data-close]').is_visible()
         assert not errors,errors
+        # 새 앱: 수동 확인창 없이 시작/재연결 비교. 시작 비교 전 저장 시각 갱신 금지.
+        auto=await b.new_context(viewport={'width':844,'height':390})
+        await auto.add_init_script(MOCK+r"""
+          ArpgBridge.put('arpg_save_v3',JSON.stringify({v:3,t:100,lv:1,gold:333,hp:4000,mp:2800,stats:{},bag:[],eq:{}}));
+          mock.status={linked:true,online:false,at:0};mock.syncs=0;
+          ArpgBridge.syncBackup=()=>{mock.syncs++;};
+          ArpgBridge.webReady=()=>ArpgBridge.syncBackup();
+        """)
+        ap=await auto.new_page();await ap.goto(URL);await ap.wait_for_function('window.UI')
+        assert await ap.evaluate('() => mock.syncs===1 && window.ARPG_SYNC_CHECKING && GAME.P.gold===333')
+        await ap.evaluate('() => {GAME.setGold(444);UI.save();}')
+        assert await ap.evaluate("() => JSON.parse(localStorage.getItem('arpg_save_v3')).t===100")
+        await ap.evaluate('() => {onArpgSyncDone();UI.save();}')
+        assert await ap.evaluate("() => JSON.parse(JSON.parse(localStorage.getItem('native_test_store')).arpg_save_v3).gold===444")
+        await ap.evaluate("() => {mock.status.online=true;dispatchEvent(new Event('online'));}")
+        assert await ap.evaluate('() => mock.syncs===2')
+        await ap.click('#settingsBtn');await ap.click('#restoreBackup')
+        assert await ap.evaluate('() => mock.syncs===3 && mock.reads===0')
+        await auto.close()
         print('backup and phone dialog ok: app-only, confirm/cancel, invalid rejection, restore, save guard, phone X')
         await b.close()
 
