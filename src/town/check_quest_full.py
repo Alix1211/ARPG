@@ -1,6 +1,13 @@
 import asyncio, os
 from playwright.async_api import async_playwright
 
+MAIN_FROM=int(os.environ.get('QUEST_MAIN_FROM','1'))
+MAIN_TO=int(os.environ.get('QUEST_MAIN_TO','70'))
+SIDE_FROM=int(os.environ.get('QUEST_SIDE_FROM','1'))
+SIDE_TO=int(os.environ.get('QUEST_SIDE_TO','45'))
+RUN_MAIN=MAIN_FROM>0 and MAIN_TO>=MAIN_FROM
+RUN_SIDE=SIDE_FROM>0 and SIDE_TO>=SIDE_FROM
+
 URL='file://'+os.path.abspath(os.path.join(os.path.dirname(__file__),'../../game/town.html'))
 
 async def main():
@@ -138,39 +145,41 @@ async def main():
             assert not await ev("id=>!!QUEST.state().active[id]",qid),('still active after completion',qid)
             print('OK ',qid,flush=True)
 
-        # 메인 1~70: 실제 순차 수락/진행/완료
-        await ev("""() => {localStorage.removeItem('arpg_save_v3');QUEST.loadData(null);GAME.P.lv=70;GAME.P.exp=0;GAME.setGold(999999);}""")
-        await town()
-        for n in range(1,71):
-            qid=f'MAIN_{n:03d}'
-            npc=await ev("id=>A.mainQuests.quests.find(q=>q.id===id).start.npc",qid)
-            await run_quest(qid,npc,24)
-        mains=await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_')).length")
-        assert mains==70,mains
-
-        # 메인 전체 완료 저장/복원
-        snap=await ev("() => QUEST.saveData()")
-        await ev("() => QUEST.loadData(null)")
-        await ev("d=>QUEST.loadData(d)",snap)
-        assert await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_')).length")==70
-
-        # 서브 1~45: 현재 퀘스트만 수락 가능하게 격리하되 실제 레벨/이전 메인 조건과 NPC 수락을 사용
-        all_main=[f'MAIN_{i:03d}' for i in range(1,71)]
-        all_side=[f'SIDE_{i:03d}' for i in range(1,46)]
-        for n in range(1,46):
-            qid=f'SIDE_{n:03d}'
-            q=await ev("id=>A.mainQuests.sideQuests.find(q=>q.id===id)",qid)
-            completed=all_main + [x for x in all_side if x!=qid]
-            await ev("""x=>{QUEST.loadData({schema:3,active:{},completed:x.completed,items:{},visited:[],flags:{}});GAME.P.lv=x.lv;GAME.P.exp=0;GAME.setGold(999999);}""",
-                     {'completed':completed,'lv':int(q['start'].get('level') or 70)})
+        # 지정한 메인 구간: 앞번호는 완료 상태로 두고, 해당 구간은 실제 수락→현장→완료를 순차 통과한다.
+        if RUN_MAIN:
+            prev=[f'MAIN_{i:03d}' for i in range(1,MAIN_FROM)]
+            await ev("""x=>{localStorage.removeItem('arpg_save_v3');QUEST.loadData({schema:3,active:{},completed:x,items:{},visited:[],flags:{}});GAME.P.lv=70;GAME.P.exp=0;GAME.setGold(999999);}""",prev)
             await town()
-            # current one was intentionally removed from completed; all others cannot hijack the NPC.
-            assert not await ev("id=>QUEST.state().completed.includes(id)",qid)
-            await run_quest(qid,q['start']['npc'],16)
+            for n in range(MAIN_FROM,MAIN_TO+1):
+                qid=f'MAIN_{n:03d}'
+                npc=await ev("id=>A.mainQuests.quests.find(q=>q.id===id).start.npc",qid)
+                await run_quest(qid,npc,24)
+            got=await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_'))")
+            for n in range(MAIN_FROM,MAIN_TO+1):
+                assert f'MAIN_{n:03d}' in got,('main chunk missing',n,got[-5:])
+            snap=await ev("() => QUEST.saveData()")
+            await ev("() => QUEST.loadData(null)")
+            await ev("d=>QUEST.loadData(d)",snap)
+            got2=await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_'))")
+            assert len(got2)>=MAIN_TO,('main save restore',MAIN_FROM,MAIN_TO,len(got2))
 
-        # 각 서브가 독립 실제 흐름으로 끝까지 완료 가능한지 모두 통과했다.
+        # 지정한 서브 구간: 대상 하나만 미완료로 격리하되 실제 레벨/선행메인/NPC 수락과 모든 단계를 사용한다.
+        if RUN_SIDE:
+            all_main=[f'MAIN_{i:03d}' for i in range(1,71)]
+            all_side=[f'SIDE_{i:03d}' for i in range(1,46)]
+            for n in range(SIDE_FROM,SIDE_TO+1):
+                qid=f'SIDE_{n:03d}'
+                q=await ev("id=>A.mainQuests.sideQuests.find(q=>q.id===id)",qid)
+                completed=all_main + [x for x in all_side if x!=qid]
+                await ev("""x=>{QUEST.loadData({schema:3,active:{},completed:x.completed,items:{},visited:[],flags:{}});GAME.P.lv=x.lv;GAME.P.exp=0;GAME.setGold(999999);}""",
+                         {'completed':completed,'lv':int(q['start'].get('level') or 70)})
+                await town()
+                assert not await ev("id=>QUEST.state().completed.includes(id)",qid)
+                await run_quest(qid,q['start']['npc'],16)
+
         assert not errs,errs
-        print('quest full ok: MAIN001-070 + SIDE001-045 end-to-end engine playthrough')
+        print('quest chunk ok',{'main':[MAIN_FROM,MAIN_TO] if RUN_MAIN else None,'side':[SIDE_FROM,SIDE_TO] if RUN_SIDE else None},flush=True)
+
         await b.close()
 
 asyncio.run(main())
