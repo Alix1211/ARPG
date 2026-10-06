@@ -142,7 +142,7 @@ async function makeFieldGround(theme,withVillage=false){
   }
   if(feather){
     const soft=document.createElement('canvas');soft.width=c.width;soft.height=c.height;const fg=soft.getContext('2d');
-    fg.filter='blur(14px)';fg.drawImage(shade,0,0);fg.filter='none';
+    fg.filter='blur(15px)';fg.drawImage(shade,0,0);fg.filter='none';
     g.drawImage(soft,0,0);
   }
 
