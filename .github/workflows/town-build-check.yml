@@ -128,6 +128,7 @@ jobs:
             src/town/check_portal_home.py
             src/town/check_shop_growth.py
             src/town/check_telemetry.py
+            src/town/check_companion.py
             src/town/check_quest.py
             src/town/check_dungeon.py
             src/town/check_chest.py
