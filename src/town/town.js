@@ -1040,14 +1040,6 @@ function frame(now){
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
     if(typeof updateCompanion==='function')updateCompanion(sdt);
     if(window.COMPANION&&COMPANION.ensureTownTests)COMPANION.ensureTownTests();
-    if(window.COMPANION&&COMPANION.diagnostics){
-      const ds=Math.floor(performance.now()/1000);
-      if(window.__COMP_DIAG_SEC!==ds){
-        window.__COMP_DIAG_SEC=ds;
-        const d=COMPANION.diagnostics(),v=$('ver');
-        if(v){if(!v.dataset.base)v.dataset.base=v.textContent;v.textContent=v.dataset.base+' · C '+d.n+'/'+d.s+'/'+d.p+' I'+d.img+' A'+d.active;}
-      }
-    }
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
     else if(MAP==='fieldvillage')updFieldVils(dt);
   }
