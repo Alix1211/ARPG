@@ -5,21 +5,26 @@ on:
     paths:
       - 'src/town/field_dungeon.js'
       - 'src/town/capture_field_feather.py'
+      - 'src/town/patch_field_feather_preview.py'
       - '.github/workflows/field-feather-preview.yml'
+
+concurrency:
+  group: field-feather-preview
+  cancel-in-progress: true
 
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: |
-          pip install pillow numpy scipy playwright
+          pip install playwright
           python -m playwright install --with-deps chromium
-      - run: python src/town/build.py
+      - run: python src/town/patch_field_feather_preview.py
       - run: python src/town/capture_field_feather.py
       - uses: actions/upload-artifact@v4
         with:
