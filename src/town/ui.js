@@ -692,7 +692,7 @@ function saveGame(){
     localStorage.setItem(SKEY,JSON.stringify({v:3,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,lastVisitedTown:G.lastVisitedTown?G.lastVisitedTown():null,
-      telemetry:window.TELEMETRY?TELEMETRY.saveData():null,
+      telemetry:window.TELEMETRY?TELEMETRY.saveData():null,companion:window.COMPANION?COMPANION.saveData():null,
       trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
   }catch(e){}
 }
@@ -712,7 +712,7 @@ function loadGame(){
   const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;P.reviveReadyAt=+d.reviveReadyAt||0;P.reviveArmed=!!d.reviveArmed;P.reviveRank=Math.max(1,Math.min(5,+d.reviveRank||1));
-  if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);if(window.QUEST)QUEST.loadData(d.quests);return d;
+  if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.COMPANION)COMPANION.loadData(d.companion);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);if(window.QUEST)QUEST.loadData(d.quests);return d;
 }
 const saved=loadGame();
 if(G.loadLastVisitedTown)G.loadLastVisitedTown(saved&&saved.lastVisitedTown||null);
