@@ -107,7 +107,12 @@ async function makeFieldGround(theme,withVillage=false){
 
   // 중간 필드 = 던전의 방+복도 생성 규칙을 쓰되, 화면에서는 밝은 야외 지형으로 보인다.
   fieldMapW=48;fieldMapH=48;
-  const D=genRoomLayout(48,48,12,{x:32,y:18,w:12,h:10});
+  let D;
+  if(window.__FIELD_LAYOUT_SEED!=null){
+    const prev=Math.random;let a=(window.__FIELD_LAYOUT_SEED>>>0);
+    Math.random=()=>{a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};
+    try{D=genRoomLayout(48,48,12,{x:32,y:18,w:12,h:10});}finally{Math.random=prev;}
+  }else D=genRoomLayout(48,48,12,{x:32,y:18,w:12,h:10});
   D.carve(1,D.start.cy-1,D.start.x,D.start.cy+1);
   D.carve(D.far.x+D.far.w-1,D.far.cy-1,46,D.far.cy+1);
 
