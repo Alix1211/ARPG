@@ -77,7 +77,10 @@ for (const p of CUR.props){
   if (p.kind === 'dummy'){ s.dummy = { hp: 0, wob: 0, ph: 0 }; dummies.push(s); }
   if (p.name) spots.push({ name: p.name, x: p.x, y: p.flat ? p.y - p.h / 2 : p.y + 16, r: p.r || (p.flat ? 40 : 46), kind: p.kind || 'prop', data: p, prop: s });
 }
-for (const n of CUR.npcs) npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
+for (const n of CUR.npcs){
+  if(n.companion&&window.COMPANION&&COMPANION.isActive(n.companion))continue;
+  npcs.push({ ...n, img: BI[n.k], ph: Math.random() * 7, key: n.y });
+}
 for (const n of npcs){
   solids.push({ x0: n.x - 13, x1: n.x + 13, y0: n.y - 12, y1: n.y - 1 });
   sprites.push(n);
@@ -489,8 +492,10 @@ function openDlg(n){
   $('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
-  $('dlgTrade').hidden = !n.shop && !n.go;
-  $('dlgTrade').textContent = n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
+  $('dlgTrade').hidden = !n.shop && !n.go && !n.companion;
+  $('dlgTrade').disabled = false;
+  $('dlgTrade').textContent = n.companion&&window.COMPANION?COMPANION.buttonText(n):n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
+  if(n.companion&&window.COMPANION&&COMPANION.isActive(n.companion))$('dlgTrade').disabled=true;
   const gx=$('dlgGuildExam');if(gx)gx.hidden=n.shop!=='guild';
   show('dlg');
   $('dlgTalk').hidden=false;if(window.QUEST)QUEST.decorateDialog(n);
@@ -498,6 +503,7 @@ function openDlg(n){
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 const guildExamBtn=$('dlgGuildExam');if(guildExamBtn)guildExamBtn.addEventListener('click',()=>{if(talking&&talking.shop==='guild'&&window.GUILD)GUILD.openExam();});
 $('dlgTrade').addEventListener('click', () => {
+  if(talking&&talking.companion&&window.COMPANION){COMPANION.hireFromDialog(talking);return;}
   if (talking.shop==='inn'){ closeAll(); if(typeof enterInn==='function')enterInn(); return; }
   if (talking.go === 'field'){ openRegionSelect(); return; }
   if (talking.go === 'dungeon'){ enterDungeonFromOut(); return; }
@@ -1032,6 +1038,7 @@ function frame(now){
   if(!simPaused){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
+    if(typeof updateCompanion==='function')updateCompanion(sdt);
     if(MAP==='town')updVils(dt,dayLook(DAY.t).lamp>0.6);
     else if(MAP==='fieldvillage')updFieldVils(dt);
   }
@@ -1049,10 +1056,12 @@ function frame(now){
   if (MAP === 'town') for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
   else if (MAP === 'fieldvillage') for (const v of fvils) list.push({vil:v,key:v.y});
   if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list);
+  if (typeof appendCompanionSprite === 'function') appendCompanionSprite(list);
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
     if (s.hide) continue;
     if (s.me){ drawPortalArrivalAura();drawMe();drawShield(); continue; }
+    if (s.companion){ if(typeof drawCompanion==='function')drawCompanion(s.companion,sdt); continue; }
     if (s.portal){drawTownPortal(s);continue;}
     if (s.vil){ drawVil(s.vil); continue; }
     if (s.mon){ drawMonster(s.mon, sdt); continue; }
@@ -1078,6 +1087,7 @@ function frame(now){
   if(window.QUEST)QUEST.draw();
   if(!DUN&&!INDOOR)drawLeaves();
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
+  if(typeof drawCompanionFx==='function')drawCompanionFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + sdt / DAYLEN) % 1;
   if(!DUN&&!INDOOR)drawDay(camX,camY);else if($('place').textContent!==CUR.name)$('place').textContent=CUR.name;
