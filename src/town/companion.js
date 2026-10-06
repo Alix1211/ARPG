@@ -14,11 +14,12 @@ let companionTownTestsEnabled=false;
 let companionTarget=null;
 let companionParkedHire=null;
 const STORY_COMPANION_WINDOWS=[
-  {quest:'MAIN_015',id:'hero',from:1,to:3,maps:['field']},
-  {quest:'MAIN_023',id:'knight',from:1,to:4,maps:['field']},
-  {quest:'MAIN_035',id:'hero',from:1,to:2,maps:['field']},
-  {quest:'MAIN_047',id:'knight',from:1,to:3,maps:['town','field']},
-  {quest:'MAIN_056',id:'hero',from:1,to:5,maps:['field','dungeon']},
+  // 봉인 퀘스트의 실제 전투/탐색 구간만 동행한다. 대화 장면만 있는 구간은 캐릭터를 강제로 붙이지 않는다.
+  {quest:'MAIN_015',id:'hero',from:1,to:2,maps:['field']},
+  {quest:'MAIN_016',id:'hero',from:0,to:2,maps:['dungeon']},
+  {quest:'MAIN_023',id:'knight',from:3,to:4,maps:['field']},
+  {quest:'MAIN_047',id:'knight',from:2,to:3,maps:['field']},
+  {quest:'MAIN_056',id:'hero',from:1,to:4,maps:['dungeon']},
 ];
 const COMPANION_IMG={};
 for(const id in (A.companions||{})){
