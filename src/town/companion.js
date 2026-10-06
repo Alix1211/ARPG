@@ -4,8 +4,10 @@
 // 길을 잃으면 플레이어 근처 워프, 한 게임 하루(현재 8분) 만료 후 모험 중에는 유지하고 다음 마을/패배 때 복귀.
 
 const COMPANION_DEF={
-  hero:{name:'카엘렌',title:'검사 · 파티 테스트',kind:'sword',range:68,aggro:285,attackCd:.72,speed:225},
-  knight:{name:'러스티',title:'이계의 용병 · 총병',kind:'gun',range:370,aggro:340,attackCd:.72,speed:205}
+  // 카엘렌: 플레이어 뒤를 붙는 추종자가 아니라 먼저 적을 물고 버티는 전방 검사.
+  hero:{name:'카엘렌',title:'검사 · 파티 테스트',kind:'sword',range:74,aggro:620,pursuit:760,attackCd:.68,speed:252,warpIdle:680,warpCombat:1250,stuckCombat:6.0},
+  // 러스티: 플레이어 주변을 유지하는 후방 지원 사수.
+  knight:{name:'러스티',title:'이계의 용병 · 총병',kind:'gun',range:390,aggro:370,pursuit:470,attackCd:.72,speed:205,warpIdle:520,warpCombat:700,stuckCombat:3.0}
 };
 const COMPANION_IMG={};
 for(const id in (A.companions||{})){
@@ -146,13 +148,17 @@ function companionLOS(x1,y1,x2,y2){
 }
 function companionPickTarget(){
   if(!companionState.active||!combatMap())return null;
-  const d=COMPANION_DEF[companionState.active];let best=null,score=1e9;
+  const c=companionState,d=COMPANION_DEF[c.active];let best=null,score=1e9;
   for(const m of monsters){
     if(!m||m.dead||m.removed)continue;
-    const pp=Math.hypot(m.x-P.x,m.y-P.y);if(pp>d.aggro)continue;
-    const cc=Math.hypot(m.x-companionState.x,m.y-companionState.y);if(cc>d.range+120)continue;
-    if(!companionLOS(companionState.x,companionState.y,m.x,m.y))continue;
-    const s=cc+pp*.35;if(s<score){score=s;best=m;}
+    const pp=Math.hypot(m.x-P.x,m.y-P.y),cc=Math.hypot(m.x-c.x,m.y-c.y);
+    // 검사는 플레이어 전방에서 넓게 찾아가고, 총병은 플레이어 근처만 지원한다.
+    const seen=d.kind==='sword'?(pp<=d.aggro||cc<=d.aggro*.72):(pp<=d.aggro&&cc<=d.pursuit);
+    if(!seen)continue;
+    if(d.kind==='gun'&&!companionLOS(c.x,c.y,m.x,m.y))continue;
+    // 카엘렌은 가까운 적보다 플레이어에게 접근한 적을 조금 더 우선한다.
+    const scoreNow=d.kind==='sword'?(pp*.58+cc*.42):(cc+pp*.35);
+    if(scoreNow<score){score=scoreNow;best=m;}
   }
   return best;
 }
@@ -173,6 +179,13 @@ function companionDesired(){
   else if(P.dir==='side'){x=P.x+(P.flip?58:-58);y=P.y+18;}
   return [x,y];
 }
+function companionDesiredFront(){
+  let x=P.x,y=P.y-88;
+  if(P.dir==='front'){x=P.x;y=P.y+96;}
+  else if(P.dir==='back'){x=P.x;y=P.y-96;}
+  else if(P.dir==='side'){x=P.x+(P.flip?-105:105);y=P.y+6;}
+  return [x,y];
+}
 function companionHit(m,v,dx,dy,kb){
   if(!m||m.dead||m.removed)return false;
   v=Math.max(1,Math.round(v));const actual=Math.min(Math.max(0,m.hp),v);
@@ -191,10 +204,15 @@ function companionAttack(m){
   c.cd=d.attackCd;c.atkT=.22;
   if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else c.dir=dy<0?'back':'front';
   if(d.kind==='gun'){
-    companionFx.push({kind:'laser',x1:c.x,y1:c.y-54,x2:m.x,y2:m.y-m.h*.55,t:0,life:.16});
+    const a=Math.atan2(dy,dx),mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
+    companionFx.push({kind:'muzzle',x:mx,y:my,a,t:0,life:.12});
+    companionFx.push({kind:'laser',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.22});
+    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.24});
     companionHit(m,c.damage,dx,dy,3);
   }else{
-    companionFx.push({kind:'slash',x:c.x+dx/dist*45,y:c.y-38+dy/dist*18,a:Math.atan2(dy,dx),t:0,life:.22});
+    const a=Math.atan2(dy,dx);
+    companionFx.push({kind:'slash',x:c.x+dx/dist*52,y:c.y-40+dy/dist*20,a,t:0,life:.30});
+    companionFx.push({kind:'swordflash',x:c.x,y:c.y-43,a,t:0,life:.18});
     companionHit(m,c.damage,dx,dy,10);
   }
 }
@@ -216,26 +234,32 @@ function updateCompanion(dt){
   }
   if(c.expired&&(MAP==='town'||MAP==='fieldvillage')){companionReturn('expired');return;}
   c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
-  const distP=Math.hypot(c.x-P.x,c.y-P.y);
-  if(distP>520){companionWarp();return;}
-  const target=companionPickTarget();
+  const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false;
-  if(d.kind==='sword'&&target&&Math.hypot(target.x-P.x,target.y-P.y)<=d.aggro){
+  if(d.kind==='sword'&&target){
+    // 전투 중에는 플레이어에게 조금 멀어졌다고 복귀하지 않는다.
+    // 카엘렌은 목표를 물고 앞에서 버티며, 정말 이탈했을 때만 워프한다.
     const dd=Math.hypot(target.x-c.x,target.y-c.y);
+    if(distP>d.warpCombat){companionWarp();return;}
     if(dd>d.range)moved=companionMoveTo(target.x,target.y,d.speed,dt);
     else if(c.cd<=0)companionAttack(target);
   }else if(d.kind==='gun'&&target){
+    if(distP>d.warpCombat){companionWarp();return;}
     const dd=Math.hypot(target.x-c.x,target.y-c.y);
     if(dd<=d.range&&c.cd<=0)companionAttack(target);
     const want=companionDesired(),fd=Math.hypot(c.x-want[0],c.y-want[1]);
     if(fd>95)moved=companionMoveTo(want[0],want[1],d.speed,dt);
   }else{
-    const want=companionDesired(),dd=Math.hypot(c.x-want[0],c.y-want[1]);
+    if(distP>d.warpIdle){companionWarp();return;}
+    const want=d.kind==='sword'?companionDesiredFront():companionDesired(),dd=Math.hypot(c.x-want[0],c.y-want[1]);
     if(dd>28)moved=companionMoveTo(want[0],want[1],d.speed,dt);
     else{c.t=0;c.dir=P.dir||c.dir;c.flip=!!P.flip;}
   }
-  if(!moved&&Math.hypot(c.x-P.x,c.y-P.y)>95)c.stuck+=dt;else c.stuck=Math.max(0,c.stuck-dt*2);
-  if(c.stuck>2.2)companionWarp();
+  const far=distP>(d.kind==='sword'?180:95);
+  if(!moved&&far)c.stuck+=dt;else c.stuck=Math.max(0,c.stuck-dt*2);
+  // 검사 전투 중에는 6초 이상 완전히 막힌 경우에만 구조용 워프. 몹을 치다 말고 복귀하지 않게 한다.
+  const stuckLimit=target?(d.stuckCombat||4):2.2;
+  if(c.stuck>stuckLimit)companionWarp();
   c.lastX=c.x;c.lastY=c.y;
 }
 function appendCompanionSprite(list){
@@ -250,18 +274,42 @@ function drawCompanion(c,dt){
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
   ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
-  const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);ctx.restore();
+  const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
+  if(c.active==='hero'){
+    // 카엘렌은 항상 검을 들고 있는 것이 보이게 한다.
+    const ang=d==='side'?(c.flip?Math.PI*.88:Math.PI*.12):(d==='back'?-Math.PI*.42:Math.PI*.42);
+    const bx=c.x+(d==='side'?(c.flip?-16:16):15),by=c.y-43;
+    ctx.save();ctx.translate(bx,by);ctx.rotate(ang);
+    ctx.strokeStyle='rgba(40,28,18,.95)';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-7,0);ctx.lineTo(9,0);ctx.stroke();
+    ctx.strokeStyle='rgba(225,235,245,.98)';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(39,0);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(10,-1);ctx.lineTo(38,-1);ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
 }
 function drawCompanionFx(dt){
   for(let i=companionFx.length-1;i>=0;i--){
     const f=companionFx[i];f.t+=dt;const k=Math.max(0,1-f.t/f.life);if(k<=0){companionFx.splice(i,1);continue;}
     ctx.save();ctx.globalCompositeOperation='lighter';
     if(f.kind==='laser'){
-      ctx.lineCap='round';ctx.strokeStyle='rgba(70,145,255,'+(.28*k)+')';ctx.lineWidth=11*k;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
-      ctx.strokeStyle='rgba(185,225,255,'+(.95*k)+')';ctx.lineWidth=3.2;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
-      ctx.fillStyle='rgba(210,240,255,'+(.9*k)+')';ctx.beginPath();ctx.arc(f.x2,f.y2,8+8*(1-k),0,7);ctx.fill();
+      ctx.lineCap='round';ctx.strokeStyle='rgba(45,120,255,'+(.42*k)+')';ctx.lineWidth=16*k;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
+      ctx.strokeStyle='rgba(170,225,255,'+(.98*k)+')';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,'+(.95*k)+')';ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
+    }else if(f.kind==='muzzle'){
+      ctx.translate(f.x,f.y);ctx.rotate(f.a);ctx.fillStyle='rgba(170,225,255,'+(.95*k)+')';
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(28*k,-8*k);ctx.lineTo(20*k,0);ctx.lineTo(28*k,8*k);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,'+(.95*k)+')';ctx.beginPath();ctx.arc(4,0,5*k,0,7);ctx.fill();
+    }else if(f.kind==='impact'){
+      ctx.translate(f.x,f.y);ctx.strokeStyle='rgba(130,205,255,'+(.95*k)+')';ctx.lineWidth=3;
+      for(let q=0;q<6;q++){const a=q*Math.PI/3+f.t*8,r=9+22*(1-k);ctx.beginPath();ctx.moveTo(Math.cos(a)*6,Math.sin(a)*6);ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);ctx.stroke();}
+      ctx.strokeStyle='rgba(230,250,255,'+(.9*k)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,8+18*(1-k),0,7);ctx.stroke();
+    }else if(f.kind==='swordflash'){
+      ctx.translate(f.x,f.y);ctx.rotate(f.a);ctx.strokeStyle='rgba(255,245,210,'+(.9*k)+')';ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(54,0);ctx.stroke();
     }else{
-      ctx.strokeStyle='rgba(225,240,255,'+(.9*k)+')';ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();ctx.arc(f.x,f.y,48,f.a-.95,f.a+.95);ctx.stroke();
+      // 카엘렌 검 궤적: 루크레아의 강베기처럼 굵은 반달형 잔광.
+      ctx.strokeStyle='rgba(255,238,195,'+(.28*k)+')';ctx.lineWidth=18*k;ctx.lineCap='round';ctx.beginPath();ctx.arc(f.x,f.y,58,f.a-1.15,f.a+1.15);ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,245,'+(.95*k)+')';ctx.lineWidth=5;ctx.beginPath();ctx.arc(f.x,f.y,58,f.a-1.12,f.a+1.12);ctx.stroke();
     }
     ctx.restore();
   }
