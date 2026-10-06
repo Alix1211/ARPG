@@ -39,16 +39,20 @@ async def main():
 
         async def go_field(theme,leg=1):
             cur=await ev("() => window.__FD?__FD.state():null")
-            if not cur or cur.get('map')!='field' or cur.get('theme')!=theme or cur.get('leg')!=leg:
+            moved=not cur or cur.get('map')!='field' or cur.get('theme')!=theme or cur.get('leg')!=leg
+            if moved:
                 assert await ev("([t,l])=>__FD.enter(t,l)",[theme,leg])
+                await pg.wait_for_timeout(480)
             await ev("() => QUEST.tick()")
             st=await ev("() => __FD.state()")
             assert st['map']=='field' and st['theme']==theme and st['leg']==leg,(theme,leg,st)
 
         async def go_dungeon(floor):
             cur=await ev("() => window.__DUN?__DUN.state():null")
-            if not cur or cur.get('map')!='dungeon' or cur.get('floor')!=floor:
+            moved=not cur or cur.get('map')!='dungeon' or cur.get('floor')!=floor
+            if moved:
                 assert await ev("f=>__DUN.go(f)",floor)
+                await pg.wait_for_timeout(480)
             await ev("() => QUEST.tick()")
             st=await ev("() => __DUN.state()")
             assert st['map']=='dungeon' and st['floor']==floor,(floor,st)
@@ -120,6 +124,7 @@ async def main():
 
         async def run_quest(qid,start_npc,max_steps=20):
             print('RUN',qid,flush=True)
+            await ev("() => {GAME.P.hp=GAME.P.maxHp=999999999;GAME.P.mp=GAME.P.maxMp=999999999;}")
             await talk(start_npc,qid)
             assert await ev("id=>!!QUEST.state().active[id]",qid),('not accepted',qid)
             for _ in range(max_steps):
