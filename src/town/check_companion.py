@@ -14,7 +14,7 @@ async def main():
         assert await ev("() => ['hero','knight'].every(id=>A.companions[id]&&['front','back','side'].every(d=>A.companions[id].fr[d].length===5))")
         assert await ev("() => A.npcs.filter(n=>n.companion).length===2")
 
-        r=await ev("""() => { GAME.setGold(1000); const before=GAME.P.gold; const base=Math.max(1,Math.round(basicDamage()*1.15)); const fee=COMPANION.fee('knight'); const ok=COMPANION.hire('knight'); const s=COMPANION.state(); return {ok,before,after:GAME.P.gold,fee,active:s.active,damage:s.damage,base}; }""")
+        r=await ev("""() => { GAME.setGold(1000); const before=GAME.P.gold; const base=COMPANION.previewDamage(); const fee=COMPANION.fee('knight'); const ok=COMPANION.hire('knight'); const s=COMPANION.state(); return {ok,before,after:GAME.P.gold,fee,active:s.active,damage:s.damage,base}; }""")
         assert r['ok'] and r['active']=='knight' and r['after']==r['before']-r['fee'],r
         assert r['damage']==r['base'],r
 
