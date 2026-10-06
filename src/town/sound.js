@@ -22,7 +22,8 @@ const SFX = (() => {
   function init(){
     if (ac) return;
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-    ac = new C(); out = ac.createGain(); out.gain.value = 0.55 * AUDIO_SETTINGS.get().sfx; out.connect(ac.destination);
+    if(!window.__ARPG_AUDIO_CTX)window.__ARPG_AUDIO_CTX=new C({latencyHint:'interactive'});
+    ac = window.__ARPG_AUDIO_CTX; out = ac.createGain(); out.gain.value = 0.55 * AUDIO_SETTINGS.get().sfx; out.connect(ac.destination);
     // 작은 방 잔향(합성 임펄스)
     rev = ac.createConvolver(); const len = ac.sampleRate * 0.6, buf = ac.createBuffer(2, len, ac.sampleRate);
     for (let c = 0; c < 2; c++){ const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
