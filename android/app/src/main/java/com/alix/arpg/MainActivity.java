@@ -329,7 +329,8 @@ public final class MainActivity extends Activity {
         if (s.has("t") && (!(s.get("t") instanceof Number) || !Double.isFinite(s.getDouble("t"))
             || s.getDouble("t") < 0 || s.getDouble("t") > 9007199254740991L
             || s.getDouble("t") != s.getLong("t"))) throw new IllegalArgumentException();
-        if (!(s.get("v") instanceof Number) || s.getDouble("v") != 3 || !(s.get("lv") instanceof Number)
+        if (!(s.get("v") instanceof Number) || s.getDouble("v") != 3 || !(s.get("release") instanceof Number)
+            || s.getDouble("release") != 1 || !(s.get("lv") instanceof Number)
             || s.getDouble("lv") != s.getInt("lv") || s.getInt("lv") < 1 || s.getInt("lv") > 70 || !(s.get("gold") instanceof Number)
             || !(s.get("hp") instanceof Number) || !(s.get("mp") instanceof Number)
             || !(s.get("stats") instanceof JSONObject) || !(s.get("bag") instanceof JSONArray)
