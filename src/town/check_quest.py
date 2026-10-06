@@ -84,7 +84,7 @@ async def main():
                 if hidden:
                     await ev('() => GAME.closeAll()')
                     return
-                await pg.click('#dlgQuest')
+                await ev("() => document.getElementById('dlgQuest').click()")
                 await pg.wait_for_timeout(15)
             raise AssertionError('dialogue did not close')
 
