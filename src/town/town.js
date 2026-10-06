@@ -1098,6 +1098,7 @@ function frame(now){
     if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
     else ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
   }
+  if(typeof drawTownTestCompanionsForced==='function')drawTownTestCompanionsForced();
   if(window.QUEST)QUEST.draw();
   if(!DUN&&!INDOOR)drawLeaves();
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
