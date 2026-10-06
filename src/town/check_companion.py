@@ -23,6 +23,19 @@ async def main():
         r=await ev("""() => {COMPANION.syncStory({active:{}},'field');return COMPANION.state();}""")
         assert r['active'] is None,r
 
+        # 봉인 스토리의 실제 전투/탐색 구간만 합류한다.
+        for qid,step,map_id,who in [
+            ('MAIN_016',0,'dungeon','hero'),
+            ('MAIN_023',3,'field','knight'),
+            ('MAIN_047',2,'field','knight'),
+            ('MAIN_056',1,'dungeon','hero'),
+        ]:
+            r=await ev("""x => {COMPANION.syncStory({active:{[x.qid]:{step:x.step}}},x.map);return COMPANION.state();}""",
+                       {'qid':qid,'step':step,'map':map_id})
+            assert r['active']==who and r['mode']=='story' and r['storyQuest']==qid,(qid,r)
+            await ev("""x => COMPANION.syncStory({active:{[x.qid]:{step:99}}},x.map)""",{'qid':qid,'map':map_id})
+            assert (await ev("() => COMPANION.state().active")) is None,qid
+
         assert await ev("() => __INN.enter()")
         await pg.wait_for_timeout(700)
         d=await ev("() => COMPANION.diagnostics()")
