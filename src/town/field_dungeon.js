@@ -464,6 +464,7 @@ function restAtCamp(){
   traveling=true;closeAll();
   const f=$('fade'),art=$('campArt');f.classList.add('slow');requestAnimationFrame(()=>f.classList.add('on'));
   setTimeout(()=>{
+    if(window.TELEMETRY)TELEMETRY.camp();
     P.hp=P.maxHp;P.mp=P.maxMp;P.mpAcc=0;
     for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
     spawnFieldMonsters(fieldTheme);syncBars();
@@ -511,6 +512,7 @@ function faceMonster(m,dx,dy){
 }
 function defeatPlayer(){
   if(tryRevivePlayer())return;
+  if(window.TELEMETRY)TELEMETRY.death({gold:P.gold});
   if(window.GUILD)GUILD.onDefeat();
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
   for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;P.shield=0;syncBars();
@@ -522,6 +524,7 @@ function rawPlayerDamage(v,label){
   const cm=window.UI&&UI.combatMods?UI.combatMods():{damageReduce:0};
   v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));
   if(P.shield>0){v=absorbShield(v);if(v<=0)return;}   // 빙결 보호막이 먼저 받는다
+  const actual=Math.min(P.hp,v);if(window.TELEMETRY)TELEMETRY.damageIn(actual);
   P.hp=Math.max(0,P.hp-v);syncBars();if(window.CHATTER)CHATTER.hurt();
   pops.push({x:P.x,y:P.y-95,t:0,txt:(label?label+' ':'')+'-'+v,enemy:true});
   if(P.hp<=0)defeatPlayer();
@@ -680,7 +683,7 @@ function updEncounters(dt){
     if(d.picked) continue;
     if(Math.hypot(d.x-P.x,d.y-P.y)<28){
       if(d.kind==='gold'){setGold(P.gold+d.amount);d.picked=true;}
-      else if(window.UI&&UI.add(d.item)){d.picked=true;say(d.item.name+' 획득');if(window.CHATTER)CHATTER.loot(d.item);}
+      else if(window.UI&&UI.add(d.item)){d.picked=true;if(window.TELEMETRY)TELEMETRY.loot(d.item);say(d.item.name+' 획득');if(window.CHATTER)CHATTER.loot(d.item);}
       else if(window.CHATTER)CHATTER.event('bagfull');
     }
   }
@@ -691,6 +694,7 @@ function hitMonster(m,d,stagger,dmOver,kbOver){
   // 정예·우두머리는 경직을 한 번 받으면 잠시 면역(무한 경직 방지)
   let st=stagger?.32:.12,kb=kbOver!=null?kbOver:(stagger?20:12);
   if(m.boss||m.elite){kb*=.4;if(m.stunImm>0){st=0;kb*=.3;}else if(stagger)m.stunImm=4;}
+  const actual=Math.min(Math.max(0,m.hp),v);if(window.TELEMETRY)TELEMETRY.damageOut(actual);
   m.hp-=v;m.hurt=.18;m.stun=st;m.hitK=(stagger||crit)?1:.65;
   if(!dmOver&&WPN&&window.GAME&&GAME.gainMastery)GAME.gainMastery(WPN.wt,1);
   const q=Math.hypot(d[0],d[1])||1;
@@ -729,6 +733,7 @@ function killMonster(m){
     m.revived=true;m.dead=true;m.death=0;m.hp=0;m.reviveT=1.5;return;
   }
   m.dead=true;m.death=0;m.hp=0;m.fallDir=m.hitDx!=null?(m.hitDx>=0?1:-1):(Math.random()<.5?1:-1);
+  if(window.TELEMETRY)TELEMETRY.kill(m);
   sfx.push({type:'kill',t:0,x:m.x,y:m.y,r:44});
   const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.coinMul||TIER_MATCH.scales.coin[tier-1];
   const coin=Math.round((2+Math.floor(Math.random()*8))*(1+coinBonus/100)*rewardMul);
