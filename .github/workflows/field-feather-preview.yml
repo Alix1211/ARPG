@@ -1,0 +1,28 @@
+name: field-feather-preview
+on:
+  push:
+    branches: [preview/field-feather]
+    paths:
+      - 'src/town/field_dungeon.js'
+      - 'src/town/capture_field_feather.py'
+      - '.github/workflows/field-feather-preview.yml'
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          pip install pillow numpy scipy playwright
+          python -m playwright install --with-deps chromium
+      - run: python src/town/build.py
+      - run: python src/town/capture_field_feather.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: field-feather-preview
+          path: field_feather_preview/*.png
+          if-no-files-found: error
