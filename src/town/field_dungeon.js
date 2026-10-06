@@ -114,9 +114,9 @@ async function makeFieldGround(theme,withVillage=false){
   const visualTheme=theme,t=fieldTiles[visualTheme],ims=Object.values(t);await waitImages(ims);
   const base=t.grass||ims[0],flower=t.grass_flower||base,dirt=t.dirt||t.path||base,blockedTex=t.water||base;
   const dark={
-    spring:'rgba(18,62,24,.42)',summer:'rgba(12,52,28,.46)',autumn:'rgba(68,43,20,.34)',
-    winter:'rgba(45,64,72,.26)',ice:'rgba(25,68,98,.28)',volcano:'rgba(50,18,10,.38)',swamp:'rgba(20,42,25,.44)'
-  }[visualTheme]||'rgba(20,55,25,.38)';
+    spring:'rgba(18,62,24,.49)',summer:'rgba(12,52,28,.53)',autumn:'rgba(68,43,20,.41)',
+    winter:'rgba(45,64,72,.33)',ice:'rgba(25,68,98,.35)',volcano:'rgba(50,18,10,.45)',swamp:'rgba(20,42,25,.51)'
+  }[visualTheme]||'rgba(20,55,25,.45)';
   const liquidBlocked=visualTheme==='volcano'||visualTheme==='swamp'||visualTheme==='ice';
 
   const c=document.createElement('canvas');c.width=48*TS;c.height=48*TS;const g=c.getContext('2d');
@@ -510,6 +510,7 @@ function faceMonster(m,dx,dy){
 }
 function defeatPlayer(){
   if(tryRevivePlayer())return;
+  if(typeof onCompanionPlayerDefeat==='function')onCompanionPlayerDefeat();
   if(window.TELEMETRY)TELEMETRY.death({gold:P.gold});
   if(window.GUILD)GUILD.onDefeat();
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
