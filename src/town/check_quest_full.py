@@ -38,6 +38,7 @@ async def main():
             await town()
             ok=await ev('''no=>{const n=A.npcs.find(n=>n.no===no);if(!n)return false;GAME.P.x=n.x;GAME.P.y=n.y+16;return true;}''',no)
             assert ok,('missing npc',no,expect_id)
+            await pg.wait_for_timeout(100)
             await ev('() => GAME.act()')
             await pg.wait_for_timeout(25)
             assert await ev("() => document.getElementById('dlg').classList.contains('on')"),('dialog not open',no,expect_id)
@@ -85,7 +86,7 @@ async def main():
                 pts=await ev("id=>QUEST.points().filter(p=>p.id===id)",qid)
                 assert pts,('no quest point',qid,step['type'],step.get('point'))
                 pt=pts[0]
-                assert await ev("p=>walkableAt(p.x,p.y)",pt),('quest point not walkable',qid,step['type'],pt,step.get('point'))
+                assert await ev("p=>GAME.walkableAt(p.x,p.y)",pt),('quest point not walkable',qid,step['type'],pt,step.get('point'))
                 await ev("p=>{GAME.P.x=p.x;GAME.P.y=p.y;}",pt)
                 assert await ev("id=>QUEST.collect(id)",qid),('point action failed',qid,step)
                 if step['type'] in ('inspect','scene'):
