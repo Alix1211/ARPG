@@ -613,7 +613,10 @@ if not os.path.exists(os.path.join(GAME_DIR, art_name)):
     with open(os.path.join(GAME_DIR, art_name), 'w', encoding='utf-8') as f: f.write(art_js)
 RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@@')?window.ART[+o.slice(2)]:o;"
            "if(Array.isArray(o))return o.map(r);if(o&&typeof o==='object'){for(const k in o)o[k]=r(o[k]);}return o;})(")
-html = html.replace('<script>\n/*ASSETS*/', '<script src="' + art_name + '"></script>\n<script>\n/*ASSETS*/')
+# WebView가 이전 그림 묶음을 잘못 캐시한 경우를 끊기 위한 캐시 세대값.
+# 그림 해시는 그대로 쓰되 세대값을 올리면 APK가 반드시 새 URL로 다시 받는다.
+ART_CACHE_EPOCH = '2'
+html = html.replace('<script>\n/*ASSETS*/', '<script src="' + art_name + '?v=' + ART_CACHE_EPOCH + '"></script>\n<script>\n/*ASSETS*/')
 html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
 with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
 print('ok', len(html) // 1024, 'KB +', art_name, len(art_js) // 1024, 'KB')
