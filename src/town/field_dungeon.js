@@ -168,13 +168,17 @@ function randomFieldProps(theme,isLast=false,bg=null){
   const startMeta=fieldPropMeta(visualTheme,poi.start[0]),campMeta=fieldPropMeta(visualTheme,poi.camp[0]),ruinMeta=fieldPropMeta(visualTheme,poi.ruin[0]),specialMeta=fieldPropMeta(visualTheme,poi.special[0]);
   if(isLast){
     const L=FIELD_LAYOUT[theme]||FIELD_LAYOUT.spring;
-    for(const p of [
+    const fixedPoi=[
       mkFieldProp(startMeta,L.sign[0],L.sign[1],'',poi.start[1]),
       mkFieldProp(campMeta,L.camp[0],L.camp[1],theme==='spring'||theme==='summer'?'fire':'',poi.camp[1]),
       mkFieldProp(ruinMeta,L.ruin[0],L.ruin[1],'',poi.ruin[1]),
       mkFieldProp(specialMeta,L.special[0],L.special[1],'',poi.special[1]),
       mkFieldProp(cave,L.cave[0],L.cave[1],'dungeon','필드 동굴 입구')
-    ])if(p)out.push(p);
+    ];
+    if(fixedPoi[0])fixedPoi[0].aliases=['지역 이정표'];
+    if(fixedPoi[1])fixedPoi[1].aliases=['야영지'];
+    if(fixedPoi[2])fixedPoi[2].aliases=['무너진 폐허'];
+    for(const p of fixedPoi)if(p)out.push(p);
     const pool=all.filter(x=>!/^1[3-6]_/.test(x.name));let tries=0;
     while(out.length<46&&tries++<620){
       const x=2+Math.random()*44,y=2+Math.random()*28;
@@ -210,9 +214,9 @@ function randomFieldProps(theme,isLast=false,bg=null){
   if(rooms.length){
     const r0=rooms[Math.floor(Math.random()*rooms.length)],r1=rooms[Math.floor(Math.random()*rooms.length)];
     const c0=mkFieldProp(campMeta,r0.cx,r0.cy,theme==='spring'||theme==='summer'?'fire':'',poi.camp[1]),c1=mkFieldProp(ruinMeta,r1.cx,r1.cy,'',poi.ruin[1]);
-    if(c0)out.push(c0);if(c1)out.push(c1);
+    if(c0){c0.aliases=['야영지'];out.push(c0);}if(c1){c1.aliases=['무너진 폐허'];out.push(c1);}
   }
-  const sg=mkFieldProp(startMeta,bg.start.x+1.4,bg.start.y-.5,'',poi.start[1]);if(sg)out.push(sg);
+  const sg=mkFieldProp(startMeta,bg.start.x+1.4,bg.start.y-.5,'',poi.start[1]);if(sg){sg.aliases=['지역 이정표'];out.push(sg);}
   const softPool=all.filter(m=>isSoftName(m.name));let tries=0;
   while(out.length<250&&tries++<900){
     const x=2+Math.random()*44,y=2+Math.random()*44;if(!outdoorFloor(bg,Math.floor(x),Math.floor(y)))continue;
@@ -314,9 +318,14 @@ async function prepareField(theme, leg, legs){
   else ex.push({x0:1.05*TS,x1:2.4*TS,y0:(start.y-1.8)*TS,y1:(start.y+1.8)*TS,to:'out',pos:[2.2*TS,11.4*TS],dir:'side'});
   if(isLast)ex.push({x0:(bg.w-1.15)*TS,x1:bg.w*TS,y0:(end.y-2.6)*TS,y1:(end.y+2.6)*TS,fn:()=>askDestination()});
   else ex.push({x0:(bg.w-2.4)*TS,x1:(bg.w-1.05)*TS,y0:(end.y-1.8)*TS,y1:(end.y+1.8)*TS,fn:()=>goLeg(th,lg+1,ls,'left')});
+  const storyBlds=[];
+  if(!isLast&&th==='autumn'&&lg===3){
+    const rs=(bg.rooms||[]).filter(r=>r!==bg.startRoom&&r!==bg.farRoom).sort((a,b)=>(b.w*b.h)-(a.w*a.h));
+    const rr=rs[0];if(rr)storyBlds.push(fieldBuilding('house_red','상인협회',rr.cx,rr.y+rr.h-1.0,3.8,'bld',th));
+  }
   const map={
     name:FIELD_INFO[th][1]+(ls>1?' '+lg+'/'+ls:''),market:th,map:{w:bg.w,h:bg.h,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
-    blds:isLast?makeFieldVillage(th):[],props,npcs:[],grid:bg.grid||null,rooms:bg.rooms||[],startRoom:bg.startRoom||null,farRoom:bg.farRoom||null,
+    blds:isLast?makeFieldVillage(th):storyBlds,props,npcs:[],grid:bg.grid||null,rooms:bg.rooms||[],startRoom:bg.startRoom||null,farRoom:bg.farRoom||null,
     spawn:[(start.x+.8)*TS,start.y*TS],exits:ex,fieldStart:start,fieldEnd:end
   };
   map.G = bg.ground; map.MINI = bg.mini;
