@@ -63,6 +63,9 @@ public final class MainActivity extends Activity {
     private volatile boolean awaitingRestoreReload = false;
     private volatile boolean checkingRemote = false;
     private volatile boolean pageReady = false, foreground = false;
+    // 첫 실행 동기화는 webReady가 한 번만 담당한다. 첫 onResume/초기 네트워크 콜백이 겹쳐 Drive를 재조회하지 않게 한다.
+    private volatile boolean networkValidated = false;
+    private boolean firstResume = true;
     // 이번 실행에서 드라이브 파일을 읽어 확인했는지, 파일과 맞춘 마지막 저장 시각, 동기화 중 밀린 저장 여부.
     // 저장(쓰기)은 확인이 끝난 뒤에는 읽기 없이 쓰기만 한다. 읽기는 시작·복귀·재연결 때만 한다.
     private volatile boolean sessionSynced = false, writeDirty = false;
@@ -73,6 +76,9 @@ public final class MainActivity extends Activity {
     private long baseT() { return backupPrefs.getLong("baseT", -1); }
     private void setBaseT(long t) { backupPrefs.edit().putLong("baseT", t).apply(); }
     static final int SYNC_NONE = 0, SYNC_WRITE = 1, SYNC_APPLY = 2, SYNC_ASK = 3;
+    static boolean shouldSyncOnNetworkChange(boolean wasValidated, boolean validated, boolean foreground, boolean pageReady) {
+        return validated && !wasValidated && foreground && pageReady;
+    }
     // lt: 이 기기 저장의 t, rt: 파일 저장의 t(없거나 깨지면 -1), bt: 마지막으로 맞춘 t(모르면 -1)
     static int decide(long lt, long rt, long bt) {
         if (rt < 0) return lt >= 0 ? SYNC_WRITE : SYNC_NONE;   // 파일이 없거나 깨짐 → 이 기기 저장으로 채움
@@ -136,12 +142,18 @@ public final class MainActivity extends Activity {
         game.setWebChromeClient(new WebChromeClient());
         game.addJavascriptInterface(new Bridge(), "ArpgBridge");
         connectivity = (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        // 앱이 이미 온라인인 상태로 시작할 때 오는 초기 capability 알림은 "재연결"이 아니다.
+        networkValidated = isOnline();
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override public void onCapabilitiesChanged(Network n, NetworkCapabilities caps) {
-                if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) && foreground && pageReady)
+                boolean validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                boolean wasValidated = networkValidated;
+                networkValidated = validated;
+                // 실제 오프라인→온라인 전환일 때만 다시 읽는다. 시작 시 최초 읽기는 webReady가 담당한다.
+                if (shouldSyncOnNetworkChange(wasValidated, validated, foreground, pageReady))
                     requestSync(true);
             }
-            @Override public void onLost(Network n) { backupNotice(""); }
+            @Override public void onLost(Network n) { networkValidated = false; backupNotice(""); }
         };
         connectivity.registerDefaultNetworkCallback(networkCallback);
         setContentView(game);
@@ -514,7 +526,9 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume(); hideBars(); requestHighestRefreshRate();
         foreground = true;
-        requestSync(true);
+        // Activity 생성 직후 첫 onResume은 webReady의 시작 동기화와 겹치므로 건너뛴다.
+        // 그 다음부터의 실제 앱 복귀는 기존 규칙대로 Drive를 다시 확인한다.
+        if (firstResume) firstResume = false; else requestSync(true);
         if (game != null) { game.resumeTimers(); game.onResume(); }
     }
     @Override protected void onPause() {
