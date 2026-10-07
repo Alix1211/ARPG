@@ -18,7 +18,7 @@ const AUDIO_SETTINGS = (() => {
 })();
 const SFX = (() => {
   let ac = null, out = null, rev = null, last = {};
-  const fileVoices = {};
+  const fileBuffers = {}, fileLoading = {};
   function init(){
     if (ac) return;
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
