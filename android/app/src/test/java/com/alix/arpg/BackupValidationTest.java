@@ -82,6 +82,13 @@ public class BackupValidationTest {
         assertEquals(MainActivity.SYNC_NONE, MainActivity.decide(-1, -1, -1));
         assertEquals(MainActivity.SYNC_APPLY, MainActivity.decide(-1, 200, -1));
     }
+    @Test public void networkSyncRunsOnlyOnRealReconnectAfterStartup() {
+        assertFalse(MainActivity.shouldSyncOnNetworkChange(true, true, true, true));   // 시작 시 이미 온라인: 중복 금지
+        assertTrue(MainActivity.shouldSyncOnNetworkChange(false, true, true, true));  // 실제 오프라인→온라인
+        assertFalse(MainActivity.shouldSyncOnNetworkChange(false, true, false, true));
+        assertFalse(MainActivity.shouldSyncOnNetworkChange(false, true, true, false));
+        assertFalse(MainActivity.shouldSyncOnNetworkChange(true, false, true, true));
+    }
     @Test public void invalidStoreCannotBeatValidProgress() throws Exception {
         JSONObject good=new JSONObject(backup(save()));
         JSONObject invalid=new JSONObject(backup(save().replace("\"lv\":7","\"lv\":71").replace("12345","99999")));
