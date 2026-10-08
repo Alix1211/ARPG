@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "columns": 6,
+  "rows": 6,
+  "cellSize": 256,
+  "items": [
+    {
+      "id": "repair_resin",
+      "name": "수리용 수지",
+      "cell": 0,
+      "visual": "small amber repair-resin jar, dark bronze lid, honey-colored resin visible, tiny wooden applicator tied to neck"
+    },
+    {
+      "id": "fixed_pin",
+      "name": "수리된 고정핀",
+      "cell": 1,
+      "visual": "single repaired iron fastening pin with a round rivet head and a subtle copper repair band"
+    },
+    {
+      "id": "herb_bundle",
+      "name": "흩어진 약초 꾸러미",
+      "cell": 2,
+      "visual": "loosely tied bundle of fresh green medicinal herbs in a small tan cloth wrap"
+    },
+    {
+      "id": "autumn_mount_chip",
+      "name": "뜯긴 받침석 조각",
+      "cell": 3,
+      "visual": "broken sandstone pedestal fragment with a shallow carved notch, weathered ochre stone"
+    },
+    {
+      "id": "autumn_ledger",
+      "name": "옛 길 관리 장부",
+      "cell": 4,
+      "visual": "closed thick old road-maintenance ledger, reddish brown leather cover, brass corner fittings"
+    },
+    {
+      "id": "sled_manifest",
+      "name": "묻힌 썰매 운송표",
+      "cell": 5,
+      "visual": "folded transport manifest parchment with a small blue cord and a simple sled pictogram"
+    },
+    {
+      "id": "winter_resin",
+      "name": "굳은 봉화 수지",
+      "cell": 6,
+      "visual": "irregular translucent amber lump of hardened beacon resin, frosty pale edge"
+    },
+    {
+      "id": "ice_deed_fragment",
+      "name": "낡은 권리문서 조각",
+      "cell": 7,
+      "visual": "torn old legal deed parchment fragment with faded decorative border and a burgundy seal fragment"
+    },
+    {
+      "id": "duty_clause",
+      "name": "관리 의무 조항",
+      "cell": 8,
+      "visual": "narrow rolled contract clause parchment, tied with dark teal ribbon, wax tab"
+    },
+    {
+      "id": "volcano_support_chip",
+      "name": "문양 있는 받침석 파편",
+      "cell": 9,
+      "visual": "dark volcanic pedestal stone fragment with carved orange-gold geometric pattern"
+    },
+    {
+      "id": "blank_contract",
+      "name": "이름 없는 고용계약 사본",
+      "cell": 10,
+      "visual": "single anonymous employment-contract sheet, pale parchment with blank seal circle, charcoal ribbon"
+    },
+    {
+      "id": "miners_contract",
+      "name": "광부 고용계약 묶음",
+      "cell": 11,
+      "visual": "bundle of several miners' parchment contracts bound in worn red string, small iron token"
+    },
+    {
+      "id": "volcano_core_piece",
+      "name": "여섯 번째 길목 고정핵",
+      "cell": 12,
+      "visual": "six-sided volcanic anchoring core, faceted obsidian stone, restrained ember-orange interior glow"
+    },
+    {
+      "id": "swamp_transfer_ledger",
+      "name": "방수함의 문서 이동 장부",
+      "cell": 13,
+      "visual": "thick moss-green waterproof ledger with bronze clasp and water-darkened leather corners"
+    },
+    {
+      "id": "charter_original",
+      "name": "대상단 특허장 원본",
+      "cell": 14,
+      "visual": "ornate original merchants' charter, cream scroll with gold trim and intact deep red wax seal"
+    },
+    {
+      "id": "reviewed_charter",
+      "name": "검토된 특허장",
+      "cell": 15,
+      "visual": "reviewed merchants' charter, folded cream parchment with deep green wax seal and a small bronze clip"
+    },
+    {
+      "id": "fresh_flour_sack",
+      "name": "농가가 건넨 마른 밀가루",
+      "cell": 16,
+      "visual": "small tied sack of white flour, natural cream linen, wooden measuring scoop tucked at side"
+    },
+    {
+      "id": "bunny_doll",
+      "name": "풀숲에 걸린 토끼 인형",
+      "cell": 17,
+      "visual": "worn soft cream rabbit rag doll with long ears and a blue patched fabric bow"
+    },
+    {
+      "id": "mature_herb",
+      "name": "다 자란 약초",
+      "cell": 18,
+      "visual": "three mature medicinal herb stems with broad green leaves and tiny pale lavender flowers, roots tied with twine"
+    },
+    {
+      "id": "clear_crystal",
+      "name": "맑은 수정 조각",
+      "cell": 19,
+      "visual": "single clean clear quartz crystal cluster, translucent icy white with very pale cyan reflections"
+    },
+    {
+      "id": "dry_reed",
+      "name": "잘 마른 갈대",
+      "cell": 20,
+      "visual": "small tied bundle of dry golden reeds with feathery seed heads"
+    },
+    {
+      "id": "merchant_graffiti",
+      "name": "옛 상인의 낙서 탁본",
+      "cell": 21,
+      "visual": "rolled charcoal rubbing sheet showing abstract merchant doodles and coin silhouettes, no readable letters"
+    },
+    {
+      "id": "coarse_iron",
+      "name": "결이 굵은 철 원석",
+      "cell": 22,
+      "visual": "rough iron ore chunk, dark blue-gray metallic ridges and rusty brown veins"
+    },
+    {
+      "id": "dry_winter_wood",
+      "name": "마른 겨울 장작",
+      "cell": 23,
+      "visual": "two short bundles of dry winter firewood tied together, pale cut ends and rough dark bark"
+    },
+    {
+      "id": "eda_glove",
+      "name": "에다의 장갑",
+      "cell": 24,
+      "visual": "single worn burgundy wool winter glove, cream fur cuff and one visible sewn patch"
+    },
+    {
+      "id": "old_beacon_letter",
+      "name": "봉화대의 오래된 편지",
+      "cell": 25,
+      "visual": "old folded beacon letter with browned edges, cracked orange wax seal and narrow faded ribbon"
+    },
+    {
+      "id": "cold_storage_note",
+      "name": "옛 냉장 보존 기록",
+      "cell": 26,
+      "visual": "old cold-storage preservation notes, open folded pale-blue parchment, tiny snowflake diagram"
+    },
+    {
+      "id": "cold_box_sketch",
+      "name": "옛 냉장상자 구조 스케치",
+      "cell": 27,
+      "visual": "folded cold-box engineering sketch parchment with a simple wooden box diagram in blue-gray ink"
+    },
+    {
+      "id": "lost_cat",
+      "name": "겁먹은 고양이",
+      "cell": 28,
+      "visual": "small timid curled-up tabby cat, warm brown and cream fur, paws together, large alert eyes, full body"
+    },
+    {
+      "id": "heat_stone",
+      "name": "열전도 광물",
+      "cell": 29,
+      "visual": "small heat-conducting mineral cluster, warm copper-red crystals with a subtle golden sheen"
+    },
+    {
+      "id": "family_box_note",
+      "name": "가족 상자 내용 기록",
+      "cell": 30,
+      "visual": "folded family keepsake inventory note beside a small plain wooden keepsake-box silhouette drawn on the paper"
+    },
+    {
+      "id": "miner_lunch",
+      "name": "광부 도시락 꾸러미",
+      "cell": 31,
+      "visual": "miners' lunch bundle wrapped in dark blue checked cloth with a tied knot and a small wooden lunchbox corner visible"
+    },
+    {
+      "id": "yanik_old_map",
+      "name": "야닉의 손그림 배송표",
+      "cell": 32,
+      "visual": "hand-drawn delivery map parchment with winding dotted routes, a red location mark and a tied brown cord"
+    },
+    {
+      "id": "grave_rubbing",
+      "name": "묘표 이름 탁본",
+      "cell": 33,
+      "visual": "rolled grave-name rubbing parchment, charcoal texture with abstract weathered stone glyph marks, no readable letters"
+    }
+  ]
+}

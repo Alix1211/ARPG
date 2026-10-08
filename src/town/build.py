@@ -599,7 +599,21 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
-A = dict(mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+# 퀘스트 전용 물품: 봉인 목록과 실제 아이콘을 대조하여 누락 없이 빌드한다.
+with open(os.path.join(ROOT, 'src', 'story', 'quest_items.json'), encoding='utf-8') as qf:
+    QUEST_ITEM_SPEC = json.load(qf)
+quest_item_ids = set()
+for quest in MAIN_QUEST_DATA['quests'] + MAIN_QUEST_DATA['sideQuests']:
+    for step in quest['steps']:
+        if step.get('item'): quest_item_ids.add(step['item'])
+        quest_item_ids.update(step.get('give', {}))
+assert quest_item_ids == {item['id'] for item in QUEST_ITEM_SPEC['items']}, 'quest item art coverage'
+QUEST_ITEMS = {}
+for item in QUEST_ITEM_SPEC['items']:
+    im = Image.open(R + 'quest_items/' + item['id'] + '.png').convert('RGBA')
+    im.thumbnail((128, 128), Image.LANCZOS)
+    QUEST_ITEMS[item['id']] = dict(name=item['name'], icon=enc(im, 90))
+A = dict(questItems=QUEST_ITEMS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()

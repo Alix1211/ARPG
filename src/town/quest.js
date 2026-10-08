@@ -4,6 +4,29 @@ const SIDE_QUESTS=A.mainQuests.sideQuests||[];
 const ALL_QUESTS=[...MAIN_QUESTS,...SIDE_QUESTS];
 let mainQuestState={active:{},completed:[],items:{},visited:[],flags:{}};
 let questDialog=null,questWorldKey='',questUiDirty=true;
+const QUEST_ITEM_ART=A.questItems||{};
+const QUEST_ITEM_IMAGES=Object.fromEntries(Object.entries(QUEST_ITEM_ART).map(([id,art])=>[id,load(art.icon)]));
+const questItemNotices=[];let questItemNoticeTimer=0;
+function questItemView(id,count,caption){
+  const art=QUEST_ITEM_ART[id];if(!art)return null;
+  const row=document.createElement('div');row.className='questItem';row.dataset.item=id;
+  const img=document.createElement('img');img.src=art.icon;img.alt='';img.width=56;img.height=56;row.append(img);
+  const text=document.createElement('span');text.className='questItemText';
+  const name=document.createElement('strong');name.textContent=art.name;text.append(name);
+  const info=document.createElement('small');info.textContent=caption||('보유 '+count+'개');text.append(info);row.append(text);
+  return row;
+}
+function questItemNotice(id,count){
+  if(!QUEST_ITEM_ART[id]||!$('questItemNotice'))return;
+  questItemNotices.push({id,count});
+  if(!questItemNoticeTimer)questNextItemNotice();
+}
+function questNextItemNotice(){
+  const host=$('questItemNotice'),entry=questItemNotices.shift();
+  if(!host||!entry){questItemNoticeTimer=0;return;}
+  host.replaceChildren(questItemView(entry.id,entry.count,'획득 · '+entry.count+'개'));host.classList.add('on');
+  questItemNoticeTimer=setTimeout(()=>{host.classList.remove('on');questItemNoticeTimer=setTimeout(questNextItemNotice,180);},2400);
+}
 const questDef=id=>ALL_QUESTS.find(q=>q.id===id);
 const questKind=q=>(q&&q.kind)||((q&&String(q.id).startsWith('MAIN_'))?'main':'side');
 const questStep=q=>q&&mainQuestState.active[q.id]?q.steps[mainQuestState.active[q.id].step]:null;
@@ -76,7 +99,7 @@ function questAccept(id){
 }
 function questAdvance(q){
   const a=mainQuestState.active[q.id];if(!a)return false;
-  const s=questStep(q);if(s&&s.give)for(const [id,n] of Object.entries(s.give))mainQuestState.items[id]=(mainQuestState.items[id]||0)+n;
+  const s=questStep(q);if(s&&s.give)for(const [id,n] of Object.entries(s.give)){mainQuestState.items[id]=(mainQuestState.items[id]||0)+n;questItemNotice(id,n);}
   a.step++;a.progress=0;
   if(a.step>=q.steps.length)return questComplete(q);
   questSave();questCheckVisit();return true;
@@ -246,6 +269,7 @@ function questCollect(id){
   if(s.type==='inspect'||s.type==='scene')return questOpenSpecial(q,s);
   const a=mainQuestState.active[id];a.progress++;
   mainQuestState.items[s.item]=(mainQuestState.items[s.item]||0)+1;
+  questItemNotice(s.item,1);
   if(a.progress>=(s.need||1))questAdvance(q);else questSave();return true;
 }
 function questObjective(q){
@@ -264,7 +288,14 @@ function questObjective(q){
 function questCard(q,done){
   const d=document.createElement('div');d.className='gq '+(questKind(q)==='main'?'mainQuestCard':'sideQuestCard');
   const b=document.createElement('b');b.textContent=(questKind(q)==='main'?'★ ':'◇ ')+q.title;d.append(b);
-  const line=document.createElement('small');line.textContent=done?'완료':questObjective(q);d.append(line);return d;
+  const line=document.createElement('small');line.textContent=done?'완료':questObjective(q);d.append(line);
+  const s=!done&&questStep(q);
+  if(s&&s.item&&['collect','deliver'].includes(s.type)){
+    const count=mainQuestState.items[s.item]||0,need=s.need||1;
+    const row=questItemView(s.item,count,(s.type==='deliver'?'전달':'수집')+' · '+count+' / '+need);
+    if(row)d.append(row);
+  }
+  return d;
 }
 function questRender(){
   const host=$('mainQuestTrack'),list=$('mainQuestActive'),done=$('mainQuestDone');
@@ -286,6 +317,12 @@ function questRender(){
   if(sideList&&!sideList.children.length){const s=document.createElement('small');s.textContent='진행 중인 연쇄·서브 의뢰가 없습니다.';sideList.append(s);}
   $('mainQuestDoneBlock').hidden=done.children.length===0;
   if($('sideQuestDoneBlock'))$('sideQuestDoneBlock').hidden=!sideDone||sideDone.children.length===0;
+  const items=$('questItems'),itemBlock=$('questItemsBlock');
+  if(items&&itemBlock){
+    items.replaceChildren();
+    for(const [id,count] of Object.entries(mainQuestState.items))if(count>0){const row=questItemView(id,count);if(row)items.append(row);}
+    itemBlock.hidden=items.children.length===0;
+  }
   questUiDirty=false;
 }
 function questDraw(){
@@ -295,6 +332,11 @@ function questDraw(){
   }
   for(const s of spots)if(s.kind==='questclue'){
     const q=questDef(s.questId),main=questKind(q)==='main',mark=s.questType==='collect'?'◆':'?';
+    const step=questStep(q),icon=s.questType==='collect'&&step&&QUEST_ITEM_IMAGES[step.item];
+    if(icon&&icon.complete&&icon.naturalWidth){
+      ctx.save();ctx.translate(s.x,s.y);ctx.fillStyle='#24170d35';ctx.beginPath();ctx.ellipse(0,0,17,6,0,0,Math.PI*2);ctx.fill();
+      ctx.drawImage(icon,-24,-48+Math.sin(T*3)*2,48,48);ctx.restore();continue;
+    }
     ctx.save();ctx.translate(s.x,s.y);ctx.fillStyle=main?'#ffe19c':'#e6f2ff';ctx.strokeStyle=main?'#8b5a22':'#4e6c88';ctx.lineWidth=2;
     ctx.beginPath();ctx.ellipse(0,0,13,7,0,0,7);ctx.fill();ctx.stroke();ctx.font='900 18px sans-serif';ctx.textAlign='center';ctx.fillText(mark,0,-13+Math.sin(T*4)*2);ctx.restore();
   }

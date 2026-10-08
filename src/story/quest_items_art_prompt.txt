@@ -1,0 +1,41 @@
+Use case: stylized-concept. Asset type: final production fantasy ARPG inventory icon sprite sheet.
+Create ONE square high-resolution genuinely transparent RGBA sprite sheet, ideally 3072x3072. EXACTLY 6 columns by 6 rows of IDENTICAL square cells. No visible grid lines. Each cell center at the exact regular 6x6 lattice. ONE distinct isolated object in each occupied cell. There must be 34 icons, in the exact row-major order below, and the final two cells (row 6 columns 5 and 6) entirely transparent. Each icon fits inside central 74% of its own cell with at least 13% clear margin on all sides. No object crosses a cell boundary.
+Style: polished hand-painted 2D medieval fantasy inventory art for Gold Quest Saga. Soft realistic material shading, warm earthy pigments, crisp dark brown edge definition, rich leather/wood/stone/cloth texture, restrained jewel highlights; like illustrated RPG equipment icons, not flat vector, not pixel art, not photorealistic. Consistent three-quarter slightly top-down view, same top-left light, comparable perceived scale and crisp detail across all 34. No backgrounds, no frames, no tiles, no ground plane, no external cast shadows, no checkerboard drawn into image, no people, no interface, no labels, no numerals, no watermarks. Printed marks on parchment must be abstract decorative strokes, never legible text. Each parchment object should have a distinctive outline, fold, ribbon, color or seal so documents do not all look identical.
+The following list is EXACT ordering, left to right in each row, top to bottom:
+Row 1 column 1: small amber repair-resin jar, dark bronze lid, honey-colored resin visible, tiny wooden applicator tied to neck.
+Row 1 column 2: single repaired iron fastening pin with a round rivet head and a subtle copper repair band.
+Row 1 column 3: loosely tied bundle of fresh green medicinal herbs in a small tan cloth wrap.
+Row 1 column 4: broken sandstone pedestal fragment with a shallow carved notch, weathered ochre stone.
+Row 1 column 5: closed thick old road-maintenance ledger, reddish brown leather cover, brass corner fittings.
+Row 1 column 6: folded transport manifest parchment with a small blue cord and a simple sled pictogram.
+Row 2 column 1: irregular translucent amber lump of hardened beacon resin, frosty pale edge.
+Row 2 column 2: torn old legal deed parchment fragment with faded decorative border and a burgundy seal fragment.
+Row 2 column 3: narrow rolled contract clause parchment, tied with dark teal ribbon, wax tab.
+Row 2 column 4: dark volcanic pedestal stone fragment with carved orange-gold geometric pattern.
+Row 2 column 5: single anonymous employment-contract sheet, pale parchment with blank seal circle, charcoal ribbon.
+Row 2 column 6: bundle of several miners' parchment contracts bound in worn red string, small iron token.
+Row 3 column 1: six-sided volcanic anchoring core, faceted obsidian stone, restrained ember-orange interior glow.
+Row 3 column 2: thick moss-green waterproof ledger with bronze clasp and water-darkened leather corners.
+Row 3 column 3: ornate original merchants' charter, cream scroll with gold trim and intact deep red wax seal.
+Row 3 column 4: reviewed merchants' charter, folded cream parchment with deep green wax seal and a small bronze clip.
+Row 3 column 5: small tied sack of white flour, natural cream linen, wooden measuring scoop tucked at side.
+Row 3 column 6: worn soft cream rabbit rag doll with long ears and a blue patched fabric bow.
+Row 4 column 1: three mature medicinal herb stems with broad green leaves and tiny pale lavender flowers, roots tied with twine.
+Row 4 column 2: single clean clear quartz crystal cluster, translucent icy white with very pale cyan reflections.
+Row 4 column 3: small tied bundle of dry golden reeds with feathery seed heads.
+Row 4 column 4: rolled charcoal rubbing sheet showing abstract merchant doodles and coin silhouettes, no readable letters.
+Row 4 column 5: rough iron ore chunk, dark blue-gray metallic ridges and rusty brown veins.
+Row 4 column 6: two short bundles of dry winter firewood tied together, pale cut ends and rough dark bark.
+Row 5 column 1: single worn burgundy wool winter glove, cream fur cuff and one visible sewn patch.
+Row 5 column 2: old folded beacon letter with browned edges, cracked orange wax seal and narrow faded ribbon.
+Row 5 column 3: old cold-storage preservation notes, open folded pale-blue parchment, tiny snowflake diagram.
+Row 5 column 4: folded cold-box engineering sketch parchment with a simple wooden box diagram in blue-gray ink.
+Row 5 column 5: small timid curled-up tabby cat, warm brown and cream fur, paws together, large alert eyes, full body.
+Row 5 column 6: small heat-conducting mineral cluster, warm copper-red crystals with a subtle golden sheen.
+Row 6 column 1: folded family keepsake inventory note beside a small plain wooden keepsake-box silhouette drawn on the paper.
+Row 6 column 2: miners' lunch bundle wrapped in dark blue checked cloth with a tied knot and a small wooden lunchbox corner visible.
+Row 6 column 3: hand-drawn delivery map parchment with winding dotted routes, a red location mark and a tied brown cord.
+Row 6 column 4: rolled grave-name rubbing parchment, charcoal texture with abstract weathered stone glyph marks, no readable letters.
+Row 6 column 5: EMPTY, fully transparent.
+Row 6 column 6: EMPTY, fully transparent.
+Keep every item completely separated, centered, fully visible, and similarly sized. Preserve true alpha transparency. This is an asset sheet to crop mechanically into 36 equal squares, not a designed poster.

@@ -133,6 +133,7 @@ jobs:
             src/town/check_telemetry.py
             src/town/check_companion.py
             src/town/check_quest.py
+            src/town/check_quest_items.py
             src/town/check_dungeon.py
             src/town/check_chest.py
           )
