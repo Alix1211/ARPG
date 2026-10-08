@@ -43,6 +43,7 @@ jobs:
           done
           node tools/check_companion_ai.js
           node tools/check_save_sync.js
+          node tools/check_haptics.js
       - name: Build town
         run: python src/town/build.py
       - name: Publish built town.html

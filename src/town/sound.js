@@ -13,7 +13,7 @@ const AUDIO_SETTINGS = (() => {
     try{localStorage.setItem('arpg_audio_settings',JSON.stringify(values));}catch(e){}
     if(typeof SFX!=='undefined')SFX.syncVolume();
     if(typeof BGM!=='undefined')BGM.sync();
-    if(key==='vibration'&&!values.vibration)try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}
+    if(key==='vibration'&&!values.vibration)HAP(0);
   }};
 })();
 const SFX = (() => {
@@ -106,27 +106,46 @@ const SFX = (() => {
     },
   };
 })();
-// 진동 (안드로이드 크롬)
-const HAP = (p) => { if (!AUDIO_SETTINGS.get().vibration) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+// 웹 진동은 세기를 지정할 수 없어 길이로 체감을 조절한다.
+// 발동/피격 중에는 짧은 명중 진동으로 기존 패턴을 끊지 않는다.
+const HAP = (() => {
+  let until=0, activePriority=0;
+  return (pattern, priority=1) => {
+    const duration=Array.isArray(pattern)?pattern.reduce((sum,v)=>sum+v,0):pattern;
+    if(duration===0){
+      until=0;activePriority=0;
+      try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}
+      return;
+    }
+    if(!AUDIO_SETTINGS.get().vibration||!navigator.vibrate)return;
+    const now=Date.now();
+    if(now<until&&(priority<activePriority||(priority===1&&activePriority===1)))return;
+    try{
+      if(navigator.vibrate(pattern)!==false){until=now+duration;activePriority=priority;}
+    }catch(e){}
+  };
+})();
 // ---- 기존 동작에 소리·진동 붙이기 (원래 함수는 그대로 두고 감싼다) ----
 (() => {
   const wrap = (name, before, after) => {
     let f; try { f = eval(name); } catch (e) { return; } if (typeof f !== 'function') return;
     const g = function(...a){ if (before) before(...a); const r = f.apply(this, a); if (after) after(r, ...a); return r; };
     eval(name + ' = g');
+    // GAME에 먼저 공개한 함수도 같은 래퍼를 사용해야 버튼 입력에 적용된다.
+    if(window.GAME && GAME[name]===f)GAME[name]=g;
   };
   const originalAttack=attack;
   attack=function(...args){const previous=P.atk,r=originalAttack.apply(this,args);if(P.atk&&P.atk!==previous){const w=P.atk.wt;SFX.play(w==='bow'?'bow':w==='staff'?'staff':w==='spear'?'thrust':w==='gauntlet'?'punch':'swing');}return r;};
-  wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 28 : 12); });   // 허수아비·몬스터 공통 타격
-  if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(18); });
-  if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(45); } });
-  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',fire2:'fire',fire3:'fire_big',ice1:'ice',ice2:'ice',ice3:'ice_big',bolt1:'lightning',bolt2:'lightning',bolt3:'lightning',dark1:'dark',dark2:'dark',dark3:'dark_big',holy1_heal:'heal',holy2_shield:'heal',holy3_revive:'heal',sword1:'slash',sword2:'spin',sword3:'slash',spear1:'thrust',spear2:'thrust',spear3:'explosion',bow1:'bow',bow2:'bow',bow3:'bow',fist1:'punch',fist2:'punch',fist3:'explosion'}[id]||'staff');HAP(id==='sword2'||id==='fire3'||id==='dark3'||id==='spear3'||id==='fist3'?[18,20,28]:id==='fire1'||id==='fire2'?[12,22,34]:id==='sword1'||id==='sword3'?28:18);});
-  wrap('drink', null, (ok) => { if (ok){ SFX.play('potion'); HAP([10, 40, 10]); } });
+  wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 40 : 22); });   // 허수아비·몬스터 공통 타격
+  if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(28); });
+  if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(65,3); } });
+  wrap('cast',null,(ok,id)=>{if(!ok)return;SFX.play({fire1:'fire',fire2:'fire',fire3:'fire_big',ice1:'ice',ice2:'ice',ice3:'ice_big',bolt1:'lightning',bolt2:'lightning',bolt3:'lightning',dark1:'dark',dark2:'dark',dark3:'dark_big',holy1_heal:'heal',holy2_shield:'heal',holy3_revive:'heal',sword1:'slash',sword2:'spin',sword3:'slash',spear1:'thrust',spear2:'thrust',spear3:'explosion',bow1:'bow',bow2:'bow',bow3:'bow',fist1:'punch',fist2:'punch',fist3:'explosion'}[id]||'staff');HAP(id==='sword2'||id==='fire3'||id==='dark3'||id==='spear3'||id==='fist3'?[40,20,55]:id==='fire1'||id==='fire2'?[35,22,45]:id==='sword1'||id==='sword3'?40:45,2);});
+  wrap('drink', null, (ok) => { if (ok){ SFX.play('potion'); HAP([20, 40, 20],2); } });
   wrap('travel', () => { if (!traveling) SFX.play('travel'); });
   // 생활스킬 타운 포탈/귀환 포탈은 실제 텔레포트 파일 효과음
   if (window.GAME && GAME.useTownPortal){ const f=GAME.useTownPortal; GAME.useTownPortal=function(...a){ const r=f.apply(this,a); if(r) SFX.play('teleport'); return r; }; }
   if (window.GAME && GAME.returnTownPortal){ const f=GAME.returnTownPortal; GAME.returnTownPortal=function(...a){ const r=f.apply(this,a); if(r) SFX.play('teleport'); return r; }; }
-  if (typeof openDungeonChest === 'function') wrap('openDungeonChest', (spot) => { const m = spot && spot.data && spot.data.mimic; SFX.play(m ? 'mimic' : 'chest'); HAP(m ? [60, 30, 60] : [15, 40, 15]); });
+  if (typeof openDungeonChest === 'function') wrap('openDungeonChest', (spot) => { const m = spot && spot.data && spot.data.mimic; SFX.play(m ? 'mimic' : 'chest'); HAP(m ? [75, 30, 75] : [30, 40, 30],2); });
   if (typeof nextDungeonFloor === 'function') wrap('nextDungeonFloor', () => SFX.play('stairs'));
   if (typeof previousDungeonFloor === 'function') wrap('previousDungeonFloor', () => SFX.play('stairs'));
   let lastGold = P.gold;
