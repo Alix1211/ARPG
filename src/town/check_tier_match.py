@@ -107,8 +107,13 @@ def check_spawn(ms, tier, dungeon=False, floor=0, cave=False):
         role = m['bossRole'] if m['rank'] == 'boss' else m['rank']
         rank = DATA['ranks'][role]
         part = (floor-1) % 3 if floor else 0
-        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)+.5)*100*(1.4 if cave else 1)
+        # 런타임 검사는 Lv1로 스폰한다. 고티어 조기 진입 격차 보정까지 실제 함수와 같은 순서로 계산한다.
+        gap = max(0, min(20, m['mobLv']-1))
+        gap_hp, gap_dmg = 1+gap*.10, 1+gap*.07
+        expected_hp = math.floor(DATA['scales']['baseHP']*DATA['scales']['hp'][tier-1]*definition['speciesHP']*rank['hp']*(1+part*.08)*gap_hp+.5)*100*(1.4 if cave else 1)
+        expected_dmg = math.floor(DATA['scales']['baseAttack']*DATA['scales']['attack'][tier-1]*definition['speciesAttack']*rank['attack']*(1+part*.05)*gap_dmg+.5)*100*(1.4 if cave else 1)
         assert m['maxHp'] == expected_hp, (m, expected_hp)
+        assert m['dmg'] == expected_dmg, (m, expected_dmg)
         assert m['exp'] == math.floor(2*DATA['scales']['exp'][tier-1]*rank['exp']+.5)*100, m
         assert m['rank'] == DATA['monsters'][m['type']]['rank'], m
         if m['packLeader']:
@@ -175,6 +180,8 @@ async def runtime_checks():
           }
           const normal=api.monsterStats('skeleton_round',21),elite=api.monsterStats('skeleton_guard',21),boss=api.monsterStats('skeleton_mage',21);
           for(const k of ['hp','dmg','exp','dropChance'])if(!(normal[k]<elite[k]&&elite[k]<boss[k]))failures.push(['rank strength',k]);
+          const t4Ready=api.monsterStats('wolf',31),t4Early=api.monsterStats('wolf',18);
+          if(t4Early.mobLv!==t4Ready.mobLv||t4Early.hp<=t4Ready.hp*2.29||t4Early.dmg<=t4Ready.dmg*1.90)failures.push(['underlevel gap',t4Ready,t4Early]);
           return failures;
         }""")
         assert not result, result
