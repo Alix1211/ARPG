@@ -749,16 +749,29 @@ function killMonster(m){
   if(window.GUILD)GUILD.onKill(m);
   if(window.QUEST)QUEST.onKill(m);
 }
-function appendEncounterSprites(list){if(!combatMap())return;drawEnemySkillFx();for(const m of monsters)if(!m.removed)list.push({mon:m,key:m.y});}
-function drawEnemySkillFx(){
+function appendEncounterSprites(list,camX,camY,vw,vh){
+  if(!combatMap())return;
+  drawEnemySkillFx(camX,camY,vw,vh);
+  const useView=Number.isFinite(camX)&&Number.isFinite(camY)&&Number.isFinite(vw)&&Number.isFinite(vh),pad=140;
+  for(const m of monsters){
+    if(m.removed)continue;
+    if(useView&&(m.x+(m.w||60)/2<camX-pad||m.x-(m.w||60)/2>camX+vw+pad||m.y<camY-pad||m.y-(m.h||80)>camY+vh+pad))continue;
+    list.push({mon:m,key:m.y});
+  }
+}
+function drawEnemySkillFx(camX,camY,vw,vh){
+  const useView=Number.isFinite(camX)&&Number.isFinite(camY)&&Number.isFinite(vw)&&Number.isFinite(vh);
+  const visible=(x,y,r=80)=>!useView||!(x+r<camX||x-r>camX+vw||y+r<camY||y-r>camY+vh);
   ctx.save();
   for(const s of enemyShots){
+    if(!visible(s.x,s.y,40))continue;
     if(s.kind==='rock'&&!vfxReady('shot_rock')){
       ctx.fillStyle='#7b6248';ctx.strokeStyle='#c1a27d';ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(s.x,s.y,8,0,7);ctx.fill();ctx.stroke();
     }
   }
   for(const h of enemyHazards){
+    if(!visible(h.x,h.y,(h.r||40)+20))continue;
     if(vfxHazard(h))continue;
     const p=Math.max(0,Math.min(1,h.t/Math.max(.01,h.delay))),r=(h.r||40)*(0.35+p*.65);
     ctx.globalAlpha=.25+.5*(1-p);

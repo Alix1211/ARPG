@@ -858,9 +858,10 @@ function weather(dt, camX, camY, vw, vh){
   for (const b of birds){ b.x += b.vx * dt; b.y += b.vy * dt; b.ph += dt * 11; }
   for (let i = birds.length - 1; i >= 0; i--) if (birds[i].x < -300 || birds[i].x > MWp + 300) birds.splice(i, 1);
 }
-function drawGroundFx(){
+function drawGroundFx(camX,camY,vw,vh){
   // 구름 그림자
   for (const c of clouds){
+    if(Number.isFinite(camX)&&(c.x+c.r*1.5<camX||c.x-c.r*1.5>camX+vw||c.y+c.r<camY||c.y-c.r>camY+vh))continue;
     const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r);
     const a = 0.10 + W.rain * 0.06;
     g.addColorStop(0, `rgba(20,30,60,${a})`); g.addColorStop(0.6, `rgba(20,30,60,${a * 0.6})`); g.addColorStop(1, 'rgba(20,30,60,0)');
@@ -878,8 +879,9 @@ function drawGroundFx(){
     ctx.beginPath(); ctx.ellipse(b.x - 6, b.y - 2 * f, 7, 2 + f * 2, -0.3 - f * 0.5, 0, 7); ctx.ellipse(b.x + 6, b.y - 2 * f, 7, 2 + f * 2, 0.3 + f * 0.5, 0, 7); ctx.fill();
   }
 }
-function drawLeaves(){
+function drawLeaves(camX,camY,vw,vh){
   for (const l of leaves){
+    if(Number.isFinite(camX)&&(l.x<camX-20||l.x>camX+vw+20||l.y<camY-20||l.y>camY+vh+20))continue;
     const a = l.land ? Math.max(0, 1 - l.land / 3) : 1;
     ctx.globalAlpha = a;
     ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.rot); ctx.scale(1, 0.55 + 0.45 * Math.abs(Math.sin(l.t * 3 + l.ph)));
@@ -985,7 +987,14 @@ function drawMini(camX, camY){
   mx.fillStyle = '#ff3b2f'; mx.strokeStyle = '#fff'; mx.beginPath(); mx.arc(P.x * sx, P.y * sy, 5, 0, 7); mx.fill(); mx.stroke();
 }
 
-let last = performance.now(), T = 0;
+let last = performance.now(), T = 0, miniDrawAt = 0;
+function drawGroundViewport(img,camX,camY,vw,vh){
+  const iw=img&&(img.naturalWidth||img.width),ih=img&&(img.naturalHeight||img.height);
+  if(!iw||!ih||!MWp||!MHp){ctx.drawImage(img,0,0,MWp,MHp);return;}
+  const pad=3,x0=Math.max(0,camX-pad),y0=Math.max(0,camY-pad),x1=Math.min(MWp,camX+vw+pad),y1=Math.min(MHp,camY+vh+pad);
+  if(x1<=x0||y1<=y0)return;
+  ctx.drawImage(img,x0/MWp*iw,y0/MHp*ih,(x1-x0)/MWp*iw,(y1-y0)/MHp*ih,x0,y0,x1-x0,y1-y0);
+}
 function drawTownPortal(p){
   const pulse=.5+.5*Math.sin(T*4.6),spin=T*1.9;
   ctx.save();ctx.translate(p.x,p.y);
@@ -1011,6 +1020,7 @@ function drawPortalArrivalAura(){
   ctx.restore();ctx.globalCompositeOperation='source-over';
 }
 function frame(now){
+  if(document.hidden){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char'||panel==='settings'||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
   let dx=joy.dx,dy=joy.dy;
@@ -1052,8 +1062,8 @@ function frame(now){
   if (INDOOR){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120a05'; ctx.fillRect(0, 0, cv.width, cv.height); }
   ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(G, 0, 0, MWp, MHp);
-  if(!DUN&&!INDOOR)drawGroundFx();
+  drawGroundViewport(G,camX,camY,vw,vh);
+  if(!DUN&&!INDOOR)drawGroundFx(camX,camY,vw,vh);
   if (typeof drawEncounterGround === 'function') drawEncounterGround(sdt);
   vfxGroundPass();
 
@@ -1061,7 +1071,7 @@ function frame(now){
   list.push({ me: true, key: P.y });
   if (MAP === 'town') for (const v of vils) if (!v.hidden) list.push({ vil: v, key: v.y });
   else if (MAP === 'fieldvillage') for (const v of fvils) list.push({vil:v,key:v.y});
-  if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list);
+  if (typeof appendEncounterSprites === 'function') appendEncounterSprites(list,camX,camY,vw,vh);
   if (typeof appendCompanionSprite === 'function') appendCompanionSprite(list);
   list.sort((a, b) => a.key - b.key);
   for (const s of list){
@@ -1097,7 +1107,7 @@ function frame(now){
   }
   if(typeof drawTownTestCompanionsForced==='function')drawTownTestCompanionsForced();
   if(window.QUEST)QUEST.draw();
-  if(!DUN&&!INDOOR)drawLeaves();
+  if(!DUN&&!INDOOR)drawLeaves(camX,camY,vw,vh);
   drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   if(typeof drawCompanionFx==='function')drawCompanionFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1113,7 +1123,7 @@ function frame(now){
     const tx = near.kind === 'npc' ? near.npc.x : P.x;
     tag.style.left = ((tx - camX) * Z) + 'px'; tag.style.top = ((ty - camY) * Z) + 'px';
   } else tag.style.display = 'none';
-  drawMini(camX, camY);
+  if(now>=miniDrawAt){drawMini(camX,camY);miniDrawAt=now+100;}
   drawBubble(dt, camX, camY);
   requestAnimationFrame(frame);
 }
