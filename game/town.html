@@ -377,7 +377,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1008-1235</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1011-1445</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -5193,25 +5193,31 @@ const SFX = (() => {
     },
   };
 })();
-// 웹 진동은 세기를 지정할 수 없어 길이로 체감을 조절한다.
+// APK는 문플로와 같은 네이티브 모터 호출을 우선 사용한다. 브라우저/옛 APK는 웹 진동 유지.
 // 발동/피격 중에는 짧은 명중 진동으로 기존 패턴을 끊지 않는다.
 const HAP = (() => {
   let until=0, activePriority=0;
+  const send=pattern=>{
+    const bridge=window.ArpgBridge;
+    if(bridge&&typeof bridge.vibrate==='function'){
+      try{if(bridge.vibrate((Array.isArray(pattern)?pattern:[pattern]).join(','))==='ok')return true;}catch(e){}
+    }
+    try{return typeof navigator.vibrate==='function'&&navigator.vibrate(pattern)!==false;}catch(e){return false;}
+  };
   return (pattern, priority=1) => {
     const duration=Array.isArray(pattern)?pattern.reduce((sum,v)=>sum+v,0):pattern;
     if(duration===0){
       until=0;activePriority=0;
-      try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}
+      send(0);
       return;
     }
-    if(!AUDIO_SETTINGS.get().vibration||!navigator.vibrate)return;
+    if(!AUDIO_SETTINGS.get().vibration||document.hidden)return;
     const now=Date.now();
     if(now<until&&(priority<activePriority||(priority===1&&activePriority===1)))return;
-    try{
-      if(navigator.vibrate(pattern)!==false){until=now+duration;activePriority=priority;}
-    }catch(e){}
+    if(send(pattern)){until=now+duration;activePriority=priority;}
   };
 })();
+addEventListener('visibilitychange',()=>{if(document.hidden)HAP(0);});
 // ---- 기존 동작에 소리·진동 붙이기 (원래 함수는 그대로 두고 감싼다) ----
 (() => {
   const wrap = (name, before, after) => {
@@ -5246,7 +5252,7 @@ const HAP = (() => {
   };
   $('settingsBtn').addEventListener('click',()=>{show('settings');P.hold=false;refresh();});
   for(const key of ['sfx','bgm'])$('volume_'+key).addEventListener('input',e=>{AUDIO_SETTINGS.set(key,Number(e.target.value)/100);refresh();});
-  $('vibration').addEventListener('change',e=>AUDIO_SETTINGS.set('vibration',e.target.checked));
+  $('vibration').addEventListener('change',e=>{AUDIO_SETTINGS.set('vibration',e.target.checked);if(e.target.checked)HAP([150,80,150],3);});
   $('escapeStuck').addEventListener('click',emergencyEscape);
 })();
 
