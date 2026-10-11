@@ -12,6 +12,7 @@ const calls=[];
 const settings={vibration:true};
 const context=vm.createContext({
   navigator:{vibrate:pattern=>{calls.push(pattern);return true;}},
+  document:{hidden:false},addEventListener:()=>{},
   Date:{now:()=>now},
   AUDIO_SETTINGS:{get:()=>settings},
   SFX:{play:()=>{}},
@@ -54,4 +55,21 @@ settings.vibration=true;now+=100;
 invoke('navigator.vibrate=()=>false;haptic(100,3)');
 invoke('navigator.vibrate=p=>{globalThis.last=p;return true;};haptic(22)');
 assert.equal(context.last,22,'rejected vibration must not lock following calls');
+// 새 APK는 웹 API가 없어도 실제 래퍼가 네이티브 브리지에 정확한 패턴을 전달한다.
+const native=[];let result='ok';
+context.ArpgBridge={vibrate:p=>{native.push(p);return result;}};
+invoke('navigator.vibrate=undefined;haptic(0)');assert.equal(native.at(-1),'0');
+now+=100;invoke("GAME.cast('fire1')");assert.equal(native.at(-1),'35,22,45');
+let n=native.length;invoke('hitTarget()');assert.equal(native.length,n,'native cast retains priority');
+invoke('hurtPlayer()');assert.equal(native.at(-1),'65');
+invoke('haptic(0)');assert.equal(native.at(-1),'0');
+settings.vibration=false;n=native.length;invoke('hurtPlayer()');assert.equal(native.length,n,'disabled native motor');
+settings.vibration=true;context.document.hidden=true;invoke('hurtPlayer()');assert.equal(native.length,n,'hidden page does not vibrate');
+context.document.hidden=false;result='error:SecurityException';
+invoke('navigator.vibrate=p=>{globalThis.last=p;return true;};haptic(45,2)');
+assert.equal(context.last,45,'native error falls back to browser');
+now+=46;result='no-vibrator';invoke('navigator.vibrate=()=>false;haptic(100,3)');
+result='ok';invoke('haptic(22)');assert.equal(native.at(-1),'22','failed backends do not create priority lock');
+now+=23;context.ArpgBridge.vibrate=()=>{throw Error('bridge unavailable');};
+invoke('navigator.vibrate=p=>{globalThis.last=p;return true;};haptic(28)');assert.equal(context.last,28);
 console.log('haptics ok: exported cast/drink, durations, priority, pause, throttle, rejection, disable');

@@ -106,25 +106,31 @@ const SFX = (() => {
     },
   };
 })();
-// 웹 진동은 세기를 지정할 수 없어 길이로 체감을 조절한다.
+// APK는 문플로와 같은 네이티브 모터 호출을 우선 사용한다. 브라우저/옛 APK는 웹 진동 유지.
 // 발동/피격 중에는 짧은 명중 진동으로 기존 패턴을 끊지 않는다.
 const HAP = (() => {
   let until=0, activePriority=0;
+  const send=pattern=>{
+    const bridge=window.ArpgBridge;
+    if(bridge&&typeof bridge.vibrate==='function'){
+      try{if(bridge.vibrate((Array.isArray(pattern)?pattern:[pattern]).join(','))==='ok')return true;}catch(e){}
+    }
+    try{return typeof navigator.vibrate==='function'&&navigator.vibrate(pattern)!==false;}catch(e){return false;}
+  };
   return (pattern, priority=1) => {
     const duration=Array.isArray(pattern)?pattern.reduce((sum,v)=>sum+v,0):pattern;
     if(duration===0){
       until=0;activePriority=0;
-      try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}
+      send(0);
       return;
     }
-    if(!AUDIO_SETTINGS.get().vibration||!navigator.vibrate)return;
+    if(!AUDIO_SETTINGS.get().vibration||document.hidden)return;
     const now=Date.now();
     if(now<until&&(priority<activePriority||(priority===1&&activePriority===1)))return;
-    try{
-      if(navigator.vibrate(pattern)!==false){until=now+duration;activePriority=priority;}
-    }catch(e){}
+    if(send(pattern)){until=now+duration;activePriority=priority;}
   };
 })();
+addEventListener('visibilitychange',()=>{if(document.hidden)HAP(0);});
 // ---- 기존 동작에 소리·진동 붙이기 (원래 함수는 그대로 두고 감싼다) ----
 (() => {
   const wrap = (name, before, after) => {
@@ -159,6 +165,6 @@ const HAP = (() => {
   };
   $('settingsBtn').addEventListener('click',()=>{show('settings');P.hold=false;refresh();});
   for(const key of ['sfx','bgm'])$('volume_'+key).addEventListener('input',e=>{AUDIO_SETTINGS.set(key,Number(e.target.value)/100);refresh();});
-  $('vibration').addEventListener('change',e=>AUDIO_SETTINGS.set('vibration',e.target.checked));
+  $('vibration').addEventListener('change',e=>{AUDIO_SETTINGS.set('vibration',e.target.checked);if(e.target.checked)HAP([150,80,150],3);});
   $('escapeStuck').addEventListener('click',emergencyEscape);
 })();
