@@ -136,7 +136,6 @@ function enchantReroll(it,index){
   return {ok:true,old:enchantAffixText(old),fresh:enchantAffixText(fresh),affix:fresh};
 }
 const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
-const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
 const BAG_PAGE=42,BAG_MAX_PAGES=5,BAG=BAG_PAGE*BAG_MAX_PAGES,bag=new Array(BAG).fill(null);
 const BAG_UPGRADE=[10000,30000,50000,100000];let bagPages=1,bagPage=0;
