@@ -51,6 +51,23 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #infoPrice{font-weight:900;color:#8a5a0a}
 #shopSay{font-size:12px;color:#7a3b1a;min-height:32px;line-height:1.35}
 
+#enchant{left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,95vw);max-height:90vh;box-sizing:border-box;overflow:auto}
+#enchantHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#enchantHead b{font-size:20px}#enchantGold{font-weight:900;color:#8a5a0a}
+#enchantBody{display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,1.15fr);gap:12px}
+#enchantGear{display:grid;grid-template-columns:repeat(5,minmax(48px,1fr));gap:6px;align-content:start;max-height:62vh;overflow:auto;padding:2px}
+.enchantGear{position:relative;aspect-ratio:1;border:2px solid #b48b50;border-radius:9px;background:#ead8b5;padding:5px}
+.enchantGear.sel{box-shadow:inset 0 0 0 3px #f0c469}.enchantGear img{width:100%;height:100%;object-fit:contain}
+.enchantGear small{position:absolute;left:3px;bottom:2px;font:900 9px sans-serif;color:#fff;text-shadow:0 1px 3px #000}
+#enchantDetail{border:1px solid #b99b6b;border-radius:10px;background:#fff3d866;padding:10px;min-height:260px}
+#enchantItemHead{display:flex;gap:10px;align-items:center;margin-bottom:8px}#enchantItemHead img{width:72px;height:72px;object-fit:contain;background:var(--slot) center/100% 100% no-repeat;padding:6px}
+#enchantItemName{font-size:15px;font-weight:900}#enchantItemMeta{font-size:11px;color:#765b39}
+.enchantAffRow{display:grid;grid-template-columns:1fr 58px;gap:6px;margin:5px 0}.enchantAff,.enchantLock{font-size:12px;padding:6px 8px}
+.enchantAff.on{box-shadow:inset 0 0 0 2px #ffd76b}.enchantAff.locked{opacity:.58}.enchantLock.on{background:#6e4a20;color:#ffe8a8}
+#enchantCost{font-size:13px;font-weight:900;color:#7a3b1a;margin:9px 0 5px}#enchantSay{font-size:12px;line-height:1.45;min-height:36px;color:#6f4a2b}
+#enchantActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+@media(max-width:700px){#enchantBody{grid-template-columns:1fr 1.15fr}#enchantGear{grid-template-columns:repeat(4,minmax(42px,1fr))}}
+
 #guild{left:50%;top:50%;transform:translate(-50%,-50%);width:min(928px,96vw);max-height:92vh;box-sizing:border-box;display:none;overflow:auto}
 #guild.on{display:block}
 #guildHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-right:52px;position:relative}
@@ -368,6 +385,14 @@ html.app #fs{display:none}
   <div id="grid"></div>
   <div id="info"><img id="infoIc" alt=""><div id="infoName"></div><div id="infoSlot"></div><div id="infoPrice"></div>
     <button class="btn" id="buy" type="button">사기</button><button class="btn" id="buy10" type="button" hidden>10개 사기</button><button class="btn ghost" id="sellAll" type="button" hidden>일괄판매</button><div id="shopSay"></div><button class="btn ghost" type="button" data-close>나가기</button></div></div></div>
+<div class="pan frame" id="enchant" role="dialog" aria-modal="true" aria-labelledby="enchantTitle">
+  <div id="enchantHead"><b id="enchantTitle">대장간 · 인챈트</b><span>보유 <span id="enchantGold">0G</span></span></div>
+  <div id="enchantBody"><div id="enchantGear"></div><div id="enchantDetail">
+    <div id="enchantItemHead"><img id="enchantIcon" alt=""><div><div id="enchantItemName">장비를 선택하세요</div><div id="enchantItemMeta"></div></div></div>
+    <div id="enchantAffixes"></div><div id="enchantCost"></div><div id="enchantSay">감정이 끝난 옵션 장비만 재부여할 수 있습니다.</div>
+    <div id="enchantActions"><button class="btn" id="enchantRoll" type="button" disabled>재부여</button><button class="btn ghost" type="button" data-close>나가기</button></div>
+  </div></div>
+</div>
 <div id="char"><div id="charWrap">
   <div id="tabs"><button type="button" data-tab="equip" id="tabEq"><b>장비</b></button><button type="button" data-tab="stat" id="tabSt"><b>능력치</b></button><button type="button" data-tab="skill" id="tabSk"><b>스킬</b></button><button type="button" data-tab="trade" id="tabTr"><b>무역품</b></button></div>
   <button id="charClose" type="button" aria-label="닫기"></button>

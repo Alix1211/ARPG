@@ -106,6 +106,36 @@ function identifyNeedRank(it){return Math.max(1,Math.min(3,(it&&it.rar)||1));}
 function identifyCost(it){return Math.max(1,Math.round(((it&&it.tier)||1)*50));}
 const STN = { atk:'공격력',matk:'마법 공격력',atkPct:'물리 공격',matkPct:'마법 공격',as:'공격 속도',crit:'치명타 확률',critDmg:'치명타 피해',fire:'화염마법',ice:'냉기마법',skill:'스킬 피해',def:'방어력',hp:'최대 체력',mp:'최대 마나',ms:'이동 속도',coin:'금화 획득',find:'아이템 발견',luck:'운' };
 const PCTSTAT=new Set(['atkPct','matkPct','as','crit','critDmg','fire','ice','skill','ms','coin','find']);
+function enchantAffixText(a){
+  if(!a)return '';
+  const n=STN[a.st]||a.st,v=Number(a.v)||0,shown=a.pct?Math.round(v):((a.st==='luck')?Math.round(v):Math.round(v/NUM));
+  return `${a.nm} · ${n} +${shown}${a.pct?'%':''}`;
+}
+function enchantCost(it){
+  if(!it||it.unid||!(it.aff&&it.aff.length))return 0;
+  const tier=clamp(it.tier||1,1,7),rar=clamp(it.rar||1,1,3),unit=[0,250,450,700][rar];
+  const repeat=1+Math.min(4,Math.max(0,it.enchantCount|0))*.25,protect=it.enchantLock?1.5:1;
+  return Math.max(50,Math.round(tier*unit*repeat*protect/10)*10);
+}
+function enchantToggleLock(it,affixId){
+  if(!it||it.unid||!(it.aff||[]).some(a=>a.id===affixId))return false;
+  it.enchantLock=it.enchantLock===affixId?null:affixId;saveGame();return true;
+}
+function enchantReroll(it,index){
+  if(!it||it.unid||!Array.isArray(it.aff)||index<0||index>=it.aff.length)return {ok:false,msg:'인챈트할 수 없는 장비입니다.'};
+  const old=it.aff[index];if(it.enchantLock===old.id)return {ok:false,msg:'보호한 옵션은 재부여할 수 없습니다.'};
+  const used=new Set(it.aff.filter((a,i)=>i!==index).map(a=>a.id));
+  const pool=AFFIX.filter(a=>a.slots.includes(it.kind)&&!used.has(a.id));if(!pool.length)return {ok:false,msg:'바꿀 수 있는 옵션이 없습니다.'};
+  if(it.st&&old.st)it.st[old.st]=(it.st[old.st]||0)-(Number(old.v)||0);
+  if(it.st&&old.st&&Math.abs(it.st[old.st]||0)<1e-9)delete it.st[old.st];
+  it.aff.splice(index,1);
+  rollAffix(it,used);
+  const fresh=it.aff.pop();it.aff.splice(index,0,fresh);
+  it.enchantCount=Math.max(0,it.enchantCount|0)+1;
+  finalizeName(it);syncHud();saveGame();
+  return {ok:true,old:enchantAffixText(old),fresh:enchantAffixText(fresh),affix:fresh};
+}
+const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
 const BAG_PAGE=42,BAG_MAX_PAGES=5,BAG=BAG_PAGE*BAG_MAX_PAGES,bag=new Array(BAG).fill(null);
@@ -664,6 +694,8 @@ window.UI = {
   scrolls:()=>({portal:SCR.portal,ident:SCR.ident}),scrollMax:SCR_MAX,
   useScroll(k){if(!(SCR[k]>0))return false;SCR[k]--;syncMmBtn();if($('char').classList.contains('on'))render();saveGame();return true;},
   make,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
+  enchantItems:()=>[...Object.entries(eq).filter(([,it])=>it).map(([slot,it])=>({from:'eq',slot,it})),...bag.slice(0,bagLimit()).map((it,i)=>it?{from:'bag',i,it}:null).filter(Boolean)],
+  enchantCost,enchantAffixText,enchantReroll,enchantToggleLock,
   merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=bagLimit()||bag[i])return false;bag[i]=it;return true;},add(it){const i=bagFreeIndex();if(i<0)return false;bag[i]=it;return true;},
   bagPages:()=>bagPages,bagPage:()=>bagPage,bagUpgradePrice:()=>BAG_UPGRADE[bagPages-1]||0,expandBag(){if(bagPages>=BAG_MAX_PAGES)return false;bagPages++;bagPage=bagPages-1;render();saveGame();return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],

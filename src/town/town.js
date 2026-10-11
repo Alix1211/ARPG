@@ -403,7 +403,7 @@ const PROP_TXT = {
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
-function closeAll(){ for (const id of ['msg','dlg','shop','guild','settings']) $(id).classList.remove('on'); if(typeof closeRegionSelect==='function')closeRegionSelect(true); if(window.TRADE)TRADE.close(true); if(window.GUILD)GUILD.close(true); if(window.UI&&UI.isOpen())UI.close(); panel=null; }
+function closeAll(){ for (const id of ['msg','dlg','shop','guild','settings','enchant']) $(id).classList.remove('on'); if(typeof closeRegionSelect==='function')closeRegionSelect(true); if(window.TRADE)TRADE.close(true); if(window.GUILD)GUILD.close(true); if(window.UI&&UI.isOpen())UI.close(); panel=null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
@@ -497,9 +497,10 @@ function openDlg(n){
   $('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
   $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
-  $('dlgTrade').hidden = !n.shop && !n.go && !n.companion;
+  const smithy=n.at==='smithy';
+  $('dlgTrade').hidden = !n.shop && !n.go && !n.companion && !smithy;
   $('dlgTrade').disabled = false;
-  $('dlgTrade').textContent = n.companion&&window.COMPANION?COMPANION.buttonText(n):n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
+  $('dlgTrade').textContent = smithy?'인챈트':n.companion&&window.COMPANION?COMPANION.buttonText(n):n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
   if(n.companion&&window.COMPANION&&COMPANION.isActive(n.companion))$('dlgTrade').disabled=true;
   const gx=$('dlgGuildExam');if(gx)gx.hidden=n.shop!=='guild';
   show('dlg');
@@ -514,6 +515,7 @@ $('dlgTrade').addEventListener('click', () => {
   if (talking.go === 'dungeon'){ enterDungeonFromOut(); return; }
   if(talking.shop==='trade'&&window.TRADE){TRADE.open(talking.market||'town');return;}
   if(talking.shop==='guild'&&window.GUILD){GUILD.open();return;}
+  if(talking.at==='smithy'&&window.UI){openEnchant();return;}
   openShop(talking);
 });
 
@@ -703,6 +705,56 @@ $('buy10').addEventListener('click',()=>{if(sel&&sel.mode==='buy')buyAt(sel.it,n
 let bulkSaleConfirm=false;
 $('sellAll').addEventListener('click',()=>{const rows=UI.bagItems().filter(r=>!r.it.locked);if(!rows.length){$('shopSay').textContent='일괄판매할 잠금 해제 아이템이 없습니다.';bulkSaleConfirm=false;return;}const total=rows.reduce((s,r)=>s+sellPrice(r.it),0);if(!bulkSaleConfirm){bulkSaleConfirm=true;$('sellAll').textContent='확인 후 일괄판매';$('shopSay').textContent=rows.length+'개 / '+total+'G 판매합니다. 한 번 더 눌러 주세요.';return;}bulkSaleConfirm=false;$('sellAll').textContent='일괄판매';for(const r of rows.slice().sort((a,b)=>b.i-a.i))UI.removeBagAt(r.i);setGold(P.gold+total);sel=null;UI.refresh();renderShop();UI.save();if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:'bulk',price:total,count:rows.length});$('shopSay').textContent=rows.length+'개를 팔아 '+total+'G를 받았습니다.';});
 window.__SHOP={goods:k=>shopGoods(k),tier:()=>levelTier(P.lv),open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
+
+// ======================= 대장간 인챈트 =======================
+let enchantItem=null,enchantAffix=-1,enchantConfirm=false;
+const ENCHANT_RAR=['일반','마법','희귀','전설'];
+function enchantEligible(it){return !!(it&&!it.unid&&Array.isArray(it.aff)&&it.aff.length);}
+function openEnchant(){
+  enchantItem=null;enchantAffix=-1;enchantConfirm=false;show('enchant');renderEnchant();
+}
+function renderEnchant(){
+  if(!$('enchant'))return;
+  $('enchantGold').textContent=P.gold.toLocaleString()+'G';
+  const rows=UI.enchantItems().filter(r=>enchantEligible(r.it));
+  const grid=$('enchantGear');grid.innerHTML='';
+  for(const r of rows){
+    const b=document.createElement('button');b.type='button';b.className='enchantGear'+(enchantItem&&enchantItem.id===r.it.id?' sel':'');
+    const im=document.createElement('img');im.src=A.icons[r.it.icon]||'';im.alt=r.it.name;b.append(im);
+    const sm=document.createElement('small');sm.textContent=(r.from==='eq'?'장착 · ':'')+'T'+(r.it.tier||1);b.append(sm);
+    b.onclick=()=>{enchantItem=r.it;enchantAffix=-1;enchantConfirm=false;renderEnchant();};grid.append(b);
+  }
+  if(!enchantItem||!rows.some(r=>r.it.id===enchantItem.id))enchantItem=rows[0]&&rows[0].it||null;
+  const it=enchantItem,roll=$('enchantRoll'),aff=$('enchantAffixes');
+  aff.innerHTML='';
+  if(!it){
+    $('enchantIcon').src='';$('enchantItemName').textContent='인챈트 가능한 장비가 없습니다.';$('enchantItemMeta').textContent='미확인 장비는 먼저 감정해야 합니다.';$('enchantCost').textContent='';$('enchantSay').textContent='옵션이 붙은 감정 완료 장비를 가져오세요.';roll.disabled=true;roll.textContent='재부여';return;
+  }
+  $('enchantIcon').src=A.icons[it.icon]||'';$('enchantItemName').textContent=it.name;
+  $('enchantItemMeta').textContent='T'+(it.tier||1)+' · '+ENCHANT_RAR[it.rar||0]+' · 재부여 '+(it.enchantCount||0)+'회';
+  it.aff.forEach((a,i)=>{
+    const row=document.createElement('div');row.className='enchantAffRow';
+    const pick=document.createElement('button');pick.type='button';pick.className='btn enchantAff'+(enchantAffix===i?' on':'')+(it.enchantLock===a.id?' locked':'');pick.textContent=UI.enchantAffixText(a);pick.disabled=it.enchantLock===a.id;
+    pick.onclick=()=>{enchantAffix=i;enchantConfirm=false;renderEnchant();};
+    const lock=document.createElement('button');lock.type='button';lock.className='btn ghost enchantLock'+(it.enchantLock===a.id?' on':'');lock.textContent=it.enchantLock===a.id?'보호중':'보호';
+    lock.onclick=()=>{UI.enchantToggleLock(it,a.id);if(it.enchantLock===a.id&&enchantAffix===i)enchantAffix=-1;enchantConfirm=false;renderEnchant();};
+    row.append(pick,lock);aff.append(row);
+  });
+  const cost=UI.enchantCost(it);$('enchantCost').textContent='재부여 비용 '+cost.toLocaleString()+'G'+(it.enchantLock?' · 보호 옵션 적용(+50%)':'');
+  if(enchantAffix<0)$('enchantSay').textContent='바꿀 옵션을 하나 선택하세요. 다른 옵션은 그대로 유지됩니다.';
+  roll.disabled=enchantAffix<0||P.gold<cost;roll.textContent=enchantConfirm?'확인 · '+cost.toLocaleString()+'G 사용':'재부여 '+cost.toLocaleString()+'G';
+}
+$('enchantRoll').addEventListener('click',()=>{
+  const it=enchantItem;if(!it||enchantAffix<0)return;
+  const cost=UI.enchantCost(it);if(P.gold<cost){$('enchantSay').textContent='금화가 부족합니다.';renderEnchant();return;}
+  if(!enchantConfirm){enchantConfirm=true;$('enchantSay').textContent=cost.toLocaleString()+'G를 사용합니다. 한 번 더 누르면 재부여합니다.';renderEnchant();return;}
+  enchantConfirm=false;setGold(P.gold-cost);
+  const res=UI.enchantReroll(it,enchantAffix);
+  if(!res.ok){setGold(P.gold+cost);$('enchantSay').textContent=res.msg||'재부여하지 못했습니다.';}
+  else $('enchantSay').textContent=res.old+' → '+res.fresh;
+  UI.refresh();UI.save();renderEnchant();
+});
+window.__ENCHANT={open:openEnchant,state:()=>({item:enchantItem&&enchantItem.id||null,affix:enchantAffix,cost:enchantItem?UI.enchantCost(enchantItem):0})};
 
 // ======================= 행인 =======================
 const WP = [[14.5,14],[18,13.6],[28,13.6],[31.5,14],[14.5,19.9],[20,20.7],[26,20.7],[31.5,19.9],[23,13.9],[19.6,16.4],[26.4,16.4],
