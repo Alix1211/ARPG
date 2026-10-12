@@ -250,6 +250,30 @@ for d in ['front', 'back', 'side']:
         im = Image.open(R + f'characters/elf/{d}_{i}.png').convert('RGBA')
         fr.append(enc(im.resize((170, 172), Image.LANCZOS), 88))
     el[d] = fr
+
+# 주인공 전투복: 5열×3행 시트 1장을 빌드 때 정면/후면/측면 5프레임씩 자동 분할.
+# sword/spear/gauntlet/bow/staff 파일이 없으면 해당 무기는 기존 평상복으로 폴백한다.
+ELF_SKINS = {}
+_elf_skin_dir = os.path.join(R, 'characters', 'elf_classes')
+for _wt in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
+    _path = os.path.join(_elf_skin_dir, _wt + '.webp')
+    if not os.path.exists(_path):
+        _path = os.path.join(_elf_skin_dir, _wt + '.png')
+    if not os.path.exists(_path):
+        continue
+    _sheet = Image.open(_path).convert('RGBA')
+    _cw, _ch = _sheet.width / 5.0, _sheet.height / 3.0
+    _skin = {}
+    for _d, _row in [('front', 0), ('back', 1), ('side', 2)]:
+        _arr = []
+        for _i in range(5):
+            _x0, _x1 = round(_i * _cw), round((_i + 1) * _cw)
+            _y0, _y1 = round(_row * _ch), round((_row + 1) * _ch)
+            _cell = _sheet.crop((_x0, _y0, _x1, _y1)).resize((170, 172), Image.LANCZOS)
+            _arr.append(enc(_cell, 88))
+        _skin[_d] = _arr
+    ELF_SKINS[_wt] = _skin
+
 face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((105, 45, 275, 215)).resize((128, 128), Image.LANCZOS)   # 얼굴 중심 정사각
 
 # ---- 본편 반복 등장 캐릭터 초상(기존 사용자 제공 에셋 재사용) ----
@@ -613,7 +637,7 @@ for item in QUEST_ITEM_SPEC['items']:
     im = Image.open(R + 'quest_items/' + item['id'] + '.png').convert('RGBA')
     im.thumbnail((128, 128), Image.LANCZOS)
     QUEST_ITEMS[item['id']] = dict(name=item['name'], icon=enc(im, 90))
-A = dict(questItems=QUEST_ITEMS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, ui=ui,
+A = dict(questItems=QUEST_ITEMS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()

@@ -13,6 +13,17 @@ let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
 for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
 const BI = {}; for (const k in A.b) BI[k] = load(A.b[k]);
 const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
+const ELSKIN = {};
+for (const wt in (A.elfSkins || {})){
+  ELSKIN[wt] = {};
+  for (const d in A.elfSkins[wt]) ELSKIN[wt][d] = A.elfSkins[wt][d].map(load);
+}
+function combatOutfitMap(){ return !['town','inn','fieldvillage'].includes(MAP); }
+function playerFrames(dir){
+  const wt = (typeof WPN !== 'undefined' && WPN && WPN.wt) || null;
+  const skin = combatOutfitMap() && wt && ELSKIN[wt];
+  return skin && skin[dir] || EL[dir];
+}
 $('face').src = A.face; $('ringImg').src = A.kit.pring;
 $('tag').style.backgroundImage = `url(${A.ui['06']})`;
 document.documentElement.style.setProperty('--panel', `url(${A.ui['04']})`);
@@ -1608,7 +1619,8 @@ function weaponLayers(){
 function drawMe(){
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x, P.y, 17, 6, 0, 0, 7); ctx.fill();
   const busy = atkBusy(), dir = busy ? P.atk.dir : P.dir, flip = busy ? P.atk.flip : P.flip;
-  const fr = EL[dir][P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
+  const frames = playerFrames(dir);
+  const fr = frames[P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
   const h = 98, w = h * 170 / 172, by = P.y + h * (11 / 344);
   const L = weaponLayers();
   ctx.save();
