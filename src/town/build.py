@@ -252,6 +252,7 @@ for d in ['front', 'back', 'side']:
     el[d] = fr
 
 # 주인공 전투복: 5열×3행 시트 1장을 빌드 때 정면/후면/측면 5프레임씩 자동 분할.
+# 2026-10-12 직업복 시트 5종 업로드 후 게임 재빌드 트리거.
 # sword/spear/gauntlet/bow/staff 파일이 없으면 해당 무기는 기존 평상복으로 폴백한다.
 ELF_SKINS = {}
 _elf_skin_dir = os.path.join(R, 'characters', 'elf_classes')
