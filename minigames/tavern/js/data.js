@@ -51,6 +51,7 @@ const MENUS=[
 const REQUESTS={drink:{label:'음료',icon:'menu-13.png'},food:{label:'음식',icon:'menu-49.png'},alcohol:{label:'주류',icon:'menu-10.png'},service:{label:'서비스',icon:'icon-service.png'},extension:{label:'연장',icon:'icon-extend.png'},checkout:{label:'계산',icon:'icon-checkout.png'}};
 const SERVICES=[{id:'talk',name:'허풍에 리본 달기',need:'lore',energy:3,line:'그 허풍, 리본만 달면 선물로 팔겠네! 킥킥!'},{id:'party',name:'오늘 대장은 누구?',need:'charisma',energy:6,line:'한 잔! 두 잔! 잔도 줄 서고 콧대도 줄 서네!'},{id:'care',name:'폭신폭신 한 판',need:'stamina',energy:3,line:'폭신폭신! 의자랑 너무 친해지면 데려가겠다고 하더라!'},{id:'detail',name:'수상한 소품 점검',need:'dexterity',energy:4,line:'반짝반짝! 바구니 안은 왜 달그락거리냐고? 나도 몰라! 킥킥!'}];
 const GUEST_NAMES=['길드 용병','젊은 상인','순례자','견습 기사','광산 일꾼','왕도 서기관','노년 귀족','골목 장인','검술 수련생','해상 상인','여행 음악가','은퇴 기사','약초 연구자','마을 주민','떠돌이 학자','시장 중개인','궁정 사절','성문 경비병','귀족 청년','숲의 사냥꾼','도서관 조수','행상인','백발 마법사','견습 연금술사','왕실 심부름꾼','대장장이','장거리 여행객','수도원 방문객','청년 모험가','노련한 경비대장'];
+const START_UNLOCKED=[0,1,2];
 const CONFIG={duration:180,spawnInterval:12,maxGuests:14,waitLimit:55,unassignedLimit:55,requestLimit:70,initialCash:3000,initialStock:4,extensionFee:40};
-const api={TALK_RESPONSES,COURSES,LESSON_LEVELS,TALK_CHOICES,LIFE_CONFIG,STAFF,NEEDS,MENUS,REQUESTS,SERVICES,GUEST_NAMES,CONFIG};root.TavernData=api;if(typeof module!=='undefined')module.exports=api;
+const api={TALK_RESPONSES,COURSES,LESSON_LEVELS,TALK_CHOICES,LIFE_CONFIG,STAFF,NEEDS,MENUS,REQUESTS,SERVICES,GUEST_NAMES,START_UNLOCKED,CONFIG};root.TavernData=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
