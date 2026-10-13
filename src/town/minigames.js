@@ -116,7 +116,7 @@
   addEventListener('keydown',e=>{if(e.key==='Escape'&&!root.hidden){e.preventDefault();e.stopImmediatePropagation();close();}},{capture:true});
   window.MINIGAMES={open,enter,close,openSupplyShop,buySupply,supplyState:()=>clone(ensureSupply()),runs:()=>clone(data.tavernRuns||[]),isOpen:()=>!root.hidden,get active(){return active?.kind||null;},saveData:()=>clone(data),loadData(value){
     if(value?.arena&&typeof value.arena==='object'){
-      const old=clone(value);data={version:2,tavern:old.tavern||null,tavernSupply:old.tavernSupply||clone(old.tavern?.inventory)||emptySupply(),tavernRuns:Array.isArray(old.tavernRuns)?old.tavernRuns.slice(-30):[],bubble:old.bubble||null,arena:old.arena};ensureSupply();
+      const old=clone(value);data={version:2,tavern:old.tavern||null,tavernSupply:old.tavernSupply||(old.tavern&&old.tavern.inventory?clone(old.tavern.inventory):emptySupply()),tavernRuns:Array.isArray(old.tavernRuns)?old.tavernRuns.slice(-30):[],bubble:old.bubble||null,arena:old.arena};ensureSupply();
     }
   }};
 })();
