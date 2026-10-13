@@ -16,6 +16,12 @@
   const arenaMinStake=t=>1000*Math.pow(2,clampTier(t)-1);
   const bubbleReference=t=>1000*Math.pow(2,clampTier(t)-1);
   const bubbleFee=t=>Math.round(bubbleReference(t)*.10);
+  const BUBBLE_FRAGMENT_NEEDS=[20,10,10,10,10,20];
+  const bubbleCollectedUnits=state=>{
+    if(!state||!Array.isArray(state.stock)||!Array.isArray(state.fragments))return 0;
+    let n=0;for(let i=0;i<BUBBLE_FRAGMENT_NEEDS.length;i++)n+=(Math.max(0,Number(state.stock[i])||0)*BUBBLE_FRAGMENT_NEEDS[i])+Math.max(0,Number(state.fragments[i])||0);
+    return Math.floor(n);
+  };
   let data = {version:3,tavern:null,tavernSupply:emptySupply(),tavernRuns:[],bubble:null,bubbleStats:{played:0,clears:0,jackpots:0,spent:0,earned:0},arena:{played:0,wins:0,losses:0,forfeits:0}}, active=null;
   const root=document.createElement('section');root.id='minigameHost';root.hidden=true;
   root.innerHTML='<button id="minigameReturn" type="button">← 모험으로</button><div id="minigameLobby"><h2>돈 벌러 갑니다</h2><button data-mini="tavern">주점 영업</button><button data-mini="bubble-pang">버블팡</button><button data-mini="arena">격투장</button><div id="arenaWager" hidden><label>응원할 선수 <select id="arenaSide"><option value="left">실비아</option><option value="right">니샤</option></select></label><label>판돈 <input id="arenaStake" type="number" min="1000" step="1000" value="1000"></label><button id="arenaEnter">경기장 입장</button><small id="arenaRule">3연승까지 매번 2배 · 중간 회수 가능 · 패배/퇴장 시 진행 판돈 0</small></div><p id="minigameMoney"></p></div><iframe id="minigameFrame" title="미니게임" allow="autoplay; fullscreen" hidden></iframe>';
@@ -128,14 +134,16 @@
       const tier=active.tier||1,reference=bubbleReference(tier),fee=bubbleFee(tier);
       if(GAME.P.gold<fee)return null;
       if(active.bubbleRound&&!active.bubbleRound.settled)active.bubbleRound.forfeit=true;
-      GAME.setGold(GAME.P.gold-fee);active.bubbleRound={tier,reference,fee,settled:false};
+      GAME.setGold(GAME.P.gold-fee);active.bubbleRound={tier,reference,fee,settled:false,startUnits:bubbleCollectedUnits(data.bubble)};
       data.bubbleStats.played++;data.bubbleStats.spent+=fee;save();
       return {tier,reference,fee,gold:GAME.P.gold};
     },
     finishBubbleRound(source,outcome){
       if(!child(source)||active.kind!=='bubble-pang'||!active.bubbleRound||active.bubbleRound.settled)return false;
       const r=active.bubbleRound;r.settled=true;let reward=0,jackpot=false;
-      const popped=Math.max(0,Math.floor(Number(source&&source.BUBBLE_ARPG_STATS&&source.BUBBLE_ARPG_STATS.popped)||0));
+      const livePopped=Math.max(0,Math.floor(Number(source&&source.BUBBLE_ARPG_STATS&&source.BUBBLE_ARPG_STATS.popped)||0));
+      const legacyPopped=Math.max(0,bubbleCollectedUnits(data.bubble)-Math.max(0,Number(r.startUnits)||0));
+      const popped=Math.max(livePopped,legacyPopped);
       const lootRolls=Math.max(0,Math.min(10,Math.floor(popped/5)));
       let loot={tier:r.tier,rolls:lootRolls,found:0,gear:0,supply:0,trade:0,junk:0,discardTrade:0,discardBag:0,none:lootRolls,names:[]};
       if(lootRolls&&window.__FD&&__FD.grantMonsterLoot)loot=__FD.grantMonsterLoot(r.tier,lootRolls,active.region||'town')||loot;
