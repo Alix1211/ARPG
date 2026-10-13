@@ -188,7 +188,7 @@ html.app #fs{display:none}
 .qprog{font-size:10px;color:#ffd978;white-space:nowrap}
 #mm{right:max(10px,env(safe-area-inset-right));top:8px;width:176px;height:150px;border-radius:50%;border:4px solid #c9923e;box-shadow:0 0 0 3px #4a2a12,inset 0 0 0 2px #e3b35f,0 3px 8px #0009;overflow:hidden;background:#000}
 #mm canvas{position:static;width:100%;height:100%}
-#mmPortal{right:max(4px,env(safe-area-inset-right));top:112px;width:50px;height:50px;border-radius:50%;border:3px solid #c9923e;box-shadow:0 0 0 2px #4a2a12,inset 0 0 0 2px #e3b35f,0 3px 8px #0009;background:#2a1a0c center/84% no-repeat;pointer-events:auto;touch-action:none;padding:0;z-index:3}
+#mmPortal{right:max(4px,env(safe-area-inset-right));top:146px;width:50px;height:50px;border-radius:50%;border:3px solid #c9923e;box-shadow:0 0 0 2px #4a2a12,inset 0 0 0 2px #e3b35f,0 3px 8px #0009;background:#2a1a0c center/84% no-repeat;pointer-events:auto;touch-action:none;padding:0;z-index:3}
 #mmPortal::before{content:'↩';position:absolute;right:-2px;top:-4px;font:900 15px sans-serif;color:#ffe9a8;text-shadow:0 1px 2px #000,0 0 4px #000}
 #mmPortal.off{filter:grayscale(.85) brightness(.6)}
 #mmPortalCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 13px sans-serif;color:#fff;text-shadow:0 1px 3px #000,0 0 4px #000;pointer-events:none}
@@ -223,7 +223,7 @@ html.app #fs{display:none}
 #stick{position:fixed;left:max(46px,calc(env(safe-area-inset-left) + 46px));bottom:34px;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle,#ffffff22,#ffffff14 60%,#ffffff08);border:2px solid #ffffff30;pointer-events:none;opacity:.45;transition:opacity .15s}
 #stick.act{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff70,#ffffff35);box-shadow:0 2px 6px #0005}
-#cluster{position:fixed;right:max(24px,calc(env(safe-area-inset-right) + 24px));bottom:52px;width:124px;height:124px;pointer-events:none}
+#cluster{position:fixed;right:max(24px,calc(env(safe-area-inset-right) + 24px));bottom:74px;width:124px;height:124px;pointer-events:none}
 #atk{position:absolute;inset:0;border:0;padding:0;border-radius:50%;background:var(--ring) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 4px 6px #000a);transition:transform .08s}
 #atk:active{transform:scale(.95)}
 #atkIc{position:absolute;left:22%;top:22%;width:56%;height:56%;object-fit:contain;filter:drop-shadow(0 2px 2px #0008)}
@@ -427,7 +427,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-2121</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-2214</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1607,9 +1607,10 @@ function drawMini(camX, camY){
     const pulse=.5+.5*Math.sin(T*6.2),r=3.8+pulse*2.8;
     for(const q of QUEST.minimapTargets()){
       const x=q.x*sx,y=q.y*sy;
+      const main=q.tone!=='side';   // 월드 퀘스트 표시와 같은 색: 메인 노랑, 서브 하늘색
       mx.save();mx.globalAlpha=.35+.65*pulse;
-      mx.fillStyle='#ff2419';mx.beginPath();mx.arc(x,y,r+4,0,7);mx.fill();
-      mx.globalAlpha=1;mx.fillStyle='#ff3328';mx.strokeStyle='#fff2df';mx.lineWidth=1.4;
+      mx.fillStyle=main?'#ffb300':'#3fa3ff';mx.beginPath();mx.arc(x,y,r+4,0,7);mx.fill();
+      mx.globalAlpha=1;mx.fillStyle=main?'#ffda55':'#9fd8ff';mx.strokeStyle=main?'#5a3205':'#173a5c';mx.lineWidth=1.4;
       mx.beginPath();mx.arc(x,y,r,0,7);mx.fill();mx.stroke();mx.restore();
     }
   }
@@ -6648,7 +6649,7 @@ function questMiniTargets(){
     if(!Number.isFinite(x)||!Number.isFinite(y))return;
     const k=Math.round(x)+':'+Math.round(y);
     if(seen.has(k))return;seen.add(k);
-    out.push({x,y,id,kind});
+    const q=questDef(id);out.push({x,y,id,kind,tone:questKind(q)==='main'?'main':'side'});
   };
   let activeMain=false;
   for(const q of ALL_QUESTS){
@@ -6670,6 +6671,8 @@ function questMiniTargets(){
       if(n&&(questMapMatches(next.start)||n.questStartAlias===next.start.map))add(n.x,n.y,next.id,'start');
     }
   }
+  // 월드에서 머리 위 !/? 표시가 뜨는 NPC는 미니맵에도 같은 색으로 찍는다(메인 노랑, 서브 하늘색).
+  for(const n of npcs){const a=questNpcAction(n);if(a&&!a.waiting)add(n.x,n.y,a.q.id,a.start?'start':'npc');}
   return out;
 }
 function questAccept(id){
@@ -7461,9 +7464,10 @@ $('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWA
 const POT = { hp:[3,0,0,0,0,0,0], mp:[2,0,0,0,0,0,0], dual:[0,0,0,0,0,0,0] };
 const SCR = { portal: 0, ident: 0 }, SCR_MAX = 20;   // 스크롤(포탈·감정): 한 종류당 20장까지
 const potEl = { hp: $('potHp'), mp: $('potMp'), dual: $('potDual') };
-potEl.hp.style.cssText += `left:${C0 - 60}px;top:${C0 - 172}px`;
-potEl.mp.style.cssText += `left:${C0 + 6}px;top:${C0 - 172}px`;
-potEl.dual.style.cssText += `left:${C0 + 72}px;top:${C0 - 172}px`;
+// 물약 3개는 간격 58px로 붙여서 오른쪽 끝(보라)이 화면 밖으로 밀리지 않게 한다.
+potEl.hp.style.cssText += `left:${C0 - 80}px;top:${C0 - 172}px`;
+potEl.mp.style.cssText += `left:${C0 - 22}px;top:${C0 - 172}px`;
+potEl.dual.style.cssText += `left:${C0 + 36}px;top:${C0 - 172}px`;
 function potionTierOwned(k){
   const a=POT[k]||[],want=G.levelTier?G.levelTier(G.P.lv):1;
   if(a[want-1]>0)return want;
