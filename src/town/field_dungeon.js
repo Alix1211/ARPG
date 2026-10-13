@@ -275,7 +275,7 @@ async function prepareFieldVillage(theme,returnState){
   if(fieldVillageReturn){const minLegs=(FIELD_TIER[theme]||1)+1;fieldLegs=Math.max(minLegs,fieldVillageReturn.legs||0);fieldLeg=Math.max(1,Math.min(fieldVillageReturn.leg||fieldLegs,fieldLegs));}
   const bg=await makeFieldVillageGround(theme);
   const b1=fieldBuilding('cottage_thatch','마을집',5.7,7.2,4.0,'bld',theme);b1.noSpot=1;
-  const b2=fieldBuilding('house_blue','마을집',26.3,7.2,4.0,'bld',theme);b2.noSpot=1;
+  const b2=fieldBuilding('house_blue',FIELD_INFO[theme][1]+' 여관',26.3,7.2,4.0,'field_inn',theme);b2.noSpot=1;
   const props=[
     villageProp('fountain',16,13.0,3.5),
     villageProp('stall_red',9.2,10.2,3.2),villageProp('stall_blue',22.8,10.2,3.2),
