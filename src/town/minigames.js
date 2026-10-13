@@ -2,6 +2,7 @@
 // 2026-10-13 주점 3인 경제 테스트 게시 트리거
 // 2026-10-13 식자재점 UI 복귀 수정 최종 게시
 (() => {
+  // 2026-10-13 버블슈터 원본 복구 후 ARPG 전리품 정산 호환
   const clone = value => JSON.parse(JSON.stringify(value));
   const SUPPLY=[
     {id:'orange',name:'오렌지 주스 재료',cost:16,icon:'menu-13.png'},{id:'berry',name:'산딸기 주스 재료',cost:20,icon:'menu-14.png'},{id:'tea',name:'허브차 재료',cost:12,icon:'menu-19.png'},
