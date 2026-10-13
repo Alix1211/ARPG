@@ -796,8 +796,15 @@ _potion_candidates = [
     os.path.join(ROOT, '판타지 물약 아이콘 3×7 컬렉션(1).png'),
 ]
 _potion_src = next((p for p in _potion_candidates if os.path.exists(p)), None)
+_potion_b64 = os.path.join(ROOT, 'source_sheets', 'potions', 'potions_3x7.webp.b64')
 if _potion_src:
     sheet = Image.open(_potion_src).convert('RGBA')
+elif os.path.exists(_potion_b64):
+    import io as _io
+    sheet = Image.open(_io.BytesIO(base64.b64decode(open(_potion_b64, encoding='ascii').read().strip()))).convert('RGBA')
+else:
+    sheet = None
+if sheet is not None:
     for row, kind in enumerate(('hp', 'mp', 'dual')):
         for tier in range(1, 8):
             col = tier - 1
