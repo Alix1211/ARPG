@@ -685,8 +685,14 @@ function updEncounters(dt){
     if(d.picked) continue;
     if(Math.hypot(d.x-P.x,d.y-P.y)<28){
       if(d.kind==='gold'){setGold(P.gold+d.amount);d.picked=true;}
-      else if(window.UI&&UI.add(d.item)){d.picked=true;if(window.TELEMETRY)TELEMETRY.loot(d.item);say(d.item.name+' 획득');if(window.CHATTER)CHATTER.loot(d.item);}
-      else if(window.CHATTER)CHATTER.event('bagfull');
+      else{
+        const it=d.item;let ok=false,msg='';
+        if(it&&it.lootType==='supply'&&window.MINIGAMES&&MINIGAMES.addSupplyLoot){ok=!!MINIGAMES.addSupplyLoot(it.supplyId,1);msg=it.name+' → 주점 재고';}
+        else if(it&&it.lootType==='trade'&&window.TRADE&&TRADE.addLoot){ok=!!TRADE.addLoot(it.tradeId,1);msg=it.name+' → 무역 화물';}
+        else if(window.UI&&UI.add(it)){ok=true;msg=it.name+' 획득';}
+        if(ok){d.picked=true;if(window.TELEMETRY)TELEMETRY.loot(it);say(msg);if(window.CHATTER&&it.lootType!=='supply'&&it.lootType!=='trade')CHATTER.loot(it);}
+        else if(!d.warned){d.warned=true;say(it&&it.lootType==='trade'?'화물칸이 가득 찼습니다.':'가방이 가득 찼습니다.');if(window.CHATTER&&it&&it.lootType!=='trade')CHATTER.event('bagfull');}
+      }
     }
   }
 }
@@ -713,12 +719,58 @@ function monsterTier(m){
   return 1;
 }
 const EQUIP_DROP_BY_TIER=[.10,.10,.11,.12,.13,.14,.15];
+const LOOT_VALUE_CAP=[20,28,36,44,52,60,72];
+const SUPPLY_DROP_RATE=.26,TRADE_DROP_RATE=.26,JUNK_DROP_RATE=.24;
+const SUPPLY_LOOT_ICON={orange:'food_orange',berry:'food_fruit',tea:'food_pitcher',cheese:'food_cheese',bread:'food_bread',fruit:'food_fruit',tart:'food_bread',ale:'food_ale',wine:'food_wine',cider:'food_cider'};
+const TRADE_LOOT_ICON={
+  wheat:'food_flour',barley:'food_flour',rice:'food_flour',potato:'food_basket',apple:'food_apple',grape:'food_grape',
+  honey:'food_pitcher',milk:'food_pitcher',egg:'food_basket',chicken:'food_chicken',pork:'food_sausage',beef:'food_chicken',
+  fish:'food_basket',eel:'food_basket',salt:'food_bowl',timber:'junk_wood',wool:'food_basket',leather:'food_basket',
+  herb:'junk_herb',mushroom:'food_basket',pepper:'food_bowl',chili:'food_basket',wine:'food_wine',iron:'junk_iron',obsidian:'trade_obsidian'
+};
+const JUNK_LOOT=[
+  {name:'빈 술병',icon:'food_bottle',price:18,minTier:1,desc:'내용물보다 병값이 더 아쉬운 물건.'},
+  {name:'금 간 나무그릇',icon:'food_bowl',price:22,minTier:1,desc:'상점에 넘기면 푼돈은 받을 수 있다.'},
+  {name:'닳은 나무접시',icon:'food_plates',price:26,minTier:1,desc:'모험지에서 굴러다니던 생활 잡동사니.'},
+  {name:'깨진 주전자',icon:'food_pitcher',price:30,minTier:1,desc:'물은 새지만 고물값은 남아 있다.'},
+  {name:'짐승 뼛조각',icon:'junk_bones',price:36,minTier:1,desc:'쓸모는 애매하고 매입상은 받아 준다.'},
+  {name:'쪼개진 단단한 목재',icon:'junk_wood',price:42,minTier:2,desc:'가공하기엔 짧고 팔기엔 충분하다.'},
+  {name:'녹슨 철조각',icon:'junk_iron',price:52,minTier:3,desc:'대장간에서 고철값 정도는 쳐 준다.'},
+  {name:'굳은 송진 덩어리',icon:'junk_resin',price:64,minTier:4,desc:'질은 나쁘지만 잡화상은 사 간다.'},
+  {name:'금 간 수정조각',icon:'junk_crystal',price:80,minTier:5,desc:'마력이 거의 빠져나간 깨진 수정.'}
+];
 function equipmentDropChance(m,find=0){
   if(m&&m.boss)return 1;
   const tier=Math.max(1,Math.min(7,monsterTier(m)));
-  const base=EQUIP_DROP_BY_TIER[tier-1];
+  const base=EQUIP_DROP_BY_TIER[tier-1]+(m&&m.elite?.02:0);
   const findBonus=Math.min(.03,Math.max(0,find)/1000);
   return Math.min(.20,base+findBonus);
+}
+function weightedLoot(pool,valueFn,cap,boostFn){
+  if(!pool.length)return null;
+  const w=pool.map(x=>Math.max(.15,Math.pow((cap+12)/(Math.max(1,valueFn(x))+8),.75))*(boostFn?boostFn(x):1));
+  let r=Math.random()*w.reduce((a,b)=>a+b,0);
+  for(let i=0;i<pool.length;i++){r-=w[i];if(r<=0)return pool[i];}
+  return pool[pool.length-1];
+}
+function supplyLoot(m){
+  if(!window.MINIGAMES||!MINIGAMES.supplyCatalog)return null;
+  const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],pool=MINIGAMES.supplyCatalog().filter(x=>x.cost<=cap);
+  const x=weightedLoot(pool,x=>x.cost,cap);if(!x)return null;
+  return {lootType:'supply',supplyId:x.id,name:x.name,icon:SUPPLY_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.cost};
+}
+function tradeLoot(m){
+  if(!window.TRADE||!Array.isArray(TRADE.goods))return null;
+  const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],region=fieldTheme||'town',reg=TRADE.regions&&TRADE.regions[region],pool=TRADE.goods.filter(x=>x.base<=cap);
+  const boost=x=>{const q=reg&&reg.m&&reg.m[x.id];return q<=.85?2.2:q>=1.2?.55:1;};
+  const x=weightedLoot(pool,x=>x.base,cap,boost);if(!x)return null;
+  return {lootType:'trade',tradeId:x.id,name:x.name,icon:TRADE_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.base};
+}
+function junkLoot(m){
+  if(!window.UI||!UI.makeLoot)return null;
+  const tier=Math.max(1,Math.min(7,monsterTier(m))),pool=JUNK_LOOT.filter(x=>x.minTier<=tier);
+  const x=pool[Math.floor(Math.random()*pool.length)];if(!x)return null;
+  return UI.makeLoot({kind:'junk',name:x.name,icon:x.icon,tier,price:x.price,desc:x.desc});
 }
 function randomDropItem(m){
   if(!window.UI)return null;
@@ -748,11 +800,14 @@ function killMonster(m){
   const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.coinMul||TIER_MATCH.scales.coin[tier-1];
   const coin=Math.round((2+Math.floor(Math.random()*8))*(1+coinBonus/100)*rewardMul);
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
-  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,dropChance=equipmentDropChance(m,find);
-  if(Math.random()<dropChance){
-    const it=randomDropItem(m);if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
-    if(m.bossRole==='floor'&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
-  }
+  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,gearChance=equipmentDropChance(m,find),roll=Math.random();
+  let it=null;
+  if(roll<gearChance)it=randomDropItem(m);
+  else if(roll<gearChance+SUPPLY_DROP_RATE)it=supplyLoot(m);
+  else if(roll<gearChance+SUPPLY_DROP_RATE+TRADE_DROP_RATE)it=tradeLoot(m);
+  else if(roll<gearChance+SUPPLY_DROP_RATE+TRADE_DROP_RATE+JUNK_DROP_RATE)it=junkLoot(m);
+  if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
+  if(m.bossRole==='floor'&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
   if(window.GUILD)GUILD.onKill(m);
   if(window.QUEST)QUEST.onKill(m);
@@ -907,8 +962,9 @@ function drawMonster(m,sdt){
   ctx.restore();
 }
 function dropImage(icon){
-  if (!A.icons[icon]) return null;
-  if (!dropImgs[icon]) dropImgs[icon] = load(A.icons[icon]);
+  const src=(A.icons&&A.icons[icon])||(A.lootIcons&&A.lootIcons[icon]);
+  if(!src)return null;
+  if(!dropImgs[icon])dropImgs[icon]=load(src);
   return dropImgs[icon];
 }
 function drawEncounterGround(){
@@ -967,6 +1023,7 @@ window.__FD={
   flinchTest(){const m={monster:1,boss:1,hp:9999,maxHp:9999,x:P.x+500,y:P.y+500,h:60,w:60,hurt:0,stun:0,type:'test'};hitMonster(m,[1,0],true,1);const a=m.stun;m.stun=0;hitMonster(m,[1,0],true,1);return [a,m.stun];},
   debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
   debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
+  lootConfig(t=FIELD_TIER[fieldTheme]||1){t=Math.max(1,Math.min(7,t|0));const cap=LOOT_VALUE_CAP[t-1];return {tier:t,cap,equip:EQUIP_DROP_BY_TIER[t-1],supplyRate:SUPPLY_DROP_RATE,tradeRate:TRADE_DROP_RATE,junkRate:JUNK_DROP_RATE,supply:window.MINIGAMES?MINIGAMES.supplyCatalog().filter(x=>x.cost<=cap).map(x=>x.id):[],trade:window.TRADE?TRADE.goods.filter(x=>x.base<=cap).map(x=>x.id):[],junk:JUNK_LOOT.filter(x=>x.minTier<=t).map(x=>x.name)};},
   testSpawn(id,dx,dy){const m=createMonster(id,P.x+dx,P.y+dy);m.stun=99;monsters.push(m);return monsters.indexOf(m);},   // 연출 확인용
   testOp(i,op,a){const m=monsters[i];if(!m)return false;if(op==='hit')hitMonster(m,[a||1,0],true,1);else if(op==='kill')killMonster(m);else if(op==='act')monAct(m,a,.5,1,0);else if(op==='clear'){for(const x of monsters)x.removed=true;}else if(op==='go'){m.stun=0;}return true;},
   hurtTest(v){rawPlayerDamage(v);return P.hp;},   // 검사용: 방어 계산 후 직접 피해
