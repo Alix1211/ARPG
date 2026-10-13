@@ -9,7 +9,7 @@ const mode={lifeEnabled:false,useBusinessOnly(game){
  game.step=function(dt){if(this.state==='ready')return;return original.step.call(this,dt)};
  game.dayClock=function(){return this.state==='ready'?'18:00':original.dayClock.call(this)};
  game.setTeam=function(...args){return this.state==='ready'?preparing(original.setTeam,args):original.setTeam.apply(this,args)};
- game.purchase=function(...args){return this.state==='ready'?preparing(original.purchase,args):original.purchase.apply(this,args)};
+ game.purchase=function(...args){if(this.state==='ready')return {ok:false,reason:'영업 전 식자재는 마을 분수 옆 식자재점에서 구매해 주세요.'};return original.purchase.apply(this,args)};
 }};
 root.TavernMode=mode;
 if(typeof module!=='undefined'&&module.exports)module.exports=mode;
