@@ -603,6 +603,7 @@ const SELL_BASE = {
   head: {1:20, 2:40}, body: {1:35, 2:70}, hands: {1:15, 2:30}, feet: {1:15, 2:30},
   ring: 120, neck: 150
 };
+const ARMOR_SELL_RATIO = { head:.55, body:.95, hands:.4, feet:.4 };
 const SHOP_BUY_RATE = {
   arms:    { weapon:1.00, armor:1.00, accessory:0.60, material:0.60, potion:0.50, junk:0.50 },
   pawn:    { weapon:0.85, armor:0.85, accessory:1.20, material:1.00, potion:0.70, junk:1.00 },
@@ -644,8 +645,9 @@ function baseSellValue(it){
   if (!it) return 1;
   let v = 10;
   if (it.kind === 'weapon') v = (SELL_BASE.weapon[it.g] || Math.round(75 * Math.max(1, it.g - 1)));
-  else if (['head','body','hands','feet'].includes(it.kind)) v = (SELL_BASE[it.kind][it.g] || SELL_BASE[it.kind][2]);
-  else if (it.kind === 'ring' || it.kind === 'neck') v = SELL_BASE[it.kind];
+  // 방어구·장신구도 무기처럼 등급/티어에 따라 오른다(예전엔 등급 1·2 표만 있어 티어와 무관하게 고정이었음).
+  else if (['head','body','hands','feet'].includes(it.kind)) v = (SELL_BASE[it.kind][it.g] || Math.max(SELL_BASE[it.kind][2], Math.round(75 * Math.max(1, (it.g || 2) - 1) * ARMOR_SELL_RATIO[it.kind])));
+  else if (it.kind === 'ring' || it.kind === 'neck') v = Math.round(SELL_BASE[it.kind] * (1 + .5 * (Math.max(1, it.tier || 1) - 1)));
   else v = Math.max(1, it.price || 10);
   return v * (1 + (it.rar || 0));
 }

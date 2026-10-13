@@ -14,8 +14,10 @@
   const clampTier=t=>Math.max(1,Math.min(7,Number(t)||1));
   const currentTier=()=>{const st=GAME.locationState();return st.map==='fieldvillage'?clampTier(MINI_TIER_BY_THEME[st.theme]||GAME.levelTier()):1;};
   const currentRegion=()=>{const st=GAME.locationState();return st.map==='fieldvillage'&&MINI_TIER_BY_THEME[st.theme]?st.theme:'town';};
-  const arenaMinStake=t=>1000*Math.pow(2,clampTier(t)-1);
-  const bubbleReference=t=>1000*Math.pow(2,clampTier(t)-1);
+  // 티어 상승폭은 사냥 수입 곡선(T1→T7 약 6.5배)에 맞춰 1.4배씩. 2배씩이면 T7 버블 한 판이 사냥 500마리분이 됨(2026-10-13 경제 검토).
+  const tierScale=t=>Math.round(1000*Math.pow(1.4,clampTier(t)-1)/100)*100;   // 1000,1400,2000,2700,3800,5400,7500
+  const arenaMinStake=t=>tierScale(t);
+  const bubbleReference=t=>tierScale(t);
   const bubbleFee=t=>Math.round(bubbleReference(t)*.10);
   const BUBBLE_FRAGMENT_NEEDS=[20,10,10,10,10,20];
   const bubbleCollectedUnits=state=>{
