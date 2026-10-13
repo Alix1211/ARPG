@@ -1269,11 +1269,12 @@ const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: �
 };
 const DUR = {}; for (const k in WB) DUR[k] = WB[k].dur;
 const PI = Math.PI;
-function wDraw(x, y, ang, sc = 1, mir = false){
-  const im = WPN && WPN.img; if (!im || !im.complete || !im.naturalWidth) return;
-  const L = WL[WPN.wt] * sc, w = L * im.naturalWidth / im.naturalHeight;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (mir) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -L * GRIP[WPN.wt], w, L); ctx.restore();
+function wDrawWeapon(weapon, x, y, ang, sc = 1, mir = false){
+  const im = weapon && weapon.img; if (!im || !im.complete || !im.naturalWidth) return;
+  const L = WL[weapon.wt] * sc, w = L * im.naturalWidth / im.naturalHeight;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (mir) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -L * GRIP[weapon.wt], w, L); ctx.restore();
 }
+function wDraw(x, y, ang, sc = 1, mir = false){ return wDrawWeapon(WPN,x,y,ang,sc,mir); }
 const shots = [];
 function attack(){
   if (typeof playerControlLocked === 'function' && playerControlLocked()) return;
@@ -1417,7 +1418,9 @@ function drawShots(dt){
 function boom(s,t){
   const vx=s.vx,vy=s.vy;s.done=true;s.vx=s.vy=0;
   const hit=(u)=>{
-    hitTarget(u,[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0],!!s.stagger,s.dmg);
+    const dir=[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0];
+    if(s.companion&&u&&u.monster&&typeof companionHit==='function')companionHit(u,s.dmg||1,dir[0],dir[1],s.kb||4);
+    else hitTarget(u,dir,!!s.stagger,s.dmg);
     if(s.status&&typeof applyMonsterStatus==='function')applyMonsterStatus(u,s.status,s.statusDur||2.5);
     if(s.chill){const now=performance.now()/1000;if(now-(u.chillAt||-9)>1.6)u.chillN=0;u.chillAt=now;u.chillN=(u.chillN||0)+1;if(s.chillFreeze&&u.chillN>=3){u.chillN=0;applyMonsterStatus(u,'freeze',s.chillFreeze);}}
   };
@@ -1590,7 +1593,8 @@ function drawSkillFx(dt){
 const FXPAL = { neutral:{ glow:[255,196,96], body:[255,238,176], core:[255,255,255] }, fire:{ glow:[255,100,24], body:[255,164,66], core:[255,238,196] }, ice:{ glow:[70,160,255], body:[168,224,255], core:[244,252,255] } };
 let FXC = FXPAL.neutral;
 const fxA = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
-function atkPalette(){ const it=WPN&&WPN.item,st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{}, f = st.fire || 0, c = st.ice || 0; return f > 0 && f >= c ? FXPAL.fire : c > 0 ? FXPAL.ice : FXPAL.neutral; }
+function atkPaletteFor(weapon){ const it=weapon&&weapon.item,st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{}, f=st.fire||0,c=st.ice||0;return f>0&&f>=c?FXPAL.fire:c>0?FXPAL.ice:FXPAL.neutral; }
+function atkPalette(){ return atkPaletteFor(WPN); }
 // 휘두름 궤적(초승달)
 function arcFx(cx, cy, r, a0, a1, k){
   if (k <= 0 || k >= 1) return;
@@ -1642,38 +1646,36 @@ function burst(x, y, r){
 }
 // 공격 단계: 준비(0~0.3) → 타격(0.3~0.6) → 회수
 function phase(k){ return k < 0.3 ? { w: k / 0.3, s: 0, r: 0 } : k < 0.6 ? { w: 1, s: (k - 0.3) / 0.3, r: 0 } : { w: 1, s: 1, r: Math.min(1, (k - 0.6) / 0.4) }; }
-function weaponLayers(){
-  // 반환: { back: fn, front: fn, lunge:[dx,dy] } — 좌표는 "오른쪽을 보는" 기준(옆모습은 나중에 뒤집음)
-  const x = P.x, y = P.y, out = { back: null, front: null, lunge: [0, 0] };
-  if (!WPN) return out;
-  const wt = WPN.wt;
-  if (!atkBusy()) return out; // 걷기·서 있기에는 무기를 그리지 않음
-  FXC = atkPalette();
-  const a = P.atk, k = Math.min(1, a.t / DUR[wt]), ph = phase(k), d = a.dir;
-  const thrust = ph.s * (1 - ph.r), alt = a.n % 2 ? 1 : -1;
-  out.lunge = d === 'side' ? [3 * thrust, 0] : d === 'front' ? [0, 3 * thrust] : [0, -3 * thrust];
-  if (d === 'side'){ // 무기는 모두 몸 뒤
-    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(-0.6, -2.0, ph.w) : lerp(-2.0, 1.9, ph.s) - ph.r * 0.6;
-      out.back = () => wDraw(x + 22, y - 32, an);
-      out.front = () => arcFx(x + 22, y - 32, 52, -1.6, lerp(-1.6, 1.9, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }
-    else if (wt === 'spear') out.back = () => { wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2); thrustFx(x + 30, y - 40, 0, thrust, ph.r, 76); };
-    else if (wt === 'bow') out.back = () => wDraw(x + 20, y - 44, 0, 1, true);
-    else if (wt === 'staff') out.back = () => wDraw(x + 26 + 8 * thrust, y - 42, lerp(0.35, 1.2, thrust) - 0.25 * ph.w * (1 - ph.s));
-    else out.back = () => { wDraw(x + 18 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), -PI / 2, 1.1, true); burst(x + 46, y - 42 + (alt > 0 ? 8 : -2), ph.s > 0 ? ph.r : 1); };  // 주먹(그림 아래쪽)이 앞을 향하게
-  } else if (d === 'back'){
-    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(0, -1.5, ph.w) : lerp(-1.5, 1.5, ph.s);
-      out.back = () => { wDraw(x + 4, y - 58, an); arcFx(x + 4, y - 58, 48, -1.5, lerp(-1.5, 1.5, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
-    else if (wt === 'spear') out.back = () => { wDraw(x + 7, y - 58 - 32 * thrust, 0); thrustFx(x + 7, y - 78, -PI / 2, thrust, ph.r, 76); };
-    else if (wt === 'bow') out.back = () => wDraw(x, y - 80, PI / 2);
-    else if (wt === 'staff') out.back = () => wDraw(x + 9, y - 60 - 8 * thrust, lerp(0.25, -0.1, thrust));
-    else out.back = () => { wDraw(x + 10 * alt, y - 70 - 16 * thrust, PI, 1.1); burst(x + 10 * alt, y - 100 - 18 * thrust, ph.s > 0 ? ph.r : 1); };
-  } else { // 정면(아래로 공격): 무기는 그리지 않고 이펙트만
-    if (wt === 'sword') out.front = () => arcFx(x, y - 30, 46, PI - 1.4, lerp(PI - 1.4, PI + 1.4, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1));
-    else if (wt === 'spear') out.front = () => thrustFx(x + 4, y - 30, PI / 2, thrust, ph.r, 70);
-    else if (wt === 'gauntlet') out.front = () => burst(x + 10 * alt, y - 18 + 14 * thrust, ph.s > 0 ? ph.r : 1);
+function weaponLayersFor(actor,weapon,atk,busy=true){
+  // 플레이어와 용병이 같은 무기 모션 파이프라인을 공유한다.
+  const x=actor.x,y=actor.y,out={back:null,front:null,lunge:[0,0]};
+  if(!weapon||!atk||!busy)return out;
+  const wt=weapon.wt,dur=atk.dur||DUR[wt]||WB[wt].dur,k=Math.min(1,atk.t/dur),ph=phase(k),d=atk.dir;
+  FXC=atkPaletteFor(weapon);
+  const thrust=ph.s*(1-ph.r),alt=atk.n%2?1:-1,draw=(xx,yy,ang,sc=1,mir=false)=>wDrawWeapon(weapon,xx,yy,ang,sc,mir);
+  out.lunge=d==='side'?[3*thrust,0]:d==='front'?[0,3*thrust]:[0,-3*thrust];
+  if(d==='side'){
+    if(wt==='sword'){const an=ph.s===0?lerp(-0.6,-2.0,ph.w):lerp(-2.0,1.9,ph.s)-ph.r*.6;
+      out.back=()=>draw(x+22,y-32,an);out.front=()=>arcFx(x+22,y-32,52,-1.6,lerp(-1.6,1.9,ph.s),ph.r*1.4+(ph.s>0?.01:1));}
+    else if(wt==='spear')out.back=()=>{draw(x-6-10*(1-ph.w)+34*thrust,y-40,PI/2);thrustFx(x+30,y-40,0,thrust,ph.r,76);};
+    else if(wt==='bow')out.back=()=>draw(x+20,y-44,0,1,true);
+    else if(wt==='staff')out.back=()=>draw(x+26+8*thrust,y-42,lerp(.35,1.2,thrust)-.25*ph.w*(1-ph.s));
+    else out.back=()=>{draw(x+18+20*thrust,y-44+(alt>0?8:-2),-PI/2,1.1,true);burst(x+46,y-42+(alt>0?8:-2),ph.s>0?ph.r:1);};
+  }else if(d==='back'){
+    if(wt==='sword'){const an=ph.s===0?lerp(0,-1.5,ph.w):lerp(-1.5,1.5,ph.s);
+      out.back=()=>{draw(x+4,y-58,an);arcFx(x+4,y-58,48,-1.5,lerp(-1.5,1.5,ph.s),ph.r*1.4+(ph.s>0?.01:1));};}
+    else if(wt==='spear')out.back=()=>{draw(x+7,y-58-32*thrust,0);thrustFx(x+7,y-78,-PI/2,thrust,ph.r,76);};
+    else if(wt==='bow')out.back=()=>draw(x,y-80,PI/2);
+    else if(wt==='staff')out.back=()=>draw(x+9,y-60-8*thrust,lerp(.25,-.1,thrust));
+    else out.back=()=>{draw(x+10*alt,y-70-16*thrust,PI,1.1);burst(x+10*alt,y-100-18*thrust,ph.s>0?ph.r:1);};
+  }else{
+    if(wt==='sword')out.front=()=>arcFx(x,y-30,46,PI-1.4,lerp(PI-1.4,PI+1.4,ph.s),ph.r*1.4+(ph.s>0?.01:1));
+    else if(wt==='spear')out.front=()=>thrustFx(x+4,y-30,PI/2,thrust,ph.r,70);
+    else if(wt==='gauntlet')out.front=()=>burst(x+10*alt,y-18+14*thrust,ph.s>0?ph.r:1);
   }
   return out;
 }
+function weaponLayers(){return weaponLayersFor(P,WPN,P.atk,atkBusy());}
 function drawMe(){
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x, P.y, 17, 6, 0, 0, 7); ctx.fill();
   const busy = atkBusy(), dir = busy ? P.atk.dir : P.dir, flip = busy ? P.atk.flip : P.flip;
