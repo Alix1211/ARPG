@@ -6,7 +6,11 @@ on:
       - 'src/town/**'
       - '.github/workflows/minigames-preview.yml'
   push:
-    branches: [codex/minigames-integration]
+    branches: [codex/minigames-integration, main]
+    paths:
+      - 'minigames/**'
+      - 'src/town/**'
+      - '.github/workflows/minigames-preview.yml'
   workflow_dispatch:
 permissions:
   contents: read
