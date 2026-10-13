@@ -434,23 +434,46 @@ def _merc_sheet_path(filename):
         if os.path.exists(p): return p
     return None
 
+def _merc_body(cell):
+    # 희미한 번짐과 옆 칸에서 넘어온 작은 파편을 정렬 기준에서 제외한다.
+    import numpy as np
+    from scipy.ndimage import label
+    alpha = np.asarray(cell.getchannel('A'))
+    labels, count = label(alpha > 40)
+    sizes = np.bincount(labels.ravel()); sizes[0] = 0
+    if not count or not sizes.max():
+        raise ValueError('비어 있는 용병 프레임')
+    keep = sizes >= max(12, sizes.max() * .01)
+    mask = keep[labels]
+    cleaned = alpha.copy(); cleaned[~mask] = 0
+    cell.putalpha(Image.fromarray(cleaned))
+    return cell.crop(Image.fromarray(mask.astype('uint8') * 255).getbbox())
+
 for sid,nm,title,filename,job,gender in _MERC_SPECS:
     src=_merc_sheet_path(filename)
     if not src: raise SystemExit('용병 이미지 파일을 찾을 수 없습니다: '+filename)
     sheet=Image.open(src).convert('RGBA')
-    if sheet.width<5 or sheet.height<3: continue
-    fr={}; first=None
+    cells=[]
+    for row in range(3):
+        for col in range(5):
+            box=(round(sheet.width*col/5),round(sheet.height*row/3),
+                 round(sheet.width*(col+1)/5),round(sheet.height*(row+1)/3))
+            cells.append(_merc_body(sheet.crop(box)))
+    # 시트당 배율 하나: 보행마다 몸이 커졌다 작아지지 않도록 한다.
+    # 공통 캔버스 170x172, 발 바닥 166. 무기 모션의 좌표계와 일치한다.
+    heights=sorted(im.height for im in cells)
+    scale=min(150/heights[len(heights)//2],160/max(im.width for im in cells),
+              160/max(im.height for im in cells))
+    fr={}
     for row,d in enumerate(['front','back','side']):
         arr=[]
-        for col in range(5):
-            x0=round(sheet.width*col/5); x1=round(sheet.width*(col+1)/5)
-            y0=round(sheet.height*row/3); y1=round(sheet.height*(row+1)/3)
-            im=sheet.crop((x0,y0,x1,y1))
-            if first is None: first=im.copy()
-            hh=172; ww=max(1,round(hh*im.width/im.height))
-            arr.append(enc(im.resize((ww,hh),Image.LANCZOS),88))
+        for im in cells[row*5:(row+1)*5]:
+            body=im.resize((max(1,round(im.width*scale)),max(1,round(im.height*scale))),Image.LANCZOS)
+            canvas=Image.new('RGBA',(170,172))
+            canvas.alpha_composite(body,((170-body.width)//2,166-body.height))
+            arr.append(enc(canvas,88))
         fr[d]=arr
-    pt=first.copy(); pt.thumbnail((520,560),Image.LANCZOS)
+    pt=cells[0].copy(); pt.thumbnail((520,560),Image.LANCZOS)
     COMPANIONS[sid]=dict(name=nm,title=title,fr=fr,port=enc(pt,88),mercenary=True,job=job,gender=gender)
 
 ui = {}
@@ -807,24 +830,38 @@ elif os.path.exists(_potion_b64):
 else:
     sheet = None
 if sheet is not None:
-    for row, kind in enumerate(('hp', 'mp', 'dual')):
-        for tier in range(1, 8):
-            col = tier - 1
-            x0 = round(sheet.width * col / 7); x1 = round(sheet.width * (col + 1) / 7)
-            y0 = round(sheet.height * row / 3); y1 = round(sheet.height * (row + 1) / 3)
-            im = sheet.crop((x0, y0, x1, y1))
-            # 흐릿한 번짐(투명도 낮은 점)은 빼고 실제 그림만 기준으로 자른다.
-            bb = im.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
-            if bb: im = im.crop(bb)
-            # 21종 모두 같은 크기 칸(160x160)에 같은 기준(가장 긴 변 150)으로 맞춰 가운데 정렬한다.
-            # 시트 안의 그림 크기가 제각각이어도 같은 등급 물약의 크기가 어긋나지 않게 한다.
-            im.thumbnail((150, 150), Image.LANCZOS)
-            if max(im.size) < 150:
-                s = 150 / max(im.size)
-                im = im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.LANCZOS)
-            canvas = Image.new('RGBA', (160, 160), (0, 0, 0, 0))
-            canvas.alpha_composite(im, ((160 - im.width) // 2, (160 - im.height) // 2))
-            POTION_ICONS[f'{kind}{tier}'] = enc(canvas, 90)
+    # 원본의 행 간격이 균등하지 않으므로 병 본체 21개의 위치로 행 경계를 찾는다.
+    # 균등 3분할은 위쪽 병의 바닥을 다음 행 아이콘에 섞어 넣는다.
+    import numpy as np
+    from scipy.ndimage import label, find_objects
+    labels,count=label(np.asarray(sheet.getchannel('A'))>40)
+    sizes=np.bincount(labels.ravel()); bounds=find_objects(labels)
+    columns={c:[] for c in range(7)}
+    for i in sorted(range(1,count+1),key=lambda i:-sizes[i])[:21]:
+        yy,xx=bounds[i-1]
+        col=min(6,int(((xx.start+xx.stop)/2)*7/sheet.width))
+        columns[col].append((yy.start,yy.stop))
+    for col,boxes in columns.items():
+        if len(boxes)!=3: raise ValueError('물약 본체 3개를 찾을 수 없습니다: '+str(col))
+        boxes.sort()
+    # 동일 티어 세 종류를 한 묶음으로 정규화한다. 넓은 장식 병도 높이가 같다.
+    for tier in range(1,8):
+        cells=[]
+        for row,kind in enumerate(('hp','mp','dual')):
+            col=tier-1
+            boxes=columns[col]
+            edges=[0,(boxes[0][1]+boxes[1][0])//2,(boxes[1][1]+boxes[2][0])//2,sheet.height]
+            box=(round(sheet.width*col/7),edges[row],round(sheet.width*(col+1)/7),edges[row+1])
+            im=sheet.crop(box)
+            bb=im.getchannel('A').point(lambda v:255 if v>40 else 0).getbbox()
+            if not bb: raise ValueError('비어 있는 물약: '+kind+str(tier))
+            cells.append((kind,im.crop(bb)))
+        height=min(150,round(150/max(im.width/im.height for _,im in cells)))
+        for kind,im in cells:
+            im=im.resize((max(1,round(im.width*height/im.height)),height),Image.LANCZOS)
+            canvas=Image.new('RGBA',(160,160))
+            canvas.alpha_composite(im,((160-im.width)//2,155-height))
+            POTION_ICONS[f'{kind}{tier}']=enc(canvas,90)
 
 # 퀘스트 전용 물품: 봉인 목록과 실제 아이콘을 대조하여 누락 없이 빌드한다.
 with open(os.path.join(ROOT, 'src', 'story', 'quest_items.json'), encoding='utf-8') as qf:
