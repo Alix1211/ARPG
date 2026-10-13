@@ -199,7 +199,7 @@
     if(!Number.isSafeInteger(stake)||stake<min||stake%min!==0||stake>GAME.P.gold){root.querySelector('#minigameMoney').textContent=`T${tier} 판돈은 ${min.toLocaleString('ko-KR')}G 단위로 가진 금화 안에서 정해 주세요.`;return;}
     enter('arena',{stake,side,tier});
   };
-  document.getElementById('minigamesBtn').onclick=open;
+  const launcherBtn=document.getElementById('minigamesBtn');if(launcherBtn)launcherBtn.onclick=open;
   addEventListener('keydown',e=>{if(e.key==='Escape'&&!root.hidden){e.preventDefault();e.stopImmediatePropagation();close();}},{capture:true});
   window.MINIGAMES={open,enter,close,openSupplyShop,buySupply,addSupplyLoot,supplyCatalog:()=>clone(SUPPLY),supplyState:()=>clone(ensureSupply()),runs:()=>clone(data.tavernRuns||[]),arenaMinStake,bubbleEconomy:t=>({tier:clampTier(t),reference:bubbleReference(t),fee:bubbleFee(t)}),isOpen:()=>!root.hidden,get active(){return active?.kind||null;},saveData:()=>clone(data),loadData(value){
     if(value&&typeof value==='object'){

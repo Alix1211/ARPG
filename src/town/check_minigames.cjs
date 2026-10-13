@@ -29,7 +29,7 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
  assert.equal(await page.evaluate(()=>document.querySelector('#minigameHost').hidden),true);
  assert.equal(await page.evaluate(()=>GAME.isPaused()),false);
  const before=await page.evaluate(()=>({pos:GAME.locationState(),hp:GAME.P.hp,day:window.__D.t}));
- await page.click('#settingsBtn');await page.click('#minigamesBtn');await page.waitForTimeout(300);
+ await page.evaluate(()=>window.MINIGAMES.open());await page.waitForTimeout(300);
  assert.equal(await page.evaluate(()=>GAME.isPaused()),true);const pausedDay=await page.evaluate(()=>__D.t);await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>__D.t),pausedDay);
  await page.click('[data-mini="tavern"]');
  let f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.tavern&&window.MiniHost?.flush);
@@ -96,6 +96,6 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
  // Existing saves without minigames still load with empty minigame progress.
  await page.addInitScript(()=>{if(localStorage.arpg_save_v3){const d=JSON.parse(localStorage.arpg_save_v3);delete d.minigames;localStorage.arpg_save_v3=JSON.stringify(d);}});await page.reload();await page.waitForFunction(()=>window.MINIGAMES&&window.UI?.save);assert.equal(await page.evaluate(()=>MINIGAMES.saveData().tavern),null);
  assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
- await page.click('#settingsBtn');await page.click('#minigamesBtn');await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'/tmp/arpg-minigame-lobby.png'});
+ await page.evaluate(()=>window.MINIGAMES.open());await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'/tmp/arpg-minigame-lobby.png'});
  console.log('PASS: 3 entries, fountain supply stock/shared cash, 3 unlocked tavern staff, timed tavern shift/history/checkpoint, bubble inventory, arena stake/outcome/idempotence, reload and legacy save; no JS or asset errors.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

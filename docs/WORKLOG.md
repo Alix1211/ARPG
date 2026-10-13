@@ -1282,3 +1282,4 @@
 - source_sheets/town_overhaul/player_tavern.png를 케인이 준 붉은 지붕 DUSK POB로 교체(크기·구도 동일, 위치/입구/미니게임 연결 유지). 검은 배경 제거 로직 시험 통과.
 - 마르타 위치(13.9,26.9), 야닉 발 그림 조각 제거 반영.
 - 아직 main에 올리지 않음: 케인이 '올려' 하면 병합·단일 푸시.
+- 설정창의 테스트용 '주점 · 버블팡 · 격투장' 버튼 제거(shell.html). 미니게임은 건물 입장으로만 열림. minigames.js는 버튼 없어도 오류 없게 보호, check_minigames.cjs는 MINIGAMES.open() 직접 호출로 변경. 빌드 보류.
