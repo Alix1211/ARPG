@@ -486,6 +486,13 @@ function companionAttack(m){
     companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.24});
     companionHit(m,c.damage*mul,dx,dy,3);companionResolveSkillBurst(m,{skill2,skill3});return;
   }
+  // 카엘렌은 기존 전용 검 궤적을 유지한다. 10인 용병만 공용 무기 모션을 사용한다.
+  if(c.active==='hero'){
+    c.atkT=.22;
+    companionFx.push({kind:'slash',x:c.x,y:c.y-43,a,t:0,life:.30});
+    companionFx.push({kind:'swordflash',x:c.x,y:c.y-43,a,t:0,life:.18});
+    companionHit(m,c.damage*mul,dx,dy,10);companionResolveSkillBurst(m,{skill2,skill3});return;
+  }
   const weapon=companionWeaponFor(c),wt=weapon&&weapon.wt;if(!weapon||!wt)return;
   const dur=(WB[wt]&&WB[wt].dur)||d.attackCd;
   companionAtk={id:c.active,t:0,dur,wt,dir:c.dir,flip:c.flip,n:c.skillCount,target:m,mul,skill2,skill3,weapon,resolved:false};
