@@ -70,7 +70,7 @@ for (const b of CUR.blds){
     exits.push({ x0: b.x - b.w * 0.15, x1: b.x + b.w * 0.15, y0: b.y - b.h * 0.42 - 22, y1: b.y - b.h * 0.42 + 2, to: 'out' });
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
-  if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
+  if((id==='town'&&b.k==='house_blue')||(id==='fieldvillage'&&b.kind==='field_inn'))spots.push({name:(id==='fieldvillage'?'지역 여관':'여관 입구'),x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
   if(id==='town'&&(b.kind==='minigame_tavern'||b.k==='player_tavern'))spots.push({name:'DUSK POB · 주점 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_tavern'});
   if(id==='town'&&(b.kind==='minigame_arena'||b.k==='arena_entry'))spots.push({name:'격투장 입장·배팅소',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_arena'});
   if(id==='town'&&(b.kind==='minigame_bubble'||b.k==='bubble_house'))spots.push({name:'버블 슈터 하우스',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_bubble'});
@@ -465,6 +465,7 @@ function travel(id,pos,dir){
   return true;
 }
 function locationState(){
+  if(MAP==='inn'&&window.__INN&&__INN.returnState){const r=__INN.returnState();if(r)return {...r};}
   if(MAP==='inn'&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
   if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
