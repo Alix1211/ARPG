@@ -1283,3 +1283,4 @@
 - 마르타 위치(13.9,26.9), 야닉 발 그림 조각 제거 반영.
 - 아직 main에 올리지 않음: 케인이 '올려' 하면 병합·단일 푸시.
 - 설정창의 테스트용 '주점 · 버블팡 · 격투장' 버튼 제거(shell.html). 미니게임은 건물 입장으로만 열림. minigames.js는 버튼 없어도 오류 없게 보호, check_minigames.cjs는 MINIGAMES.open() 직접 호출로 변경. 빌드 보류.
+- 오우거 정예(ogre_club) 좌/우 그림이 시트에서 반대 → monster_visual_v2.json에 swapLR 표시, build.py에서 left/right 교환. 숲 거미: source_sheets/spider_forest_4dir.webp가 256x64(칸당 64px)라 확대 시 깨짐 → 고해상도 원본 재제공 필요(미해결). 빌드 보류.

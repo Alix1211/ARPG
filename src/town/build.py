@@ -696,6 +696,8 @@ for name,d in CATALOG['monsters'].items():
         if not box: raise ValueError('빈 몬스터 보조 이미지: '+path)
         im=im.crop(box); im.thumbnail((240,240),Image.LANCZOS)
         images[direction]=enc(im,86)
+    if ref.get('swapLR'):  # 원본 시트의 좌/우 그림이 반대인 몬스터(오우거 정예)
+        images['left'],images['right']=images['right'],images['left']
     MON3[name]=images
 # 케인 제공 숲 거미 4방향 시트(앞/뒤/좌/우). V2의 잘못된 딱정벌레형 그림만 교체한다.
 _spider_sheet = Image.open(os.path.join(ROOT, 'source_sheets', 'spider_forest_4dir.webp')).convert('RGBA')
