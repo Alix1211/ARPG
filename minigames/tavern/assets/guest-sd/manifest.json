@@ -1,0 +1,272 @@
+[
+  {
+    "file": "0-front.png",
+    "source": "image-gen-1(20261011-154118).png",
+    "row": 0,
+    "column": 0,
+    "size": [
+      360,
+      405
+    ]
+  },
+  {
+    "file": "0-left.png",
+    "source": "image-gen-1(20261011-154118).png",
+    "row": 0,
+    "column": 1,
+    "size": [
+      360,
+      403
+    ]
+  },
+  {
+    "file": "0-right.png",
+    "source": "image-gen-1(20261011-154118).png",
+    "row": 0,
+    "column": 2,
+    "size": [
+      360,
+      421
+    ]
+  },
+  {
+    "file": "1-front.png",
+    "source": "image-gen-1(20261011-154118).png",
+    "row": 1,
+    "column": 0,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "1-left.png",
+    "source": "image-gen-1(20261011-154118).png",
+    "row": 1,
+    "column": 1,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "1-right.png",
+    "source": "image-gen-1(20261011-154118).png",
+    "row": 1,
+    "column": 2,
+    "size": [
+      360,
+      411
+    ]
+  },
+  {
+    "file": "2-front.png",
+    "source": "image-gen-2(20261011-154122).png",
+    "row": 0,
+    "column": 0,
+    "size": [
+      360,
+      405
+    ]
+  },
+  {
+    "file": "2-left.png",
+    "source": "image-gen-2(20261011-154122).png",
+    "row": 0,
+    "column": 1,
+    "size": [
+      360,
+      405
+    ]
+  },
+  {
+    "file": "2-right.png",
+    "source": "image-gen-2(20261011-154122).png",
+    "row": 0,
+    "column": 2,
+    "size": [
+      360,
+      405
+    ]
+  },
+  {
+    "file": "3-front.png",
+    "source": "image-gen-2(20261011-154122).png",
+    "row": 1,
+    "column": 0,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "3-left.png",
+    "source": "image-gen-2(20261011-154122).png",
+    "row": 1,
+    "column": 1,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "3-right.png",
+    "source": "image-gen-2(20261011-154122).png",
+    "row": 1,
+    "column": 2,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "4-front.png",
+    "source": "image-gen-3(20261011-154126).png",
+    "row": 0,
+    "column": 0,
+    "size": [
+      360,
+      454
+    ]
+  },
+  {
+    "file": "4-left.png",
+    "source": "image-gen-3(20261011-154126).png",
+    "row": 0,
+    "column": 1,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "4-right.png",
+    "source": "image-gen-3(20261011-154126).png",
+    "row": 0,
+    "column": 2,
+    "size": [
+      360,
+      415
+    ]
+  },
+  {
+    "file": "5-front.png",
+    "source": "image-gen-3(20261011-154126).png",
+    "row": 1,
+    "column": 0,
+    "size": [
+      360,
+      431
+    ]
+  },
+  {
+    "file": "5-left.png",
+    "source": "image-gen-3(20261011-154126).png",
+    "row": 1,
+    "column": 1,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "5-right.png",
+    "source": "image-gen-3(20261011-154126).png",
+    "row": 1,
+    "column": 2,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "6-front.png",
+    "source": "image-gen-4(20261011-154130).png",
+    "row": 0,
+    "column": 0,
+    "size": [
+      360,
+      405
+    ]
+  },
+  {
+    "file": "6-left.png",
+    "source": "image-gen-4(20261011-154130).png",
+    "row": 0,
+    "column": 1,
+    "size": [
+      360,
+      405
+    ]
+  },
+  {
+    "file": "6-right.png",
+    "source": "image-gen-4(20261011-154130).png",
+    "row": 0,
+    "column": 2,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "7-front.png",
+    "source": "image-gen-4(20261011-154130).png",
+    "row": 1,
+    "column": 0,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "7-left.png",
+    "source": "image-gen-4(20261011-154130).png",
+    "row": 1,
+    "column": 1,
+    "size": [
+      360,
+      406
+    ]
+  },
+  {
+    "file": "7-right.png",
+    "source": "image-gen-4(20261011-154130).png",
+    "row": 1,
+    "column": 2,
+    "size": [
+      360,
+      407
+    ]
+  },
+  {
+    "file": "8-front.png",
+    "source": "image-gen-5(20261011-154134).png",
+    "row": 0,
+    "column": 0,
+    "size": [
+      255,
+      540
+    ]
+  },
+  {
+    "file": "8-left.png",
+    "source": "image-gen-5(20261011-154134).png",
+    "row": 0,
+    "column": 1,
+    "size": [
+      260,
+      540
+    ]
+  },
+  {
+    "file": "8-right.png",
+    "source": "image-gen-5(20261011-154134).png",
+    "row": 0,
+    "column": 2,
+    "size": [
+      249,
+      540
+    ]
+  }
+]

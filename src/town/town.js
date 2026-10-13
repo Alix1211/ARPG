@@ -414,7 +414,7 @@ const PROP_TXT = {
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
-function closeAll(){ for (const id of ['msg','dlg','shop','guild','settings','enchant']) $(id).classList.remove('on'); if(typeof closeRegionSelect==='function')closeRegionSelect(true); if(window.TRADE)TRADE.close(true); if(window.GUILD)GUILD.close(true); if(window.UI&&UI.isOpen())UI.close(); panel=null; }
+function closeAll(){ if(window.MINIGAMES&&MINIGAMES.isOpen())return; for (const id of ['msg','dlg','shop','guild','settings','enchant']) $(id).classList.remove('on'); if(typeof closeRegionSelect==='function')closeRegionSelect(true); if(window.TRADE)TRADE.close(true); if(window.GUILD)GUILD.close(true); if(window.UI&&UI.isOpen())UI.close(); panel=null; }
 function act(){
   if (panel === 'msg' || panel === 'dlg'){ closeAll(); return; }
   if (panel) return;
@@ -864,9 +864,9 @@ function syncBars(){
 window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, skillPrereq, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
-  setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
+  releaseInput:releaseAll, setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   lastVisitedTown:lastVisitedTownState,loadLastVisitedTown,markTownArrival,
-  isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings', setOpen:v=>{panel=v;}, swing, say, setMax };
+  isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings'||panel==='minigames', setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -1085,7 +1085,7 @@ function drawPortalArrivalAura(){
 function frame(now){
   if(document.hidden){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
-  const simPaused=panel==='char'||panel==='settings'||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
+  const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
@@ -1104,7 +1104,7 @@ function frame(now){
     P.t += sdt;
   } else P.t = 0;
   if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
-  if(window.QUEST)QUEST.tick();
+  if(!simPaused&&window.QUEST)QUEST.tick();
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
 

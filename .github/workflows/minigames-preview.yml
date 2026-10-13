@@ -1,0 +1,50 @@
+name: 미니게임 통합 미리보기
+on:
+  pull_request:
+    paths:
+      - 'minigames/**'
+      - 'src/town/**'
+      - '.github/workflows/minigames-preview.yml'
+  push:
+    branches: [codex/minigames-integration]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            src/town/.enc_cache
+            src/town/.ground_cache.png
+            src/town/.ground_out_cache.png
+          key: minigames-build-${{ runner.os }}-${{ hashFiles('src/town/build.py', 'assets/**') }}
+      - name: 빌드
+        run: |
+          pip install pillow numpy scipy
+          python src/town/build.py
+      - name: 통합 동작 검사
+        run: |
+          npm install --prefix /tmp/gqs-test playwright
+          node /tmp/gqs-test/node_modules/playwright/cli.js install --with-deps chromium
+          NODE_PATH=/tmp/gqs-test/node_modules node src/town/check_minigames.cjs
+          node tools/check_save_sync.js
+      - name: 실행 묶음 준비
+        run: |
+          mkdir -p /tmp/gqs-preview/game
+          cp game/town.html game/art_*.js /tmp/gqs-preview/game/
+          cp -r minigames /tmp/gqs-preview/
+          cp tools/play-minigames-preview.bat /tmp/gqs-preview/실행하기.bat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Golden-Quest-minigames-preview
+          path: /tmp/gqs-preview/

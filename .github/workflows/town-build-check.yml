@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'src/town/**'
+      - 'minigames/**'
       - 'src/story/quests.json'
       - '.github/workflows/town-build-check.yml'
 
