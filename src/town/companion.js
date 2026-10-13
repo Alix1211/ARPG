@@ -481,7 +481,7 @@ function updateCompanion(dt){
       }
     }
   }
-  if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='fieldvillage')){companionReturn('expired');return;}
+  if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')){companionReturn('expired');return;}
   c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;
