@@ -46,6 +46,7 @@ for(const id in (A.companions||{})){
   COMPANION_IMG[id]={...src,fr};
 }
 const companionFx=[];
+let companionAtk=null;
 let companionState={active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,tier:1,skillCount:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
 
 function companionFee(id){
@@ -150,9 +151,7 @@ function companionDrawMarketNpc(n){
   const h=108,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.24)';ctx.beginPath();ctx.ellipse(n.x,n.y,17,5.5,0,0,7);ctx.fill();
   ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}
-  if(d==='back')companionDrawWeapon(n.companion,n.x,n.y,d,0,.7);
   ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);
-  if(d!=='back')companionDrawWeapon(n.companion,n.x,n.y,d,0,.7);
   ctx.restore();
   return true;
 }
@@ -241,7 +240,7 @@ function companionEmpty(){
 }
 function companionActivate(id,mode,extra={}){
   const q=nearestSafePosition(P.x-48,P.y+18);
-  companionTarget=null;companionFx.length=0;
+  companionTarget=null;companionFx.length=0;companionAtk=null;
   companionState={active:id,mode,storyQuest:extra.storyQuest||null,remaining:mode==='hire'?Math.max(0,+extra.remaining||DAYLEN):0,
     expired:mode==='hire'&&!!extra.expired,damage:Math.max(1,Math.round(+extra.damage||basicDamage()*1.15)),
     tier:Math.max(1,Math.min(7,+extra.tier||1)),skillCount:Math.max(0,+extra.skillCount||0),
@@ -280,7 +279,7 @@ function companionLoad(d){
 }
 function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
-  companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;
+  companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;companionAtk=null;
   if(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')buildWorld(MAP);
   if(!silent){const nm=COMPANION_DEF[id]&&COMPANION_DEF[id].name||'용병';say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. '+nm+'이(가) 여관으로 돌아갔습니다.');}
   if(window.UI&&UI.save)UI.save();return true;
@@ -453,46 +452,65 @@ function companionHit(m,v,dx,dy,kb){
   if(m.hp<=0)killMonster(m);
   return true;
 }
+function companionWeaponFor(c=companionState){
+  const d=COMPANION_DEF[c.active],wt=d&&MERC_WEAPON[d.kind];if(!wt||typeof WIMG==='undefined')return null;
+  let icon=wt+'_01';
+  if(typeof TIER_MATCH!=='undefined'&&TIER_MATCH.gear){
+    const tier=Math.max(1,Math.min(7,c.tier||1)),pool=TIER_MATCH.gear.filter(b=>b.kind==='weapon'&&b.wt===wt&&b.tier<=tier);
+    pool.sort((a,b)=>(b.tier||1)-(a.tier||1)||(b.requiredLevel||1)-(a.requiredLevel||1)||(b.powerGrade||1)-(a.powerGrade||1));
+    if(pool[0]&&WIMG[pool[0].icon])icon=pool[0].icon;
+  }
+  const im=WIMG[icon];return im?{wt,img:im,item:null,icon}:null;
+}
+function companionResolveSkillBurst(m,atk){
+  if(!m||m.dead||m.removed||(!atk.skill2&&!atk.skill3))return;
+  const d=COMPANION_DEF[companionState.active],radius=d.kind==='mage'?145:d.kind==='archer'?115:95,ratio=atk.skill3?.68:.42;
+  companionFx.push({kind:'burst',x:m.x,y:m.y-m.h*.45,r:radius,t:0,life:.34});
+  for(const o of monsters){
+    if(!o||o===m||o.dead||o.removed||Math.hypot(o.x-m.x,o.y-m.y)>radius)continue;
+    companionHit(o,companionState.damage*ratio,o.x-companionState.x,o.y-companionState.y,atk.skill3?8:4);
+    if(atk.skill3)o.stun=Math.max(o.stun||0,.28);
+  }
+}
 function companionAttack(m){
-  const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx);
-  c.cd=d.attackCd;c.atkT=.22;c.attackAngle=a;c.skillCount=(c.skillCount||0)+1;
-  const tier=Math.max(1,Math.min(7,c.tier||1));
-  const skill1=tier>=2&&c.skillCount%5===0,skill2=tier>=4&&c.skillCount%7===0,skill3=tier>=6&&c.skillCount%9===0;
+  const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,a=Math.atan2(dy,dx);
+  c.cd=d.attackCd;c.skillCount=(c.skillCount||0)+1;
+  const tier=Math.max(1,Math.min(7,c.tier||1)),skill1=tier>=2&&c.skillCount%5===0,skill2=tier>=4&&c.skillCount%7===0,skill3=tier>=6&&c.skillCount%9===0;
   let mul=skill1?1.25:1;if(skill2)mul*=1.15;if(skill3)mul*=1.45;
-  if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else c.dir=dy<0?'back':'front';
+  if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else{c.dir=dy<0?'back':'front';c.flip=false;}
   if(d.kind==='gun'){
+    c.atkT=.22;
     const mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
     companionFx.push({kind:'muzzle',x:mx,y:my,a,t:0,life:.18});
     companionFx.push({kind:'laser',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.22});
     companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.24});
-    companionHit(m,c.damage*mul,dx,dy,3);
-  }else if(d.kind==='archer'){
-    const mx=c.x+Math.cos(a)*25,my=c.y-52+Math.sin(a)*8;
-    companionFx.push({kind:'arrow',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,a,t:0,life:.18});
-    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.20});
-    companionHit(m,c.damage*mul,dx,dy,4);
-  }else if(d.kind==='mage'){
-    const mx=c.x+Math.cos(a)*20,my=c.y-58+Math.sin(a)*8;
-    companionFx.push({kind:'magicbolt',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.26});
-    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.28});
-    companionHit(m,c.damage*mul,dx,dy,2);
-  }else if(d.kind==='brawler'){
-    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.48,t:0,life:.22});
-    companionHit(m,c.damage*mul,dx,dy,13);
-  }else{
-    companionFx.push({kind:'slash',x:c.x,y:c.y-43,a,t:0,life:.30});
-    companionFx.push({kind:'swordflash',x:c.x,y:c.y-43,a,t:0,life:.18});
-    companionHit(m,c.damage*mul,dx,dy,d.kind==='lancer'?16:10);
+    companionHit(m,c.damage*mul,dx,dy,3);companionResolveSkillBurst(m,{skill2,skill3});return;
   }
-  if(skill2||skill3){
-    const radius=d.kind==='mage'?145:d.kind==='archer'?115:95,ratio=skill3?.68:.42;
-    companionFx.push({kind:'burst',x:m.x,y:m.y-m.h*.45,r:radius,t:0,life:.34});
-    for(const o of monsters){
-      if(!o||o===m||o.dead||o.removed||Math.hypot(o.x-m.x,o.y-m.y)>radius)continue;
-      companionHit(o,c.damage*ratio,o.x-c.x,o.y-c.y,skill3?8:4);
-      if(skill3)o.stun=Math.max(o.stun||0,.28);
+  const weapon=companionWeaponFor(c),wt=weapon&&weapon.wt;if(!weapon||!wt)return;
+  const dur=(WB[wt]&&WB[wt].dur)||d.attackCd;
+  companionAtk={id:c.active,t:0,dur,wt,dir:c.dir,flip:c.flip,n:((companionAtk&&companionAtk.n)||0)+1,target:m,mul,skill2,skill3,weapon,resolved:false};
+  c.atkT=dur;
+}
+function companionUpdateAttack(dt){
+  const c=companionState,a=companionAtk;if(!a||a.id!==c.active)return;
+  a.t+=dt;c.atkT=Math.max(0,a.dur-a.t);
+  const k=a.t/a.dur;if(!a.resolved&&k>.45){
+    a.resolved=true;
+    const m=a.target,d=COMPANION_DEF[c.active];if(m&&!m.dead&&!m.removed){
+      const dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1;
+      if(a.wt==='bow'||a.wt==='staff'){
+        const w=WB[a.wt],speed=w.speed,ux=dx/dist,uy=dy/dist;
+        const sx=a.wt==='staff'?c.x+ux*24:c.x+(a.dir==='side'?(a.flip?-30:30):0);
+        const sy=a.wt==='staff'?c.y-44+uy*24:c.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
+        shots.push({x:sx,y:sy,vx:ux*speed,vy:uy*speed,speed,t:0,life:w.life,kind:a.wt,blast:w.blast||0,
+          companion:true,dmg:Math.max(1,Math.round(c.damage*a.mul)),kb:a.wt==='bow'?4:2,target:m});
+      }else{
+        const kb=a.wt==='spear'?16:a.wt==='gauntlet'?13:10;
+        companionHit(m,c.damage*a.mul,dx,dy,kb);companionResolveSkillBurst(m,a);
+      }
     }
   }
+  if(k>1.2)companionAtk=null;
 }
 function updateCompanion(dt){
   companionUpdateMarket(dt);
@@ -500,7 +518,7 @@ function updateCompanion(dt){
   c.moving=false;
   c.navWait=Math.max(0,(c.navWait||0)-dt);
   const d=COMPANION_DEF[c.active];
-  if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionWarp();}
+  if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionAtk=null;companionWarp();}
   if(c.mode==='hire'&&!c.expired){
     c.remaining=Math.max(0,c.remaining-dt);
     if(c.remaining<=0){
@@ -513,7 +531,7 @@ function updateCompanion(dt){
     }
   }
   if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')){companionReturn('expired');return;}
-  c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
+  c.cd=Math.max(0,c.cd-dt);if(COMPANION_DEF[c.active].kind==='gun')c.atkT=Math.max(0,c.atkT-dt);companionUpdateAttack(dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;
   if(companionMelee(d)&&target){
@@ -556,51 +574,27 @@ function appendCompanionSprite(list){
   list.push({companion:companionState,key:companionState.y});
 }
 const MERC_WEAPON={sword:'sword',lancer:'spear',brawler:'gauntlet',archer:'bow',mage:'staff',gun:null};
-function companionDrawWeapon(id,x,y,dir,atkT=0,sc=.78){
-  const d=COMPANION_DEF[id],wt=d&&MERC_WEAPON[d.kind];if(!wt||typeof WIMG==='undefined')return;
-  const im=WIMG[wt+'_01'];if(!im||!im.complete||!im.naturalWidth)return;
-  let ang=0,ox=0,oy=-48;
-  if(dir==='side'){ang=Math.PI/2;ox=22;oy=-42;}
-  else if(dir==='front'){ang=Math.PI;ox=18;oy=-48;}
-  else{ang=0;ox=-18;oy=-52;}
-  if(atkT>0){
-    const p=Math.max(0,Math.min(1,1-atkT/.22));
-    if(wt==='sword')ang+=(p-.5)*2.4;
-    else if(wt==='spear')ox+=24*p;
-    else if(wt==='staff')ang+=(p-.5)*.65;
-    else if(wt==='bow')ang+=(p-.5)*.25;
-  }
-  const L=(typeof WL!=='undefined'&&WL[wt]||60)*sc,w=L*im.naturalWidth/im.naturalHeight,g=(typeof GRIP!=='undefined'&&GRIP[wt]||.7);
-  ctx.save();ctx.translate(x+ox,y+oy);ctx.rotate(ang);ctx.drawImage(im,-w/2,-L*g,w,L);ctx.restore();
-}
 function drawCompanion(c,dt){
   const src=COMPANION_IMG[c.active];if(!src||!src.fr)return;
-  const d=c.dir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
-  const moving=!!c.moving;
-  const idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
+  const a=companionAtk&&companionAtk.id===c.active?companionAtk:null,d=a?a.dir:(c.dir||'front'),arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
+  const moving=!!c.moving&&!a,idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
 
-  // 루크레아와 같은 순서: 검 궤적/검 -> 몸. 평상시에는 별도 검을 꺼내지 않는다.
-  if(c.active==='hero')drawCompanionFx(0,true);
-  ctx.save();
-  if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
-  if(c.active!=='hero'&&d==='back')companionDrawWeapon(c.active,c.x,c.y,d,c.atkT);
-  if(c.active==='hero'&&c.atkT>0&&d!=='front'){
-    const p=Math.max(0,Math.min(1,1-c.atkT/.22));
-    const ang=d==='side'?(-1.85+p*3.55):(-1.45+p*2.9);
-    const bx=d==='side'?c.x+22:c.x+4,by=d==='side'?c.y-34:c.y-58;
-    ctx.save();ctx.translate(bx,by);ctx.rotate(ang);
-    ctx.strokeStyle='rgba(40,28,18,.95)';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-9,0);ctx.lineTo(9,0);ctx.stroke();
-    ctx.strokeStyle='#d7ad65';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(8,-9);ctx.lineTo(8,9);ctx.stroke();
-    ctx.fillStyle='#dceafa';ctx.strokeStyle='#455b73';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(10,-4);ctx.lineTo(46,-3);ctx.lineTo(55,0);ctx.lineTo(46,3);ctx.lineTo(10,4);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(12,-1);ctx.lineTo(49,-1);ctx.stroke();
-    ctx.restore();
+  // 10인 용병은 루크레아와 같은 공용 무기 모션을 그대로 쓴다. 평상시엔 무기를 그리지 않는다.
+  if(c.active==='hero'){
+    if(c.atkT>0)drawCompanionFx(0,true);
+    ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+    const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);ctx.restore();return;
   }
-  const kick=c.atkT>0?(c.atkT/.22)*4:0;
-  ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
-  if(c.active!=='hero'&&d!=='back')companionDrawWeapon(c.active,c.x,c.y,d,c.atkT);
+  if(COMPANION_DEF[c.active]&&COMPANION_DEF[c.active].kind==='gun'){
+    ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}ctx.drawImage(im,c.x-w/2,c.y-h+4,w,h);ctx.restore();return;
+  }
+  const weapon=a?(a.weapon||companionWeaponFor(c)):null,L=a&&weapon?weaponLayersFor(c,weapon,a,true):{back:null,front:null,lunge:[0,0]};
+  ctx.save();const flip=a?a.flip:c.flip;if(flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+  if(L.back)L.back();
+  ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+4+L.lunge[1],w,h);
+  if(L.front)L.front();
   ctx.restore();
 }
 function drawCompanionFx(dt,behind=false){
