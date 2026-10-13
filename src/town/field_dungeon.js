@@ -687,8 +687,8 @@ function updEncounters(dt){
       if(d.kind==='gold'){setGold(P.gold+d.amount);d.picked=true;}
       else{
         const it=d.item;let ok=false,msg='';
-        if(it&&it.lootType==='supply'&&window.MINIGAMES&&MINIGAMES.addSupplyLoot){ok=!!MINIGAMES.addSupplyLoot(it.supplyId,1);msg=it.name+' → 주점 재고';}
-        else if(it&&it.lootType==='trade'&&window.TRADE&&TRADE.addLoot){ok=!!TRADE.addLoot(it.tradeId,1);msg=it.name+' → 무역 화물';}
+        if(it&&it.lootType==='supply'&&window.MINIGAMES&&MINIGAMES.addSupplyLoot){ok=!!MINIGAMES.addSupplyLoot(it.supplyId,1);msg=it.name+' 획득';}
+        else if(it&&it.lootType==='trade'&&window.TRADE&&TRADE.addLoot){ok=!!TRADE.addLoot(it.tradeId,1);msg=it.name+' 획득';}
         else if(window.UI&&UI.add(it)){ok=true;msg=it.name+' 획득';}
         if(ok){d.picked=true;if(window.TELEMETRY)TELEMETRY.loot(it);say(msg);if(window.CHATTER&&it.lootType!=='supply'&&it.lootType!=='trade')CHATTER.loot(it);}
         else if(!d.warned){d.warned=true;say(it&&it.lootType==='trade'?'화물칸이 가득 찼습니다.':'가방이 가득 찼습니다.');if(window.CHATTER&&it&&it.lootType!=='trade')CHATTER.event('bagfull');}
