@@ -811,10 +811,18 @@ if sheet is not None:
             x0 = round(sheet.width * col / 7); x1 = round(sheet.width * (col + 1) / 7)
             y0 = round(sheet.height * row / 3); y1 = round(sheet.height * (row + 1) / 3)
             im = sheet.crop((x0, y0, x1, y1))
-            bb = im.getbbox()
+            # 흐릿한 번짐(투명도 낮은 점)은 빼고 실제 그림만 기준으로 자른다.
+            bb = im.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
             if bb: im = im.crop(bb)
-            im.thumbnail((160, 160), Image.LANCZOS)
-            POTION_ICONS[f'{kind}{tier}'] = enc(im, 90)
+            # 21종 모두 같은 크기 칸(160x160)에 같은 기준(가장 긴 변 150)으로 맞춰 가운데 정렬한다.
+            # 시트 안의 그림 크기가 제각각이어도 같은 등급 물약의 크기가 어긋나지 않게 한다.
+            im.thumbnail((150, 150), Image.LANCZOS)
+            if max(im.size) < 150:
+                s = 150 / max(im.size)
+                im = im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.LANCZOS)
+            canvas = Image.new('RGBA', (160, 160), (0, 0, 0, 0))
+            canvas.alpha_composite(im, ((160 - im.width) // 2, (160 - im.height) // 2))
+            POTION_ICONS[f'{kind}{tier}'] = enc(canvas, 90)
 
 # 퀘스트 전용 물품: 봉인 목록과 실제 아이콘을 대조하여 누락 없이 빌드한다.
 with open(os.path.join(ROOT, 'src', 'story', 'quest_items.json'), encoding='utf-8') as qf:
