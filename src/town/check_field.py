@@ -17,6 +17,13 @@ async def main():
         browser=await p.chromium.launch(); pg=await browser.new_page(viewport={'width':1280,'height':720})
         errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto(URL); await pg.wait_for_timeout(1000)
+        cfg1=await pg.evaluate("() => __FD.lootConfig(1)")
+        cfg7=await pg.evaluate("() => __FD.lootConfig(7)")
+        assert abs(cfg1['equip']-.10)<1e-9 and abs(cfg7['equip']-.15)<1e-9,(cfg1,cfg7)
+        assert cfg1['cap']==20 and cfg7['cap']==72,(cfg1,cfg7)
+        assert 'wine' not in cfg1['supply'] and 'wine' in cfg7['supply'],(cfg1,cfg7)
+        assert 'obsidian' not in cfg1['trade'] and 'obsidian' in cfg7['trade'],(cfg1,cfg7)
+        assert await pg.evaluate("() => Object.keys(A.lootIcons||{}).length")>=20
         timings=[]
         final_ends={}
         final_layouts={}
