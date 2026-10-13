@@ -8,6 +8,8 @@ const A={companions:{}},P={x:1000,y:1000,dir:'side',flip:false,lv:1,gold:10000};
 let MAP='field',wall=false,warpCount=0,obstacle=null;
 const monsters=[],npcs=[],sprites=[],spots=[],solids=[],pops=[],sfx=[];
 const DAYLEN=480,BI={};
+// 실제 게임의 근접 용병은 전투 시 공용 무기 데이터를 사용한다. 검사 환경에도 최소 무기 데이터를 제공한다.
+const WIMG={sword_01:{naturalWidth:64,naturalHeight:64}},WB={sword:{dur:.68}};
 function load(s){return s;}function combatMap(){return MAP==='field';}
 function blocked(x,y){return wall||!!(obstacle&&obstacle(x,y));}function monsterBlocked(){return true;}
 function nearestSafePosition(x,y){warpCount++;return [x,y];}
