@@ -36,7 +36,7 @@ const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS, mou
 function mountNow(){ return TRADE_MOUNTS[Math.max(0,Math.min(tradeState.mount|0,TRADE_MOUNTS.length-1))]; }
 function cargoMax(){ return mountNow().slots; }
 function mountImg(m,h,extra){ const u=(typeof A!=='undefined'&&A.mounts)?A.mounts[m.id]:''; return u?'<img src="'+u+'" alt="'+m.name+'" style="height:'+h+'px;vertical-align:middle;'+(extra||'')+'">':m.icon; }
-let tradeRegion='town', tradeSel='wheat', tradeMode='buy';
+let tradeRegion='town', tradeSel='wheat', tradeMode='buy', tradeSellAllArmed=false;
 
 function tradeRegionDef(k){ return TRADE_REGIONS[k] || TRADE_REGIONS.town; }
 function tradeMod(region,id){ return tradeRegionDef(region).m[id] || 1; }
@@ -93,6 +93,32 @@ function tradeSell(id,n){
   tradeMsg((profit>=0?'좋습니다. ':'아깝군요. ')+g.name+' '+n+'개, '+(profit>=0?'+':'')+profit+'골드.');
   renderTrade(); return true;
 }
+function tradeSellAll(){
+  const rows=Object.entries(tradeState.cargo).filter(([,cur])=>cur&&cur.qty>0);
+  if(!rows.length){tradeMsg('팔 화물이 없습니다.');return false;}
+  let revenue=0,cost=0,units=0,kinds=0;
+  const sold=[];
+  for(const [id,cur] of rows){
+    const g=TRADE_BY_ID[id];if(!g)continue;
+    const n=cur.qty|0;if(n<1)continue;
+    const q=tradeQuote(tradeRegion,id),r=q.sell*n,cc=cur.avg*n,p=Math.round(r-cc);
+    revenue+=r;cost+=cc;units+=n;kinds++;
+    sold.push({id,n,price:q.sell,profit:p});
+  }
+  if(!sold.length){tradeMsg('팔 수 있는 화물이 없습니다.');return false;}
+  for(const x of sold){
+    delete tradeState.cargo[x.id];
+    const key=tradeRegion+':'+x.id;tradeState.pressure[key]=(tradeState.pressure[key]||0)+x.n;
+    if(window.QUEST)QUEST.onEvent('trade_sell',{region:tradeRegion,id:x.id,n:x.n,price:x.price,profit:x.profit,count:x.n,bulk:true});
+  }
+  const profit=Math.round(revenue-cost);
+  setGold(P.gold+revenue);
+  if(window.GUILD)GUILD.refreshTrack();
+  if(window.UI&&UI.save)UI.save();
+  tradeMsg('화물 '+kinds+'종 '+units+'개 전체 판매 · '+revenue+'G · '+(profit>=0?'+':'')+profit+'G');
+  tradeSellAllArmed=false;
+  renderTrade();return true;
+}
 function recordSeen(region){
   const q={}; for(const g of TRADE_GOODS){ const x=tradeQuote(region,g.id); q[g.id]=[x.buy,x.sell]; }
   tradeState.seen[region]={t:Date.now(),q};
@@ -146,8 +172,8 @@ function ensureTradeUI(){
 .tgood,.tcargo{border:2px solid #b58a51;border-radius:8px;background:#fff4d9;color:#4b321a;min-height:58px;padding:5px;text-align:left;position:relative;overflow:hidden}.tgood.sel,.tcargo.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}.tgood.dim,.tcargo.dim{opacity:.55}
 .tgood i,.tcargo i{font-style:normal;font-size:21px;float:left;margin-right:4px}.tgood b,.tcargo b{font-size:11px;white-space:nowrap}.tgood small,.tcargo small{display:block;clear:both;font-size:9px;line-height:1.25;margin-top:3px}.tgood .hi{color:#b32720}.tgood .lo{color:#24689c}.tempty{border:1px dashed #bda77d;border-radius:8px;min-height:58px;opacity:.45}
 #tradeDetail{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-top:2px solid #b78a4d;padding-top:8px;min-height:86px}#tradeIcon{font-size:36px;width:45px;text-align:center}#tradeName{font-size:16px;font-weight:900}#tradePrice,#tradeStock,#tradeSeen{font-size:10px;line-height:1.35;color:#684c2c}
-#tradeActionBox{display:grid;grid-template-columns:130px 80px;gap:5px;align-items:center}#tradeAction,#tradeClose,#tradeMountBtn{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:8px;font-weight:900}#tradeClose{background:#e8d4ad;color:#50351d}#tradeAction:disabled{opacity:.35}
-#tradeHold{grid-column:1/3;text-align:center;font-size:9px;color:#7d6546}#tradeMount{grid-column:1/4;font-size:10px;color:#5a3d20;border-top:1px solid #c7a875;padding-top:4px;display:flex;gap:8px;align-items:center}#tradeMountTxt{flex:1}#tradeMountBtn{padding:5px 9px;width:auto}
+#tradeActionBox{display:grid;grid-template-columns:112px 112px 80px;gap:5px;align-items:center}#tradeAction,#tradeSellAll,#tradeClose,#tradeMountBtn{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:8px;font-weight:900}#tradeSellAll{background:#8a3f24}#tradeSellAll.armed{background:#b32920;color:#fff}#tradeClose{background:#e8d4ad;color:#50351d}#tradeAction:disabled,#tradeSellAll:disabled{opacity:.35}
+#tradeHold{grid-column:1/4;text-align:center;font-size:9px;color:#7d6546}#tradeMount{grid-column:1/4;font-size:10px;color:#5a3d20;border-top:1px solid #c7a875;padding-top:4px;display:flex;gap:8px;align-items:center}#tradeMountTxt{flex:1}#tradeMountBtn{padding:5px 9px;width:auto}
 #tradeSay{grid-column:1/4;font-size:10px;color:#883d20;min-height:14px}
 #tradeQty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1a1009a8;z-index:3}#tradeQty.on{display:flex}#tradeQty .qbox{width:280px;background:#f1dfb8;border:3px solid #795026;border-radius:12px;padding:16px;text-align:center;box-shadow:0 12px 30px #0008}#tradeQtyTitle{font-weight:900;font-size:16px}#tradeQtyLine{font-size:11px;color:#725233;margin:6px 0 10px}#tradeQtyInput{width:110px;font-size:24px;text-align:center;padding:4px;border:2px solid #9b7447;border-radius:8px;background:#fff8e8}#tradeQty .qrow{display:flex;gap:6px;justify-content:center;margin-top:10px}#tradeQty button{border:2px solid #99642c;border-radius:7px;padding:7px 12px;font-weight:900;background:#6f3e1f;color:#fff0ce}#tradeQty button.ghost{background:#e8d4ad;color:#50351d}
 .tradeSummary{margin-top:52px;height:calc(100% - 52px);box-sizing:border-box;overflow:auto;background:linear-gradient(#f3e6c6,#e4cf9f);border:4px solid #7b5228;border-radius:16px;padding:18px 22px;color:#53391d}.tradeSummary h2{margin:0 0 10px}.tradeSummary p{font-size:13px;line-height:1.6}.tradeSummary strong{color:#9a541e}
@@ -155,10 +181,11 @@ function ensureTradeUI(){
 `;
   document.head.append(st);
   const d=document.createElement('div');d.id='trade';
-  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><div id="tradeTabs"><button id="tradeBuyTab" type="button">사기</button><button id="tradeSellTab" type="button">팔기</button></div><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeColumns"><section class="tradePane"><h3>이 마을 물품 <small>짧게 선택 · 길게 수량</small></h3><div id="tradeList"></div></section><section class="tradePane"><h3>내 화물 <small id="tradeHint"></small></h3><div id="tradeCargoList"></div></section></div><div id="tradeDetail"><div id="tradeIcon"></div><div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeSeen"></div></div><div id="tradeActionBox"><button id="tradeAction" type="button">1개 사기</button><button id="tradeClose" type="button">나가기</button><div id="tradeHold">길게 누르면 수량 선택</div></div><div id="tradeMount"><div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn">수레 구매</button></div><div id="tradeSay"></div></div><div id="tradeQty"><div class="qbox"><div id="tradeQtyTitle"></div><div id="tradeQtyLine"></div><input id="tradeQtyInput" type="number" inputmode="numeric" min="1"><div class="qrow"><button id="tradeQtyMax" type="button">최대</button><button id="tradeQtyOk" type="button">확인</button><button class="ghost" id="tradeQtyCancel" type="button">취소</button></div></div></div></div>';
+  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><div id="tradeTabs"><button id="tradeBuyTab" type="button">사기</button><button id="tradeSellTab" type="button">팔기</button></div><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeColumns"><section class="tradePane"><h3>이 마을 물품 <small>짧게 선택 · 길게 수량</small></h3><div id="tradeList"></div></section><section class="tradePane"><h3>내 화물 <small id="tradeHint"></small></h3><div id="tradeCargoList"></div></section></div><div id="tradeDetail"><div id="tradeIcon"></div><div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeSeen"></div></div><div id="tradeActionBox"><button id="tradeAction" type="button">1개 사기</button><button id="tradeSellAll" type="button">전체 팔기</button><button id="tradeClose" type="button">나가기</button><div id="tradeHold">길게 누르면 수량 선택</div></div><div id="tradeMount"><div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn">수레 구매</button></div><div id="tradeSay"></div></div><div id="tradeQty"><div class="qbox"><div id="tradeQtyTitle"></div><div id="tradeQtyLine"></div><input id="tradeQtyInput" type="number" inputmode="numeric" min="1"><div class="qrow"><button id="tradeQtyMax" type="button">최대</button><button id="tradeQtyOk" type="button">확인</button><button class="ghost" id="tradeQtyCancel" type="button">취소</button></div></div></div></div>';
   document.body.append(d);
   d.addEventListener('click',e=>{if(e.target===d)closeTrade();});
-  $('tradeClose').onclick=()=>closeTrade();$('tradeBuyTab').onclick=()=>{tradeMode='buy';renderTrade();};$('tradeSellTab').onclick=()=>{tradeMode='sell';renderTrade();};
+  $('tradeClose').onclick=()=>closeTrade();$('tradeBuyTab').onclick=()=>{tradeMode='buy';tradeSellAllArmed=false;renderTrade();};$('tradeSellTab').onclick=()=>{tradeMode='sell';tradeSellAllArmed=false;renderTrade();};
+  $('tradeSellAll').onclick=()=>{if(tradeMode!=='sell'||cargoSlots()<1)return;if(!tradeSellAllArmed){tradeSellAllArmed=true;renderTrade();tradeMsg('현재 마을 시세로 화물을 전부 팝니다. 한 번 더 눌러 확인.');return;}tradeSellAll();};
   $('tradeMountBtn').onclick=()=>buyMount();
   bindTradePress($('tradeAction'),()=>{const max=tradeQtyMax(tradeMode,tradeSel);if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,1):tradeSell(tradeSel,1);},()=>openTradeQty(tradeMode,tradeSel));
   $('tradeQtyCancel').onclick=closeTradeQty;$('tradeQty').addEventListener('click',e=>{if(e.target.id==='tradeQty')closeTradeQty();});
@@ -166,9 +193,9 @@ function ensureTradeUI(){
   $('tradeQtyOk').onclick=()=>{const max=tradeQtyMax(tradeMode,tradeSel),n=Math.max(1,Math.min(max,parseInt($('tradeQtyInput').value,10)||1));closeTradeQty();if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,n):tradeSell(tradeSel,n);};
 }
 function openTrade(region){
-  closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
+  closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';tradeSellAllArmed=false;panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
 }
-function closeTrade(silent){closeTradeQty();const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
+function closeTrade(silent){closeTradeQty();tradeSellAllArmed=false;const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
 function renderTrade(){
   ensureTradeUI();const R=tradeRegionDef(tradeRegion),cargoIds=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
   if(tradeMode==='sell'&&!cargoEntry(tradeSel).qty&&cargoIds.length)tradeSel=cargoIds[0];
@@ -203,6 +230,7 @@ function renderTrade(){
   for(const r in tradeState.seen){if(r===tradeRegion)continue;const e=tradeState.seen[r].q[g.id];if(!e)continue;rows.push(tradeRegionDef(r).short+' '+e[0]+'/'+e[1]);if(!best||e[1]>best.s)best={r,s:e[1]};}
   $('tradeSeen').textContent=rows.length?'수첩 · '+rows.join(' · '):'수첩 · 다른 마을 시세 미확인';
   const action=$('tradeAction'),max=tradeQtyMax(tradeMode,g.id);action.textContent=tradeMode==='buy'?'1개 사기':'1개 팔기';action.disabled=max<1;
+  const all=$('tradeSellAll');if(all){all.hidden=tradeMode!=='sell';all.disabled=tradeMode!=='sell'||cargoIds.length<1;all.textContent=tradeSellAllArmed?'확인: 전체 판매':'전체 팔기';all.classList.toggle('armed',tradeSellAllArmed);}
   const m=mountNow(),nx=TRADE_MOUNTS[(tradeState.mount|0)+1],tier=REGION_TIER[tradeRegion]||0;
   $('tradeMountTxt').innerHTML=mountImg(m,30)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?' → '+mountImg(nx,20)+' '+nx.name+' '+nx.slots+'칸 / '+nx.price+'G':' · 최고 단계');
   $('tradeMountBtn').style.display=nx?'':'none';if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
@@ -251,7 +279,7 @@ function renderTradeCargo(R){
   R.append(d);
 }
 window.TRADE={
-  open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,addLoot:tradeAddLoot,
+  open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,sellAll:tradeSellAll,addLoot:tradeAddLoot,
   cargo:()=>JSON.parse(JSON.stringify(tradeState.cargo)),goods:TRADE_GOODS,regions:TRADE_REGIONS,
   saveData:tradeSaveData,loadData:tradeLoadData,consume:tradeConsume,renderSummary:renderTradeSummary,renderCargo:renderTradeCargo,
   state:()=>({region:tradeRegion,slots:cargoSlots(),max:cargoMax(),mount:tradeState.mount|0,seen:Object.keys(tradeState.seen),cargo:JSON.parse(JSON.stringify(tradeState.cargo)),resetAt:tradeState.resetAt}),
