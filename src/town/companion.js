@@ -101,6 +101,7 @@ function companionEnsureMarket(mapId=MAP){
   return true;
 }
 function companionUpdateMarket(dt){
+  if((MAP==='town'||MAP==='inn')&&companionMercReady()&&!npcs.some(n=>n.mercenaryMarket))companionEnsureMarket(MAP);
   if(companionMercReady()&&typeof DAY!=='undefined'){
     const prev=mercMarket.lastDayT;
     if(prev!=null&&prev>.82&&DAY.t<.18){
@@ -112,7 +113,7 @@ function companionUpdateMarket(dt){
   if(MAP!=='town')return;
   for(const n of npcs){
     if(!n.mercenaryMarket||!n.mercRoam||n.hide)continue;
-    n.mercWait-=dt;n.mercT+=dt;
+    n.mercMoving=false;n.mercWait-=dt;n.mercT+=dt;
     const dx=n.mercTx-n.x,dy=n.mercTy-n.y,dd=Math.hypot(dx,dy);
     if(n.mercWait<=0||dd<8){
       n.mercWait=2+Math.random()*4;
@@ -121,7 +122,7 @@ function companionUpdateMarket(dt){
       continue;
     }
     const step=Math.min(dd,42*dt),nx=n.x+dx/dd*step,ny=n.y+dy/dd*step;
-    if(!blocked(nx,ny)){n.x=nx;n.y=ny;n.key=ny;if(Math.abs(dx)>Math.abs(dy)*.8){n.mercDir='side';n.mercFlip=dx<0;}else n.mercDir=dy<0?'back':'front';}
+    if(!blocked(nx,ny)){n.x=nx;n.y=ny;n.key=ny;n.mercMoving=true;if(Math.abs(dx)>Math.abs(dy)*.8){n.mercDir='side';n.mercFlip=dx<0;}else n.mercDir=dy<0?'back':'front';}
     else n.mercWait=0;
     const sp=spots.find(s=>s.kind==='npc'&&s.npc===n);if(sp){sp.x=n.x;sp.y=n.y+6;}
   }
@@ -129,7 +130,7 @@ function companionUpdateMarket(dt){
 function companionDrawMarketNpc(n){
   const src=COMPANION_IMG[n.companion];if(!src)return false;
   const d=n.mercDir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;if(!arr||!arr.length)return false;
-  const idx=n.mercRoam?1+(Math.floor((n.mercT||0)*7)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return false;
+  const idx=n.mercMoving?1+(Math.floor((n.mercT||0)*7)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return false;
   const h=108,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.24)';ctx.beginPath();ctx.ellipse(n.x,n.y,17,5.5,0,0,7);ctx.fill();
   ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);ctx.restore();
