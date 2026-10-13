@@ -742,7 +742,7 @@ const JUNK_LOOT=[
 function equipmentDropChance(m,find=0){
   if(m&&m.boss)return 1;
   const tier=Math.max(1,Math.min(7,monsterTier(m)));
-  const base=EQUIP_DROP_BY_TIER[tier-1]+(m&&m.elite?.02:0);
+  const base=EQUIP_DROP_BY_TIER[tier-1]+(m&&m.elite?0.02:0);
   const findBonus=Math.min(.03,Math.max(0,find)/1000);
   return Math.min(.20,base+findBonus);
 }
@@ -762,7 +762,7 @@ function supplyLoot(m){
 function tradeLoot(m){
   if(!window.TRADE||!Array.isArray(TRADE.goods))return null;
   const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],region=fieldTheme||'town',reg=TRADE.regions&&TRADE.regions[region],pool=TRADE.goods.filter(x=>x.base<=cap);
-  const boost=x=>{const q=reg&&reg.m&&reg.m[x.id];return q<=.85?2.2:q>=1.2?.55:1;};
+  const boost=x=>{const q=reg&&reg.m&&reg.m[x.id];return q<=.85?2.2:(q>=1.2?0.55:1);};
   const x=weightedLoot(pool,x=>x.base,cap,boost);if(!x)return null;
   return {lootType:'trade',tradeId:x.id,name:x.name,icon:TRADE_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.base};
 }
