@@ -99,7 +99,8 @@ async function prepareDungeon(floor){
     for (let k = 0; k < 2 + Math.floor(Math.random() * 3); k++){
       const x = r.x + 0.8 + Math.random() * (r.w - 1.6), y = r.y + 1 + Math.random() * (r.h - 1.6);
       if (Math.hypot(x - D.far.cx, y - D.far.cy) < 2) continue;
-      props.push(dprop(deco[Math.floor(Math.random() * deco.length)], x, y));
+      const decoKey=deco[Math.floor(Math.random() * deco.length)];
+      props.push(dprop(decoKey, x, y, decoKey==='jar'?{kind:'breakable',breakType:'jar'}:null));
     }
     if (r.w >= 9 && r.h >= 7){ props.push(dprop('pillar', r.x + 2, r.y + 2.6)); props.push(dprop('pillar', r.x + r.w - 2, r.y + 2.6)); }
     if (Math.random() < 0.45 && r !== D.far) props.push(dprop('chest_closed', r.cx + 1.5, r.y + 1.6, { name: '보물상자', kind: 'chest' }));
@@ -112,6 +113,35 @@ async function prepareDungeon(floor){
   map.G = load(map.ground); map.MINI = load(map.mini); await waitImages([map.G, map.MINI]);
   MAPS.dungeon = map; return map;
 }
+function dungeonBreakables(){
+  return MAP==='dungeon'?sprites.filter(s=>s.breakable&&!s.brokenAt&&!s.hide):[];
+}
+function breakDungeonProp(s){
+  if(!s||s.brokenAt||MAP!=='dungeon')return false;
+  const p=s.breakData||{};s.brokenAt=performance.now();
+  const si=solids.findIndex(q=>q.x0===p.x-p.w*p.cw/2&&q.x1===p.x+p.w*p.cw/2&&q.y0===p.y-p.cd&&q.y1===p.y-2);
+  if(si>=0)solids.splice(si,1);
+  const tier=dungeonTier(dunFloor);
+  if(Math.random()<.24)dropsLoot.push({kind:'gold',x:s.x+(Math.random()-.5)*18,y:s.y+8,amount:3+tier*3+Math.floor(Math.random()*(6+tier*4)),ph:0});
+  if(Math.random()<.06){const it=randomDropItem({tier,caveChallenge:dunTheme==='cave'});if(it)dropsLoot.push({kind:'item',x:s.x+(Math.random()-.5)*18,y:s.y+8,item:it,ph:1});}
+  if(typeof sfx!=='undefined')sfx.push({type:'hit',t:0,x:s.x,y:s.y-s.h*.45,r:34,crit:false});
+  return true;
+}
+function breakDungeonPropsMelee(px,py,d,w){
+  if(MAP!=='dungeon')return false;let broke=false;
+  for(const s of dungeonBreakables()){
+    const dx=s.x-px,dy=s.y-py,along=dx*d[0]+dy*d[1],side=Math.abs(dx*d[1]-dy*d[0]),dist=Math.hypot(dx,dy);
+    const hit=w.cone?(dist<w.reach+18&&(dist<24||along/Math.max(1,dist)>Math.cos(w.cone*Math.PI/180))):(along>-12&&along<w.reach+18&&side<w.width+18);
+    if(hit)broke=breakDungeonProp(s)||broke;
+  }
+  return broke;
+}
+function breakDungeonPropAt(x,y,r=22){
+  if(MAP!=='dungeon')return false;
+  for(const s of dungeonBreakables())if(Math.abs(x-s.x)<s.w*.36+r&&y>s.y-s.h*.9-r&&y<s.y+r)return breakDungeonProp(s);
+  return false;
+}
+
 function spawnDungeonMonsters(){
   monsters.length=0;dropsLoot.length=0;enemyShots.length=0;enemyHazards.length=0;
   const M=MAPS.dungeon,tier=dungeonTier(dunFloor),pool=DUN_MOBS[tier-1],elites=TIER_MATCH.dungeonElites[tier-1];
@@ -243,6 +273,8 @@ function drawDungeonShade(camX, camY){
 window.__DUN={
   setTheme:t=>{dunTheme=t;},theme:()=>dunTheme,rooms:()=>(MAPS.dungeon.rooms||[]).map(r=>[r.cx,r.cy]),
   respawn:()=>spawnDungeonMonsters(),
+  breakables:()=>dungeonBreakables().length,
+  debugBreakFirst(){const s=dungeonBreakables()[0];return s?breakDungeonProp(s):false;},
   debugMimic(){
     const id=TIER_MATCH.mimics[dungeonTier(dunFloor)-1],spot=spots.find(s=>s.kind==='chest');
     if(!id||!spot)return null;
