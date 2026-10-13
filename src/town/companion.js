@@ -488,7 +488,7 @@ function companionAttack(m){
   }
   const weapon=companionWeaponFor(c),wt=weapon&&weapon.wt;if(!weapon||!wt)return;
   const dur=(WB[wt]&&WB[wt].dur)||d.attackCd;
-  companionAtk={id:c.active,t:0,dur,wt,dir:c.dir,flip:c.flip,n:((companionAtk&&companionAtk.n)||0)+1,target:m,mul,skill2,skill3,weapon,resolved:false};
+  companionAtk={id:c.active,t:0,dur,wt,dir:c.dir,flip:c.flip,n:c.skillCount,target:m,mul,skill2,skill3,weapon,resolved:false};
   c.atkT=dur;
 }
 function companionUpdateAttack(dt){
@@ -503,7 +503,9 @@ function companionUpdateAttack(dt){
         const sx=a.wt==='staff'?c.x+ux*24:c.x+(a.dir==='side'?(a.flip?-30:30):0);
         const sy=a.wt==='staff'?c.y-44+uy*24:c.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
         shots.push({x:sx,y:sy,vx:ux*speed,vy:uy*speed,speed,t:0,life:w.life,kind:a.wt,blast:w.blast||0,
-          companion:true,dmg:Math.max(1,Math.round(c.damage*a.mul)),kb:a.wt==='bow'?4:2,target:m});
+          companion:true,dmg:Math.max(1,Math.round(c.damage*a.mul)),kb:a.wt==='bow'?4:2,target:m,
+          companionBurst:a.skill2||a.skill3,companionBurstRadius:d.kind==='mage'?145:115,
+          companionBurstRatio:a.skill3?.68:.42,companionBurstStun:!!a.skill3});
       }else{
         const kb=a.wt==='spear'?16:a.wt==='gauntlet'?13:10;
         companionHit(m,c.damage*a.mul,dx,dy,kb);companionResolveSkillBurst(m,a);
