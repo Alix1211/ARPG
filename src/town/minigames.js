@@ -58,6 +58,10 @@
     const x=SUPPLY.find(x=>x.id===id);if(!x||![1,5,10].includes(qty))return false;const total=x.cost*qty;if(GAME.P.gold<total)return false;
     GAME.setGold(GAME.P.gold-total);ensureSupply()[id]+=qty;save();renderSupply();return true;
   }
+  function addSupplyLoot(id,qty=1){
+    const x=SUPPLY.find(x=>x.id===id);qty=Math.max(1,qty|0);if(!x)return false;
+    ensureSupply()[id]+=qty;save();if(!supply.hidden)renderSupply();return true;
+  }
   function openSupplyShop(){
     if(active||blocked()||GAME.locationState().map!=='town')return false;
     GAME.closeAll();GAME.releaseInput();GAME.setHold(false);GAME.setOpen('minigames');root.hidden=false;lobby.hidden=true;frame.hidden=true;supply.hidden=false;renderSupply();return true;
@@ -128,7 +132,7 @@
   };
   document.getElementById('minigamesBtn').onclick=open;
   addEventListener('keydown',e=>{if(e.key==='Escape'&&!root.hidden){e.preventDefault();e.stopImmediatePropagation();close();}},{capture:true});
-  window.MINIGAMES={open,enter,close,openSupplyShop,buySupply,supplyState:()=>clone(ensureSupply()),runs:()=>clone(data.tavernRuns||[]),isOpen:()=>!root.hidden,get active(){return active?.kind||null;},saveData:()=>clone(data),loadData(value){
+  window.MINIGAMES={open,enter,close,openSupplyShop,buySupply,addSupplyLoot,supplyCatalog:()=>clone(SUPPLY),supplyState:()=>clone(ensureSupply()),runs:()=>clone(data.tavernRuns||[]),isOpen:()=>!root.hidden,get active(){return active?.kind||null;},saveData:()=>clone(data),loadData(value){
     if(value?.arena&&typeof value.arena==='object'){
       const old=clone(value);data={version:2,tavern:old.tavern||null,tavernSupply:old.tavernSupply||(old.tavern&&old.tavern.inventory?clone(old.tavern.inventory):emptySupply()),tavernRuns:Array.isArray(old.tavernRuns)?old.tavernRuns.slice(-30):[],bubble:old.bubble||null,arena:old.arena};ensureSupply();
     }
