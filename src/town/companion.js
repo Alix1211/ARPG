@@ -557,6 +557,16 @@ function drawCompanionFx(dt,behind=false){
       ctx.lineCap='round';ctx.strokeStyle='rgba(45,120,255,'+(.42*k)+')';ctx.lineWidth=16*k;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
       ctx.strokeStyle='rgba(170,225,255,'+(.98*k)+')';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
       ctx.strokeStyle='rgba(255,255,255,'+(.95*k)+')';ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
+    }else if(f.kind==='arrow'){
+      ctx.strokeStyle='rgba(245,224,184,'+(.95*k)+')';ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();
+      ctx.translate(f.x2,f.y2);ctx.rotate(f.a);ctx.fillStyle='rgba(255,245,220,'+(.95*k)+')';ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-7,-5);ctx.lineTo(-4,0);ctx.lineTo(-7,5);ctx.closePath();ctx.fill();
+    }else if(f.kind==='magicbolt'){
+      const p=Math.max(0,Math.min(1,f.t/f.life)),x=f.x1+(f.x2-f.x1)*p,y=f.y1+(f.y2-f.y1)*p;
+      ctx.lineCap='round';ctx.strokeStyle='rgba(137,98,255,'+(.35*k)+')';ctx.lineWidth=12*k;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(x,y);ctx.stroke();
+      ctx.fillStyle='rgba(232,214,255,'+(.95*k)+')';ctx.shadowColor='#a97cff';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(x,y,8+5*k,0,7);ctx.fill();ctx.shadowBlur=0;
+    }else if(f.kind==='burst'){
+      ctx.translate(f.x,f.y);ctx.strokeStyle='rgba(255,225,130,'+(.75*k)+')';ctx.lineWidth=5*k;ctx.beginPath();ctx.arc(0,0,(f.r||90)*(1-k*.25),0,7);ctx.stroke();
+      ctx.strokeStyle='rgba(196,160,255,'+(.5*k)+')';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,(f.r||90)*(.55+.45*(1-k)),0,7);ctx.stroke();
     }else if(f.kind==='muzzle'){
       ctx.translate(f.x,f.y);ctx.rotate(f.a);ctx.fillStyle='rgba(170,225,255,'+(.95*k)+')';
       ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(28*k,-8*k);ctx.lineTo(20*k,0);ctx.lineTo(28*k,8*k);ctx.closePath();ctx.fill();
@@ -585,6 +595,8 @@ window.COMPANION={
   fee:companionFee,previewDamage:()=>Math.max(1,Math.round(basicDamage()*1.15)),buttonText:companionButtonText,hire:companionHire,hireFromDialog:companionHireFromDialog,
   ensureTownTests:companionEnsureTownTests,diagnostics:companionDiagnostics,
   townTestsEnabled:()=>companionTownTestsEnabled,setTownTestsEnabled:companionSetTownTests,
+  ensureMarket:companionEnsureMarket,rotateMarket:()=>companionRotateMarket(true),drawMarketNpc:companionDrawMarketNpc,
+  marketState:()=>JSON.parse(JSON.stringify(mercMarket)),mercenaryIds:()=>MERC_IDS.slice(),
   saveData:companionSave,loadData:companionLoad,state:companionStateCopy,isActive:companionIsActive,syncStory:companionSyncStory,
   onDefeat:companionOnPlayerDefeat,debugExpire:companionDebugExpire,debugTick:companionDebugTick
 };
