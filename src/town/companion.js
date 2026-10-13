@@ -304,18 +304,18 @@ function companionPickTarget(){
   if(!companionState.active||!combatMap())return null;
   const c=companionState,d=COMPANION_DEF[c.active];let best=null,score=1e9;
   // 이미 물고 있는 적은 인식 경계를 넘거나 다른 적이 가까워져도 전투를 이어간다.
-  if(d.kind==='sword'&&companionTarget&&monsters.includes(companionTarget)&&!companionTarget.dead&&!companionTarget.removed&&
+  if(companionMelee(d)&&companionTarget&&monsters.includes(companionTarget)&&!companionTarget.dead&&!companionTarget.removed&&
       Math.hypot(companionTarget.x-c.x,companionTarget.y-c.y)<=d.pursuit&&
       Math.hypot(companionTarget.x-P.x,companionTarget.y-P.y)<=d.warpCombat)return companionTarget;
   for(const m of monsters){
     if(!m||m.dead||m.removed)continue;
     const pp=Math.hypot(m.x-P.x,m.y-P.y),cc=Math.hypot(m.x-c.x,m.y-c.y);
     // 검사는 플레이어 전방에서 넓게 찾아가고, 총병은 플레이어 근처만 지원한다.
-    const seen=d.kind==='sword'?(pp<=d.aggro||cc<=d.aggro*.72):(pp<=d.aggro&&cc<=d.pursuit);
+    const seen=companionMelee(d)?(pp<=d.aggro||cc<=d.aggro*.72):(pp<=d.aggro&&cc<=d.pursuit);
     if(!seen)continue;
-    if(d.kind==='gun'&&!companionLOS(c.x,c.y,m.x,m.y))continue;
+    if(companionRanged(d)&&!companionLOS(c.x,c.y,m.x,m.y))continue;
     // 카엘렌은 가까운 적보다 플레이어에게 접근한 적을 조금 더 우선한다.
-    const scoreNow=d.kind==='sword'?(pp*.58+cc*.42):(cc+pp*.35);
+    const scoreNow=companionMelee(d)?(pp*.58+cc*.42):(cc+pp*.35);
     if(scoreNow<score){score=scoreNow;best=m;}
   }
   companionTarget=best;return best;
@@ -361,7 +361,7 @@ function companionNudgeTarget(tx,ty){
   return best;
 }
 function companionMoveTo(tx,ty,speed,dt){
-  const c=companionState,isSword=COMPANION_DEF[c.active].kind==='sword';
+  const c=companionState,isSword=companionMelee(COMPANION_DEF[c.active]);
   if(isSword){
     if(companionClearStep(c.x,c.y,tx,ty))c.navPath=null;
     else{
@@ -418,23 +418,48 @@ function companionHit(m,v,dx,dy,kb){
   return true;
 }
 function companionAttack(m){
-  const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1;
-  c.cd=d.attackCd;c.atkT=.22;c.attackAngle=Math.atan2(dy,dx);
+  const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx);
+  c.cd=d.attackCd;c.atkT=.22;c.attackAngle=a;c.skillCount=(c.skillCount||0)+1;
+  const tier=Math.max(1,Math.min(7,c.tier||1));
+  const skill1=tier>=2&&c.skillCount%5===0,skill2=tier>=4&&c.skillCount%7===0,skill3=tier>=6&&c.skillCount%9===0;
+  let mul=skill1?1.25:1;if(skill2)mul*=1.15;if(skill3)mul*=1.45;
   if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else c.dir=dy<0?'back':'front';
   if(d.kind==='gun'){
-    const a=Math.atan2(dy,dx),mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
+    const mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
     companionFx.push({kind:'muzzle',x:mx,y:my,a,t:0,life:.18});
     companionFx.push({kind:'laser',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.22});
     companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.24});
-    companionHit(m,c.damage,dx,dy,3);
+    companionHit(m,c.damage*mul,dx,dy,3);
+  }else if(d.kind==='archer'){
+    const mx=c.x+Math.cos(a)*25,my=c.y-52+Math.sin(a)*8;
+    companionFx.push({kind:'arrow',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,a,t:0,life:.18});
+    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.20});
+    companionHit(m,c.damage*mul,dx,dy,4);
+  }else if(d.kind==='mage'){
+    const mx=c.x+Math.cos(a)*20,my=c.y-58+Math.sin(a)*8;
+    companionFx.push({kind:'magicbolt',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.26});
+    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.28});
+    companionHit(m,c.damage*mul,dx,dy,2);
+  }else if(d.kind==='brawler'){
+    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.48,t:0,life:.22});
+    companionHit(m,c.damage*mul,dx,dy,13);
   }else{
-    const a=Math.atan2(dy,dx);
     companionFx.push({kind:'slash',x:c.x,y:c.y-43,a,t:0,life:.30});
     companionFx.push({kind:'swordflash',x:c.x,y:c.y-43,a,t:0,life:.18});
-    companionHit(m,c.damage,dx,dy,10);
+    companionHit(m,c.damage*mul,dx,dy,d.kind==='lancer'?16:10);
+  }
+  if(skill2||skill3){
+    const radius=d.kind==='mage'?145:d.kind==='archer'?115:95,ratio=skill3?.68:.42;
+    companionFx.push({kind:'burst',x:m.x,y:m.y-m.h*.45,r:radius,t:0,life:.34});
+    for(const o of monsters){
+      if(!o||o===m||o.dead||o.removed||Math.hypot(o.x-m.x,o.y-m.y)>radius)continue;
+      companionHit(o,c.damage*ratio,o.x-c.x,o.y-c.y,skill3?8:4);
+      if(skill3)o.stun=Math.max(o.stun||0,.28);
+    }
   }
 }
 function updateCompanion(dt){
+  companionUpdateMarket(dt);
   const c=companionState;if(!c.active||dt<=0)return;
   c.moving=false;
   c.navWait=Math.max(0,(c.navWait||0)-dt);
@@ -446,7 +471,7 @@ function updateCompanion(dt){
       c.expired=true;
       if(!c.expireSaid){
         c.expireSaid=true;
-        say('고용 시간이 끝났습니다. 모험 중에는 계속 함께하고, 다음 마을에서 러스티가 여관으로 돌아갑니다.');
+        say('고용 시간이 끝났습니다. 모험 중에는 계속 함께하고, 다음 마을에서 계약이 종료됩니다.');
         if(window.UI&&UI.save)UI.save();
       }
     }
@@ -455,14 +480,14 @@ function updateCompanion(dt){
   c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;
-  if(d.kind==='sword'&&target){
+  if(companionMelee(d)&&target){
     // 전투 중에는 플레이어에게 조금 멀어졌다고 복귀하지 않는다.
     // 카엘렌은 목표를 물고 앞에서 버티며, 정말 이탈했을 때만 워프한다.
     const dd=Math.hypot(target.x-c.x,target.y-c.y);
     if(distP>d.warpCombat){companionWarp();return;}
     if(dd>d.range){attemptedMove=true;moved=companionMoveTo(target.x,target.y,d.speed,dt);}
     else if(c.cd<=0)companionAttack(target);
-  }else if(d.kind==='gun'&&target){
+  }else if(companionRanged(d)&&target){
     if(distP>d.warpCombat){companionWarp();return;}
     const dd=Math.hypot(target.x-c.x,target.y-c.y);
     if(dd<=d.range&&c.cd<=0)companionAttack(target);
@@ -470,12 +495,12 @@ function updateCompanion(dt){
     if(fd>95){attemptedMove=true;moved=companionMoveTo(want[0],want[1],d.speed,dt);}
   }else{
     if(distP>d.warpIdle){companionWarp();return;}
-    const want=d.kind==='sword'?companionDesiredFront():companionDesired(),dd=Math.hypot(c.x-want[0],c.y-want[1]);
+    const want=companionMelee(d)?companionDesiredFront():companionDesired(),dd=Math.hypot(c.x-want[0],c.y-want[1]);
     if(dd>28){attemptedMove=true;moved=companionMoveTo(want[0],want[1],d.speed,dt);}
     else{c.t=0;c.dir=P.dir||c.dir;c.flip=!!P.flip;}
   }
   // 공격 중에는 끼임으로 보지 않는다. 실제 이동을 시도했는데 제자리인 시간만 센다.
-  if(attemptedMove&&d.kind==='sword'){
+  if(attemptedMove&&companionMelee(d)){
     if(!Number.isFinite(c.progressX)){c.progressX=c.lastX;c.progressY=c.lastY;}
     if(Math.hypot(c.x-c.progressX,c.y-c.progressY)>=18){
       c.stuck=0;c.stuckRepath=false;c.progressX=c.x;c.progressY=c.y;
@@ -484,9 +509,9 @@ function updateCompanion(dt){
     c.stuck=attemptedMove&&!moved?c.stuck+dt:0;
     c.stuckRepath=false;c.progressX=c.x;c.progressY=c.y;
   }
-  const stuckLimit=d.kind==='sword'?d.stuckCombat:(target?d.stuckCombat:2.2);
+  const stuckLimit=companionMelee(d)?d.stuckCombat:(target?d.stuckCombat:2.2);
   // 0.45초 제자리면 먼저 즉시 새 길을 찾고, 그래도 1.8초 이상 못 움직일 때만 구조 워프.
-  if(d.kind==='sword'&&c.stuck>.45&&!c.stuckRepath){c.navPath=null;c.navWait=0;c.stuckRepath=true;}
+  if(companionMelee(d)&&c.stuck>.45&&!c.stuckRepath){c.navPath=null;c.navWait=0;c.stuckRepath=true;}
   if(c.stuck>stuckLimit)companionWarp();
   c.lastX=c.x;c.lastY=c.y;
 }
