@@ -1,7 +1,9 @@
 (function(root){
 'use strict';
 const mode={lifeEnabled:false,useBusinessOnly(game){
- if(game.businessOnly)return;game.businessOnly=true;
+ if(Object.prototype.hasOwnProperty.call(game,'start')&&game.__businessOnlyApplied)return;
+ delete game.businessOnly; // 옛 저장에 섞여 들어온 표시가 모드 적용을 막지 않게 함
+ Object.defineProperty(game,'__businessOnlyApplied',{value:true,enumerable:false,configurable:true});
  // Keep growth prototypes and saved plans intact; only this UI instance bypasses daytime.
  const original={start:game.start,step:game.step,dayClock:game.dayClock,setTeam:game.setTeam,purchase:game.purchase};
  const preparing=(fn,args)=>{const status=game.life.status;game.life.status='planning';try{return fn.apply(game,args)}finally{game.life.status=status}};

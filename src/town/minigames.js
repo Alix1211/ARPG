@@ -50,7 +50,7 @@
     .supply-row small{display:block;margin-top:2px;font-size:12px;white-space:nowrap}
     .supply-buy{grid-column:2;display:flex;gap:5px;min-width:0}
     .supply-buy button,#supplyClose{border:1px solid #9c642d;border-radius:7px;background:#543218;color:#ffe8b0;font-weight:800;white-space:nowrap;touch-action:manipulation}
-    .supply-buy button{flex:1 1 0;min-width:0;padding:5px 6px;margin:0;font-size:12px;line-height:1.1}
+    .supply-buy button{flex:1 1 0;min-width:0;max-width:112px;padding:5px 6px;margin:0;font-size:12px;line-height:1.1}
     #supplyClose{padding:6px 12px;font-size:13px}
     .supply-foot{text-align:right;margin-top:9px}
     @media(max-width:850px){#tavernSupplyShop{padding-inline:10px}.supply-card{width:98vw;padding:10px}#supplyGrid{grid-template-columns:1fr}.supply-row{grid-template-columns:48px minmax(0,1fr)}.supply-row img{width:42px;height:42px}.supply-buy button{font-size:11px;padding:5px 4px}}

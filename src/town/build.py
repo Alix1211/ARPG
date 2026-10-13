@@ -423,7 +423,7 @@ _MERC_SPECS=[
     ('merc_m_mage','남성 인간 마법사','인간 용병 · 마법사','m-마법사용병.png','mage','m'),
     ('merc_m_brawler','남성 드워프 무투가','드워프 용병 · 무투가','m-드워프 무투가.png','brawler','m'),
     ('merc_m_archer','남성 늑대수인 궁수','수인 용병 · 궁수','m-궁수.png','archer','m'),
-    ('merc_m_lancer','남성 창기사','중갑 용병 · 창기사','m-창기사(1).png','lancer','m'),
+    ('merc_m_lancer','남성 창기사','중갑 용병 · 창기사','m-창기사.png','lancer','m'),
 ]
 def _merc_sheet_path(filename):
     for p in [
@@ -436,7 +436,7 @@ def _merc_sheet_path(filename):
 
 for sid,nm,title,filename,job,gender in _MERC_SPECS:
     src=_merc_sheet_path(filename)
-    if not src: continue
+    if not src: raise SystemExit('용병 이미지 파일을 찾을 수 없습니다: '+filename)
     sheet=Image.open(src).convert('RGBA')
     if sheet.width<5 or sheet.height<3: continue
     fr={}; first=None
