@@ -251,7 +251,22 @@ function companionActivate(id,mode,extra={}){
 }
 function companionLoad(d){
   companionTarget=null;companionFx.length=0;companionParkedHire=null;
-  if(d&&d.market&&typeof d.market==='object')mercMarket={v:1,serial:+d.market.serial||0,lastDayT:Number.isFinite(+d.market.lastDayT)?+d.market.lastDayT:null,roster:Array.isArray(d.market.roster)?d.market.roster.filter(x=>MERC_IDS.includes(x)).slice(0,5):[],inn:Array.isArray(d.market.inn)?d.market.inn.filter(x=>MERC_IDS.includes(x)).slice(0,3):[],town:Array.isArray(d.market.town)?d.market.town.filter(x=>MERC_IDS.includes(x)).slice(0,2):[]};
+  if(d&&d.market&&typeof d.market==='object'){
+    const dm=d.market,sets={};
+    if(dm.sets&&typeof dm.sets==='object'){
+      for(const [key,m] of Object.entries(dm.sets)){
+        if(!m||typeof m!=='object')continue;
+        const roster=Array.isArray(m.roster)?m.roster.filter(x=>MERC_IDS.includes(x)).slice(0,5):[];
+        sets[key]={serial:+m.serial||0,roster,inn:Array.isArray(m.inn)?m.inn.filter(x=>MERC_IDS.includes(x)).slice(0,3):roster.slice(0,3),
+          town:Array.isArray(m.town)?m.town.filter(x=>MERC_IDS.includes(x)).slice(0,2):roster.slice(3,5)};
+      }
+    }else{
+      const roster=Array.isArray(dm.roster)?dm.roster.filter(x=>MERC_IDS.includes(x)).slice(0,5):[];
+      sets.town={serial:+dm.serial||0,roster,inn:Array.isArray(dm.inn)?dm.inn.filter(x=>MERC_IDS.includes(x)).slice(0,3):roster.slice(0,3),
+        town:Array.isArray(dm.town)?dm.town.filter(x=>MERC_IDS.includes(x)).slice(0,2):roster.slice(3,5)};
+    }
+    mercMarket={v:2,lastDayT:Number.isFinite(+dm.lastDayT)?+dm.lastDayT:null,sets};
+  }
   if(d&&d.parkedHire&&COMPANION_DEF[d.parkedHire.active])companionParkedHire={...d.parkedHire,mode:'hire'};
   const id=d&&d.active;
   // 정식판 이전 광장 테스트 계약(v1/무모드)은 이어받지 않는다.
@@ -266,7 +281,7 @@ function companionLoad(d){
 function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
   companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;
-  if(MAP==='town'||MAP==='inn')buildWorld(MAP);
+  if(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')buildWorld(MAP);
   if(!silent){const nm=COMPANION_DEF[id]&&COMPANION_DEF[id].name||'용병';say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. '+nm+'이(가) 여관으로 돌아갔습니다.');}
   if(window.UI&&UI.save)UI.save();return true;
 }
