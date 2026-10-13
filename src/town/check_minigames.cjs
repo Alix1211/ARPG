@@ -66,16 +66,33 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
  await f.evaluate(()=>MiniHost.flush());await page.waitForTimeout(80);
  const runs=await page.evaluate(()=>MINIGAMES.runs());assert.ok(runs.length>=1);assert.equal(runs.at(-1).teamCount,3);assert.ok(runs.at(-1).realSeconds>=0);
 
- await page.click('#minigameReturn');await page.evaluate(()=>MINIGAMES.open());await page.click('[data-mini="bubble-pang"]');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.MiniHost);
- await f.evaluate(()=>MiniHost.flush());await page.click('#minigameReturn');await page.evaluate(()=>{const d=MINIGAMES.saveData();d.bubble.stock[0]=2;d.bubble.fragments[0]=3;MINIGAMES.loadData(d);UI.save();});await page.evaluate(()=>MINIGAMES.open());await page.click('[data-mini="bubble-pang"]');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.MiniHost?.flush);await page.click('#minigameReturn');
- await page.evaluate(()=>MINIGAMES.open());await page.click('[data-mini="arena"]');await page.fill('#arenaStake','100');await page.click('#arenaEnter');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.ArenaPreview&&window.MiniHost);
- const gold=await page.evaluate(()=>GAME.P.gold);await f.click('#start');assert.equal(await page.evaluate(()=>GAME.P.gold),gold-100);
- // Fast-forward the real engine to its actual outcome, then check one-time payout.
- const result=await f.evaluate(()=>{const e=ArenaPreview.engine;for(let n=0;n<10000&&e.state.phase!=='finished';n++){e.step(.04);e.drain();}return e.state.winner;});
- await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>GAME.P.gold),gold-100+(result===null?100:result==='left'?200:0));
- const settled=await page.evaluate(()=>GAME.P.gold);assert.equal(await f.evaluate(()=>MiniHost.finishArena('left')),false);assert.equal(await page.evaluate(()=>GAME.P.gold),settled);
+ await page.click('#minigameReturn');
+ await page.evaluate(()=>GAME.setGold(20000));
+ assert.deepEqual(await page.evaluate(()=>MINIGAMES.bubbleEconomy(1)),{tier:1,reference:1000,fee:100});
+ await page.evaluate(()=>MINIGAMES.open());await page.click('[data-mini="bubble-pang"]');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.MiniHost?.flush);await page.waitForTimeout(150);
+ assert.equal(await page.evaluate(()=>GAME.P.gold),19900);
+ const bubbleClear=await f.evaluate(()=>MiniHost.finishBubbleRound('clear'));assert.equal(bubbleClear.outcome,'clear');assert.ok(bubbleClear.reward>=800&&bubbleClear.reward<=1900);assert.equal(await page.evaluate(()=>GAME.P.gold),19900+bubbleClear.reward);
+ await page.click('#minigameReturn');
+ await page.evaluate(()=>MINIGAMES.open());await page.click('[data-mini="bubble-pang"]');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.MiniHost?.flush);await f.evaluate(()=>MiniHost.flush());await page.click('#minigameReturn');
+ await page.evaluate(()=>{const d=MINIGAMES.saveData();d.bubble.stock[0]=2;d.bubble.fragments[0]=3;MINIGAMES.loadData(d);UI.save();});await page.evaluate(()=>MINIGAMES.open());await page.click('[data-mini="bubble-pang"]');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.MiniHost?.flush);assert.equal(await f.evaluate(()=>MiniHost.initial.state.stock[0]),2);assert.equal(await f.evaluate(()=>MiniHost.initial.state.fragments[0]),3);await page.click('#minigameReturn');
+
+ await page.evaluate(()=>GAME.setGold(20000));await page.evaluate(()=>MINIGAMES.open('arena'));await page.waitForSelector('#arenaWager:not([hidden])');
+ assert.equal(await page.$eval('#arenaStake',e=>Number(e.min)),1000);assert.equal(await page.$eval('#arenaStake',e=>Number(e.step)),1000);
+ await page.fill('#arenaStake','1000');await page.selectOption('#arenaSide','left');await page.click('#arenaEnter');f=await (await page.$('#minigameFrame')).contentFrame();await f.waitForFunction(()=>window.ArenaPreview&&window.MiniHost);
+ assert.equal((await f.evaluate(()=>MiniHost.beginArena())).stake,1000);assert.equal(await page.evaluate(()=>GAME.P.gold),19000);
+ let ar=await f.evaluate(()=>MiniHost.finishArena('left'));assert.deepEqual({status:ar.status,bank:ar.bank,streak:ar.streak},{status:'won',bank:2000,streak:1});assert.equal(await page.evaluate(()=>GAME.P.gold),19000);
+ assert.equal((await f.evaluate(()=>MiniHost.arenaDecision('continue'))).status,'continue');
+ ar=await f.evaluate(()=>MiniHost.finishArena('left'));assert.deepEqual({status:ar.status,bank:ar.bank,streak:ar.streak},{status:'won',bank:4000,streak:2});
+ assert.equal((await f.evaluate(()=>MiniHost.arenaDecision('continue'))).status,'continue');
+ ar=await f.evaluate(()=>MiniHost.finishArena('left'));assert.deepEqual({status:ar.status,payout:ar.payout,streak:ar.streak},{status:'jackpot',payout:8000,streak:3});assert.equal(await page.evaluate(()=>GAME.P.gold),27000);
+ assert.equal(await f.evaluate(()=>MiniHost.finishArena('left')),false);
+ assert.equal(await f.evaluate(()=>MiniHost.repeatArena()),true);assert.equal((await f.evaluate(()=>MiniHost.beginArena())).stake,1000);assert.equal(await page.evaluate(()=>GAME.P.gold),26000);
+ ar=await f.evaluate(()=>MiniHost.finishArena('right'));assert.equal(ar.status,'lost');assert.equal(await page.evaluate(()=>GAME.P.gold),26000);
+ assert.equal(await f.evaluate(()=>MiniHost.repeatArena()),true);assert.equal((await f.evaluate(()=>MiniHost.beginArena())).stake,1000);assert.equal(await page.evaluate(()=>GAME.P.gold),25000);
+ ar=await f.evaluate(()=>MiniHost.finishArena('left'));assert.equal(ar.bank,2000);ar=await f.evaluate(()=>MiniHost.arenaDecision('cashout'));assert.deepEqual({status:ar.status,payout:ar.payout,streak:ar.streak},{status:'cashed',payout:2000,streak:1});assert.equal(await page.evaluate(()=>GAME.P.gold),27000);
+ const settled=await page.evaluate(()=>GAME.P.gold);
  await page.click('#minigameReturn');await page.reload();await page.waitForFunction(()=>window.MINIGAMES&&window.UI?.save);
- const saved=await page.evaluate(()=>MINIGAMES.saveData());assert.equal(saved.bubble.stock[0],2);assert.equal(saved.tavern.generated,count);assert.equal(saved.arena.played,1);assert.equal(await page.evaluate(()=>GAME.P.gold),settled);
+ const saved=await page.evaluate(()=>MINIGAMES.saveData());assert.equal(saved.bubble.stock[0],2);assert.equal(saved.tavern.generated,count);assert.equal(saved.arena.played,3);assert.equal(saved.arena.wins,4);assert.equal(saved.arena.losses,1);assert.equal(await page.evaluate(()=>GAME.P.gold),settled);
  // Existing saves without minigames still load with empty minigame progress.
  await page.addInitScript(()=>{if(localStorage.arpg_save_v3){const d=JSON.parse(localStorage.arpg_save_v3);delete d.minigames;localStorage.arpg_save_v3=JSON.stringify(d);}});await page.reload();await page.waitForFunction(()=>window.MINIGAMES&&window.UI?.save);assert.equal(await page.evaluate(()=>MINIGAMES.saveData().tavern),null);
  assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
