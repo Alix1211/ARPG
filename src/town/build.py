@@ -410,6 +410,49 @@ for sid,nm,title,folder in [
         fr[d]=arr
     COMPANIONS[sid]=dict(name=nm,title=title,fr=fr)
 
+# ---- 랜덤 용병 10인: 사용자 5x3 시트(정면/후면/측면 x 5프레임) ----
+# 로컬에서 작업하기 쉽도록 세 위치를 모두 허용한다.
+# 1) source_sheets/mercenaries/  2) assets/characters/mercenaries/  3) 저장소 루트
+_MERC_SPECS=[
+    ('merc_f_sword','여성 떠돌이 검사','인간 용병 · 검사','f-떠돌이 인간 용병.png','sword','f'),
+    ('merc_f_mage','여성 엘프 마법사','엘프 용병 · 마법사','f-마법사 엘프 용병.png','mage','f'),
+    ('merc_f_brawler','여성 드워프 무투가','드워프 용병 · 무투가','f-덩치 좋은 드워프 무투가 용병.png','brawler','f'),
+    ('merc_f_archer','여성 엘프 궁수','엘프 용병 · 궁수','f-궁수용병.png','archer','f'),
+    ('merc_f_lancer','여성 창기사','중갑 용병 · 창기사','f-창기사.png','lancer','f'),
+    ('merc_m_sword','남성 떠돌이 검사','인간 용병 · 검사','m-인간 용병.png','sword','m'),
+    ('merc_m_mage','남성 인간 마법사','인간 용병 · 마법사','m-마법사용병.png','mage','m'),
+    ('merc_m_brawler','남성 드워프 무투가','드워프 용병 · 무투가','m-드워프 무투가.png','brawler','m'),
+    ('merc_m_archer','남성 늑대수인 궁수','수인 용병 · 궁수','m-궁수.png','archer','m'),
+    ('merc_m_lancer','남성 창기사','중갑 용병 · 창기사','m-창기사(1).png','lancer','m'),
+]
+def _merc_sheet_path(filename):
+    for p in [
+        os.path.join(ROOT,'source_sheets','mercenaries',filename),
+        os.path.join(R,'characters','mercenaries',filename),
+        os.path.join(ROOT,filename),
+    ]:
+        if os.path.exists(p): return p
+    return None
+
+for sid,nm,title,filename,job,gender in _MERC_SPECS:
+    src=_merc_sheet_path(filename)
+    if not src: continue
+    sheet=Image.open(src).convert('RGBA')
+    if sheet.width<5 or sheet.height<3: continue
+    fr={}; first=None
+    for row,d in enumerate(['front','back','side']):
+        arr=[]
+        for col in range(5):
+            x0=round(sheet.width*col/5); x1=round(sheet.width*(col+1)/5)
+            y0=round(sheet.height*row/3); y1=round(sheet.height*(row+1)/3)
+            im=sheet.crop((x0,y0,x1,y1))
+            if first is None: first=im.copy()
+            hh=172; ww=max(1,round(hh*im.width/im.height))
+            arr.append(enc(im.resize((ww,hh),Image.LANCZOS),88))
+        fr[d]=arr
+    pt=first.copy(); pt.thumbnail((520,560),Image.LANCZOS)
+    COMPANIONS[sid]=dict(name=nm,title=title,fr=fr,port=enc(pt,88),mercenary=True,job=job,gender=gender)
+
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
     ui[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
