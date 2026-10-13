@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/town/**'
       - 'minigames/**'
+      - 'source_sheets/town_overhaul/**'
       - 'src/story/quests.json'
       - '.github/workflows/town-build-check.yml'
 

@@ -7,6 +7,16 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HERE = os.path.dirname(os.path.abspath(__file__))
 R = os.path.join(ROOT, 'assets') + '/'
+
+# 메인 마을 개보수 원본 3장. 원본이 모두 들어온 뒤 한 번에 활성화한다.
+TOWN_OVERHAUL_DIR = os.path.join(ROOT, 'source_sheets', 'town_overhaul')
+TOWN_OVERHAUL_SOURCES = {
+    'tavern': os.path.join(TOWN_OVERHAUL_DIR, 'player_tavern.png'),
+    'colosseum': os.path.join(TOWN_OVERHAUL_DIR, 'colosseum.png'),
+    'arena_sheet': os.path.join(TOWN_OVERHAUL_DIR, 'arena_buildings.png'),
+}
+TOWN_OVERHAUL_READY = all(os.path.exists(p) for p in TOWN_OVERHAUL_SOURCES.values())
+
 with open(os.path.join(ROOT,'src','story','quests.json'),encoding='utf-8') as qf:
     MAIN_QUEST_DATA=json.load(qf)
 TS = 48          # 게임 단위 칸 크기
@@ -58,7 +68,7 @@ def mask_from(sdf, soft=0.12, n=None):
     d = sdf + (N1 if n is None else n)
     return np.clip(0.5 - d / soft, 0, 1)[..., None]
 
-CACHE=os.path.join(HERE, '.ground_cache.png')
+CACHE=os.path.join(HERE, '.ground_cache_town_overhaul.png' if TOWN_OVERHAUL_READY else '.ground_cache.png')
 import os
 def make_ground():
     img = grass.copy()
@@ -75,6 +85,8 @@ def make_ground():
     DIRT = [(3, 15.4, 13.2, 17.6), (32.8, 15.4, 43, 17.6),  # 서·동쪽 흙길
             (6.8, 10.5, 9.2, 15.6), (36.8, 10.5, 39.2, 15.6), # 촌장 집·전당포 앞
             (14.3, 9.6, 16.3, 12.8), (30.4, 9.8, 32.4, 12.8)]
+    if TOWN_OVERHAUL_READY:
+        DIRT += [(8.5, 10.8, 12.7, 12.7), (40.6, 13.4, 42.7, 15.8)]  # 격투장 입장소 / 호숫가 주점
 
     def union(rects):
         s = np.full((H, W), 1e9, np.float32)
@@ -140,6 +152,49 @@ def bake_shadows(base, items):
     return Image.fromarray(arr.clip(0, 255).astype(np.uint8))
 
 # ---- 건물 ----
+# 개보수 원본은 source_sheets에 보관하고 빌드 중 투명 건물 에셋으로 정리한다.
+BUILDING_OVERRIDE = {}
+if TOWN_OVERHAUL_READY:
+    _gen = os.path.join(HERE, '.generated_town_overhaul')
+    os.makedirs(_gen, exist_ok=True)
+
+    # 주점: 원본의 바깥 검정 배경만 제거한다. 내부의 어두운 선/그림자는 보존한다.
+    _im = Image.open(TOWN_OVERHAUL_SOURCES['tavern']).convert('RGBA')
+    _arr = np.array(_im)
+    _dark = np.max(_arr[:, :, :3], axis=2) < 12
+    _labels, _ = nd.label(_dark)
+    _border = np.unique(np.concatenate((_labels[0, :], _labels[-1, :], _labels[:, 0], _labels[:, -1])))
+    _border = _border[_border != 0]
+    if len(_border):
+        _arr[np.isin(_labels, _border), 3] = 0
+    _im = Image.fromarray(_arr)
+    _bb = _im.getbbox()
+    if _bb: _im = _im.crop(_bb)
+    _p = os.path.join(_gen, 'player_tavern.png'); _im.save(_p); BUILDING_OVERRIDE['player_tavern'] = _p
+
+    # 콜롯세움: 전체를 그대로 사용한다.
+    _im = Image.open(TOWN_OVERHAUL_SOURCES['colosseum']).convert('RGBA')
+    _bb = _im.getbbox()
+    if _bb: _im = _im.crop(_bb)
+    _p = os.path.join(_gen, 'colosseum.png'); _im.save(_p); BUILDING_OVERRIDE['colosseum'] = _p
+
+    # 건물 시트 오른쪽 아래의 작은 건물을 격투장 입장·배팅소로 사용한다.
+    _im = Image.open(TOWN_OVERHAUL_SOURCES['arena_sheet']).convert('RGBA')
+    _x0, _y0 = round(_im.width * 0.61), round(_im.height * 0.51)
+    _im = _im.crop((_x0, _y0, _im.width, _im.height))
+    _bb = _im.getbbox()
+    if _bb: _im = _im.crop(_bb)
+    _p = os.path.join(_gen, 'arena_entry.png'); _im.save(_p); BUILDING_OVERRIDE['arena_entry'] = _p
+
+def building_path(k):
+    if k in BUILDING_OVERRIDE: return BUILDING_OVERRIDE[k]
+    for ext in ('.png', '.webp'):
+        p = R + 'buildings/' + k + ext
+        if os.path.exists(p): return p
+    raise FileNotFoundError('building asset: ' + k)
+
+TAVERN_KEY = 'player_tavern' if TOWN_OVERHAUL_READY else 'tavern'
+
 # key, 이름, 중심x, 바닥y, 폭(칸), 문 x 보정(폭 비율)
 B = [
  ('guild_hall', '길드 홀', 23, 12.4, 5.6, 0),
@@ -149,7 +204,7 @@ B = [
  ('townhouse_pawn', '전당포', 38.0, 10.6, 3.6, 0),
  ('house_blue', '여관', 7.0, 15.2, 4.4, -0.05),
  ('house_red', '민가', 3.6, 25.0, 4.6, 0),
- ('tavern', '술집', 15.0, 25.6, 5.2, 0.05),
+ (TAVERN_KEY, 'DUSK POB' if TOWN_OVERHAUL_READY else '술집', 42.0 if TOWN_OVERHAUL_READY else 15.0, 14.5 if TOWN_OVERHAUL_READY else 25.6, 5.8 if TOWN_OVERHAUL_READY else 5.2, -0.12 if TOWN_OVERHAUL_READY else 0.05),
  ('shop_general', '잡화점', 19.0, 21.6, 4.4, -0.08) if False else ('shop_general', '잡화점', 9.8, 24.4, 4.6, -0.08),
  ('shop_weapons', '무기·방어구점', 30.6, 25.6, 4.8, 0),
  ('smithy', '대장간', 36.2, 25.2, 5.0, -0.05),
@@ -158,10 +213,16 @@ B = [
  ('watchtower', '망루', 28.4, 31.6, 2.6, 0),
  ('gate_twin_tower', '성문 (성 밖으로)', 23, 32.4, 6.6, 0),
 ]
+if TOWN_OVERHAUL_READY:
+    # 콜롯세움은 배경 랜드마크, 실제 진입은 앞의 입장·배팅소에서 한다.
+    B += [
+      ('colosseum', '콜롯세움', 6.2, 9.1, 7.2, 0),
+      ('arena_entry', '격투장 입장·배팅소', 11.1, 11.8, 2.8, 0),
+    ]
 SCALE = 1.5   # 게임 단위 대비 그림 해상도
 imgs = {}
 for k in sorted(set(b[0] for b in B)):
-    im = Image.open(R + f'buildings/{k}.png').convert('RGBA')
+    im = Image.open(building_path(k)).convert('RGBA')
     imgs[k] = im
 blds = []
 assets = {}
@@ -170,7 +231,11 @@ for k, name, cx, by, wt, dxr in B:
     w = wt * TS; h = w * im.height / im.width
     if k not in assets:
         assets[k] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS))
-    blds.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, door=dxr))
+    meta = {}
+    if k == 'player_tavern': meta = dict(kind='minigame_tavern', solidScale=0.70)
+    elif k == 'colosseum': meta = dict(noSpot=True, solidScale=0.72)
+    elif k == 'arena_entry': meta = dict(kind='minigame_arena', solidScale=0.68)
+    blds.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, door=dxr, **meta))
 
 # 소품 (건물 부품 중 바닥에 세울 수 있는 것만)
 # 소품: key, 이름(살펴보기), x, 바닥y, 폭(칸), 충돌(폭 비율, 깊이 칸) — 충돌 0이면 통과
@@ -215,6 +280,10 @@ P = [
  (TP+'tree_big', None, 33.2, 31.6, 4.0, (0.16, 0.3)), (TP+'tree_small', None, 38.6, 30.6, 3.0, (0.16, 0.3)),
  (TP+'tree_blossom', None, 43.8, 31.0, 3.2, (0.16, 0.3)), (TP+'tree_small', None, 12.0, 6.4, 3.0, (0.16, 0.3)),
 ]
+if TOWN_OVERHAUL_READY:
+    # 새 대형 건물과 겹치는 기존 장식만 치운다. 기존 기능 건물은 유지한다.
+    _clear = {(2.4,5.0), (5.6,7.4), (11.8,12.0), (12.4,10.8), (44.0,16.6), (44.6,7.8)}
+    P = [p for p in P if (round(p[2],1), round(p[3],1)) not in _clear]
 props = []
 for k, name, cx, by, wt, col in P:
     im = Image.open(R + k + '.png').convert('RGBA')
@@ -229,7 +298,7 @@ _stash_width=1.3*TS*SCALE
 assets['personal_stash_open']=enc(_stash_open.resize((round(_stash_width),round(_stash_width*_stash_open.height/_stash_open.width)),Image.LANCZOS))
 
 # 행인 걷기 (옆모습은 왼쪽을 봄)
-VIL = [('youth', 1.0, 'house_red'), ('kid', 0.82, 'house_blue'), ('grandpa', 0.95, 'cottage_thatch'), ('maiden', 0.97, 'tavern'), ('auntie', 0.97, 'shop_general')]
+VIL = [('youth', 1.0, 'house_red'), ('kid', 0.82, 'house_blue'), ('grandpa', 0.95, 'cottage_thatch'), ('maiden', 0.97, TAVERN_KEY), ('auntie', 0.97, 'shop_general')]
 vils = []
 for name, sc, home in VIL:
     fr = {}
@@ -319,7 +388,7 @@ NPC = [
  (23, '루나', '무기·방어구점 주인', 'shop_weapons', -1, '그거 내려놔요. 손잡이 먼저 잡아봐요. 무기는 눈으로 고르는 거 아니니까.', 'arms'),
  (42, '그레타', '대장간 주인', 'smithy', 1, '뭐라고? 망치 소리 때문에 안 들려. 가까이 와서 말해. 핀, 불 좀 더 올리고!', None),
  (12, '핀', '교역소 직원', 'shop_tools', -1, '오늘 장부가 좀 이상해요. 아니, 장부가 아니라 사람들이 이상한 건가… 아무튼 시세는 여기 적어뒀습니다.', 'trade'),
- (40, '브란', '술집 주인', 'tavern', 1, '앉아. 주문 안 해도 돼. 오래 앉아 있으면 그때부터 눈치 줄 거니까.', None),
+ (40, '브란', '주점 관리인' if TOWN_OVERHAUL_READY else '술집 주인', ('free', 39.0, 14.2) if TOWN_OVERHAUL_READY else 'tavern', 1, '앉아. 주문 안 해도 돼. 오래 앉아 있으면 그때부터 눈치 줄 거니까.', None),
  (39, '하르트', '길드장', 'guild_hall', -1, '왔나? 게시판은 저기고, 난 지금 무릎이랑 협상 중이네. 둘 다 말을 안 들어.', 'guild'),
  (29, '에드먼', '학자', 'scholar_dome', 1, '아, 잠깐만요. 그 책 밟지 마십시오. 아니, 그건 책이 아니라 상자군요. 어쨌든 거기 서 계세요.', None),
  (43, '페닉스', '금고 관리인', 'manor_vault', -1, '잠시만요. 열쇠가 열셋… 열넷… 맞군요. 이제 말씀하시죠.', None),
@@ -447,7 +516,7 @@ for kind,row in [('ring',0),('neck',1)]:
     ICON[kind]=ICON[f'acc_{row}_01']
 
 
-SH = [dict(path=R + f"buildings/{b['k']}.png", x=b['x'], y=b['y'], w=b['w'], h=b['h'], sq=0.5 if b['k'] in ('watchtower','gate_twin_tower') else 0.42) for b in blds]
+SH = [dict(path=building_path(b['k']), x=b['x'], y=b['y'], w=b['w'], h=b['h'], sq=0.5 if b['k'] in ('watchtower','gate_twin_tower') else 0.42) for b in blds]
 SH += [dict(path=R + p['path'] + '.png', x=p['x'], y=p['y'], w=p['w'], h=p['h'], sq=0.55 if p['tree'] else 0.5, foot=0.03) for p in props]
 ground = bake_shadows(ground, SH)
 mini = ground.resize((MW * 6, MH * 6), Image.LANCZOS)

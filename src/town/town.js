@@ -62,7 +62,7 @@ function buildWorld(id){
 const hasNpc = new Set(CUR.npcs.map(n => n.at).filter(Boolean));
 for (const b of CUR.blds){
   const gate = b.k === 'gate_twin_tower';
-  const fw = b.w * (b.k === 'watchtower' ? 0.5 : 0.8);
+  const fw = b.w * (Number.isFinite(b.solidScale) ? b.solidScale : (b.k === 'watchtower' ? 0.5 : 0.8));
   if (gate){ // 성문은 양쪽 탑만 막고 가운데는 문 앞까지 걸어갈 수 있게
     solids.push({ x0: b.x - b.w * 0.48, x1: b.x - b.w * 0.17, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.05 });
     solids.push({ x0: b.x + b.w * 0.17, x1: b.x + b.w * 0.48, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.05 });
@@ -71,7 +71,9 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
-  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k)) continue;
+  if(id==='town'&&b.kind==='minigame_tavern')spots.push({name:'DUSK POB · 주점 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_tavern'});
+  if(id==='town'&&b.kind==='minigame_arena')spots.push({name:'격투장 입장·배팅소',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_arena'});
+  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k) || (b.kind&&b.kind.startsWith('minigame_'))) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
 for (const p of CUR.props){
@@ -422,6 +424,8 @@ function act(){
   if(near.kind==='stash'&&window.UI)return UI.openStash();
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
+  if(near.kind==='minigame_tavern'&&window.MINIGAMES)return MINIGAMES.open('tavern');
+  if(near.kind==='minigame_arena'&&window.MINIGAMES)return MINIGAMES.open('arena');
   if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();

@@ -19,11 +19,20 @@
   function blocked(){return !!(window.ARPG_BACKUP_RESTORING||window.ARPG_SYNC_CHECKING||window.ARPG_SYNC_CONFLICT);}
   function money(){root.querySelector('#minigameMoney').textContent='금화 '+Math.round(GAME.P.gold).toLocaleString('ko-KR')+' G';}
   function save(){UI.refresh();UI.save();money();}
-  function open(){
+  function lobbyMode(kind){
+    const direct=kind==='arena';
+    lobby.querySelector('h2').textContent=direct?'격투장 입장·배팅소':'돈 벌러 갑니다';
+    root.querySelectorAll('[data-mini]').forEach(b=>b.hidden=direct);
+    root.querySelector('#arenaWager').hidden=!direct;
+  }
+  function open(kind=null){
+    if(typeof kind!=='string')kind=null;
     if(active||blocked())return false;
     const map=GAME.locationState().map;
     if(!['town','inn','fieldvillage'].includes(map)){GAME.say('마을에서 돈 벌 궁리를 해 봅시다.');return false;}
-    GAME.closeAll();GAME.releaseInput();GAME.setHold(false);GAME.setOpen('minigames');root.hidden=false;lobby.hidden=false;frame.hidden=true;root.querySelector('#arenaWager').hidden=true;money();return true;
+    GAME.closeAll();GAME.releaseInput();GAME.setHold(false);GAME.setOpen('minigames');root.hidden=false;lobby.hidden=false;frame.hidden=true;lobbyMode(kind);money();
+    if(kind==='tavern'||kind==='bubble-pang')return enter(kind);
+    return true;
   }
   function enter(kind,bet=null){
     if(active||blocked()||!['tavern','bubble-pang','arena'].includes(kind))return false;
@@ -34,7 +43,7 @@
   function close(){
     if(blocked())return false;
     if(active&&frame.contentWindow.MiniHost?.flush&&!blocked())frame.contentWindow.MiniHost.flush();
-    active=null;frame.removeAttribute('src');frame.hidden=true;root.hidden=true;GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();if(!blocked())save();
+    active=null;frame.removeAttribute('src');frame.hidden=true;root.hidden=true;lobbyMode(null);GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();if(!blocked())save();
   }
   function child(source){return active&&source===frame.contentWindow&&!blocked();}
   window.ARPG_MINIGAME_LINK={
