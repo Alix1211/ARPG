@@ -52,8 +52,89 @@ function companionFee(id){
   if(!COMPANION_DEF[id])return 0;
   return Math.max(50,Math.round(((P.lv||1)*25)/10)*10);
 }
-function companionStateCopy(){const o=JSON.parse(JSON.stringify(companionState));o.parkedHire=companionParkedHire?{...companionParkedHire}:null;return o;}
+function companionStateCopy(){const o=JSON.parse(JSON.stringify(companionState));o.parkedHire=companionParkedHire?{...companionParkedHire}:null;o.market=JSON.parse(JSON.stringify(mercMarket));return o;}
 function companionIsActive(id){return !!companionState.active&&(!id||companionState.active===id);}
+function companionCurrentTier(){
+  try{
+    const st=typeof locationState==='function'?locationState():null;
+    if(st&&st.map==='fieldvillage')return Math.max(1,Math.min(7,MERC_TIER_THEME[st.theme]||1));
+  }catch(e){}
+  return 1;
+}
+function companionMercReady(){return MERC_IDS.length>=5;}
+function companionRotateMarket(force=false){
+  if(!companionMercReady())return false;
+  if(!force&&mercMarket.roster.length===5)return false;
+  const pool=MERC_IDS.filter(id=>!(companionState.active===id&&companionState.mode==='hire'));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  mercMarket.roster=pool.slice(0,5);
+  mercMarket.inn=mercMarket.roster.slice(0,3);
+  mercMarket.town=mercMarket.roster.slice(3,5);
+  mercMarket.serial=(mercMarket.serial||0)+1;
+  mercMarket.lastDayT=typeof DAY!=='undefined'?DAY.t:null;
+  if(window.UI&&UI.save)UI.save();
+  return true;
+}
+function companionMarketLine(id){
+  const d=COMPANION_DEF[id],tier=companionCurrentTier();
+  return d?d.name+'이(가) 장비를 점검하고 있습니다. T'+tier+' 지역 기준 기술을 사용합니다. 하루 계약은 선불입니다.':'용병입니다.';
+}
+function companionMarketNpc(id,x,y,roam=false){
+  const d=COMPANION_DEF[id],src=COMPANION_IMG[id];if(!d||!src)return null;
+  const im=src.fr.front&&src.fr.front[0];if(!im)return null;
+  return {k:'merc_'+id,no:0,name:d.name,title:d.title,x,y,w:92,h:110,line:companionMarketLine(id),shop:null,at:null,
+    companion:id,mercenaryMarket:true,mercRoam:!!roam,mercHomeX:x,mercHomeY:y,mercTx:x,mercTy:y,mercWait:Math.random()*3,
+    mercT:0,mercDir:'front',mercFlip:false,img:im,ph:Math.random()*7,key:y};
+}
+function companionEnsureMarket(mapId=MAP){
+  if(!companionMercReady()||!['town','inn'].includes(mapId))return false;
+  if(!mercMarket.roster||mercMarket.roster.length!==5)companionRotateMarket(true);
+  const want=(mapId==='inn'?mercMarket.inn:mercMarket.town).filter(id=>id!==companionState.active);
+  const positions=mapId==='inn'
+    ? [[2.9*TS,7.05*TS],[7.0*TS,7.45*TS],[11.45*TS,7.15*TS]]
+    : [[8.7*TS,18.1*TS],[19.2*TS,19.2*TS]];
+  for(let i=0;i<want.length&&i<positions.length;i++){
+    const id=want[i];if(npcs.some(n=>n.mercenaryMarket&&n.companion===id))continue;
+    const n=companionMarketNpc(id,positions[i][0],positions[i][1],mapId==='town');if(!n)continue;
+    npcs.push(n);sprites.push(n);spots.push({name:n.name,x:n.x,y:n.y+6,r:52,kind:'npc',npc:n});
+  }
+  return true;
+}
+function companionUpdateMarket(dt){
+  if(companionMercReady()&&typeof DAY!=='undefined'){
+    const prev=mercMarket.lastDayT;
+    if(prev!=null&&prev>.82&&DAY.t<.18){
+      companionRotateMarket(true);
+      if(MAP==='town'||MAP==='inn'){buildWorld(MAP);return;}
+    }
+    mercMarket.lastDayT=DAY.t;
+  }
+  if(MAP!=='town')return;
+  for(const n of npcs){
+    if(!n.mercenaryMarket||!n.mercRoam||n.hide)continue;
+    n.mercWait-=dt;n.mercT+=dt;
+    const dx=n.mercTx-n.x,dy=n.mercTy-n.y,dd=Math.hypot(dx,dy);
+    if(n.mercWait<=0||dd<8){
+      n.mercWait=2+Math.random()*4;
+      n.mercTx=n.mercHomeX+(Math.random()*2-1)*115;
+      n.mercTy=n.mercHomeY+(Math.random()*2-1)*75;
+      continue;
+    }
+    const step=Math.min(dd,42*dt),nx=n.x+dx/dd*step,ny=n.y+dy/dd*step;
+    if(!blocked(nx,ny)){n.x=nx;n.y=ny;n.key=ny;if(Math.abs(dx)>Math.abs(dy)*.8){n.mercDir='side';n.mercFlip=dx<0;}else n.mercDir=dy<0?'back':'front';}
+    else n.mercWait=0;
+    const sp=spots.find(s=>s.kind==='npc'&&s.npc===n);if(sp){sp.x=n.x;sp.y=n.y+6;}
+  }
+}
+function companionDrawMarketNpc(n){
+  const src=COMPANION_IMG[n.companion];if(!src)return false;
+  const d=n.mercDir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;if(!arr||!arr.length)return false;
+  const idx=n.mercRoam?1+(Math.floor((n.mercT||0)*7)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return false;
+  const h=108,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
+  ctx.fillStyle='rgba(0,0,0,.24)';ctx.beginPath();ctx.ellipse(n.x,n.y,17,5.5,0,0,7);ctx.fill();
+  ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);ctx.restore();
+  return true;
+}
 function companionSetTownTests(enabled){
   companionTownTestsEnabled=!!enabled;
   if(MAP==='town')buildWorld('town');
