@@ -41,6 +41,8 @@ function castExtra(id, d, rank, cm, mod, skillMul){
   const mag = Math.max(8, cm.magic) * mod.dmg * skillMul, phy = Math.max(1, cm.phys) * mod.dmg * skillMul;
   const home = (P.passives && P.passives.magicGuide) || 0;
   const ang = Math.atan2(d[1], d[0]), ox = P.x + d[0] * 28, oy = P.y - 44 + d[1] * 28;
+  // 활 스킬 조준: 사거리 안 가장 가까운 적 방향(없으면 바라보는 방향)
+  const bowAim = lim => { const t = nearestShotTarget(P.x, P.y - 44, lim); if (!t) return ang; return Math.atan2(t.y - (t.h || 60) * .45 - oy, t.x - ox); };
   const popName = () => { if (SK2_POP[id]) pops.push({ x:P.x, y:P.y - 115, t:0, txt:SK2_POP[id], crit:true }); };
   switch (id){
     case 'holy2_shield': {
@@ -182,7 +184,8 @@ function castExtra(id, d, rank, cm, mod, skillMul){
       popName();return true;
     }
     case 'bow1': {
-      shots.push({x:ox,y:oy,vx:d[0]*840,vy:d[1]*840,speed:840,t:0,life:.78,kind:'bow',blast:0,
+      const ba=bowAim(650);
+      shots.push({x:ox,y:oy,vx:Math.cos(ba)*840,vy:Math.sin(ba)*840,speed:840,t:0,life:.78,kind:'bow',blast:0,
         dmg:Math.round(phy*(1.7+rank*.06)),status:'poison',statusDur:4+rank*.3,fx:'poisonburst'});
       popName();return true;
     }
@@ -218,8 +221,9 @@ function castExtra(id, d, rank, cm, mod, skillMul){
     }
     case 'bow2': {
       const n = rank >= 5 ? 7 : rank >= 3 ? 6 : 5, spread = 60 * Math.PI / 180, dm = Math.round(phy * (.95 + rank * .03));
+      const ca = bowAim(360);
       for (let i = 0; i < n; i++){
-        const a = ang + (i / (n - 1) - .5) * spread;
+        const a = ca + (i / (n - 1) - .5) * spread;
         shots.push({ x:ox, y:oy, vx:Math.cos(a) * 720, vy:Math.sin(a) * 720, speed:720, t:0, life:.5, kind:'bow', blast:0, dmg:dm });
       }
       popName();

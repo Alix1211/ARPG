@@ -1329,7 +1329,8 @@ function updAtk(dt){
     a.shot = true;
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const w=WB[a.wt],home=a.wt==='staff'?((P.passives&&P.passives.magicGuide)||0):0,homeRange=home?260+home*90:0;
-    const aim=a.wt==='staff'&&home>0?magicAim(w.speed,homeRange):{vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
+    // 활은 사거리 안 가장 가까운 적을 조준해 직선으로 쏜다(유도는 없음). 예전엔 4방향 고정이라 대각선 적을 거의 못 맞혔다.
+    const aim=a.wt==='staff'&&home>0?magicAim(w.speed,homeRange):a.wt==='bow'?magicAim(w.speed,w.speed*w.life):{vx:d[0]*w.speed,vy:d[1]*w.speed,target:null};
     const ux=aim.vx/w.speed, uy=aim.vy/w.speed;
     const sx=a.wt==='staff'?P.x+ux*24:P.x+(a.dir==='side'?d[0]*30:0);
     const sy=a.wt==='staff'?P.y-44+uy*24:P.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
@@ -1405,7 +1406,7 @@ function drawShots(dt){
           if (again && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ if (s.rehit) s.hit.set(t, s.t); else s.hit.add(t); pierceHit(s, t); }
         }
       } else {
-        for (const t of combatTargets()){ if(s.companion&&!t.monster)continue;if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+        for (const t of combatTargets()){ if(s.companion&&!t.monster)continue;const hw=s.kind==='bow'?30:22;if (Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - (hw-22) && s.y < t.y + (hw-22)){ boom(s, t); break; } }
       }
       if (!s.done && s.t > s.life) boom(s, null);
     }
