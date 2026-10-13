@@ -412,7 +412,7 @@ const PROP_TXT = {
   '의뢰 게시판': '길드 의뢰가 붙는 곳입니다. 의뢰는 다음 단계에서 붙입니다.',
   '우물': '시원한 물이 찰랑입니다. 동전을 던지는 사람은… 이 마을에 없습니다.',
   '이정표': '↓ 성문(던전)   ← 여관   → 대장간',
-  '과일 노점': '주인이 자리를 비웠습니다.',
+  '주점 식자재점': 'DUSK POB에서 쓸 음식과 술 재료를 정상가에 살 수 있습니다.',
   '물약 노점': '주인이 자리를 비웠습니다.',
 };
 function show(id){ closeAll(); panel = id; $(id).classList.add('on'); joy.id = null; joy.dx = joy.dy = 0; knob.style.transform = ''; homeStick(); }
@@ -426,6 +426,7 @@ function act(){
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
   if(near.kind==='minigame_tavern'&&window.MINIGAMES)return MINIGAMES.open('tavern');
   if(near.kind==='minigame_arena'&&window.MINIGAMES)return MINIGAMES.open('arena');
+  if(near.kind==='prop'&&near.name==='주점 식자재점'&&window.MINIGAMES)return MINIGAMES.openSupplyShop();
   if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
