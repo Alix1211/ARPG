@@ -54,6 +54,14 @@ async def main():
         g_after_sell=await pg.evaluate("() => GAME.P.gold")
         assert g_after_sell > 1000, (g_after_buy,g_after_sell)
 
+        # 여러 종류 화물을 한 번에 전부 판매한다.
+        batch=await pg.evaluate("""() => {
+          TRADE.addLoot('barley',3); TRADE.addLoot('salt',2); TRADE.debugRegion('autumn');
+          const before=GAME.P.gold, ok=TRADE.sellAll();
+          return {ok,before,after:GAME.P.gold,cargo:TRADE.cargo()};
+        }""")
+        assert batch['ok'] and batch['after']>batch['before'] and not batch['cargo'],batch
+
         # 모든 필드 마지막 칸에는 작은 마을 입구가 있고, 내부 마을이 같은 구조로 열린다.
         for ti,th in enumerate(THEMES,1):
             await pg.evaluate("([th,leg]) => __FD.enter(th,leg)", [th,ti+1])
@@ -78,7 +86,7 @@ async def main():
         await pg.evaluate("() => GAME.act()"); await pg.wait_for_timeout(80)
         await pg.click('#dlgTrade'); await pg.wait_for_timeout(120)
         assert await pg.evaluate("() => document.getElementById('trade').classList.contains('on')")
-        assert await pg.evaluate("() => !!document.getElementById('tradeCargoList') && !!document.getElementById('tradeBuyTab') && !!document.getElementById('tradeSellTab')")
+        assert await pg.evaluate("() => !!document.getElementById('tradeCargoList') && !!document.getElementById('tradeBuyTab') && !!document.getElementById('tradeSellTab') && !!document.getElementById('tradeSellAll')")
 
         assert not errs, errs
         print('trade ok', q, g_after_buy, g_after_sell)
