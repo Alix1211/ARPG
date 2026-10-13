@@ -18,6 +18,14 @@ async def main():
         assert not await ev("() => {GAME.setGold(1000);return COMPANION.hire('hero');}")
         assert not await ev("() => {GAME.setGold(1000);return COMPANION.hire('knight');}")
 
+        # 10인 용병 시트가 로컬/배포본에 들어온 경우 시장 로테이션과 일반 고용까지 검사한다.
+        merc_ids=await ev("() => COMPANION.mercenaryIds()")
+        if merc_ids:
+            assert len(merc_ids)==10,merc_ids
+            m=await ev("() => COMPANION.marketState()")
+            assert 'town' in m.get('sets',{}) and len(m['sets']['town']['roster'])==5,m
+            assert len(m['sets']['town']['inn'])==3 and len(m['sets']['town']['town'])==2,m
+
         r=await ev("""() => {COMPANION.syncStory({active:{MAIN_015:{step:1}}},'field');return COMPANION.state();}""")
         assert r['active']=='hero' and r['mode']=='story' and r['storyQuest']=='MAIN_015',r
         r=await ev("""() => {COMPANION.syncStory({active:{}},'field');return COMPANION.state();}""")
@@ -61,7 +69,7 @@ async def main():
 
         await ev("() => UI.save()")
         raw=await ev("() => JSON.parse(localStorage.getItem('arpg_save_v3')).companion")
-        assert raw and raw['v']==2 and raw['active']=='knight' and raw['mode']=='hire',raw
+        assert raw and raw['v']==3 and raw['active']=='knight' and raw['mode']=='hire' and raw.get('market') is not None,raw
 
         g=await ev("() => GAME.P.gold")
         await ev("() => COMPANION.onDefeat()")
