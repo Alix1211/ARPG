@@ -178,10 +178,32 @@ if TOWN_OVERHAUL_READY:
     if _bb: _im = _im.crop(_bb)
     _p = os.path.join(_gen, 'colosseum.png'); _im.save(_p); BUILDING_OVERRIDE['colosseum'] = _p
 
-    # 건물 시트 오른쪽 아래의 작은 건물을 격투장 입장·배팅소로 사용한다.
-    _im = Image.open(TOWN_OVERHAUL_SOURCES['arena_sheet']).convert('RGBA')
-    _x0, _y0 = round(_im.width * 0.61), round(_im.height * 0.51)
-    _im = _im.crop((_x0, _y0, _im.width, _im.height))
+    # 건물 시트 오른쪽 아래의 작은 건물만 격투장 입장·배팅소로 사용한다.
+    # 단순 사각 crop은 위쪽 다른 건물의 일부가 함께 들어오므로, 투명 알파 연결요소 중
+    # 오른쪽 아래에 있는 가장 큰 독립 건물 하나만 골라 잘라낸다.
+    _sheet = Image.open(TOWN_OVERHAUL_SOURCES['arena_sheet']).convert('RGBA')
+    _alpha = np.asarray(_sheet.getchannel('A')) > 20
+    _lab, _n = nd.label(_alpha)
+    _objs = nd.find_objects(_lab)
+    _candidates = []
+    for _idx, _sl in enumerate(_objs, start=1):
+        if _sl is None: continue
+        _ys, _xs = _sl
+        _cx = (_xs.start + _xs.stop) * 0.5 / _sheet.width
+        _cy = (_ys.start + _ys.stop) * 0.5 / _sheet.height
+        if _cx > 0.55 and _cy > 0.55:
+            _area = int((_lab[_sl] == _idx).sum())
+            _candidates.append((_area, _idx, _xs.start, _ys.start, _xs.stop, _ys.stop))
+    if not _candidates:
+        raise RuntimeError('arena entry component not found')
+    _, _idx, _x0, _y0, _x1, _y1 = max(_candidates)
+    _pad = max(4, round(min(_sheet.width, _sheet.height) * 0.006))
+    _x0=max(0,_x0-_pad); _y0=max(0,_y0-_pad); _x1=min(_sheet.width,_x1+_pad); _y1=min(_sheet.height,_y1+_pad)
+    _im = _sheet.crop((_x0, _y0, _x1, _y1))
+    _arr = np.asarray(_im).copy()
+    _sub = (_lab[_y0:_y1, _x0:_x1] == _idx)
+    _arr[:, :, 3] = np.where(_sub, _arr[:, :, 3], 0)
+    _im = Image.fromarray(_arr)
     _bb = _im.getbbox()
     if _bb: _im = _im.crop(_bb)
     _p = os.path.join(_gen, 'arena_entry.png'); _im.save(_p); BUILDING_OVERRIDE['arena_entry'] = _p
@@ -200,7 +222,7 @@ B = [
  ('guild_hall', '길드 홀', 23, 12.4, 5.6, 0),
  ('scholar_dome', '학자의 집', 15.3, 10.0, 4.6, 0),
  ('manor_vault', '마을 금고', 31.4, 10.0, 5.6, 0),
- ('cottage_thatch', '촌장 집', 8.0, 10.6, 4.6, 0.02),
+ ('cottage_thatch', '촌장 집', 15.0 if TOWN_OVERHAUL_READY else 8.0, 25.6 if TOWN_OVERHAUL_READY else 10.6, 4.6, 0.02),
  ('townhouse_pawn', '전당포', 38.0, 10.6, 3.6, 0),
  ('house_blue', '여관', 7.0, 15.2, 4.4, -0.05),
  ('house_red', '민가', 3.6, 25.0, 4.6, 0),
@@ -217,7 +239,7 @@ if TOWN_OVERHAUL_READY:
     # 콜롯세움은 배경 랜드마크, 실제 진입은 앞의 입장·배팅소에서 한다.
     B += [
       ('colosseum', '콜롯세움', 6.2, 9.1, 7.2, 0),
-      ('arena_entry', '격투장 입장·배팅소', 11.1, 11.8, 2.8, 0),
+      ('arena_entry', '격투장 입장·배팅소', 11.1, 11.8, 4.2, 0),
     ]
 SCALE = 1.5   # 게임 단위 대비 그림 해상도
 imgs = {}
@@ -282,7 +304,8 @@ P = [
 ]
 if TOWN_OVERHAUL_READY:
     # 새 대형 건물과 겹치는 기존 장식만 치운다. 기존 기능 건물은 유지한다.
-    _clear = {(2.4,5.0), (5.6,7.4), (11.8,12.0), (12.4,10.8), (44.0,16.6), (44.6,7.8)}
+    _clear = {(2.4,5.0), (5.6,7.4), (11.8,12.0), (12.4,10.8), (44.0,16.6), (44.6,7.8),
+              (12.4,26.0), (18.0,26.0), (13.2,31.6)}
     P = [p for p in P if (round(p[2],1), round(p[3],1)) not in _clear]
 props = []
 for k, name, cx, by, wt, col in P:
