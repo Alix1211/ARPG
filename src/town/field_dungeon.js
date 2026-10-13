@@ -511,6 +511,7 @@ function faceMonster(m,dx,dy){
 }
 function defeatPlayer(){
   if(tryRevivePlayer())return;
+  if(window.SAGE)SAGE.clear();
   if(typeof onCompanionPlayerDefeat==='function')onCompanionPlayerDefeat();
   if(window.TELEMETRY)TELEMETRY.death({gold:P.gold});
   if(window.GUILD)GUILD.onDefeat();
@@ -540,7 +541,7 @@ function hurtPlayer(v,dx,dy,status,statusDur){
   if(playerInv>0||traveling) return false;
   playerInv=.55; rawPlayerDamage(v); sfx.push({type:'hurt',t:0,x:P.x,y:P.y-42,r:36});
   if(P.reviveGrace>0)return true;
-  const d=Math.hypot(dx,dy)||1; move(-dx/d*14,-dy/d*14);
+  const d=Math.hypot(dx,dy)||1,resist=window.SAGE&&SAGE.bonus('guard')?0:1; move(-dx/d*14*resist,-dy/d*14*resist);
   if(status&&!(P.shield>0)) applyPlayerStatus(status,statusDur);   // 보호막이 남아 있으면 상태이상도 막는다
   return true;
 }

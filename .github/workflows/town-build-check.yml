@@ -116,6 +116,7 @@ jobs:
             src/town/check_equipcmp.py
             src/town/check_skills.py
             src/town/check_skill_presentation.py
+            src/town/check_sage.py
             src/town/check_skill.py
             src/town/check_growth.py
             src/town/check_stash.py

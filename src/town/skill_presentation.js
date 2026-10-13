@@ -1,7 +1,7 @@
 // 스킬 연출 전용. 피해·범위·마나·쿨타임은 원래 스킬 코드가 담당한다.
 const SKILL_SHOW = {events:[], pose:null, stop:0, shake:0, flash:0, color:'#fff0cc'};
 const skillShowMapKey=()=>MAP+(MAP==='field'?':'+fieldSerial:'');
-const skillStage = id => Number((id.match(/[123]/)||['1'])[0]);
+const skillStage = id => /[4-7]_/.test(id)?3:Number((id.match(/[123]/)||['1'])[0]);
 const skillElement = id => id.startsWith('fire')?'fire':id.startsWith('ice')?'ice':id.startsWith('bolt')?'volt':id.startsWith('dark')?'dark':id.startsWith('holy')?'holy':'stone';
 const SKILL_COLOR = {fire:'#ff8233',ice:'#a1e8ff',volt:'#fff0a1',dark:'#b18aff',holy:'#ffedb1',stone:'#ffd58d'};
 function skillShowEvent(type,x,y,r,extra={}){
@@ -18,9 +18,9 @@ function skillShowImpact(kind,x,y,r,stage=2){
   if(stage===3&&typeof HAP==='function')HAP([28,15,40],2);
 }
 function skillShowStart(id,d,rank,shotAt,zoneAt,fxAt){
-  const stage=skillStage(id),kind=skillElement(id),weaponType={sword:'sword',spear:'spear',bow:'bow',fist:'gauntlet'}[id.replace(/[123].*/, '')]||'staff';
+  const stage=skillStage(id),kind=skillElement(id),weaponType={sword:'sword',spear:'spear',bow:'bow',fist:'gauntlet'}[id.replace(/[1-7].*/, '')]||'staff';
   const weapon={wt:weaponType,img:WIMG[weaponType+'_01'],item:null};
-  const pose={id,stage,kind,d:d.slice(),dir:P.dir,flip:P.flip,t:0,map:MAP,life:id==='fist3'?.64:id==='spear3'?.68:id==='bow3'?.6:stage===3?.64:.5,weapon,mapKey:skillShowMapKey()};
+  const pose={id,stage,kind,d:d.slice(),dir:P.dir,flip:P.flip,t:0,map:MAP,life:window.SAGE&&SAGE.skills[id]&&SAGE.skills[id].dur?SAGE.skills[id].dur:id==='fist3'?.64:id==='spear3'?.68:id==='bow3'?.6:stage===3?.64:.5,weapon,mapKey:skillShowMapKey()};
   SKILL_SHOW.pose=pose;
   for(let i=shotAt;i<shots.length;i++){shots[i].skillId=id;shots[i].visualStage=stage;shots[i].visualMapKey=skillShowMapKey();}
   for(let i=zoneAt;i<zones.length;i++){zones[i].skillId=id;zones[i].visualStage=stage;zones[i].visualWeapon=weapon;zones[i].visualMapKey=skillShowMapKey();}
@@ -45,14 +45,14 @@ function skillShowTick(dt,paused){
 function skillShowPose(){
   const p=SKILL_SHOW.pose,out={x:0,y:0,rot:0,sx:1,sy:1,shadow:1,frame:null,dir:null,flip:false};if(!p)return out;
   const k=p.t/p.life;out.dir=p.dir;out.flip=p.flip;
-  if(p.id==='spear3'){
-    const launch=Math.min(1,p.t/.15),land=Math.max(0,Math.min(1,(p.t-.28)/.14));
+  if(p.id==='spear3'||p.id==='spear7_heaven'){
+    const launch=Math.min(1,p.t/.15),land=Math.max(0,Math.min(1,(p.t-(p.id==='spear7_heaven'?.4:.28))/.14));
     out.y=-118*Math.sin(launch*Math.PI/2)*(1-land);out.shadow=Math.max(.3,1+out.y/160);
     if(p.t>.42){out.sy=1-.18*Math.sin(Math.min(1,(p.t-.42)/.2)*Math.PI);out.sx=1.08;}
     out.rot=p.t<.3?-.16:.12;out.frame=0;
   }else if(p.id==='fist3'){
     const phase=(p.t%.2)/.2;out.y=-12*Math.sin(phase*Math.PI);out.sy=phase<.25?.84:1;out.sx=phase<.25?1.12:1;out.rot=(phase<.25?-.17:.09)*(p.flip?-1:1);out.frame=0;
-  }else if(p.id==='sword2'){
+  }else if(p.id==='sword2'||p.id==='sword4_whirl'||p.id==='spear4_wheel'||p.id==='bow4_circle'){
     out.dir=['side','back','side','front'][Math.min(3,Math.floor(k*4))];out.flip=k>.5;out.rot=Math.sin(k*Math.PI*4)*.13;out.y=-6*Math.sin(k*Math.PI);out.frame=0;
   }else if(p.id.startsWith('fist')||p.id.startsWith('spear')||p.id.startsWith('sword')){
     const lunge=Math.sin(k*Math.PI);out.x=p.d[0]*12*lunge;out.y=p.d[1]*8*lunge;out.rot=(p.flip?-1:1)*.12*lunge;out.frame=0;

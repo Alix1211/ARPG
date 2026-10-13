@@ -37,6 +37,7 @@ const skGround = (t, z) => Math.hypot(t.x - z.x, (t.y - z.y) * 1.3);   // 바닥
 
 // 쓸 수 있으면 true, 대상이 없어 못 썼으면 false(마나·쿨타임 되돌림)
 function castExtra(id, d, rank, cm, mod, skillMul){
+  if(SAGE_SKILLS[id])return sageCast(id,d,rank,cm,mod,skillMul);
   const mag = Math.max(8, cm.magic) * mod.dmg * skillMul, phy = Math.max(1, cm.phys) * mod.dmg * skillMul;
   const home = (P.passives && P.passives.magicGuide) || 0;
   const ang = Math.atan2(d[1], d[0]), ox = P.x + d[0] * 28, oy = P.y - 44 + d[1] * 28;

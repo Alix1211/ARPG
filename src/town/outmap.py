@@ -57,7 +57,7 @@ OUT_PROPS = [
  (FP + '01_tree_big', None, 2.2, 4.0, 4.0, (0.16, 0.3), 'tree'), (FP + '02_tree_mid', None, 5.6, 4.6, 3.2, (0.16, 0.3), 'tree'),
  (FP + '01_tree_big', None, 25.0, 4.0, 4.0, (0.16, 0.3), 'tree'), (FP + '02_tree_mid', None, 28.4, 4.8, 3.2, (0.16, 0.3), 'tree'),
  (FP + '03_tree_young', None, 12.0, 4.8, 2.2, (0.16, 0.3), 'tree'), (FP + '03_tree_young', None, 18.2, 4.8, 2.2, (0.16, 0.3), 'tree'),
- (FP + '01_tree_big', None, 2.0, 20.4, 4.0, (0.16, 0.3), 'tree'), (FP + '02_tree_mid', None, 15.6, 20.6, 3.2, (0.16, 0.3), 'tree'),
+ (FP + '01_tree_big', None, 2.0, 20.4, 4.0, (0.16, 0.3), 'tree'), (FP + '02_tree_mid', None, 18.6, 20.6, 3.2, (0.16, 0.3), 'tree'),
  (FP + '01_tree_big', None, 27.6, 20.4, 4.0, (0.16, 0.3), 'tree'), (FP + '03_tree_young', None, 11.4, 20.2, 2.2, (0.16, 0.3), 'tree'),
  (FP + '02_tree_mid', None, 21.4, 20.5, 3.2, (0.16, 0.3), 'tree'), (FP + '03_tree_young', None, 6.4, 20.4, 2.2, (0.16, 0.3), 'tree'),
 ]

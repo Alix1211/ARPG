@@ -7,6 +7,7 @@ function load(s){ const i = new Image(); i.src = s; return i; }
 const MAPS = {
   town: { name: '마을', map: A.map, ground: A.ground, mini: A.mini, blds: A.blds, props: A.props, npcs: A.npcs },
   out: { ...A.out },
+  sage: { ...A.sage },
   inn: { ...A.inn },
 };
 let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
@@ -112,6 +113,10 @@ for (const n of npcs){
     spots.push({name:'귀환 포탈',x:px,y:py,r:58,kind:'town_portal'});
   }
   if (CUR.exits) exits.push(...CUR.exits);
+  if(id==='out'){
+    spots.push({name:'현자의 숙소',x:15*TS,y:18.3*TS,r:62,kind:'sage_entry'});
+    exits.push({x0:14*TS,x1:16*TS,y0:18.5*TS,y1:19.5*TS,to:'sage',pos:MAPS.sage.spawn,dir:'back'});
+  }
   if (CUR.solids) solids.push(...CUR.solids);
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
   if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
@@ -134,7 +139,13 @@ const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:fals
   lifeSkills:{}, portalReadyAt:0 };
 function blocked(x, y){
   if (x < P.r || y < P.r + 20 || x > MWp - P.r || y > MHp - 6) return true;
-  if (CUR.grid && gridBlocked(x, y, P.r)) return true;   // 던전 벽
+  if (CUR.grid && gridBlocked(x, y, P.r)) return true;
+  if(CUR.blockPolygons)for(const poly of CUR.blockPolygons){
+    for(const [dx,dy] of [[0,0],[P.r,0],[-P.r,0],[0,P.r],[0,-P.r]]){
+      let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [ax,ay]=poly[i],[bx,by]=poly[j];if((ay>y+dy)!==(by>y+dy)&&(x+dx)<(bx-ax)*(y+dy-ay)/(by-ay)+ax)inside=!inside;}
+      if(inside)return true;
+    }
+  }   // 던전 벽
   for (const s of solids){
     const cx = Math.max(s.x0, Math.min(x, s.x1)), cy = Math.max(s.y0, Math.min(y, s.y1));
     if ((x - cx) ** 2 + (y - cy) ** 2 < P.r * P.r) return true;
@@ -233,6 +244,7 @@ const SKILL_PREV={fire2:'fire1',fire3:'fire2',ice2:'ice1',ice3:'ice2',bolt2:'bol
   bow2:'bow1',bow3:'bow2',fist2:'fist1',fist3:'fist2'};
 function skillPrereq(id){const prev=SKILL_PREV[id]||null;return {id:prev,ok:!prev||((P.skillLv&&P.skillLv[prev])||0)>=3};}
 function investSkill(id){
+  if(window.SAGE&&SAGE.skills[id])return false;
   if(!P.skillLv||!(id in P.skillLv)||P.skillPts<1)return false;
   const cur=P.skillLv[id]||0;if(cur>=5)return false;
   const pre=skillPrereq(id);if(cur<1&&!pre.ok){say('선행 스킬을 3단계까지 올려야 합니다.');return false;}
@@ -433,6 +445,7 @@ function act(){
   if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
+  if(near.kind==='sage_entry')return travel('sage',MAPS.sage.spawn,'back');
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
@@ -484,8 +497,8 @@ async function resumeLocation(st){
     }else if(map==='dungeon'&&typeof prepareDungeon==='function'){
       if(window.__DUN&&__DUN.restoreEntry)__DUN.restoreEntry(st.dungeonTheme||'ruins',st.caveReturn||null);
       await prepareDungeon(Math.max(1,st.floor||1));buildWorld('dungeon');
-    }else if(map==='out'){
-      buildWorld('out');
+    }else if(map==='out'||map==='sage'){
+      buildWorld(map);
     }else{
       buildWorld('town');
     }
@@ -513,6 +526,7 @@ function emergencyEscape(){
   return true;
 }
 function openDlg(n){
+  if(window.SAGE)sageCloseShop();
   talking = n;
   $('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
   const cport=n.companion&&A.companions&&A.companions[n.companion]&&A.companions[n.companion].port;
@@ -526,10 +540,12 @@ function openDlg(n){
   const gx=$('dlgGuildExam');if(gx)gx.hidden=n.shop!=='guild';
   show('dlg');
   $('dlgTalk').hidden=false;if(window.QUEST)QUEST.decorateDialog(n);
+  if(n.shop==='sage'){ $('dlgTrade').textContent='무예 배우기';SAGE.talk(); }
 }
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 const guildExamBtn=$('dlgGuildExam');if(guildExamBtn)guildExamBtn.addEventListener('click',()=>{if(talking&&talking.shop==='guild'&&window.GUILD)GUILD.openExam();});
 $('dlgTrade').addEventListener('click', () => {
+  if(talking&&talking.shop==='sage'){SAGE.open();return;}
   if(talking&&talking.companion&&window.COMPANION){COMPANION.hireFromDialog(talking);return;}
   if (talking.shop==='inn'){ closeAll(); if(typeof enterInn==='function')enterInn(); return; }
   if (talking.go === 'field'){ openRegionSelect(); return; }
@@ -1199,7 +1215,8 @@ function frame(now){
     if (s.title){ // 사람: 그림자 + 숨쉬기
       ctx.fillStyle = 'rgba(0,0,0,.26)'; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.w * 0.28, 6, 0, 0, 7); ctx.fill();
       const br = 1 + Math.sin(T * 2.2 + s.ph) * 0.014;
-      ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br);
+      const npcImage=s.idle?BI[s.idle[Math.floor(T*5)%s.idle.length]]:s.img;
+      ctx.drawImage(npcImage, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br);
       if(s.companion){
         ctx.save();ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(20,14,8,.9)';ctx.fillStyle='#ffe58a';
         const tt='TEST · '+s.name;ctx.strokeText(tt,s.x,s.y-s.h-10);ctx.fillText(tt,s.x,s.y-s.h-10);ctx.restore();
@@ -1226,7 +1243,7 @@ function frame(now){
   if(typeof drawTownTestCompanionsForced==='function')drawTownTestCompanionsForced();
   if(window.QUEST)QUEST.draw();
   if(!DUN&&!INDOOR)drawLeaves(camX,camY,vw,vh);
-  drawFx(sdt);skillShowTop(); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
+  drawFx(sdt);skillShowTop();sageDraw(); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   if(typeof drawCompanionFx==='function')drawCompanionFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + sdt / DAYLEN) % 1;
@@ -1567,6 +1584,7 @@ function drink(k,tier=1){
   return true;
 }
 function updSkills(dt){
+  sageTick(dt);
   P.reviveGrace=Math.max(0,(P.reviveGrace||0)-dt);
   potCd = Math.max(0, potCd - dt);
   P.castRoot = Math.max(0, (P.castRoot || 0) - dt);

@@ -165,7 +165,8 @@ function derived(){
   const t=totals(),b=G.P.stats||{str:5,vit:5,int:5,mag:6,dex:8,luck:3};
   const wt=eq[cur]&&eq[cur].wt, mb=wt&&G.masteryBonus?G.masteryBonus(wt):{lv:0,dmg:0,as:0};
   const passive=G.P.passives||{}, life=G.P.lifeSkills||{};
-  const phys=Math.max(1,Math.round((t.atk+b.str*.85*NUM)*(1+t.atkPct/100)*(1+mb.dmg/100)));
+  const sb=window.SAGE?SAGE.bonus:()=>0;
+  const phys=Math.max(1,Math.round((t.atk+b.str*.85*NUM)*(1+t.atkPct/100)*(1+mb.dmg/100)*(1+sb('attack')/100)));
   let magicBase=t.matk+b.int*.85*NUM;
   if(wt&&wt!=='staff'){
     // 마법 공용: 같은 단계·지능·숙련의 일반 지팡이 기준 70% 보장.
@@ -174,15 +175,15 @@ function derived(){
     magicBase=Math.max(magicBase,(staffBase+b.int*.85*NUM)*(1+mb.dmg/100)*.7);
   }
   const magic=Math.max(1,Math.round(magicBase*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
-  const maxHp=Math.round((20+b.vit*5)*NUM+t.hp), maxMp=Math.round((10+b.mag*4)*NUM+t.mp);
+  const maxHp=Math.round(((20+b.vit*5)*NUM+t.hp)*(1+sb('vitality')/100)), maxMp=Math.round((10+b.mag*4)*NUM+t.mp);
   const as=b.dex*.45+t.as+mb.as+(passive.rapid||0)*3;
   const crit=Math.min(65,5+b.dex*.08+t.crit+(passive.precision||0)*2);
   const critDmg=150+t.critDmg;
-  const damageReduce=Math.min(65,t.def/NUM*.75+(passive.survival||0)*3);
+  const damageReduce=Math.min(75,Math.min(65,t.def/NUM*.75+(passive.survival||0)*3)+sb('guard'));
   const manaReduce=Math.min(35,(passive.manaFlow||0)*4);
   const coin=(b.luck+t.luck)*1.5+t.coin+(passive.greed||0)*3+(life.moneyScent||0)*2;
   const find=t.find+(passive.greed||0)*5+(life.moneyScent||0)*5;
-  const move=b.dex*.12+t.ms;
+  const move=b.dex*.12+t.ms+sb('speed');
   return {
     t,phys,magic,maxHp,maxMp,as,crit,critDmg,damageReduce,manaReduce,coin,find,move,mastery:mb,
     fire:t.fire||0,ice:t.ice||0,skill:t.skill||0,
@@ -267,6 +268,8 @@ const SKD = { holy2_shield:'강한 피해 흡수막 5초, 4단계부터 8초. �
   spear1:'좁은 직선 3연속 찌르기, 마지막 타격이 강한 치명타', spear2:'창을 던져 맞은 자리에서 폭발', spear3:'지정 지점에 강하해 넓은 충격파',
   bow1:'맹독 화살 한 발, 명중 시 지속 독 피해', bow2:'부채꼴로 화살 여러 발', bow3:'넓은 구역에 화살 비, 맞은 적 둔화',
   fist1:'짧게 돌진해 쳐올리며 적의 준비동작을 끊음', fist2:'앞으로 뻗는 투기, 4랭크부터 관통', fist3:'제자리에서 3연속 원형 충격파, 둔화' };
+for(const [id,s] of Object.entries(window.SAGE?SAGE.skills:{})){IMPLEMENTED.add(id);SKN[id]=s.name;SKD[id]=s.desc;}
+for(const [label,prefix] of [['검 · 고대 무예','sword'],['활 · 고대 무예','bow'],['창 · 고대 무예','spear'],['격투 · 고대 무예','fist']])SKG.push([label,Object.keys(SAGE.skills).filter(id=>id.startsWith(prefix))]);
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
 const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};
@@ -450,8 +453,8 @@ function render(){
         const preTxt=pre.id&&!preOk?` · 선행 ${SKN[pre.id]||pre.id} Lv3 필요`:'';
         c.title=SKN[id]?SKN[id]+' · '+SKD[id]+preTxt+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
         if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
-        wrap.append(c,el('span','skrank',impl?`Lv${rank}/5`:'-'));
-        if(impl){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5||!preOk;plus.title=!preOk?`선행 스킬 ${SKN[pre.id]||pre.id} Lv3 필요`:'';plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
+        wrap.append(c,el('span','skrank',SAGE.skills[id]?`Lv${rank}/${SAGE.skills[id].max}`:impl?`Lv${rank}/5`:'-'));
+        if(impl&&!SAGE.skills[id]){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5||!preOk;plus.title=!preOk?`선행 스킬 ${SKN[pre.id]||pre.id} Lv3 필요`:'';plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
         row.append(wrap);
       }
       pane.append(row);
@@ -807,7 +810,7 @@ if(window.TELEMETRY)TELEMETRY.loadData(saved&&saved.telemetry||null);
 if(!saved&&window.TELEMETRY)TELEMETRY.enter(G.locationState());
 // 테스트용: 구현된 액티브 스킬을 전부 배운 상태(1랭크)로 만든다(포인트는 건드리지 않음 — 저장 검사와 충돌). 정식 시작 전에 false로 바꿀 것.
 const TEST_UNLOCK_ALL_SKILLS=false;
-if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}}
+if(TEST_UNLOCK_ALL_SKILLS){for(const id of IMPLEMENTED)if(!SAGE.skills[id]&&!((G.P.skillLv||{})[id]>0)){G.P.skillLv=G.P.skillLv||{};G.P.skillLv[id]=1;}}
 syncHud();syncPot();
 if(saved){
   G.P.hp=Math.max(1,Math.min(G.P.maxHp,saved.hp||G.P.maxHp));G.P.mp=Math.min(G.P.maxMp,saved.mp||0);G.setMax(G.P.maxHp,G.P.maxMp);
