@@ -16,10 +16,17 @@ const BGM = (() => {
     if(!activeBoss)activeBoss=monsters.find(m=>m.boss&&!m.dead&&(m.state==='chase'||Math.hypot(m.x-P.x,m.y-P.y)<360))||null;
     return activeBoss?'boss':MAP;
   }
+  // 음악은 시작 때 받지 않는다. 'js:파일명'이면 그 곡 파일을 처음 필요할 때만 불러온다(파일 이름에 내용 해시가 있어 한 번 받으면 재사용).
+  function source(name){
+    const t=tracks[name];if(!t.startsWith('js:'))return Promise.resolve(t);
+    const have=()=>window.BGM_DATA&&window.BGM_DATA[name];if(have())return Promise.resolve(have());
+    return new Promise((ok,fail)=>{const s=document.createElement('script');s.src=t.slice(3);s.async=true;
+      s.onload=()=>have()?ok(have()):fail(Error('bgm'));s.onerror=()=>{s.remove();fail(Error('bgm'));};document.head.appendChild(s);});
+  }
   function load(name){
     if(buffers[name])return Promise.resolve(buffers[name]);
     if(!tracks[name])return Promise.resolve(null);
-    if(!loading[name])loading[name]=fetch(tracks[name]).then(r=>r.arrayBuffer()).then(b=>context().decodeAudioData(b)).then(b=>buffers[name]=b).catch(()=>null);
+    if(!loading[name])loading[name]=source(name).then(u=>fetch(u)).then(r=>r.arrayBuffer()).then(b=>context().decodeAudioData(b)).then(b=>buffers[name]=b).catch(()=>{delete loading[name];return null;});
     return loading[name];
   }
   function fade(g,to,done){
