@@ -724,6 +724,7 @@ function saveGame(){
     localStorage.setItem(SKEY,JSON.stringify({v:3,release:1,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,lastVisitedTown:G.lastVisitedTown?G.lastVisitedTown():null,
+      minigames:window.MINIGAMES?MINIGAMES.saveData():null,
       telemetry:window.TELEMETRY?TELEMETRY.saveData():null,companion:window.COMPANION?COMPANION.saveData():null,
       trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
   }catch(e){}
@@ -731,6 +732,7 @@ function saveGame(){
 function loadGame(){
   let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null');}catch(e){}
   if(!d||d.v!==3||d.release!==1)return null;
+  if(window.MINIGAMES)MINIGAMES.loadData(d.minigames);
   bagPages=Math.max(1,Math.min(BAG_MAX_PAGES,d.bagPages|0||1));bagPage=Math.max(0,Math.min(bagPages-1,d.bagPage|0));
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
   for(let i=0;i<STASH;i++)stash[i]=d.stash&&d.stash[i]||null;

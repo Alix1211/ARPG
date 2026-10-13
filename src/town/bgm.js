@@ -30,7 +30,7 @@ const BGM = (() => {
   async function sync(){
     if(!unlocked)return;const c=context();if(!c)return;if(c.state==='suspended')try{await c.resume();}catch(e){}
     const volume=AUDIO_SETTINGS.get().bgm;
-    if(!volume||document.hidden){if(current){stop(current);current=null;}return;}
+    if(!volume||document.hidden||panel==='minigames'){if(current){stop(current);current=null;}return;}
     const name=target(),goal=(level[name]||.22)*volume;if(!tracks[name])return;
     if(current&&current.name===name){fade(current.gain,goal);return;}
     const token={name};current&&stop(current);current=token;
