@@ -133,7 +133,11 @@ function companionDrawMarketNpc(n){
   const idx=n.mercMoving?1+(Math.floor((n.mercT||0)*7)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return false;
   const h=108,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.24)';ctx.beginPath();ctx.ellipse(n.x,n.y,17,5.5,0,0,7);ctx.fill();
-  ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);ctx.restore();
+  ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}
+  if(d==='back')companionDrawWeapon(n.companion,n.x,n.y,d,0,.7);
+  ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);
+  if(d!=='back')companionDrawWeapon(n.companion,n.x,n.y,d,0,.7);
+  ctx.restore();
   return true;
 }
 function companionSetTownTests(enabled){
@@ -520,6 +524,24 @@ function appendCompanionSprite(list){
   if(!companionState.active)return;
   list.push({companion:companionState,key:companionState.y});
 }
+const MERC_WEAPON={sword:'sword',lancer:'spear',brawler:'gauntlet',archer:'bow',mage:'staff',gun:null};
+function companionDrawWeapon(id,x,y,dir,atkT=0,sc=.78){
+  const d=COMPANION_DEF[id],wt=d&&MERC_WEAPON[d.kind];if(!wt||typeof WIMG==='undefined')return;
+  const im=WIMG[wt+'_01'];if(!im||!im.complete||!im.naturalWidth)return;
+  let ang=0,ox=0,oy=-48;
+  if(dir==='side'){ang=Math.PI/2;ox=22;oy=-42;}
+  else if(dir==='front'){ang=Math.PI;ox=18;oy=-48;}
+  else{ang=0;ox=-18;oy=-52;}
+  if(atkT>0){
+    const p=Math.max(0,Math.min(1,1-atkT/.22));
+    if(wt==='sword')ang+=(p-.5)*2.4;
+    else if(wt==='spear')ox+=24*p;
+    else if(wt==='staff')ang+=(p-.5)*.65;
+    else if(wt==='bow')ang+=(p-.5)*.25;
+  }
+  const L=(typeof WL!=='undefined'&&WL[wt]||60)*sc,w=L*im.naturalWidth/im.naturalHeight,g=(typeof GRIP!=='undefined'&&GRIP[wt]||.7);
+  ctx.save();ctx.translate(x+ox,y+oy);ctx.rotate(ang);ctx.drawImage(im,-w/2,-L*g,w,L);ctx.restore();
+}
 function drawCompanion(c,dt){
   const src=COMPANION_IMG[c.active];if(!src||!src.fr)return;
   const d=c.dir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
@@ -532,6 +554,7 @@ function drawCompanion(c,dt){
   if(c.active==='hero')drawCompanionFx(0,true);
   ctx.save();
   if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+  if(c.active!=='hero'&&d==='back')companionDrawWeapon(c.active,c.x,c.y,d,c.atkT);
   if(c.active==='hero'&&c.atkT>0&&d!=='front'){
     const p=Math.max(0,Math.min(1,1-c.atkT/.22));
     const ang=d==='side'?(-1.85+p*3.55):(-1.45+p*2.9);
@@ -546,6 +569,7 @@ function drawCompanion(c,dt){
   }
   const kick=c.atkT>0?(c.atkT/.22)*4:0;
   ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
+  if(c.active!=='hero'&&d!=='back')companionDrawWeapon(c.active,c.x,c.y,d,c.atkT);
   ctx.restore();
 }
 function drawCompanionFx(dt,behind=false){
