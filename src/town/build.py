@@ -267,7 +267,7 @@ for k, name, cx, by, wt, dxr in B:
     if k == 'player_tavern': meta = dict(kind='minigame_tavern', solidScale=0.70)
     elif k == 'colosseum': meta = dict(noSpot=True, solidScale=0.72)
     elif k == 'arena_entry': meta = dict(kind='minigame_arena', solidScale=0.68)
-    elif k == 'bubble_house': meta = dict(noSpot=True, solidScale=0.68)
+    elif k == 'bubble_house': meta = dict(kind='minigame_bubble', solidScale=0.68)
     blds.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, door=dxr, **meta))
 
 # 소품 (건물 부품 중 바닥에 세울 수 있는 것만)
