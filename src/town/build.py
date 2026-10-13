@@ -543,6 +543,24 @@ def icon(path):
     im = Image.open(path).convert('RGBA'); im.thumbnail((96,96), Image.LANCZOS); return enc(im,88)
 for item in CATALOG['gear']:
     ICON[item['icon']] = icon(os.path.join(ROOT,item['file']))
+
+# 생활 전리품 아이콘: 새 임시 그림 대신 기존 음식/소품/재료 이미지를 재사용한다.
+LOOT_ICON_FILES = {
+    'food_bread':'food/food_06.png','food_apple':'food/food_07.png','food_grape':'food/food_09.png',
+    'food_orange':'food/food_11.png','food_fruit':'food/food_12.png','food_ale':'food/food_13.png',
+    'food_bottle':'food/food_15.png','food_wine':'food/food_16.png','food_cider':'food/food_17.png',
+    'food_pitcher':'food/food_19.png','food_pot':'food/food_20.png','food_vase':'food/food_21.png',
+    'food_bowl':'food/food_22.png','food_plates':'food/food_23.png','food_cheese':'food/food_24.png',
+    'food_sausage':'food/food_25.png','food_chicken':'food/food_26.png','food_flour':'food/food_29.png',
+    'food_basket':'food/food_30.png','junk_bones':'dungeon/props/bones.png',
+    'junk_iron':'quest_items/coarse_iron.png','junk_wood':'quest_items/dry_winter_wood.png',
+    'junk_resin':'quest_items/repair_resin.png','junk_crystal':'quest_items/clear_crystal.png',
+    'junk_herb':'quest_items/herb_bundle.png','trade_obsidian':'field_props/volcano/06_obsidian.png',
+}
+LOOT_ICONS = {}
+for key, rel in LOOT_ICON_FILES.items():
+    LOOT_ICONS[key] = icon(R + rel)
+
 # 이전 상점/검사 아이콘 별칭. 신규 생성은 baseId를 사용한다.
 for i,kind in enumerate(['head','body','hands','feet']): ICON[f'armor_{i}']=ICON[f'knight_{kind}_02']
 for kind,row in [('ring',0),('neck',1)]:
@@ -741,7 +759,7 @@ for item in QUEST_ITEM_SPEC['items']:
     im = Image.open(R + 'quest_items/' + item['id'] + '.png').convert('RGBA')
     im.thumbnail((128, 128), Image.LANCZOS)
     QUEST_ITEMS[item['id']] = dict(name=item['name'], icon=enc(im, 90))
-A = dict(questItems=QUEST_ITEMS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
+A = dict(questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
