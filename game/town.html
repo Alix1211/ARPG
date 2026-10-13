@@ -403,7 +403,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1652</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1758</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1765,11 +1765,12 @@ const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: �
 };
 const DUR = {}; for (const k in WB) DUR[k] = WB[k].dur;
 const PI = Math.PI;
-function wDraw(x, y, ang, sc = 1, mir = false){
-  const im = WPN && WPN.img; if (!im || !im.complete || !im.naturalWidth) return;
-  const L = WL[WPN.wt] * sc, w = L * im.naturalWidth / im.naturalHeight;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (mir) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -L * GRIP[WPN.wt], w, L); ctx.restore();
+function wDrawWeapon(weapon, x, y, ang, sc = 1, mir = false){
+  const im = weapon && weapon.img; if (!im || !im.complete || !im.naturalWidth) return;
+  const L = WL[weapon.wt] * sc, w = L * im.naturalWidth / im.naturalHeight;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (mir) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -L * GRIP[weapon.wt], w, L); ctx.restore();
 }
+function wDraw(x, y, ang, sc = 1, mir = false){ return wDrawWeapon(WPN,x,y,ang,sc,mir); }
 const shots = [];
 function attack(){
   if (typeof playerControlLocked === 'function' && playerControlLocked()) return;
@@ -1876,7 +1877,7 @@ function drawShots(dt){
           if (again && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ if (s.rehit) s.hit.set(t, s.t); else s.hit.add(t); pierceHit(s, t); }
         }
       } else {
-        for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+        for (const t of combatTargets()){ if(s.companion&&!t.monster)continue;if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
       }
       if (!s.done && s.t > s.life) boom(s, null);
     }
@@ -1913,15 +1914,26 @@ function drawShots(dt){
 function boom(s,t){
   const vx=s.vx,vy=s.vy;s.done=true;s.vx=s.vy=0;
   const hit=(u)=>{
-    hitTarget(u,[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0],!!s.stagger,s.dmg);
+    const dir=[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0];
+    if(s.companion&&u&&u.monster&&typeof companionHit==='function')companionHit(u,s.dmg||1,dir[0],dir[1],s.kb||4);
+    else hitTarget(u,dir,!!s.stagger,s.dmg);
     if(s.status&&typeof applyMonsterStatus==='function')applyMonsterStatus(u,s.status,s.statusDur||2.5);
     if(s.chill){const now=performance.now()/1000;if(now-(u.chillAt||-9)>1.6)u.chillN=0;u.chillAt=now;u.chillN=(u.chillN||0)+1;if(s.chillFreeze&&u.chillN>=3){u.chillN=0;applyMonsterStatus(u,'freeze',s.chillFreeze);}}
   };
   if(s.blast){
-    for(const u of combatTargets())if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);
+    for(const u of combatTargets()){if(s.companion&&!u.monster)continue;if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);}
     sfx.push({type:s.fx||(s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact'),t:0,x:s.x,y:s.y,r:s.blast});
   }else if(t){
     hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:s.pellet?22:34});
+  }
+  if(s.companion&&s.companionBurst&&typeof companionHit==='function'){
+    const r=s.companionBurstRadius||100,ratio=s.companionBurstRatio||.42;
+    if(typeof companionFx!=='undefined')companionFx.push({kind:'burst',x:s.x,y:s.y,r,t:0,life:.34});
+    for(const u of monsters){
+      if(!u||u===t||u.dead||u.removed||Math.hypot(u.x-s.x,u.y-s.y)>r)continue;
+      companionHit(u,(s.dmg||1)*ratio,u.x-s.x,u.y-s.y,s.companionBurstStun?8:4);
+      if(s.companionBurstStun)u.stun=Math.max(u.stun||0,.28);
+    }
   }
 }
 
@@ -2086,7 +2098,8 @@ function drawSkillFx(dt){
 const FXPAL = { neutral:{ glow:[255,196,96], body:[255,238,176], core:[255,255,255] }, fire:{ glow:[255,100,24], body:[255,164,66], core:[255,238,196] }, ice:{ glow:[70,160,255], body:[168,224,255], core:[244,252,255] } };
 let FXC = FXPAL.neutral;
 const fxA = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
-function atkPalette(){ const it=WPN&&WPN.item,st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{}, f = st.fire || 0, c = st.ice || 0; return f > 0 && f >= c ? FXPAL.fire : c > 0 ? FXPAL.ice : FXPAL.neutral; }
+function atkPaletteFor(weapon){ const it=weapon&&weapon.item,st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{}, f=st.fire||0,c=st.ice||0;return f>0&&f>=c?FXPAL.fire:c>0?FXPAL.ice:FXPAL.neutral; }
+function atkPalette(){ return atkPaletteFor(WPN); }
 // 휘두름 궤적(초승달)
 function arcFx(cx, cy, r, a0, a1, k){
   if (k <= 0 || k >= 1) return;
@@ -2138,38 +2151,36 @@ function burst(x, y, r){
 }
 // 공격 단계: 준비(0~0.3) → 타격(0.3~0.6) → 회수
 function phase(k){ return k < 0.3 ? { w: k / 0.3, s: 0, r: 0 } : k < 0.6 ? { w: 1, s: (k - 0.3) / 0.3, r: 0 } : { w: 1, s: 1, r: Math.min(1, (k - 0.6) / 0.4) }; }
-function weaponLayers(){
-  // 반환: { back: fn, front: fn, lunge:[dx,dy] } — 좌표는 "오른쪽을 보는" 기준(옆모습은 나중에 뒤집음)
-  const x = P.x, y = P.y, out = { back: null, front: null, lunge: [0, 0] };
-  if (!WPN) return out;
-  const wt = WPN.wt;
-  if (!atkBusy()) return out; // 걷기·서 있기에는 무기를 그리지 않음
-  FXC = atkPalette();
-  const a = P.atk, k = Math.min(1, a.t / DUR[wt]), ph = phase(k), d = a.dir;
-  const thrust = ph.s * (1 - ph.r), alt = a.n % 2 ? 1 : -1;
-  out.lunge = d === 'side' ? [3 * thrust, 0] : d === 'front' ? [0, 3 * thrust] : [0, -3 * thrust];
-  if (d === 'side'){ // 무기는 모두 몸 뒤
-    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(-0.6, -2.0, ph.w) : lerp(-2.0, 1.9, ph.s) - ph.r * 0.6;
-      out.back = () => wDraw(x + 22, y - 32, an);
-      out.front = () => arcFx(x + 22, y - 32, 52, -1.6, lerp(-1.6, 1.9, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }
-    else if (wt === 'spear') out.back = () => { wDraw(x - 6 - 10 * (1 - ph.w) + 34 * thrust, y - 40, PI / 2); thrustFx(x + 30, y - 40, 0, thrust, ph.r, 76); };
-    else if (wt === 'bow') out.back = () => wDraw(x + 20, y - 44, 0, 1, true);
-    else if (wt === 'staff') out.back = () => wDraw(x + 26 + 8 * thrust, y - 42, lerp(0.35, 1.2, thrust) - 0.25 * ph.w * (1 - ph.s));
-    else out.back = () => { wDraw(x + 18 + 20 * thrust, y - 44 + (alt > 0 ? 8 : -2), -PI / 2, 1.1, true); burst(x + 46, y - 42 + (alt > 0 ? 8 : -2), ph.s > 0 ? ph.r : 1); };  // 주먹(그림 아래쪽)이 앞을 향하게
-  } else if (d === 'back'){
-    if (wt === 'sword'){ const an = ph.s === 0 ? lerp(0, -1.5, ph.w) : lerp(-1.5, 1.5, ph.s);
-      out.back = () => { wDraw(x + 4, y - 58, an); arcFx(x + 4, y - 58, 48, -1.5, lerp(-1.5, 1.5, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1)); }; }
-    else if (wt === 'spear') out.back = () => { wDraw(x + 7, y - 58 - 32 * thrust, 0); thrustFx(x + 7, y - 78, -PI / 2, thrust, ph.r, 76); };
-    else if (wt === 'bow') out.back = () => wDraw(x, y - 80, PI / 2);
-    else if (wt === 'staff') out.back = () => wDraw(x + 9, y - 60 - 8 * thrust, lerp(0.25, -0.1, thrust));
-    else out.back = () => { wDraw(x + 10 * alt, y - 70 - 16 * thrust, PI, 1.1); burst(x + 10 * alt, y - 100 - 18 * thrust, ph.s > 0 ? ph.r : 1); };
-  } else { // 정면(아래로 공격): 무기는 그리지 않고 이펙트만
-    if (wt === 'sword') out.front = () => arcFx(x, y - 30, 46, PI - 1.4, lerp(PI - 1.4, PI + 1.4, ph.s), ph.r * 1.4 + (ph.s > 0 ? 0.01 : 1));
-    else if (wt === 'spear') out.front = () => thrustFx(x + 4, y - 30, PI / 2, thrust, ph.r, 70);
-    else if (wt === 'gauntlet') out.front = () => burst(x + 10 * alt, y - 18 + 14 * thrust, ph.s > 0 ? ph.r : 1);
+function weaponLayersFor(actor,weapon,atk,busy=true){
+  // 플레이어와 용병이 같은 무기 모션 파이프라인을 공유한다.
+  const x=actor.x,y=actor.y,out={back:null,front:null,lunge:[0,0]};
+  if(!weapon||!atk||!busy)return out;
+  const wt=weapon.wt,dur=atk.dur||DUR[wt]||WB[wt].dur,k=Math.min(1,atk.t/dur),ph=phase(k),d=atk.dir;
+  FXC=atkPaletteFor(weapon);
+  const thrust=ph.s*(1-ph.r),alt=atk.n%2?1:-1,draw=(xx,yy,ang,sc=1,mir=false)=>wDrawWeapon(weapon,xx,yy,ang,sc,mir);
+  out.lunge=d==='side'?[3*thrust,0]:d==='front'?[0,3*thrust]:[0,-3*thrust];
+  if(d==='side'){
+    if(wt==='sword'){const an=ph.s===0?lerp(-0.6,-2.0,ph.w):lerp(-2.0,1.9,ph.s)-ph.r*.6;
+      out.back=()=>draw(x+22,y-32,an);out.front=()=>arcFx(x+22,y-32,52,-1.6,lerp(-1.6,1.9,ph.s),ph.r*1.4+(ph.s>0?.01:1));}
+    else if(wt==='spear')out.back=()=>{draw(x-6-10*(1-ph.w)+34*thrust,y-40,PI/2);thrustFx(x+30,y-40,0,thrust,ph.r,76);};
+    else if(wt==='bow')out.back=()=>draw(x+20,y-44,0,1,true);
+    else if(wt==='staff')out.back=()=>draw(x+26+8*thrust,y-42,lerp(.35,1.2,thrust)-.25*ph.w*(1-ph.s));
+    else out.back=()=>{draw(x+18+20*thrust,y-44+(alt>0?8:-2),-PI/2,1.1,true);burst(x+46,y-42+(alt>0?8:-2),ph.s>0?ph.r:1);};
+  }else if(d==='back'){
+    if(wt==='sword'){const an=ph.s===0?lerp(0,-1.5,ph.w):lerp(-1.5,1.5,ph.s);
+      out.back=()=>{draw(x+4,y-58,an);arcFx(x+4,y-58,48,-1.5,lerp(-1.5,1.5,ph.s),ph.r*1.4+(ph.s>0?.01:1));};}
+    else if(wt==='spear')out.back=()=>{draw(x+7,y-58-32*thrust,0);thrustFx(x+7,y-78,-PI/2,thrust,ph.r,76);};
+    else if(wt==='bow')out.back=()=>draw(x,y-80,PI/2);
+    else if(wt==='staff')out.back=()=>draw(x+9,y-60-8*thrust,lerp(.25,-.1,thrust));
+    else out.back=()=>{draw(x+10*alt,y-70-16*thrust,PI,1.1);burst(x+10*alt,y-100-18*thrust,ph.s>0?ph.r:1);};
+  }else{
+    if(wt==='sword')out.front=()=>arcFx(x,y-30,46,PI-1.4,lerp(PI-1.4,PI+1.4,ph.s),ph.r*1.4+(ph.s>0?.01:1));
+    else if(wt==='spear')out.front=()=>thrustFx(x+4,y-30,PI/2,thrust,ph.r,70);
+    else if(wt==='gauntlet')out.front=()=>burst(x+10*alt,y-18+14*thrust,ph.s>0?ph.r:1);
   }
   return out;
 }
+function weaponLayers(){return weaponLayersFor(P,WPN,P.atk,atkBusy());}
 function drawMe(){
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x, P.y, 17, 6, 0, 0, 7); ctx.fill();
   const busy = atkBusy(), dir = busy ? P.atk.dir : P.dir, flip = busy ? P.atk.flip : P.flip;
@@ -4338,9 +4349,9 @@ function supplyLoot(m){
   const x=weightedLoot(pool,x=>x.cost,cap);if(!x)return null;
   return {lootType:'supply',supplyId:x.id,name:x.name,icon:SUPPLY_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.cost};
 }
-function tradeLoot(m){
+function tradeLoot(m,regionOverride){
   if(!window.TRADE||!Array.isArray(TRADE.goods))return null;
-  const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],region=fieldTheme||'town',reg=TRADE.regions&&TRADE.regions[region],pool=TRADE.goods.filter(x=>x.base<=cap);
+  const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],region=regionOverride||fieldTheme||'town',reg=TRADE.regions&&TRADE.regions[region],pool=TRADE.goods.filter(x=>x.base<=cap);
   const boost=x=>{const q=reg&&reg.m&&reg.m[x.id];return q<=.85?2.2:(q>=1.2?0.55:1);};
   const x=weightedLoot(pool,x=>x.base,cap,boost);if(!x)return null;
   return {lootType:'trade',tradeId:x.id,name:x.name,icon:TRADE_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.base};
@@ -4363,6 +4374,29 @@ function randomDropItem(m){
     return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,rank:m&&m.rank,roll:true,magicBoost});
   }
   return UI.make({kind:Math.random()<.55?'ring':'neck',tier,rank:m&&m.rank,roll:true,magicBoost});
+}
+function grantMonsterEquivalentLoot(tier,rolls=10,region){
+  tier=Math.max(1,Math.min(7,tier|0));rolls=Math.max(1,Math.min(50,rolls|0||10));
+  const dummy={tier},find=(window.UI&&UI.findBonus)?UI.findBonus():0,gearChance=equipmentDropChance(dummy,find);
+  const out={tier,rolls,found:0,gear:0,supply:0,trade:0,junk:0,discardTrade:0,discardBag:0,none:0,names:[]};
+  for(let i=0;i<rolls;i++){
+    const roll=Math.random();let it=null,kind='none';
+    if(roll<gearChance){it=randomDropItem(dummy);kind='gear';}
+    else if(roll<gearChance+SUPPLY_DROP_RATE){it=supplyLoot(dummy);kind='supply';}
+    else if(roll<gearChance+SUPPLY_DROP_RATE+TRADE_DROP_RATE){it=tradeLoot(dummy,region);kind='trade';}
+    else if(roll<gearChance+SUPPLY_DROP_RATE+TRADE_DROP_RATE+JUNK_DROP_RATE){it=junkLoot(dummy);kind='junk';}
+    if(!it){out.none++;continue;}
+    let ok=false;
+    if(kind==='supply'&&window.MINIGAMES&&MINIGAMES.addSupplyLoot)ok=!!MINIGAMES.addSupplyLoot(it.supplyId,1);
+    else if(kind==='trade'&&window.TRADE&&TRADE.addLoot)ok=!!TRADE.addLoot(it.tradeId,1);
+    else if(window.UI&&UI.add)ok=!!UI.add(it);
+    if(ok){
+      out.found++;out[kind]++;if(out.names.length<12)out.names.push(it.name||kind);
+    }else if(kind==='trade')out.discardTrade++;
+    else out.discardBag++;
+  }
+  if(window.UI&&UI.save)UI.save();
+  return out;
 }
 function monsterExp(m){
   const tier=monsterTier(m),cap=tier*10,lv=P.lv||1;
@@ -4603,6 +4637,7 @@ window.__FD={
   debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
   debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
   lootConfig(t=FIELD_TIER[fieldTheme]||1){t=Math.max(1,Math.min(7,t|0));const cap=LOOT_VALUE_CAP[t-1];return {tier:t,cap,equip:EQUIP_DROP_BY_TIER[t-1],supplyRate:SUPPLY_DROP_RATE,tradeRate:TRADE_DROP_RATE,junkRate:JUNK_DROP_RATE,supply:window.MINIGAMES?MINIGAMES.supplyCatalog().filter(x=>x.cost<=cap).map(x=>x.id):[],trade:window.TRADE?TRADE.goods.filter(x=>x.base<=cap).map(x=>x.id):[],junk:JUNK_LOOT.filter(x=>x.minTier<=t).map(x=>x.name)};},
+  grantMonsterLoot:(tier,rolls=10,region)=>grantMonsterEquivalentLoot(tier,rolls,region),
   testSpawn(id,dx,dy){const m=createMonster(id,P.x+dx,P.y+dy);m.stun=99;monsters.push(m);return monsters.indexOf(m);},   // 연출 확인용
   testOp(i,op,a){const m=monsters[i];if(!m)return false;if(op==='hit')hitMonster(m,[a||1,0],true,1);else if(op==='kill')killMonster(m);else if(op==='act')monAct(m,a,.5,1,0);else if(op==='clear'){for(const x of monsters)x.removed=true;}else if(op==='go'){m.stun=0;}return true;},
   hurtTest(v){rawPlayerDamage(v);return P.hp;},   // 검사용: 방어 계산 후 직접 피해
@@ -4657,6 +4692,7 @@ for(const id in (A.companions||{})){
   COMPANION_IMG[id]={...src,fr};
 }
 const companionFx=[];
+let companionAtk=null;
 let companionState={active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,tier:1,skillCount:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
 
 function companionFee(id){
@@ -4761,9 +4797,7 @@ function companionDrawMarketNpc(n){
   const h=108,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.24)';ctx.beginPath();ctx.ellipse(n.x,n.y,17,5.5,0,0,7);ctx.fill();
   ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}
-  if(d==='back')companionDrawWeapon(n.companion,n.x,n.y,d,0,.7);
   ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);
-  if(d!=='back')companionDrawWeapon(n.companion,n.x,n.y,d,0,.7);
   ctx.restore();
   return true;
 }
@@ -4852,7 +4886,7 @@ function companionEmpty(){
 }
 function companionActivate(id,mode,extra={}){
   const q=nearestSafePosition(P.x-48,P.y+18);
-  companionTarget=null;companionFx.length=0;
+  companionTarget=null;companionFx.length=0;companionAtk=null;
   companionState={active:id,mode,storyQuest:extra.storyQuest||null,remaining:mode==='hire'?Math.max(0,+extra.remaining||DAYLEN):0,
     expired:mode==='hire'&&!!extra.expired,damage:Math.max(1,Math.round(+extra.damage||basicDamage()*1.15)),
     tier:Math.max(1,Math.min(7,+extra.tier||1)),skillCount:Math.max(0,+extra.skillCount||0),
@@ -4891,7 +4925,7 @@ function companionLoad(d){
 }
 function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
-  companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;
+  companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;companionAtk=null;
   if(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')buildWorld(MAP);
   if(!silent){const nm=COMPANION_DEF[id]&&COMPANION_DEF[id].name||'용병';say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. '+nm+'이(가) 여관으로 돌아갔습니다.');}
   if(window.UI&&UI.save)UI.save();return true;
@@ -5064,46 +5098,74 @@ function companionHit(m,v,dx,dy,kb){
   if(m.hp<=0)killMonster(m);
   return true;
 }
+function companionWeaponFor(c=companionState){
+  const d=COMPANION_DEF[c.active],wt=d&&MERC_WEAPON[d.kind];if(!wt||typeof WIMG==='undefined')return null;
+  let icon=wt+'_01';
+  if(typeof TIER_MATCH!=='undefined'&&TIER_MATCH.gear){
+    const tier=Math.max(1,Math.min(7,c.tier||1)),pool=TIER_MATCH.gear.filter(b=>b.kind==='weapon'&&b.wt===wt&&b.tier<=tier);
+    pool.sort((a,b)=>(b.tier||1)-(a.tier||1)||(b.requiredLevel||1)-(a.requiredLevel||1)||(b.powerGrade||1)-(a.powerGrade||1));
+    if(pool[0]&&WIMG[pool[0].icon])icon=pool[0].icon;
+  }
+  const im=WIMG[icon];return im?{wt,img:im,item:null,icon}:null;
+}
+function companionResolveSkillBurst(m,atk){
+  if(!m||m.dead||m.removed||(!atk.skill2&&!atk.skill3))return;
+  const d=COMPANION_DEF[companionState.active],radius=d.kind==='mage'?145:d.kind==='archer'?115:95,ratio=atk.skill3?.68:.42;
+  companionFx.push({kind:'burst',x:m.x,y:m.y-m.h*.45,r:radius,t:0,life:.34});
+  for(const o of monsters){
+    if(!o||o===m||o.dead||o.removed||Math.hypot(o.x-m.x,o.y-m.y)>radius)continue;
+    companionHit(o,companionState.damage*ratio,o.x-companionState.x,o.y-companionState.y,atk.skill3?8:4);
+    if(atk.skill3)o.stun=Math.max(o.stun||0,.28);
+  }
+}
 function companionAttack(m){
-  const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx);
-  c.cd=d.attackCd;c.atkT=.22;c.attackAngle=a;c.skillCount=(c.skillCount||0)+1;
-  const tier=Math.max(1,Math.min(7,c.tier||1));
-  const skill1=tier>=2&&c.skillCount%5===0,skill2=tier>=4&&c.skillCount%7===0,skill3=tier>=6&&c.skillCount%9===0;
+  const c=companionState,d=COMPANION_DEF[c.active],dx=m.x-c.x,dy=m.y-c.y,a=Math.atan2(dy,dx);
+  c.cd=d.attackCd;c.skillCount=(c.skillCount||0)+1;
+  const tier=Math.max(1,Math.min(7,c.tier||1)),skill1=tier>=2&&c.skillCount%5===0,skill2=tier>=4&&c.skillCount%7===0,skill3=tier>=6&&c.skillCount%9===0;
   let mul=skill1?1.25:1;if(skill2)mul*=1.15;if(skill3)mul*=1.45;
-  if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else c.dir=dy<0?'back':'front';
+  if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else{c.dir=dy<0?'back':'front';c.flip=false;}
   if(d.kind==='gun'){
+    c.atkT=.22;
     const mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
     companionFx.push({kind:'muzzle',x:mx,y:my,a,t:0,life:.18});
     companionFx.push({kind:'laser',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.22});
     companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.24});
-    companionHit(m,c.damage*mul,dx,dy,3);
-  }else if(d.kind==='archer'){
-    const mx=c.x+Math.cos(a)*25,my=c.y-52+Math.sin(a)*8;
-    companionFx.push({kind:'arrow',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,a,t:0,life:.18});
-    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.20});
-    companionHit(m,c.damage*mul,dx,dy,4);
-  }else if(d.kind==='mage'){
-    const mx=c.x+Math.cos(a)*20,my=c.y-58+Math.sin(a)*8;
-    companionFx.push({kind:'magicbolt',x1:mx,y1:my,x2:m.x,y2:m.y-m.h*.55,t:0,life:.26});
-    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.55,t:0,life:.28});
-    companionHit(m,c.damage*mul,dx,dy,2);
-  }else if(d.kind==='brawler'){
-    companionFx.push({kind:'impact',x:m.x,y:m.y-m.h*.48,t:0,life:.22});
-    companionHit(m,c.damage*mul,dx,dy,13);
-  }else{
+    companionHit(m,c.damage*mul,dx,dy,3);companionResolveSkillBurst(m,{skill2,skill3});return;
+  }
+  // 카엘렌은 기존 전용 검 궤적을 유지한다. 10인 용병만 공용 무기 모션을 사용한다.
+  if(c.active==='hero'){
+    c.atkT=.22;
     companionFx.push({kind:'slash',x:c.x,y:c.y-43,a,t:0,life:.30});
     companionFx.push({kind:'swordflash',x:c.x,y:c.y-43,a,t:0,life:.18});
-    companionHit(m,c.damage*mul,dx,dy,d.kind==='lancer'?16:10);
+    companionHit(m,c.damage*mul,dx,dy,10);companionResolveSkillBurst(m,{skill2,skill3});return;
   }
-  if(skill2||skill3){
-    const radius=d.kind==='mage'?145:d.kind==='archer'?115:95,ratio=skill3?.68:.42;
-    companionFx.push({kind:'burst',x:m.x,y:m.y-m.h*.45,r:radius,t:0,life:.34});
-    for(const o of monsters){
-      if(!o||o===m||o.dead||o.removed||Math.hypot(o.x-m.x,o.y-m.y)>radius)continue;
-      companionHit(o,c.damage*ratio,o.x-c.x,o.y-c.y,skill3?8:4);
-      if(skill3)o.stun=Math.max(o.stun||0,.28);
+  const weapon=companionWeaponFor(c),wt=weapon&&weapon.wt;if(!weapon||!wt)return;
+  const dur=(WB[wt]&&WB[wt].dur)||d.attackCd;
+  companionAtk={id:c.active,t:0,dur,wt,dir:c.dir,flip:c.flip,n:c.skillCount,target:m,mul,skill2,skill3,weapon,resolved:false};
+  c.atkT=dur;
+}
+function companionUpdateAttack(dt){
+  const c=companionState,a=companionAtk;if(!a||a.id!==c.active)return;
+  a.t+=dt;c.atkT=Math.max(0,a.dur-a.t);
+  const k=a.t/a.dur;if(!a.resolved&&k>.45){
+    a.resolved=true;
+    const m=a.target,d=COMPANION_DEF[c.active];if(m&&!m.dead&&!m.removed){
+      const dx=m.x-c.x,dy=m.y-c.y,dist=Math.hypot(dx,dy)||1;
+      if(a.wt==='bow'||a.wt==='staff'){
+        const w=WB[a.wt],speed=w.speed,ux=dx/dist,uy=dy/dist;
+        const sx=a.wt==='staff'?c.x+ux*24:c.x+(a.dir==='side'?(a.flip?-30:30):0);
+        const sy=a.wt==='staff'?c.y-44+uy*24:c.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
+        shots.push({x:sx,y:sy,vx:ux*speed,vy:uy*speed,speed,t:0,life:w.life,kind:a.wt,blast:w.blast||0,
+          companion:true,dmg:Math.max(1,Math.round(c.damage*a.mul)),kb:a.wt==='bow'?4:2,target:m,
+          companionBurst:a.skill2||a.skill3,companionBurstRadius:d.kind==='mage'?145:115,
+          companionBurstRatio:a.skill3?.68:.42,companionBurstStun:!!a.skill3});
+      }else{
+        const kb=a.wt==='spear'?16:a.wt==='gauntlet'?13:10;
+        companionHit(m,c.damage*a.mul,dx,dy,kb);companionResolveSkillBurst(m,a);
+      }
     }
   }
+  if(k>1.2)companionAtk=null;
 }
 function updateCompanion(dt){
   companionUpdateMarket(dt);
@@ -5111,7 +5173,7 @@ function updateCompanion(dt){
   c.moving=false;
   c.navWait=Math.max(0,(c.navWait||0)-dt);
   const d=COMPANION_DEF[c.active];
-  if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionWarp();}
+  if(c.lastMap!==MAP){c.lastMap=MAP;companionFx.length=0;companionAtk=null;companionWarp();}
   if(c.mode==='hire'&&!c.expired){
     c.remaining=Math.max(0,c.remaining-dt);
     if(c.remaining<=0){
@@ -5124,7 +5186,7 @@ function updateCompanion(dt){
     }
   }
   if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')){companionReturn('expired');return;}
-  c.cd=Math.max(0,c.cd-dt);c.atkT=Math.max(0,c.atkT-dt);
+  c.cd=Math.max(0,c.cd-dt);if(COMPANION_DEF[c.active].kind==='gun')c.atkT=Math.max(0,c.atkT-dt);companionUpdateAttack(dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;
   if(companionMelee(d)&&target){
@@ -5167,51 +5229,27 @@ function appendCompanionSprite(list){
   list.push({companion:companionState,key:companionState.y});
 }
 const MERC_WEAPON={sword:'sword',lancer:'spear',brawler:'gauntlet',archer:'bow',mage:'staff',gun:null};
-function companionDrawWeapon(id,x,y,dir,atkT=0,sc=.78){
-  const d=COMPANION_DEF[id],wt=d&&MERC_WEAPON[d.kind];if(!wt||typeof WIMG==='undefined')return;
-  const im=WIMG[wt+'_01'];if(!im||!im.complete||!im.naturalWidth)return;
-  let ang=0,ox=0,oy=-48;
-  if(dir==='side'){ang=Math.PI/2;ox=22;oy=-42;}
-  else if(dir==='front'){ang=Math.PI;ox=18;oy=-48;}
-  else{ang=0;ox=-18;oy=-52;}
-  if(atkT>0){
-    const p=Math.max(0,Math.min(1,1-atkT/.22));
-    if(wt==='sword')ang+=(p-.5)*2.4;
-    else if(wt==='spear')ox+=24*p;
-    else if(wt==='staff')ang+=(p-.5)*.65;
-    else if(wt==='bow')ang+=(p-.5)*.25;
-  }
-  const L=(typeof WL!=='undefined'&&WL[wt]||60)*sc,w=L*im.naturalWidth/im.naturalHeight,g=(typeof GRIP!=='undefined'&&GRIP[wt]||.7);
-  ctx.save();ctx.translate(x+ox,y+oy);ctx.rotate(ang);ctx.drawImage(im,-w/2,-L*g,w,L);ctx.restore();
-}
 function drawCompanion(c,dt){
   const src=COMPANION_IMG[c.active];if(!src||!src.fr)return;
-  const d=c.dir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
-  const moving=!!c.moving;
-  const idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
+  const a=companionAtk&&companionAtk.id===c.active?companionAtk:null,d=a?a.dir:(c.dir||'front'),arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
+  const moving=!!c.moving&&!a,idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
 
-  // 루크레아와 같은 순서: 검 궤적/검 -> 몸. 평상시에는 별도 검을 꺼내지 않는다.
-  if(c.active==='hero')drawCompanionFx(0,true);
-  ctx.save();
-  if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
-  if(c.active!=='hero'&&d==='back')companionDrawWeapon(c.active,c.x,c.y,d,c.atkT);
-  if(c.active==='hero'&&c.atkT>0&&d!=='front'){
-    const p=Math.max(0,Math.min(1,1-c.atkT/.22));
-    const ang=d==='side'?(-1.85+p*3.55):(-1.45+p*2.9);
-    const bx=d==='side'?c.x+22:c.x+4,by=d==='side'?c.y-34:c.y-58;
-    ctx.save();ctx.translate(bx,by);ctx.rotate(ang);
-    ctx.strokeStyle='rgba(40,28,18,.95)';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-9,0);ctx.lineTo(9,0);ctx.stroke();
-    ctx.strokeStyle='#d7ad65';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(8,-9);ctx.lineTo(8,9);ctx.stroke();
-    ctx.fillStyle='#dceafa';ctx.strokeStyle='#455b73';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(10,-4);ctx.lineTo(46,-3);ctx.lineTo(55,0);ctx.lineTo(46,3);ctx.lineTo(10,4);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(12,-1);ctx.lineTo(49,-1);ctx.stroke();
-    ctx.restore();
+  // 10인 용병은 루크레아와 같은 공용 무기 모션을 그대로 쓴다. 평상시엔 무기를 그리지 않는다.
+  if(c.active==='hero'){
+    if(c.atkT>0)drawCompanionFx(0,true);
+    ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+    const kick=c.atkT>0?(c.atkT/.22)*4:0;ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);ctx.restore();return;
   }
-  const kick=c.atkT>0?(c.atkT/.22)*4:0;
-  ctx.drawImage(im,c.x-w/2,c.y-h+4-kick,w,h);
-  if(c.active!=='hero'&&d!=='back')companionDrawWeapon(c.active,c.x,c.y,d,c.atkT);
+  if(COMPANION_DEF[c.active]&&COMPANION_DEF[c.active].kind==='gun'){
+    ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}ctx.drawImage(im,c.x-w/2,c.y-h+4,w,h);ctx.restore();return;
+  }
+  const weapon=a?(a.weapon||companionWeaponFor(c)):null,L=a&&weapon?weaponLayersFor(c,weapon,a,true):{back:null,front:null,lunge:[0,0]};
+  ctx.save();const flip=a?a.flip:c.flip;if(flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+  if(L.back)L.back();
+  ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+4+L.lunge[1],w,h);
+  if(L.front)L.front();
   ctx.restore();
 }
 function drawCompanionFx(dt,behind=false){
@@ -5924,7 +5962,7 @@ const tradeState = { cargo:{}, pressure:{}, resetAt:Date.now()+TRADE_DAY_MS, mou
 function mountNow(){ return TRADE_MOUNTS[Math.max(0,Math.min(tradeState.mount|0,TRADE_MOUNTS.length-1))]; }
 function cargoMax(){ return mountNow().slots; }
 function mountImg(m,h,extra){ const u=(typeof A!=='undefined'&&A.mounts)?A.mounts[m.id]:''; return u?'<img src="'+u+'" alt="'+m.name+'" style="height:'+h+'px;vertical-align:middle;'+(extra||'')+'">':m.icon; }
-let tradeRegion='town', tradeSel='wheat', tradeMode='buy';
+let tradeRegion='town', tradeSel='wheat', tradeMode='buy', tradeSellAllArmed=false;
 
 function tradeRegionDef(k){ return TRADE_REGIONS[k] || TRADE_REGIONS.town; }
 function tradeMod(region,id){ return tradeRegionDef(region).m[id] || 1; }
@@ -5981,6 +6019,32 @@ function tradeSell(id,n){
   tradeMsg((profit>=0?'좋습니다. ':'아깝군요. ')+g.name+' '+n+'개, '+(profit>=0?'+':'')+profit+'골드.');
   renderTrade(); return true;
 }
+function tradeSellAll(){
+  const rows=Object.entries(tradeState.cargo).filter(([,cur])=>cur&&cur.qty>0);
+  if(!rows.length){tradeMsg('팔 화물이 없습니다.');return false;}
+  let revenue=0,cost=0,units=0,kinds=0;
+  const sold=[];
+  for(const [id,cur] of rows){
+    const g=TRADE_BY_ID[id];if(!g)continue;
+    const n=cur.qty|0;if(n<1)continue;
+    const q=tradeQuote(tradeRegion,id),r=q.sell*n,cc=cur.avg*n,p=Math.round(r-cc);
+    revenue+=r;cost+=cc;units+=n;kinds++;
+    sold.push({id,n,price:q.sell,profit:p});
+  }
+  if(!sold.length){tradeMsg('팔 수 있는 화물이 없습니다.');return false;}
+  for(const x of sold){
+    delete tradeState.cargo[x.id];
+    const key=tradeRegion+':'+x.id;tradeState.pressure[key]=(tradeState.pressure[key]||0)+x.n;
+    if(window.QUEST)QUEST.onEvent('trade_sell',{region:tradeRegion,id:x.id,n:x.n,price:x.price,profit:x.profit,count:x.n,bulk:true});
+  }
+  const profit=Math.round(revenue-cost);
+  setGold(P.gold+revenue);
+  if(window.GUILD)GUILD.refreshTrack();
+  if(window.UI&&UI.save)UI.save();
+  tradeMsg('화물 '+kinds+'종 '+units+'개 전체 판매 · '+revenue+'G · '+(profit>=0?'+':'')+profit+'G');
+  tradeSellAllArmed=false;
+  renderTrade();return true;
+}
 function recordSeen(region){
   const q={}; for(const g of TRADE_GOODS){ const x=tradeQuote(region,g.id); q[g.id]=[x.buy,x.sell]; }
   tradeState.seen[region]={t:Date.now(),q};
@@ -6034,8 +6098,8 @@ function ensureTradeUI(){
 .tgood,.tcargo{border:2px solid #b58a51;border-radius:8px;background:#fff4d9;color:#4b321a;min-height:58px;padding:5px;text-align:left;position:relative;overflow:hidden}.tgood.sel,.tcargo.sel{border-color:#7b4616;box-shadow:inset 0 0 0 2px #e1b451}.tgood.dim,.tcargo.dim{opacity:.55}
 .tgood i,.tcargo i{font-style:normal;font-size:21px;float:left;margin-right:4px}.tgood b,.tcargo b{font-size:11px;white-space:nowrap}.tgood small,.tcargo small{display:block;clear:both;font-size:9px;line-height:1.25;margin-top:3px}.tgood .hi{color:#b32720}.tgood .lo{color:#24689c}.tempty{border:1px dashed #bda77d;border-radius:8px;min-height:58px;opacity:.45}
 #tradeDetail{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-top:2px solid #b78a4d;padding-top:8px;min-height:86px}#tradeIcon{font-size:36px;width:45px;text-align:center}#tradeName{font-size:16px;font-weight:900}#tradePrice,#tradeStock,#tradeSeen{font-size:10px;line-height:1.35;color:#684c2c}
-#tradeActionBox{display:grid;grid-template-columns:130px 80px;gap:5px;align-items:center}#tradeAction,#tradeClose,#tradeMountBtn{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:8px;font-weight:900}#tradeClose{background:#e8d4ad;color:#50351d}#tradeAction:disabled{opacity:.35}
-#tradeHold{grid-column:1/3;text-align:center;font-size:9px;color:#7d6546}#tradeMount{grid-column:1/4;font-size:10px;color:#5a3d20;border-top:1px solid #c7a875;padding-top:4px;display:flex;gap:8px;align-items:center}#tradeMountTxt{flex:1}#tradeMountBtn{padding:5px 9px;width:auto}
+#tradeActionBox{display:grid;grid-template-columns:112px 112px 80px;gap:5px;align-items:center}#tradeAction,#tradeSellAll,#tradeClose,#tradeMountBtn{border:2px solid #a96d2b;background:#6f3e1f;color:#fff0ce;border-radius:8px;padding:8px;font-weight:900}#tradeSellAll{background:#8a3f24}#tradeSellAll.armed{background:#b32920;color:#fff}#tradeClose{background:#e8d4ad;color:#50351d}#tradeAction:disabled,#tradeSellAll:disabled{opacity:.35}
+#tradeHold{grid-column:1/4;text-align:center;font-size:9px;color:#7d6546}#tradeMount{grid-column:1/4;font-size:10px;color:#5a3d20;border-top:1px solid #c7a875;padding-top:4px;display:flex;gap:8px;align-items:center}#tradeMountTxt{flex:1}#tradeMountBtn{padding:5px 9px;width:auto}
 #tradeSay{grid-column:1/4;font-size:10px;color:#883d20;min-height:14px}
 #tradeQty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1a1009a8;z-index:3}#tradeQty.on{display:flex}#tradeQty .qbox{width:280px;background:#f1dfb8;border:3px solid #795026;border-radius:12px;padding:16px;text-align:center;box-shadow:0 12px 30px #0008}#tradeQtyTitle{font-weight:900;font-size:16px}#tradeQtyLine{font-size:11px;color:#725233;margin:6px 0 10px}#tradeQtyInput{width:110px;font-size:24px;text-align:center;padding:4px;border:2px solid #9b7447;border-radius:8px;background:#fff8e8}#tradeQty .qrow{display:flex;gap:6px;justify-content:center;margin-top:10px}#tradeQty button{border:2px solid #99642c;border-radius:7px;padding:7px 12px;font-weight:900;background:#6f3e1f;color:#fff0ce}#tradeQty button.ghost{background:#e8d4ad;color:#50351d}
 .tradeSummary{margin-top:52px;height:calc(100% - 52px);box-sizing:border-box;overflow:auto;background:linear-gradient(#f3e6c6,#e4cf9f);border:4px solid #7b5228;border-radius:16px;padding:18px 22px;color:#53391d}.tradeSummary h2{margin:0 0 10px}.tradeSummary p{font-size:13px;line-height:1.6}.tradeSummary strong{color:#9a541e}
@@ -6043,10 +6107,11 @@ function ensureTradeUI(){
 `;
   document.head.append(st);
   const d=document.createElement('div');d.id='trade';
-  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><div id="tradeTabs"><button id="tradeBuyTab" type="button">사기</button><button id="tradeSellTab" type="button">팔기</button></div><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeColumns"><section class="tradePane"><h3>이 마을 물품 <small>짧게 선택 · 길게 수량</small></h3><div id="tradeList"></div></section><section class="tradePane"><h3>내 화물 <small id="tradeHint"></small></h3><div id="tradeCargoList"></div></section></div><div id="tradeDetail"><div id="tradeIcon"></div><div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeSeen"></div></div><div id="tradeActionBox"><button id="tradeAction" type="button">1개 사기</button><button id="tradeClose" type="button">나가기</button><div id="tradeHold">길게 누르면 수량 선택</div></div><div id="tradeMount"><div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn">수레 구매</button></div><div id="tradeSay"></div></div><div id="tradeQty"><div class="qbox"><div id="tradeQtyTitle"></div><div id="tradeQtyLine"></div><input id="tradeQtyInput" type="number" inputmode="numeric" min="1"><div class="qrow"><button id="tradeQtyMax" type="button">최대</button><button id="tradeQtyOk" type="button">확인</button><button class="ghost" id="tradeQtyCancel" type="button">취소</button></div></div></div></div>';
+  d.innerHTML='<div class="tbox"><div id="tradeHead"><b id="tradeTitle"></b><div id="tradeTabs"><button id="tradeBuyTab" type="button">사기</button><button id="tradeSellTab" type="button">팔기</button></div><span id="tradeNote"></span><small>금화 <em id="tradeGold">0</em></small></div><div id="tradeColumns"><section class="tradePane"><h3>이 마을 물품 <small>짧게 선택 · 길게 수량</small></h3><div id="tradeList"></div></section><section class="tradePane"><h3>내 화물 <small id="tradeHint"></small></h3><div id="tradeCargoList"></div></section></div><div id="tradeDetail"><div id="tradeIcon"></div><div><div id="tradeName"></div><div id="tradePrice"></div><div id="tradeStock"></div><div id="tradeSeen"></div></div><div id="tradeActionBox"><button id="tradeAction" type="button">1개 사기</button><button id="tradeSellAll" type="button">전체 팔기</button><button id="tradeClose" type="button">나가기</button><div id="tradeHold">길게 누르면 수량 선택</div></div><div id="tradeMount"><div id="tradeMountTxt"></div><button type="button" id="tradeMountBtn">수레 구매</button></div><div id="tradeSay"></div></div><div id="tradeQty"><div class="qbox"><div id="tradeQtyTitle"></div><div id="tradeQtyLine"></div><input id="tradeQtyInput" type="number" inputmode="numeric" min="1"><div class="qrow"><button id="tradeQtyMax" type="button">최대</button><button id="tradeQtyOk" type="button">확인</button><button class="ghost" id="tradeQtyCancel" type="button">취소</button></div></div></div></div>';
   document.body.append(d);
   d.addEventListener('click',e=>{if(e.target===d)closeTrade();});
-  $('tradeClose').onclick=()=>closeTrade();$('tradeBuyTab').onclick=()=>{tradeMode='buy';renderTrade();};$('tradeSellTab').onclick=()=>{tradeMode='sell';renderTrade();};
+  $('tradeClose').onclick=()=>closeTrade();$('tradeBuyTab').onclick=()=>{tradeMode='buy';tradeSellAllArmed=false;renderTrade();};$('tradeSellTab').onclick=()=>{tradeMode='sell';tradeSellAllArmed=false;renderTrade();};
+  $('tradeSellAll').onclick=()=>{if(tradeMode!=='sell'||cargoSlots()<1)return;if(!tradeSellAllArmed){tradeSellAllArmed=true;renderTrade();tradeMsg('현재 마을 시세로 화물을 전부 팝니다. 한 번 더 눌러 확인.');return;}tradeSellAll();};
   $('tradeMountBtn').onclick=()=>buyMount();
   bindTradePress($('tradeAction'),()=>{const max=tradeQtyMax(tradeMode,tradeSel);if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,1):tradeSell(tradeSel,1);},()=>openTradeQty(tradeMode,tradeSel));
   $('tradeQtyCancel').onclick=closeTradeQty;$('tradeQty').addEventListener('click',e=>{if(e.target.id==='tradeQty')closeTradeQty();});
@@ -6054,9 +6119,9 @@ function ensureTradeUI(){
   $('tradeQtyOk').onclick=()=>{const max=tradeQtyMax(tradeMode,tradeSel),n=Math.max(1,Math.min(max,parseInt($('tradeQtyInput').value,10)||1));closeTradeQty();if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,n):tradeSell(tradeSel,n);};
 }
 function openTrade(region){
-  closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
+  closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';tradeSellAllArmed=false;panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
 }
-function closeTrade(silent){closeTradeQty();const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
+function closeTrade(silent){closeTradeQty();tradeSellAllArmed=false;const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
 function renderTrade(){
   ensureTradeUI();const R=tradeRegionDef(tradeRegion),cargoIds=Object.keys(tradeState.cargo).filter(id=>tradeState.cargo[id]&&tradeState.cargo[id].qty>0);
   if(tradeMode==='sell'&&!cargoEntry(tradeSel).qty&&cargoIds.length)tradeSel=cargoIds[0];
@@ -6091,6 +6156,7 @@ function renderTrade(){
   for(const r in tradeState.seen){if(r===tradeRegion)continue;const e=tradeState.seen[r].q[g.id];if(!e)continue;rows.push(tradeRegionDef(r).short+' '+e[0]+'/'+e[1]);if(!best||e[1]>best.s)best={r,s:e[1]};}
   $('tradeSeen').textContent=rows.length?'수첩 · '+rows.join(' · '):'수첩 · 다른 마을 시세 미확인';
   const action=$('tradeAction'),max=tradeQtyMax(tradeMode,g.id);action.textContent=tradeMode==='buy'?'1개 사기':'1개 팔기';action.disabled=max<1;
+  const all=$('tradeSellAll');if(all){all.hidden=tradeMode!=='sell';all.disabled=tradeMode!=='sell'||cargoIds.length<1;all.textContent=tradeSellAllArmed?'확인: 전체 판매':'전체 팔기';all.classList.toggle('armed',tradeSellAllArmed);}
   const m=mountNow(),nx=TRADE_MOUNTS[(tradeState.mount|0)+1],tier=REGION_TIER[tradeRegion]||0;
   $('tradeMountTxt').innerHTML=mountImg(m,30)+' <b>'+m.name+'</b> · 화물 '+m.slots+'칸'+(nx?' → '+mountImg(nx,20)+' '+nx.name+' '+nx.slots+'칸 / '+nx.price+'G':' · 최고 단계');
   $('tradeMountBtn').style.display=nx?'':'none';if(nx)$('tradeMountBtn').disabled=tier<nx.tier||P.gold<nx.price;
@@ -6139,7 +6205,7 @@ function renderTradeCargo(R){
   R.append(d);
 }
 window.TRADE={
-  open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,addLoot:tradeAddLoot,
+  open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,sellAll:tradeSellAll,addLoot:tradeAddLoot,
   cargo:()=>JSON.parse(JSON.stringify(tradeState.cargo)),goods:TRADE_GOODS,regions:TRADE_REGIONS,
   saveData:tradeSaveData,loadData:tradeLoadData,consume:tradeConsume,renderSummary:renderTradeSummary,renderCargo:renderTradeCargo,
   state:()=>({region:tradeRegion,slots:cargoSlots(),max:cargoMax(),mount:tradeState.mount|0,seen:Object.keys(tradeState.seen),cargo:JSON.parse(JSON.stringify(tradeState.cargo)),resetAt:tradeState.resetAt}),
@@ -6859,6 +6925,7 @@ requestAnimationFrame(frame);
 // 2026-10-13 주점 3인 경제 테스트 게시 트리거
 // 2026-10-13 식자재점 UI 복귀 수정 최종 게시
 (() => {
+  // 2026-10-13 버블슈터 원본 복구 후 ARPG 전리품 정산 호환
   const clone = value => JSON.parse(JSON.stringify(value));
   const SUPPLY=[
     {id:'orange',name:'오렌지 주스 재료',cost:16,icon:'menu-13.png'},{id:'berry',name:'산딸기 주스 재료',cost:20,icon:'menu-14.png'},{id:'tea',name:'허브차 재료',cost:12,icon:'menu-19.png'},
@@ -6869,9 +6936,16 @@ requestAnimationFrame(frame);
   const MINI_TIER_BY_THEME={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
   const clampTier=t=>Math.max(1,Math.min(7,Number(t)||1));
   const currentTier=()=>{const st=GAME.locationState();return st.map==='fieldvillage'?clampTier(MINI_TIER_BY_THEME[st.theme]||GAME.levelTier()):1;};
+  const currentRegion=()=>{const st=GAME.locationState();return st.map==='fieldvillage'&&MINI_TIER_BY_THEME[st.theme]?st.theme:'town';};
   const arenaMinStake=t=>1000*Math.pow(2,clampTier(t)-1);
   const bubbleReference=t=>1000*Math.pow(2,clampTier(t)-1);
   const bubbleFee=t=>Math.round(bubbleReference(t)*.10);
+  const BUBBLE_FRAGMENT_NEEDS=[20,10,10,10,10,20];
+  const bubbleCollectedUnits=state=>{
+    if(!state||!Array.isArray(state.stock)||!Array.isArray(state.fragments))return 0;
+    let n=0;for(let i=0;i<BUBBLE_FRAGMENT_NEEDS.length;i++)n+=(Math.max(0,Number(state.stock[i])||0)*BUBBLE_FRAGMENT_NEEDS[i])+Math.max(0,Number(state.fragments[i])||0);
+    return Math.floor(n);
+  };
   let data = {version:3,tavern:null,tavernSupply:emptySupply(),tavernRuns:[],bubble:null,bubbleStats:{played:0,clears:0,jackpots:0,spent:0,earned:0},arena:{played:0,wins:0,losses:0,forfeits:0}}, active=null;
   const root=document.createElement('section');root.id='minigameHost';root.hidden=true;
   root.innerHTML='<button id="minigameReturn" type="button">← 모험으로</button><div id="minigameLobby"><h2>돈 벌러 갑니다</h2><button data-mini="tavern">주점 영업</button><button data-mini="bubble-pang">버블팡</button><button data-mini="arena">격투장</button><div id="arenaWager" hidden><label>응원할 선수 <select id="arenaSide"><option value="left">실비아</option><option value="right">니샤</option></select></label><label>판돈 <input id="arenaStake" type="number" min="1000" step="1000" value="1000"></label><button id="arenaEnter">경기장 입장</button><small id="arenaRule">3연승까지 매번 2배 · 중간 회수 가능 · 패배/퇴장 시 진행 판돈 0</small></div><p id="minigameMoney"></p></div><iframe id="minigameFrame" title="미니게임" allow="autoplay; fullscreen" hidden></iframe>';
@@ -6952,7 +7026,7 @@ requestAnimationFrame(frame);
   }
   function enter(kind,bet=null){
     if(active||blocked()||!['tavern','bubble-pang','arena'].includes(kind))return false;
-    root.hidden=false;supply.hidden=true;active={kind,bet,paid:false,source:null,tier:clampTier(bet&&bet.tier||currentTier()),arena:null,bubbleRound:null};GAME.setOpen('minigames');
+    root.hidden=false;supply.hidden=true;active={kind,bet,paid:false,source:null,tier:clampTier(bet&&bet.tier||currentTier()),region:currentRegion(),arena:null,bubbleRound:null};GAME.setOpen('minigames');
     lobby.hidden=true;frame.hidden=false;frame.src='../minigames/'+kind+'/index.html?arpg=1';
     active.source=frame.contentWindow;return true;
   }
@@ -6984,19 +7058,25 @@ requestAnimationFrame(frame);
       const tier=active.tier||1,reference=bubbleReference(tier),fee=bubbleFee(tier);
       if(GAME.P.gold<fee)return null;
       if(active.bubbleRound&&!active.bubbleRound.settled)active.bubbleRound.forfeit=true;
-      GAME.setGold(GAME.P.gold-fee);active.bubbleRound={tier,reference,fee,settled:false};
+      GAME.setGold(GAME.P.gold-fee);active.bubbleRound={tier,reference,fee,settled:false,startUnits:bubbleCollectedUnits(data.bubble)};
       data.bubbleStats.played++;data.bubbleStats.spent+=fee;save();
       return {tier,reference,fee,gold:GAME.P.gold};
     },
     finishBubbleRound(source,outcome){
       if(!child(source)||active.kind!=='bubble-pang'||!active.bubbleRound||active.bubbleRound.settled)return false;
       const r=active.bubbleRound;r.settled=true;let reward=0,jackpot=false;
+      const livePopped=Math.max(0,Math.floor(Number(source&&source.BUBBLE_ARPG_STATS&&source.BUBBLE_ARPG_STATS.popped)||0));
+      const legacyPopped=Math.max(0,bubbleCollectedUnits(data.bubble)-Math.max(0,Number(r.startUnits)||0));
+      const popped=Math.max(livePopped,legacyPopped);
+      const lootRolls=Math.max(0,Math.min(10,Math.floor(popped/5)));
+      let loot={tier:r.tier,rolls:lootRolls,found:0,gear:0,supply:0,trade:0,junk:0,discardTrade:0,discardBag:0,none:lootRolls,names:[]};
+      if(lootRolls&&window.__FD&&__FD.grantMonsterLoot)loot=__FD.grantMonsterLoot(r.tier,lootRolls,active.region||'town')||loot;
       if(outcome==='clear'){
         data.bubbleStats.clears++;reward=Math.round(r.reference*(.80+Math.random()*.10));
         jackpot=Math.random()<.02;if(jackpot){reward+=r.reference;data.bubbleStats.jackpots++;}
         GAME.setGold(GAME.P.gold+reward);data.bubbleStats.earned+=reward;
       }
-      save();return {outcome,reward,jackpot,fee:r.fee,tier:r.tier,gold:GAME.P.gold};
+      save();return {outcome,reward,jackpot,fee:r.fee,tier:r.tier,gold:GAME.P.gold,popped,lootRolls,loot};
     },
     beginArena(source){
       if(!child(source)||active.kind!=='arena'||active.arena&&!active.arena.ended)return false;
