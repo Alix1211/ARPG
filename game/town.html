@@ -403,7 +403,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1055</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1107</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -558,7 +558,7 @@ function buildWorld(id){
 const hasNpc = new Set(CUR.npcs.map(n => n.at).filter(Boolean));
 for (const b of CUR.blds){
   const gate = b.k === 'gate_twin_tower';
-  const fw = b.w * (b.k === 'watchtower' ? 0.5 : 0.8);
+  const fw = b.w * (Number.isFinite(b.solidScale) ? b.solidScale : (b.k === 'watchtower' ? 0.5 : 0.8));
   if (gate){ // 성문은 양쪽 탑만 막고 가운데는 문 앞까지 걸어갈 수 있게
     solids.push({ x0: b.x - b.w * 0.48, x1: b.x - b.w * 0.17, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.05 });
     solids.push({ x0: b.x + b.w * 0.17, x1: b.x + b.w * 0.48, y0: b.y - b.h * 0.42, y1: b.y - b.h * 0.05 });
@@ -567,7 +567,9 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
-  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k)) continue;
+  if(id==='town'&&b.kind==='minigame_tavern')spots.push({name:'DUSK POB · 주점 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_tavern'});
+  if(id==='town'&&b.kind==='minigame_arena')spots.push({name:'격투장 입장·배팅소',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_arena'});
+  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k) || (b.kind&&b.kind.startsWith('minigame_'))) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
 for (const p of CUR.props){
@@ -918,6 +920,8 @@ function act(){
   if(near.kind==='stash'&&window.UI)return UI.openStash();
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
+  if(near.kind==='minigame_tavern'&&window.MINIGAMES)return MINIGAMES.open('tavern');
+  if(near.kind==='minigame_arena'&&window.MINIGAMES)return MINIGAMES.open('arena');
   if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
@@ -6498,11 +6502,20 @@ requestAnimationFrame(frame);
   function blocked(){return !!(window.ARPG_BACKUP_RESTORING||window.ARPG_SYNC_CHECKING||window.ARPG_SYNC_CONFLICT);}
   function money(){root.querySelector('#minigameMoney').textContent='금화 '+Math.round(GAME.P.gold).toLocaleString('ko-KR')+' G';}
   function save(){UI.refresh();UI.save();money();}
-  function open(){
+  function lobbyMode(kind){
+    const direct=kind==='arena';
+    lobby.querySelector('h2').textContent=direct?'격투장 입장·배팅소':'돈 벌러 갑니다';
+    root.querySelectorAll('[data-mini]').forEach(b=>b.hidden=direct);
+    root.querySelector('#arenaWager').hidden=!direct;
+  }
+  function open(kind=null){
+    if(typeof kind!=='string')kind=null;
     if(active||blocked())return false;
     const map=GAME.locationState().map;
     if(!['town','inn','fieldvillage'].includes(map)){GAME.say('마을에서 돈 벌 궁리를 해 봅시다.');return false;}
-    GAME.closeAll();GAME.releaseInput();GAME.setHold(false);GAME.setOpen('minigames');root.hidden=false;lobby.hidden=false;frame.hidden=true;root.querySelector('#arenaWager').hidden=true;money();return true;
+    GAME.closeAll();GAME.releaseInput();GAME.setHold(false);GAME.setOpen('minigames');root.hidden=false;lobby.hidden=false;frame.hidden=true;lobbyMode(kind);money();
+    if(kind==='tavern'||kind==='bubble-pang')return enter(kind);
+    return true;
   }
   function enter(kind,bet=null){
     if(active||blocked()||!['tavern','bubble-pang','arena'].includes(kind))return false;
@@ -6513,7 +6526,7 @@ requestAnimationFrame(frame);
   function close(){
     if(blocked())return false;
     if(active&&frame.contentWindow.MiniHost?.flush&&!blocked())frame.contentWindow.MiniHost.flush();
-    active=null;frame.removeAttribute('src');frame.hidden=true;root.hidden=true;GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();if(!blocked())save();
+    active=null;frame.removeAttribute('src');frame.hidden=true;root.hidden=true;lobbyMode(null);GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();if(!blocked())save();
   }
   function child(source){return active&&source===frame.contentWindow&&!blocked();}
   window.ARPG_MINIGAME_LINK={
