@@ -72,6 +72,17 @@ function tradeBuy(id,n){
   tradeMsg(g.name+' '+n+'개 매입. 금화 '+(q.buy*n)+'닢… 남는 장사여야 할 텐데요.');
   renderTrade(); return true;
 }
+function tradeAddLoot(id,qty=1){
+  const g=TRADE_BY_ID[id];if(!g)return false;
+  const cur=cargoEntry(id);qty=Math.max(1,qty|0);
+  if(!cur.qty&&cargoSlots()>=cargoMax())return false;
+  qty=Math.min(qty,TRADE_STACK_MAX-cur.qty);if(qty<1)return false;
+  const next=cur.qty+qty,avg=next>0?(cur.avg*cur.qty)/next:0;
+  tradeState.cargo[id]={qty:next,avg};
+  if(window.GUILD)GUILD.refreshTrack();if(window.UI&&UI.save)UI.save();
+  if($('trade')&&$('trade').classList.contains('on'))renderTrade();
+  return qty;
+}
 function tradeSell(id,n){
   const g=TRADE_BY_ID[id], cur=cargoEntry(id); if(!g||!cur.qty)return false;
   n=Math.max(0,Math.min(n|0,cur.qty)); if(!n)return false;
@@ -240,7 +251,7 @@ function renderTradeCargo(R){
   R.append(d);
 }
 window.TRADE={
-  open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,
+  open:openTrade,close:closeTrade,quote:tradeQuote,buy:tradeBuy,sell:tradeSell,addLoot:tradeAddLoot,
   cargo:()=>JSON.parse(JSON.stringify(tradeState.cargo)),goods:TRADE_GOODS,regions:TRADE_REGIONS,
   saveData:tradeSaveData,loadData:tradeLoadData,consume:tradeConsume,renderSummary:renderTradeSummary,renderCargo:renderTradeCargo,
   state:()=>({region:tradeRegion,slots:cargoSlots(),max:cargoMax(),mount:tradeState.mount|0,seen:Object.keys(tradeState.seen),cargo:JSON.parse(JSON.stringify(tradeState.cargo)),resetAt:tradeState.resetAt}),
