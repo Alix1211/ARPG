@@ -15,7 +15,9 @@ TOWN_OVERHAUL_SOURCES = {
     'colosseum': os.path.join(TOWN_OVERHAUL_DIR, 'colosseum.png'),
     'arena_sheet': os.path.join(TOWN_OVERHAUL_DIR, 'arena_buildings.png'),
 }
+BUBBLE_HOUSE_SOURCE = os.path.join(TOWN_OVERHAUL_DIR, 'bubble_house.webp')
 TOWN_OVERHAUL_READY = all(os.path.exists(p) for p in TOWN_OVERHAUL_SOURCES.values())
+BUBBLE_HOUSE_READY = TOWN_OVERHAUL_READY and os.path.exists(BUBBLE_HOUSE_SOURCE)
 
 with open(os.path.join(ROOT,'src','story','quests.json'),encoding='utf-8') as qf:
     MAIN_QUEST_DATA=json.load(qf)
@@ -87,6 +89,8 @@ def make_ground():
             (14.3, 9.6, 16.3, 12.8), (30.4, 9.8, 32.4, 12.8)]
     if TOWN_OVERHAUL_READY:
         DIRT += [(8.5, 10.8, 12.7, 12.7), (40.6, 13.4, 42.7, 15.8)]  # 격투장 입장소 / 호숫가 주점
+        if BUBBLE_HOUSE_READY:
+            DIRT += [(36.2, 16.8, 37.6, 20.9)]  # 동쪽 큰길 → 버블슈터 하우스
 
     def union(rects):
         s = np.full((H, W), 1e9, np.float32)
@@ -208,6 +212,10 @@ if TOWN_OVERHAUL_READY:
     if _bb: _im = _im.crop(_bb)
     _p = os.path.join(_gen, 'arena_entry.png'); _im.save(_p); BUILDING_OVERRIDE['arena_entry'] = _p
 
+    # 버블슈터 하우스: 이미 투명 배경으로 정리된 단일 건물 에셋을 그대로 사용한다.
+    if BUBBLE_HOUSE_READY:
+        BUILDING_OVERRIDE['bubble_house'] = BUBBLE_HOUSE_SOURCE
+
 def building_path(k):
     if k in BUILDING_OVERRIDE: return BUILDING_OVERRIDE[k]
     for ext in ('.png', '.webp'):
@@ -241,6 +249,8 @@ if TOWN_OVERHAUL_READY:
       ('colosseum', '콜롯세움', 6.2, 9.1, 7.2, 0),
       ('arena_entry', '격투장 입장·배팅소', 11.1, 11.8, 4.2, 0),
     ]
+    if BUBBLE_HOUSE_READY:
+        B += [('bubble_house', '버블 슈터 하우스', 36.9, 20.8, 4.2, 0)]
 SCALE = 1.5   # 게임 단위 대비 그림 해상도
 imgs = {}
 for k in sorted(set(b[0] for b in B)):
@@ -257,6 +267,7 @@ for k, name, cx, by, wt, dxr in B:
     if k == 'player_tavern': meta = dict(kind='minigame_tavern', solidScale=0.70)
     elif k == 'colosseum': meta = dict(noSpot=True, solidScale=0.72)
     elif k == 'arena_entry': meta = dict(kind='minigame_arena', solidScale=0.68)
+    elif k == 'bubble_house': meta = dict(noSpot=True, solidScale=0.68)
     blds.append(dict(k=k, name=name, x=cx * TS, y=by * TS, w=w, h=h, door=dxr, **meta))
 
 # 소품 (건물 부품 중 바닥에 세울 수 있는 것만)
