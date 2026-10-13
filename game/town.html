@@ -403,7 +403,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1156</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1208</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -6484,6 +6484,7 @@ requestAnimationFrame(frame);
 
 // 기존 페이지를 그대로 열고, 본편의 위치·세계 상태는 메모리에 보존한다.
 // 2026-10-13 주점 3인 경제 테스트 게시 트리거
+// 2026-10-13 식자재점 UI 복귀 수정 최종 게시
 (() => {
   const clone = value => JSON.parse(JSON.stringify(value));
   const SUPPLY=[
@@ -6504,16 +6505,26 @@ requestAnimationFrame(frame);
     #minigameHost[hidden],#minigameHost [hidden]{display:none!important}
     #minigameHost{position:fixed;inset:0;z-index:1500;background:#160d08;font-family:'Noto Sans KR',sans-serif;display:grid;place-items:center}
     #minigameFrame{width:100%;height:100%;border:0;background:#160d08}
-    #minigameReturn{position:absolute;top:max(4px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:3;padding:5px 14px;border:1px solid #bd914a;border-radius:7px;background:#2c160ae8;color:#f3e6c8;font-weight:bold}
+    #minigameReturn{position:absolute;top:max(6px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:60;padding:5px 12px;border:1px solid #bd914a;border-radius:7px;background:#2c160af2;color:#f3e6c8;font-size:14px;font-weight:800;white-space:nowrap;pointer-events:auto;touch-action:manipulation}
     #minigameLobby{background:#2c160a;border:2px solid #b07a35;border-radius:14px;padding:25px;text-align:center;color:#f3e6c8;max-width:90vw}
     #minigameLobby button,#minigameLobby input,#minigameLobby select{font:inherit;padding:12px;margin:6px;border:1px solid #b07a35;border-radius:7px;background:#493019;color:#f3e6c8}
     #arenaWager label{display:block}#arenaWager input{width:110px}#arenaWager small{display:block}
-    #tavernSupplyShop{position:absolute;inset:0;display:grid;place-items:center;background:#160d08}
-    .supply-card{width:min(900px,92vw);max-height:88vh;overflow:auto;background:#efe0bd;color:#3b2412;border:3px solid #b07a35;border-radius:14px;padding:18px;box-sizing:border-box}
-    .supply-head{display:flex;justify-content:space-between;align-items:center;font-size:20px;font-weight:900}.supply-card>p{margin:4px 0 12px;color:#72502d}
-    #supplyGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.supply-row{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center;border:1px solid #b8925f;border-radius:9px;background:#fff5df;padding:7px}
-    .supply-row img{width:44px;height:44px;object-fit:contain}.supply-row small{display:block}.supply-buy button,#supplyClose{font:inherit;padding:7px 9px;margin:2px;border:1px solid #9c642d;border-radius:7px;background:#543218;color:#ffe8b0;font-weight:800}.supply-foot{text-align:right;margin-top:12px}
-    @media(max-width:700px){#supplyGrid{grid-template-columns:1fr}}
+    #tavernSupplyShop{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:#160d08;padding:54px 18px 16px;box-sizing:border-box}
+    .supply-card{width:min(1180px,96vw);max-height:calc(100vh - 76px);overflow:auto;background:#efe0bd;color:#3b2412;border:3px solid #b07a35;border-radius:14px;padding:14px 16px;box-sizing:border-box}
+    .supply-head{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:18px;font-weight:900}.supply-card>p{margin:2px 0 10px;color:#72502d;font-size:14px}
+    #supplyGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .supply-row{display:grid;grid-template-columns:52px minmax(0,1fr);grid-template-rows:auto auto;gap:4px 9px;align-items:center;border:1px solid #b8925f;border-radius:9px;background:#fff5df;padding:8px 9px;min-width:0}
+    .supply-row img{grid-row:1/3;width:46px;height:46px;object-fit:contain}
+    .supply-row>div:not(.supply-buy){min-width:0;word-break:keep-all;overflow-wrap:normal;line-height:1.25}
+    .supply-row strong{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .supply-row small{display:block;margin-top:2px;font-size:12px;white-space:nowrap}
+    .supply-buy{grid-column:2;display:flex;gap:5px;min-width:0}
+    .supply-buy button,#supplyClose{border:1px solid #9c642d;border-radius:7px;background:#543218;color:#ffe8b0;font-weight:800;white-space:nowrap;touch-action:manipulation}
+    .supply-buy button{flex:1 1 0;min-width:0;padding:5px 6px;margin:0;font-size:12px;line-height:1.1}
+    #supplyClose{padding:6px 12px;font-size:13px}
+    .supply-foot{text-align:right;margin-top:9px}
+    @media(max-width:850px){#tavernSupplyShop{padding-inline:10px}.supply-card{width:98vw;padding:10px}#supplyGrid{grid-template-columns:1fr}.supply-row{grid-template-columns:48px minmax(0,1fr)}.supply-row img{width:42px;height:42px}.supply-buy button{font-size:11px;padding:5px 4px}}
+    @media(max-height:650px){#tavernSupplyShop{padding-top:44px}.supply-card{max-height:calc(100vh - 56px)}.supply-head{font-size:16px}.supply-card>p{font-size:12px;margin-bottom:7px}.supply-row{padding:6px 8px}.supply-row img{width:40px;height:40px}}
   `;document.head.appendChild(style);
   function blocked(){return !!(window.ARPG_BACKUP_RESTORING||window.ARPG_SYNC_CHECKING||window.ARPG_SYNC_CONFLICT);}
   function money(){root.querySelector('#minigameMoney').textContent='금화 '+Math.round(GAME.P.gold).toLocaleString('ko-KR')+' G';}
@@ -6558,9 +6569,12 @@ requestAnimationFrame(frame);
     active.source=frame.contentWindow;return true;
   }
   function close(){
-    if(blocked())return false;
-    if(active&&frame.contentWindow.MiniHost?.flush&&!blocked())frame.contentWindow.MiniHost.flush();
-    active=null;frame.removeAttribute('src');frame.hidden=true;supply.hidden=true;root.hidden=true;lobbyMode(null);GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();if(!blocked())save();
+    const locked=blocked();
+    if(active&&!locked&&frame.contentWindow.MiniHost?.flush)frame.contentWindow.MiniHost.flush();
+    active=null;frame.removeAttribute('src');frame.hidden=true;supply.hidden=true;lobby.hidden=true;root.hidden=true;lobbyMode(null);
+    GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();
+    if(!locked)save();
+    return true;
   }
   function child(source){return active&&source===frame.contentWindow&&!blocked();}
   window.ARPG_MINIGAME_LINK={
