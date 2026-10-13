@@ -403,7 +403,7 @@ html.app #fs{display:none}
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1535</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-1538</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -6619,9 +6619,15 @@ requestAnimationFrame(frame);
     {id:'tart',name:'숲딸기 타르트 재료',cost:43,icon:'menu-63.png'},{id:'ale',name:'드워프 흑맥주',cost:32,icon:'menu-0.png'},{id:'wine',name:'붉은 포도주',cost:52,icon:'menu-10.png'},{id:'cider',name:'황금 사과주',cost:38,icon:'menu-11.png'}
   ];
   const emptySupply=()=>Object.fromEntries(SUPPLY.map(x=>[x.id,0]));
-  let data = {version:2,tavern:null,tavernSupply:emptySupply(),tavernRuns:[],bubble:null,arena:{played:0,wins:0}}, active=null;
+  const MINI_TIER_BY_THEME={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
+  const clampTier=t=>Math.max(1,Math.min(7,Number(t)||1));
+  const currentTier=()=>{const st=GAME.locationState();return st.map==='fieldvillage'?clampTier(MINI_TIER_BY_THEME[st.theme]||GAME.levelTier()):1;};
+  const arenaMinStake=t=>1000*Math.pow(2,clampTier(t)-1);
+  const bubbleReference=t=>1000*Math.pow(2,clampTier(t)-1);
+  const bubbleFee=t=>Math.round(bubbleReference(t)*.10);
+  let data = {version:3,tavern:null,tavernSupply:emptySupply(),tavernRuns:[],bubble:null,bubbleStats:{played:0,clears:0,jackpots:0,spent:0,earned:0},arena:{played:0,wins:0,losses:0,forfeits:0}}, active=null;
   const root=document.createElement('section');root.id='minigameHost';root.hidden=true;
-  root.innerHTML='<button id="minigameReturn" type="button">← 모험으로</button><div id="minigameLobby"><h2>돈 벌러 갑니다</h2><button data-mini="tavern">주점 영업</button><button data-mini="bubble-pang">버블팡</button><button data-mini="arena">격투장</button><div id="arenaWager" hidden><label>응원할 선수 <select id="arenaSide"><option value="left">실비아</option><option value="right">니샤</option></select></label><label>판돈 <input id="arenaStake" type="number" min="1" step="1" value="100"></label><button id="arenaEnter">경기장 입장</button><small>승리 2배 · 무승부 반환 · 패배/경기 중 퇴장 0</small></div><p id="minigameMoney"></p></div><iframe id="minigameFrame" title="미니게임" allow="autoplay; fullscreen" hidden></iframe>';
+  root.innerHTML='<button id="minigameReturn" type="button">← 모험으로</button><div id="minigameLobby"><h2>돈 벌러 갑니다</h2><button data-mini="tavern">주점 영업</button><button data-mini="bubble-pang">버블팡</button><button data-mini="arena">격투장</button><div id="arenaWager" hidden><label>응원할 선수 <select id="arenaSide"><option value="left">실비아</option><option value="right">니샤</option></select></label><label>판돈 <input id="arenaStake" type="number" min="1000" step="1000" value="1000"></label><button id="arenaEnter">경기장 입장</button><small id="arenaRule">3연승까지 매번 2배 · 중간 회수 가능 · 패배/퇴장 시 진행 판돈 0</small></div><p id="minigameMoney"></p></div><iframe id="minigameFrame" title="미니게임" allow="autoplay; fullscreen" hidden></iframe>';
   const supply=document.createElement('section');supply.id='tavernSupplyShop';supply.hidden=true;
   supply.innerHTML='<div class="supply-card"><div class="supply-head"><b>주점 식자재점</b><span id="supplyGold"></span></div><p>DUSK POB 전용 재고 · 영업 전 정상가</p><div id="supplyGrid"></div><div class="supply-foot"><button id="supplyClose" type="button">장보기 끝</button></div></div>';
   root.appendChild(supply);document.body.appendChild(root);
@@ -6682,6 +6688,11 @@ requestAnimationFrame(frame);
     lobby.querySelector('h2').textContent=direct?'격투장 입장·배팅소':'돈 벌러 갑니다';
     root.querySelectorAll('[data-mini]').forEach(b=>b.hidden=direct);
     root.querySelector('#arenaWager').hidden=!direct;
+    if(direct){
+      const tier=currentTier(),min=arenaMinStake(tier),input=root.querySelector('#arenaStake');
+      input.min=String(min);input.step=String(min);if(Number(input.value)<min||Number(input.value)%min)input.value=String(min);
+      root.querySelector('#arenaRule').textContent=`T${tier} 최소 ${min.toLocaleString('ko-KR')}G · 3연승까지 매번 2배 · 중간 회수 가능 · 패배/퇴장 시 진행 판돈 0`;
+    }
   }
   function open(kind=null){
     if(typeof kind!=='string')kind=null;
@@ -6694,13 +6705,16 @@ requestAnimationFrame(frame);
   }
   function enter(kind,bet=null){
     if(active||blocked()||!['tavern','bubble-pang','arena'].includes(kind))return false;
-    root.hidden=false;supply.hidden=true;active={kind,bet,paid:false,source:null};GAME.setOpen('minigames');
+    root.hidden=false;supply.hidden=true;active={kind,bet,paid:false,source:null,tier:clampTier(bet&&bet.tier||currentTier()),arena:null,bubbleRound:null};GAME.setOpen('minigames');
     lobby.hidden=true;frame.hidden=false;frame.src='../minigames/'+kind+'/index.html?arpg=1';
     active.source=frame.contentWindow;return true;
   }
   function close(){
     const locked=blocked();
     if(active&&!locked&&frame.contentWindow.MiniHost?.flush)frame.contentWindow.MiniHost.flush();
+    if(active?.kind==='arena'&&active.arena&&!active.arena.ended&&active.arena.bank>0){
+      active.arena.bank=0;active.arena.ended=true;data.arena.forfeits=(data.arena.forfeits||0)+1;
+    }
     active=null;frame.removeAttribute('src');frame.hidden=true;supply.hidden=true;lobby.hidden=true;root.hidden=true;lobbyMode(null);
     GAME.releaseInput();GAME.setHold(false);GAME.setOpen(null);window.AUDIO?.bgm.sync();
     if(!locked)save();
@@ -6708,7 +6722,7 @@ requestAnimationFrame(frame);
   }
   function child(source){return active&&source===frame.contentWindow&&!blocked();}
   window.ARPG_MINIGAME_LINK={
-    init(source){if(!child(source))return null;return {kind:active.kind,gold:GAME.P.gold,state:clone(active.kind==='tavern'?data.tavern:active.kind==='bubble-pang'?data.bubble:null),supply:active.kind==='tavern'?clone(ensureSupply()):null};},
+    init(source){if(!child(source))return null;return {kind:active.kind,tier:active.tier,gold:GAME.P.gold,state:clone(active.kind==='tavern'?data.tavern:active.kind==='bubble-pang'?data.bubble:null),supply:active.kind==='tavern'?clone(ensureSupply()):null};},
     checkpoint(source,state,cash){
       if(!child(source))return false;
       if(active.kind==='tavern'){
@@ -6718,17 +6732,58 @@ requestAnimationFrame(frame);
       }else if(active.kind==='bubble-pang')data.bubble=clone(state);else return false;
       save();return true;
     },
+    beginBubbleRound(source){
+      if(!child(source)||active.kind!=='bubble-pang')return null;
+      const tier=active.tier||1,reference=bubbleReference(tier),fee=bubbleFee(tier);
+      if(GAME.P.gold<fee)return null;
+      if(active.bubbleRound&&!active.bubbleRound.settled)active.bubbleRound.forfeit=true;
+      GAME.setGold(GAME.P.gold-fee);active.bubbleRound={tier,reference,fee,settled:false};
+      data.bubbleStats.played++;data.bubbleStats.spent+=fee;save();
+      return {tier,reference,fee,gold:GAME.P.gold};
+    },
+    finishBubbleRound(source,outcome){
+      if(!child(source)||active.kind!=='bubble-pang'||!active.bubbleRound||active.bubbleRound.settled)return false;
+      const r=active.bubbleRound;r.settled=true;let reward=0,jackpot=false;
+      if(outcome==='clear'){
+        data.bubbleStats.clears++;reward=Math.round(r.reference*(.80+Math.random()*.10));
+        jackpot=Math.random()<.02;if(jackpot){reward+=r.reference;data.bubbleStats.jackpots++;}
+        GAME.setGold(GAME.P.gold+reward);data.bubbleStats.earned+=reward;
+      }
+      save();return {outcome,reward,jackpot,fee:r.fee,tier:r.tier,gold:GAME.P.gold};
+    },
     beginArena(source){
-      if(!child(source)||active.kind!=='arena'||active.paid)return false;
-      const b=active.bet;if(!b||!Number.isSafeInteger(b.stake)||b.stake<1||GAME.P.gold<b.stake)return false;
-      GAME.setGold(GAME.P.gold-b.stake);active.paid=true;data.arena.played++;save();return true;
+      if(!child(source)||active.kind!=='arena'||active.arena&&!active.arena.ended)return false;
+      const b=active.bet,min=arenaMinStake(active.tier);
+      if(!b||!Number.isSafeInteger(b.stake)||b.stake<min||b.stake%min!==0||GAME.P.gold<b.stake)return false;
+      GAME.setGold(GAME.P.gold-b.stake);active.paid=true;active.arena={bank:b.stake,streak:0,round:true,decision:null,ended:false};
+      data.arena.played++;save();return {stake:b.stake,tier:active.tier,gold:GAME.P.gold};
     },
     finishArena(source,winner){
-      if(!child(source)||active.kind!=='arena'||!active.paid||active.settled||![null,'left','right'].includes(winner))return false;
-      active.settled=true;const b=active.bet,payout=winner===null?b.stake:winner===b.side?b.stake*2:0;
-      if(winner===b.side)data.arena.wins++;GAME.setGold(GAME.P.gold+payout);save();return {payout,gold:GAME.P.gold};
+      if(!child(source)||active.kind!=='arena'||!active.arena||active.arena.ended||!active.arena.round||![null,'left','right'].includes(winner))return false;
+      const a=active.arena,b=active.bet;a.round=false;
+      if(winner===null){a.decision='draw';save();return {status:'draw',bank:a.bank,streak:a.streak,gold:GAME.P.gold};}
+      if(winner!==b.side){a.bank=0;a.ended=true;a.decision=null;data.arena.losses=(data.arena.losses||0)+1;save();return {status:'lost',bank:0,streak:a.streak,gold:GAME.P.gold};}
+      data.arena.wins++;a.streak++;a.bank*=2;
+      if(a.streak>=3){
+        const payout=a.bank;GAME.setGold(GAME.P.gold+payout);a.bank=0;a.ended=true;a.decision=null;save();
+        return {status:'jackpot',payout,bank:0,streak:a.streak,gold:GAME.P.gold};
+      }
+      a.decision='win';save();return {status:'won',bank:a.bank,streak:a.streak,gold:GAME.P.gold};
     },
-    repeatArena(source){if(!child(source)||!active.settled)return false;active.paid=false;active.settled=false;return true;},
+    arenaDecision(source,action){
+      if(!child(source)||active.kind!=='arena'||!active.arena||active.arena.ended)return false;
+      const a=active.arena;
+      if(action==='continue'&&(a.decision==='win'||a.decision==='draw')){a.decision=null;a.round=true;save();return {status:'continue',bank:a.bank,streak:a.streak,gold:GAME.P.gold};}
+      if(action==='cashout'&&a.decision==='win'){
+        const payout=a.bank;GAME.setGold(GAME.P.gold+payout);a.bank=0;a.decision=null;a.ended=true;save();
+        return {status:'cashed',payout,streak:a.streak,gold:GAME.P.gold};
+      }
+      return false;
+    },
+    repeatArena(source){
+      if(!child(source)||!active.arena||!active.arena.ended)return false;
+      active.arena=null;active.paid=false;return true;
+    },
     isBlocked:blocked
   };
   root.querySelector('#minigameReturn').onclick=close;root.querySelector('#supplyClose').onclick=close;
@@ -6736,15 +6791,16 @@ requestAnimationFrame(frame);
     if(b.dataset.mini==='arena'){root.querySelector('#arenaWager').hidden=false;money();}else enter(b.dataset.mini);
   });
   root.querySelector('#arenaEnter').onclick=()=>{
-    const stake=Number(root.querySelector('#arenaStake').value),side=root.querySelector('#arenaSide').value;
-    if(!Number.isSafeInteger(stake)||stake<1||stake>GAME.P.gold){root.querySelector('#minigameMoney').textContent='가진 금화 안에서 판돈을 정해 주세요.';return;}
-    enter('arena',{stake,side});
+    const stake=Number(root.querySelector('#arenaStake').value),side=root.querySelector('#arenaSide').value,tier=currentTier(),min=arenaMinStake(tier);
+    if(!Number.isSafeInteger(stake)||stake<min||stake%min!==0||stake>GAME.P.gold){root.querySelector('#minigameMoney').textContent=`T${tier} 판돈은 ${min.toLocaleString('ko-KR')}G 단위로 가진 금화 안에서 정해 주세요.`;return;}
+    enter('arena',{stake,side,tier});
   };
   document.getElementById('minigamesBtn').onclick=open;
   addEventListener('keydown',e=>{if(e.key==='Escape'&&!root.hidden){e.preventDefault();e.stopImmediatePropagation();close();}},{capture:true});
-  window.MINIGAMES={open,enter,close,openSupplyShop,buySupply,addSupplyLoot,supplyCatalog:()=>clone(SUPPLY),supplyState:()=>clone(ensureSupply()),runs:()=>clone(data.tavernRuns||[]),isOpen:()=>!root.hidden,get active(){return active?.kind||null;},saveData:()=>clone(data),loadData(value){
-    if(value?.arena&&typeof value.arena==='object'){
-      const old=clone(value);data={version:2,tavern:old.tavern||null,tavernSupply:old.tavernSupply||(old.tavern&&old.tavern.inventory?clone(old.tavern.inventory):emptySupply()),tavernRuns:Array.isArray(old.tavernRuns)?old.tavernRuns.slice(-30):[],bubble:old.bubble||null,arena:old.arena};ensureSupply();
+  window.MINIGAMES={open,enter,close,openSupplyShop,buySupply,addSupplyLoot,supplyCatalog:()=>clone(SUPPLY),supplyState:()=>clone(ensureSupply()),runs:()=>clone(data.tavernRuns||[]),arenaMinStake,bubbleEconomy:t=>({tier:clampTier(t),reference:bubbleReference(t),fee:bubbleFee(t)}),isOpen:()=>!root.hidden,get active(){return active?.kind||null;},saveData:()=>clone(data),loadData(value){
+    if(value&&typeof value==='object'){
+      const old=clone(value),arena=old.arena&&typeof old.arena==='object'?old.arena:{};
+      data={version:3,tavern:old.tavern||null,tavernSupply:old.tavernSupply||(old.tavern&&old.tavern.inventory?clone(old.tavern.inventory):emptySupply()),tavernRuns:Array.isArray(old.tavernRuns)?old.tavernRuns.slice(-30):[],bubble:old.bubble||null,bubbleStats:Object.assign({played:0,clears:0,jackpots:0,spent:0,earned:0},old.bubbleStats||{}),arena:Object.assign({played:0,wins:0,losses:0,forfeits:0},arena)};ensureSupply();
     }
   }};
 })();
