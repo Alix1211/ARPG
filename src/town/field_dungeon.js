@@ -759,9 +759,9 @@ function supplyLoot(m){
   const x=weightedLoot(pool,x=>x.cost,cap);if(!x)return null;
   return {lootType:'supply',supplyId:x.id,name:x.name,icon:SUPPLY_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.cost};
 }
-function tradeLoot(m){
+function tradeLoot(m,regionOverride){
   if(!window.TRADE||!Array.isArray(TRADE.goods))return null;
-  const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],region=fieldTheme||'town',reg=TRADE.regions&&TRADE.regions[region],pool=TRADE.goods.filter(x=>x.base<=cap);
+  const tier=Math.max(1,Math.min(7,monsterTier(m))),cap=LOOT_VALUE_CAP[tier-1],region=regionOverride||fieldTheme||'town',reg=TRADE.regions&&TRADE.regions[region],pool=TRADE.goods.filter(x=>x.base<=cap);
   const boost=x=>{const q=reg&&reg.m&&reg.m[x.id];return q<=.85?2.2:(q>=1.2?0.55:1);};
   const x=weightedLoot(pool,x=>x.base,cap,boost);if(!x)return null;
   return {lootType:'trade',tradeId:x.id,name:x.name,icon:TRADE_LOOT_ICON[x.id]||'food_basket',kind:'material',tier,rar:0,price:x.base};
@@ -784,6 +784,29 @@ function randomDropItem(m){
     return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,rank:m&&m.rank,roll:true,magicBoost});
   }
   return UI.make({kind:Math.random()<.55?'ring':'neck',tier,rank:m&&m.rank,roll:true,magicBoost});
+}
+function grantMonsterEquivalentLoot(tier,rolls=10,region){
+  tier=Math.max(1,Math.min(7,tier|0));rolls=Math.max(1,Math.min(50,rolls|0||10));
+  const dummy={tier},find=(window.UI&&UI.findBonus)?UI.findBonus():0,gearChance=equipmentDropChance(dummy,find);
+  const out={tier,rolls,found:0,gear:0,supply:0,trade:0,junk:0,discardTrade:0,discardBag:0,none:0,names:[]};
+  for(let i=0;i<rolls;i++){
+    const roll=Math.random();let it=null,kind='none';
+    if(roll<gearChance){it=randomDropItem(dummy);kind='gear';}
+    else if(roll<gearChance+SUPPLY_DROP_RATE){it=supplyLoot(dummy);kind='supply';}
+    else if(roll<gearChance+SUPPLY_DROP_RATE+TRADE_DROP_RATE){it=tradeLoot(dummy,region);kind='trade';}
+    else if(roll<gearChance+SUPPLY_DROP_RATE+TRADE_DROP_RATE+JUNK_DROP_RATE){it=junkLoot(dummy);kind='junk';}
+    if(!it){out.none++;continue;}
+    let ok=false;
+    if(kind==='supply'&&window.MINIGAMES&&MINIGAMES.addSupplyLoot)ok=!!MINIGAMES.addSupplyLoot(it.supplyId,1);
+    else if(kind==='trade'&&window.TRADE&&TRADE.addLoot)ok=!!TRADE.addLoot(it.tradeId,1);
+    else if(window.UI&&UI.add)ok=!!UI.add(it);
+    if(ok){
+      out.found++;out[kind]++;if(out.names.length<12)out.names.push(it.name||kind);
+    }else if(kind==='trade')out.discardTrade++;
+    else out.discardBag++;
+  }
+  if(window.UI&&UI.save)UI.save();
+  return out;
 }
 function monsterExp(m){
   const tier=monsterTier(m),cap=tier*10,lv=P.lv||1;
@@ -1024,6 +1047,7 @@ window.__FD={
   debugMonster(){const m=monsters.find(x=>!x.dead&&!x.removed);return m?{type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}:null;},
   debugMonsters(){return monsters.filter(x=>!x.dead&&!x.removed).map(m=>({type:m.type,family:m.family,name:m.name,rank:m.rank,bossRole:m.bossRole,packId:m.packId||0,packLeader:!!m.packLeader,w:m.w,baseW:m.baseW,x:m.x,y:m.y,exp:m.exp,dropChance:m.dropChance,blocked:pointInSolid(m.x,m.y,m.w*.5)||gridBlocked(m.x,m.y,m.w*.5),tier:m.tier,mobLv:m.mobLv||0,hp:m.hp,maxHp:m.maxHp,dmg:m.dmg,skill:m.skill,sp:m.sp}));},
   lootConfig(t=FIELD_TIER[fieldTheme]||1){t=Math.max(1,Math.min(7,t|0));const cap=LOOT_VALUE_CAP[t-1];return {tier:t,cap,equip:EQUIP_DROP_BY_TIER[t-1],supplyRate:SUPPLY_DROP_RATE,tradeRate:TRADE_DROP_RATE,junkRate:JUNK_DROP_RATE,supply:window.MINIGAMES?MINIGAMES.supplyCatalog().filter(x=>x.cost<=cap).map(x=>x.id):[],trade:window.TRADE?TRADE.goods.filter(x=>x.base<=cap).map(x=>x.id):[],junk:JUNK_LOOT.filter(x=>x.minTier<=t).map(x=>x.name)};},
+  grantMonsterLoot:(tier,rolls=10,region)=>grantMonsterEquivalentLoot(tier,rolls,region),
   testSpawn(id,dx,dy){const m=createMonster(id,P.x+dx,P.y+dy);m.stun=99;monsters.push(m);return monsters.indexOf(m);},   // 연출 확인용
   testOp(i,op,a){const m=monsters[i];if(!m)return false;if(op==='hit')hitMonster(m,[a||1,0],true,1);else if(op==='kill')killMonster(m);else if(op==='act')monAct(m,a,.5,1,0);else if(op==='clear'){for(const x of monsters)x.removed=true;}else if(op==='go'){m.stun=0;}return true;},
   hurtTest(v){rawPlayerDamage(v);return P.hp;},   // 검사용: 방어 계산 후 직접 피해
