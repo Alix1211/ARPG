@@ -332,7 +332,7 @@ html.app #fs{display:none}
 #fs{top:8px;right:calc(max(10px,env(safe-area-inset-right)) + 288px)}
 #place{top:194px;width:150px}
 .pot{position:fixed;width:34px!important;height:34px!important;margin:0!important;left:auto!important;top:136px!important}
-#potMp{right:calc(max(10px,env(safe-area-inset-right)) + 9px)}#potHp{right:calc(max(10px,env(safe-area-inset-right)) + 50px)}
+#potDual{right:calc(max(10px,env(safe-area-inset-right)) + 9px)}#potMp{right:calc(max(10px,env(safe-area-inset-right)) + 50px)}#potHp{right:calc(max(10px,env(safe-area-inset-right)) + 91px)}
 .pot b{min-width:15px;height:15px;font-size:9px;line-height:11px}
 #cluster{width:93px;height:93px;bottom:44px}
 #atkCap{font-size:11px}
@@ -358,7 +358,7 @@ html.app #fs{display:none}
 <div class="hud" id="place">마을</div>
 <button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="settingsBtn" type="button">⚙ 설정</button><button class="hud" id="resetBtn" type="button" hidden>초기화</button>
 <div class="hud" id="joy"></div><div id="stick"><div id="knob"></div></div>
-<div id="cluster"><button id="atk" type="button" aria-label="공격"><img id="atkIc" alt=""><span id="atkCap"></span></button><button class="sk" data-i="0" type="button" hidden><i></i></button><button class="sk" data-i="1" type="button" hidden><i></i></button><button class="sk" data-i="2" type="button" hidden><i></i></button><button class="sk" data-i="3" type="button" hidden><i></i></button><button class="sk" data-i="4" type="button" hidden><i></i></button><button class="pot" id="potHp" type="button" aria-label="체력 물약"><b>0</b></button><button class="pot" id="potMp" type="button" aria-label="마나 물약"><b>0</b></button><button id="swap" type="button" aria-label="무기 교체"><small id="swapNo">1</small></button></div>
+<div id="cluster"><button id="atk" type="button" aria-label="공격"><img id="atkIc" alt=""><span id="atkCap"></span></button><button class="sk" data-i="0" type="button" hidden><i></i></button><button class="sk" data-i="1" type="button" hidden><i></i></button><button class="sk" data-i="2" type="button" hidden><i></i></button><button class="sk" data-i="3" type="button" hidden><i></i></button><button class="sk" data-i="4" type="button" hidden><i></i></button><button class="pot" id="potHp" type="button" aria-label="체력 물약"><b>0</b></button><button class="pot" id="potMp" type="button" aria-label="마나 물약"><b>0</b></button><button class="pot" id="potDual" type="button" aria-label="체력·마나 회복 물약"><b>0</b></button><button id="swap" type="button" aria-label="무기 교체"><small id="swapNo">1</small></button></div>
 <div id="bubble"></div>
 <div id="levelNotice" role="status" aria-live="polite"></div>
 <div id="tag"></div>
