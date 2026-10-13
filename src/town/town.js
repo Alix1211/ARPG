@@ -1381,7 +1381,7 @@ function drawShots(dt){
           if (again && Math.abs(s.x - t.x) < hw && s.y > t.y - t.h * 0.85 - hw * .6 && s.y < t.y + hw * .6){ if (s.rehit) s.hit.set(t, s.t); else s.hit.add(t); pierceHit(s, t); }
         }
       } else {
-        for (const t of combatTargets()){ if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
+        for (const t of combatTargets()){ if(s.companion&&!t.monster)continue;if (Math.abs(s.x - t.x) < 22 && s.y > t.y - t.h * 0.85 && s.y < t.y){ boom(s, t); break; } }
       }
       if (!s.done && s.t > s.life) boom(s, null);
     }
@@ -1425,10 +1425,19 @@ function boom(s,t){
     if(s.chill){const now=performance.now()/1000;if(now-(u.chillAt||-9)>1.6)u.chillN=0;u.chillAt=now;u.chillN=(u.chillN||0)+1;if(s.chillFreeze&&u.chillN>=3){u.chillN=0;applyMonsterStatus(u,'freeze',s.chillFreeze);}}
   };
   if(s.blast){
-    for(const u of combatTargets())if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);
+    for(const u of combatTargets()){if(s.companion&&!u.monster)continue;if(Math.hypot(u.x-s.x,(u.y-30)-s.y)<s.blast+16)hit(u);}
     sfx.push({type:s.fx||(s.kind==='fire'?'fireburst':s.kind==='ice'?'iceburst':'impact'),t:0,x:s.x,y:s.y,r:s.blast});
   }else if(t){
     hit(t);sfx.push({type:s.fx||(s.kind==='ice'?'icehit':'impact'),t:0,x:s.x,y:s.y,r:s.pellet?22:34});
+  }
+  if(s.companion&&s.companionBurst&&typeof companionHit==='function'){
+    const r=s.companionBurstRadius||100,ratio=s.companionBurstRatio||.42;
+    if(typeof companionFx!=='undefined')companionFx.push({kind:'burst',x:s.x,y:s.y,r,t:0,life:.34});
+    for(const u of monsters){
+      if(!u||u===t||u.dead||u.removed||Math.hypot(u.x-s.x,u.y-s.y)>r)continue;
+      companionHit(u,(s.dmg||1)*ratio,u.x-s.x,u.y-s.y,s.companionBurstStun?8:4);
+      if(s.companionBurstStun)u.stun=Math.max(u.stun||0,.28);
+    }
   }
 }
 
