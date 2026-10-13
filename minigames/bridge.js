@@ -17,6 +17,7 @@
 
   function installBubbleEconomy(){
     if(initial.kind!=='bubble-pang')return;
+    const originalFlush=window.MiniHost.flush;
     const overlay=document.getElementById('overlay'),title=document.getElementById('ovTitle'),textBox=document.getElementById('ovText');
     const restart=document.getElementById('restartBtn'),retry=document.getElementById('retryBtn'),toast=document.getElementById('toast'),canvas=document.getElementById('gameCanvas');
     if(!overlay||!title||!textBox)return;
@@ -52,7 +53,7 @@
       roundOpen=false;appendSettlement(res);
     });
     observer.observe(overlay,{attributes:true,childList:true,subtree:true,attributeFilter:['class']});
-    window.MiniHost.flush=()=>{observer.disconnect();};
+    window.MiniHost.flush=()=>{observer.disconnect();if(typeof originalFlush==='function')originalFlush();};
     // 원본은 로드 직전에 첫 판을 이미 만들어 둔다. 첫 판도 동일하게 이용료를 낸다.
     begin();
   }
