@@ -1,8 +1,20 @@
 'use strict';
 // 여관 1단계 + 감정사: 실내 이동, 회복, 미확인 장비 감정.
+let innReturn=null;
 function innCost(){return Math.max(0,(P.lv||1)*8);}
-function enterInn(){if(MAP!=='town')return false;return travel('inn',MAPS.inn.spawn,'back');}
-function leaveInn(){closeAll();return MAP==='inn'?travel('town',MAPS.inn.back,'front'):false;}
+function enterInn(){
+  if(!['town','fieldvillage'].includes(MAP))return false;
+  const st=typeof locationState==='function'?locationState():{map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
+  innReturn={...st,x:P.x,y:P.y,dir:P.dir||'front'};
+  return travel('inn',MAPS.inn.spawn,'back');
+}
+function leaveInn(){
+  closeAll();if(MAP!=='inn')return false;
+  const r=innReturn||{map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
+  if(r.map==='fieldvillage'&&MAPS.fieldvillage)return travel('fieldvillage',[r.x,r.y],r.dir||'front');
+  return travel('town',[r.x||MAPS.inn.back[0],r.y||MAPS.inn.back[1]],r.dir||'front');
+}
+function innReturnState(){return innReturn?{...innReturn}:null;}
 function openInnDlg(n){
   talking=n;
   $('dlgImg').src=A.port[n.k];$('dlgName').textContent=n.name;$('dlgTitle').textContent=n.title;
@@ -34,4 +46,4 @@ function restInn(){
 $('dlgRest').addEventListener('click',restInn);
 $('dlgIdentify').addEventListener('click',identifyInn);
 $('dlgLeave').addEventListener('click',()=>{if(MAP==='inn')leaveInn();else closeAll();});
-window.__INN={enter:enterInn,leave:leaveInn,open:()=>{const n=npcs.find(x=>x.shop==='inn');return n?openInnDlg(n):false;},rest:restInn,identify:identifyInn,cost:innCost,state:()=>({map:MAP,x:P.x,y:P.y,gold:P.gold,hp:P.hp,mp:P.mp})};
+window.__INN={enter:enterInn,leave:leaveInn,returnState:innReturnState,open:()=>{const n=npcs.find(x=>x.shop==='inn');return n?openInnDlg(n):false;},rest:restInn,identify:identifyInn,cost:innCost,state:()=>({map:MAP,x:P.x,y:P.y,gold:P.gold,hp:P.hp,mp:P.mp,returnState:innReturnState()})};
