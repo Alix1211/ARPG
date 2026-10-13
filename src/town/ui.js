@@ -279,17 +279,39 @@ const skBtns = [...document.querySelectorAll('.sk')];
 const C0 = 62;
 skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
 $('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWAPPOS[1]) + 'px';
-// 물약 버튼 2개: 스킬 칸 위 (케인 지시)
-const POT = { hp: 3, mp: 2 };   // 시작할 때 체력 물약 3, 마나 물약 2 — 잡화점(마르코)에서 삼
+// 물약 버튼 3개: 빨강 HP / 파랑 MP / 보라 HP+MP, 각 7티어.
+const POT = { hp:[3,0,0,0,0,0,0], mp:[2,0,0,0,0,0,0], dual:[0,0,0,0,0,0,0] };
 const SCR = { portal: 0, ident: 0 }, SCR_MAX = 20;   // 스크롤(포탈·감정): 한 종류당 20장까지
-const potEl = { hp: $('potHp'), mp: $('potMp') };
-potEl.hp.style.cssText += `left:${C0 - 26}px;top:${C0 - 172}px;background-image:url(${K.h_php})`;
-potEl.mp.style.cssText += `left:${C0 + 40}px;top:${C0 - 172}px;background-image:url(${K.h_pmp})`;
-function syncPot(){ for (const k of ['hp', 'mp']){ potEl[k].querySelector('b').textContent = POT[k]; potEl[k].classList.toggle('none', !POT[k]); } }
-for (const k of ['hp', 'mp']) potEl[k].addEventListener('pointerdown', e => {
+const potEl = { hp: $('potHp'), mp: $('potMp'), dual: $('potDual') };
+potEl.hp.style.cssText += `left:${C0 - 60}px;top:${C0 - 172}px`;
+potEl.mp.style.cssText += `left:${C0 + 6}px;top:${C0 - 172}px`;
+potEl.dual.style.cssText += `left:${C0 + 72}px;top:${C0 - 172}px`;
+function potionTierOwned(k){
+  const a=POT[k]||[],want=G.levelTier?G.levelTier(G.P.lv):1;
+  if(a[want-1]>0)return want;
+  for(let t=want-1;t>=1;t--)if(a[t-1]>0)return t;
+  for(let t=want+1;t<=7;t++)if(a[t-1]>0)return t;
+  return 0;
+}
+function potionIcon(k,t){
+  const key=k+t;
+  if(A.potions&&A.potions[key])return A.potions[key];
+  return k==='hp'?K.h_php:k==='mp'?K.h_pmp:K.ring;
+}
+function syncPot(){
+  for(const k of ['hp','mp','dual']){
+    const t=potionTierOwned(k),n=t?(POT[k][t-1]||0):0,b=potEl[k];
+    b.querySelector('b').textContent=n;
+    b.classList.toggle('none',!n);
+    b.style.backgroundImage=`url(${potionIcon(k,t||1)})`;
+    b.setAttribute('aria-label',(k==='hp'?'체력':k==='mp'?'마나':'체력·마나')+` 물약 T${t||'-'} · ${n}개`);
+  }
+}
+for (const k of ['hp','mp','dual']) potEl[k].addEventListener('pointerdown', e => {
   e.preventDefault(); if (G.isOpen()) return;
-  if (!POT[k]){ G.say(k === 'hp' ? '체력 물약이 없습니다' : '마나 물약이 없습니다'); return; }
-  if (G.drink(k)){ POT[k]--; syncPot(); if (!POT[k] && window.CHATTER) CHATTER.event('nopot', 1900); }
+  const t=potionTierOwned(k);
+  if(!t){G.say(k==='hp'?'체력 물약이 없습니다':k==='mp'?'마나 물약이 없습니다':'복합 회복 물약이 없습니다');return;}
+  if(G.drink(k,t)){POT[k][t-1]--;syncPot();if(!potionTierOwned(k)&&window.CHATTER)CHATTER.event('nopot',1900);}
 });
 syncPot();
 function needWeapon(id){if(id==='townPortal')return null;const w=SKW[id.replace(/[0-9].*$/,'')];return w||null;}
@@ -706,7 +728,7 @@ function stashInfo(from,i){
 }
 
 window.UI = {
-  addPotion(k,n){POT[k]+=n;syncPot();},potions:()=>({hp:POT.hp,mp:POT.mp}),
+  addPotion(k,tier,n){if(n==null){n=tier;tier=1;}tier=Math.max(1,Math.min(7,tier|0));if(!POT[k])return 0;POT[k][tier-1]+=Math.max(0,n|0);syncPot();return POT[k][tier-1];},potions:()=>({hp:POT.hp.slice(),mp:POT.mp.slice(),dual:POT.dual.slice()}),
   addScroll(k,n){const had=SCR[k]|0;SCR[k]=Math.min(SCR_MAX,had+n);syncMmBtn();if($('char').classList.contains('on'))render();return SCR[k]-had;},
   scrolls:()=>({portal:SCR.portal,ident:SCR.ident}),scrollMax:SCR_MAX,
   useScroll(k){if(!(SCR[k]>0))return false;SCR[k]--;syncMmBtn();if($('char').classList.contains('on'))render();saveGame();return true;},
@@ -756,7 +778,15 @@ function loadGame(){
   for(let i=0;i<STASH;i++)stash[i]=d.stash&&d.stash[i]||null;
   for(const k in eq)eq[k]=d.eq&&d.eq[k]||null;
   cur=d.cur==='w2'&&eq.w2?'w2':'w1';
-  if(d.pot){POT.hp=d.pot.hp|0;POT.mp=d.pot.mp|0;}
+  if(d.pot){
+    for(const k of ['hp','mp','dual']){
+      const src=d.pot[k];
+      POT[k].fill(0);
+      if(Array.isArray(src)){for(let i=0;i<7;i++)POT[k][i]=Math.max(0,src[i]|0);}
+      else if(src!=null&&k!=='dual')POT[k][0]=Math.max(0,src|0); // 예전 단일 물약은 T1로 이관
+    }
+    syncPot();
+  }
   if(d.scr){SCR.portal=Math.max(0,Math.min(SCR_MAX,d.scr.portal|0));SCR.ident=Math.max(0,Math.min(SCR_MAX,d.scr.ident|0));}
   if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&(d.qs[i]==='townPortal'||A.skicon[d.qs[i]])?d.qs[i]:null;
   // unid 필드가 없는 이전 저장 장비는 falsy이므로 모두 감정 완료로 취급한다.
