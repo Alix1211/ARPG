@@ -71,9 +71,10 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if(id==='town'&&b.k==='house_blue')spots.push({name:'여관 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
-  if(id==='town'&&b.kind==='minigame_tavern')spots.push({name:'DUSK POB · 주점 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_tavern'});
-  if(id==='town'&&b.kind==='minigame_arena')spots.push({name:'격투장 입장·배팅소',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_arena'});
-  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k) || (b.kind&&b.kind.startsWith('minigame_'))) continue;
+  if(id==='town'&&(b.kind==='minigame_tavern'||b.k==='player_tavern'))spots.push({name:'DUSK POB · 주점 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_tavern'});
+  if(id==='town'&&(b.kind==='minigame_arena'||b.k==='arena_entry'))spots.push({name:'격투장 입장·배팅소',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_arena'});
+  if(id==='town'&&(b.kind==='minigame_bubble'||b.k==='bubble_house'))spots.push({name:'버블 슈터 하우스',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_bubble'});
+  if (b.noSpot || b.k === 'watchtower' || hasNpc.has(b.k) || (b.kind&&b.kind.startsWith('minigame_')) || ['player_tavern','arena_entry','bubble_house'].includes(b.k)) continue;
   spots.push({ name: b.name, x: b.x + b.door * b.w, y: gate ? b.y - b.h * 0.42 - 14 : b.y - b.h * 0.06, r: gate ? 60 : 46, kind: b.kind || (gate ? 'gate' : 'bld'), market: b.market || CUR.market || null });
 }
 for (const p of CUR.props){
@@ -85,7 +86,7 @@ for (const p of CUR.props){
     continue;
   }
   if (p.cw > 0) solids.push({ x0: p.x - p.w * p.cw / 2, x1: p.x + p.w * p.cw / 2, y0: p.y - p.cd, y1: p.y - 2 });
-  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.flat ? -1e9 : p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom', mimic:p.mimic,flame:p.flame,stash:p.kind==='stash' };
+  const s = { img: BI[p.k], x: p.x, y: p.y, w: p.w, h: p.h, key: p.flat ? -1e9 : p.y - 4, tree: p.tree, shadow: p.shadow, ph: Math.random() * 7, pink: p.k === 'tree_blossom', mimic:p.mimic,flame:p.flame,stash:p.kind==='stash',breakable:p.kind==='breakable',breakData:p };
   sprites.push(s); if (p.tree) trees.push(s);
   if (p.kind === 'dummy'){ s.dummy = { hp: 0, wob: 0, ph: 0 }; dummies.push(s); }
   if (p.name) spots.push({ name: p.name, x: p.x, y: p.flat ? p.y - p.h / 2 : p.y + 16, r: p.r || (p.flat ? 40 : 46), kind: p.kind || 'prop', data: p, prop: s });
@@ -425,6 +426,7 @@ function act(){
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
   if(near.kind==='minigame_tavern'&&window.MINIGAMES)return MINIGAMES.open('tavern');
+  if(near.kind==='minigame_bubble'&&window.MINIGAMES)return MINIGAMES.open('bubble-pang');
   if(near.kind==='minigame_arena'&&window.MINIGAMES)return MINIGAMES.open('arena');
   if(near.kind==='prop'&&near.name==='주점 식자재점'&&window.MINIGAMES)return MINIGAMES.openSupplyShop();
   if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
@@ -1169,6 +1171,19 @@ function frame(now){
       }
       continue;
     }
+    if(s.breakable&&s.brokenAt){
+      const age=(performance.now()-s.brokenAt)/1000;
+      if(age>.52){s.hide=true;continue;}
+      const q=Math.min(1,age/.52),im=s.img,iw=im.naturalWidth||2,ih=im.naturalHeight||2,sw=iw/2,sh=ih/2,dw=s.w/2,dh=s.h/2;
+      const parts=[[0,0,-1,-1,-.55],[sw,0,1,-1,.5],[0,sh,-1,1,.45],[sw,sh,1,1,-.4]];
+      ctx.save();
+      for(const [sx,sy,dx,dy,rot] of parts){
+        const cx0=s.x-s.w/4+(sx?dw:0),cy0=s.y-s.h+dh/2+(sy?dh:0);
+        ctx.save();ctx.translate(cx0+dx*q*13,cy0+dy*q*18+q*q*25);ctx.rotate(rot*q);
+        ctx.globalAlpha=1-q*.7;ctx.drawImage(im,sx,sy,sw,sh,-dw/2,-dh/2,dw,dh);ctx.restore();
+      }
+      ctx.restore();ctx.globalAlpha=1;continue;
+    }
     if (s.shadow){ ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(s.x + s.w * 0.10, s.y + 4, Math.max(8, s.w * 0.28), Math.max(3, s.w * 0.08), 0.22, 0, 7); ctx.fill(); }
     if(s.stash&&window.UI&&UI.stashOpen()){const im=BI.personal_stash_open,h=s.w*im.naturalHeight/im.naturalWidth;if(im.complete&&im.naturalWidth)ctx.drawImage(im,s.x-s.w/2,s.y-h,s.w,h);else ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h,s.w,s.h);}
     else ctx.drawImage(s.img, s.x - s.w / 2, s.y - s.h, s.w, s.h);
@@ -1254,6 +1269,7 @@ function updAtk(dt){
     }
     hits.sort((p, q) => p[0] - q[0]);
     hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger, undefined, w.kb));
+    if(typeof breakDungeonPropsMelee==='function')breakDungeonPropsMelee(P.x,P.y,d,w);
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
@@ -1322,7 +1338,9 @@ function drawShots(dt){
     if (!s.done) guideShot(s, dt);
     s.t += dt;
     const nx=s.x+s.vx*dt, ny=s.y+s.vy*dt;
-    if(!s.done && blocked(nx,ny)){s.x=nx;s.y=ny;boom(s,null);}
+    const hitBreakable=!s.done&&typeof breakDungeonPropAt==='function'&&breakDungeonPropAt(nx,ny,22);
+    if(hitBreakable){s.x=nx;s.y=ny;boom(s,null);}
+    else if(!s.done && blocked(nx,ny)){s.x=nx;s.y=ny;boom(s,null);}
     else{s.x=nx;s.y=ny;}
     if (!s.done){
       if (s.pierce){   // 관통: 대상마다 한 번씩 맞히고 계속 날아간다(검기·파편·파동권)
