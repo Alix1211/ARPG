@@ -812,7 +812,7 @@ if(saved){
   });
 }
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
-window.UI.save=saveGame;window.UI.reset=()=>{RESETTING=true;try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
 // 테스트용 초기화 버튼: 두 번 눌러야 지워진다. 정식 시작 전에 false로.
 const TEST_RESET_BUTTON=false;
 {const b=document.getElementById('resetBtn');
