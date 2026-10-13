@@ -38,7 +38,7 @@ dependencies {
 
 // 인터넷이 안 될 때 쓸 예비 판: 빌드할 때 game/town.html 과 그림 파일(art_*.js)을 앱 안에 넣는다.
 def syncWebAssets = tasks.register('syncWebAssets', Sync) {
-    from(rootProject.file('../game')) { include 'town.html', 'art_*.js' }
+    from(rootProject.file('../game')) { include 'town.html', 'art_*' }
     into(layout.buildDirectory.dir('generated/webAssets/game'))
 }
 tasks.configureEach {

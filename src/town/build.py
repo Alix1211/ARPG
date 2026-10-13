@@ -913,8 +913,15 @@ ART_FILES = {}
 for _g_name in sorted(ART_GROUPS):
     _js = 'Object.assign(window.ART=window.ART||{},' + json.dumps(ART_GROUPS[_g_name], sort_keys=True) + ');'
     ART_FILES['art_' + _g_name + '_' + hashlib.sha1(_js.encode()).hexdigest()[:10] + '.js'] = _js
-_keep = set(ART_FILES) | set(BGM_FILES)
-for old_art in glob.glob(os.path.join(GAME_DIR, 'art_*.js')):
+# 시작·로딩 화면 그림: 이름에 내용 해시를 붙인 별도 파일. 한 번 받으면 다시 받지 않는다.
+_title = Image.open(os.path.join(ROOT, 'source_sheets', 'ui', 'title_loading.png')).convert('RGB')
+_title.thumbnail((1600, 900), Image.LANCZOS)
+_tb = io.BytesIO(); _title.save(_tb, 'WEBP', quality=82, method=6); _tb = _tb.getvalue()
+TITLE_FILE = 'art_title_' + hashlib.sha1(_tb).hexdigest()[:10] + '.webp'
+if not os.path.exists(os.path.join(GAME_DIR, TITLE_FILE)):
+    with open(os.path.join(GAME_DIR, TITLE_FILE), 'wb') as f: f.write(_tb)
+_keep = set(ART_FILES) | set(BGM_FILES) | {TITLE_FILE}
+for old_art in glob.glob(os.path.join(GAME_DIR, 'art_*')):
     if os.path.basename(old_art) not in _keep: os.remove(old_art)
 for _fn, _js in {**ART_FILES, **BGM_FILES}.items():
     if not os.path.exists(os.path.join(GAME_DIR, _fn)):
@@ -924,7 +931,9 @@ RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@
 # WebView가 이전 그림 묶음을 잘못 캐시한 경우를 끊기 위한 캐시 세대값.
 # 그림 해시는 그대로 쓰되 세대값을 올리면 APK가 반드시 새 URL로 다시 받는다.
 ART_CACHE_EPOCH = '2'
-html = html.replace('<script>\n/*ASSETS*/', ''.join('<script src="' + _fn + '?v=' + ART_CACHE_EPOCH + '"></script>\n' for _fn in sorted(ART_FILES)) + '<script>\n/*ASSETS*/')
+_kb = {_fn: max(1, len(_js) // 1024) for _fn, _js in ART_FILES.items()}
+html = html.replace('/*TITLE*/', TITLE_FILE).replace('/*BOOT_TOTAL*/1', str(sum(_kb.values())))
+html = html.replace('<script>\n/*ASSETS*/', ''.join('<script src="' + _fn + '?v=' + ART_CACHE_EPOCH + '" onload="__bootStep(' + str(_kb[_fn]) + ')"></script>\n' for _fn in sorted(ART_FILES)) + '<script>\n/*ASSETS*/')
 html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
 with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
 print('ok', len(html) // 1024, 'KB + 그림', len(ART_FILES), '묶음', sum(map(len, ART_FILES.values())) // 1024, 'KB + 음악', len(BGM_FILES), '곡', sum(map(len, BGM_FILES.values())) // 1024, 'KB')

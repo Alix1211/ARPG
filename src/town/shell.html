@@ -344,9 +344,34 @@ html.app #fs{display:none}
 .sk[data-i="4"]{left:11.25px!important;top:110.25px!important}
 #swap{width:40px;height:40px;margin:-20px 0 0 -20px;left:69px!important;top:112.5px!important}
 }
+#boot{position:fixed;inset:0;z-index:9999;background:#0b0806;transition:opacity .45s ease}
+#boot.out{opacity:0;pointer-events:none}
+#bootImg{position:absolute;inset:0;background:#0b0806 center/cover no-repeat}
+#boot::after{content:'';position:absolute;left:0;right:0;bottom:0;height:24%;background:linear-gradient(transparent,#000c);pointer-events:none}
+#bootUi{position:absolute;z-index:1;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(46vw,520px);text-align:center}
+#bootBar{height:10px;border:2px solid #c9923e;border-radius:8px;background:#0008;overflow:hidden;box-shadow:0 0 12px #0009}
+#bootBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8a5a1c,#f3c76a)}
+#bootTxt{margin-top:8px;color:#f3e6c8;font:700 clamp(13px,1.8vw,18px) "Noto Sans KR",sans-serif;text-shadow:0 2px 6px #000,0 0 2px #000;letter-spacing:.06em}
+#boot.ready #bootBar{display:none}
+#boot.ready #bootTxt{font-size:clamp(18px,2.8vw,30px);color:#f6d68a;animation:bootPulse 1.6s ease-in-out infinite}
+@keyframes bootPulse{0%,100%{opacity:1}50%{opacity:.6}}
 </style>
 </head>
 <body>
+<div id="boot"><div id="bootImg" style="background-image:url('/*TITLE*/')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div>
+<script>
+// 시작·로딩 화면: 그림 묶음을 받는 동안 막대를 채우고, 다 받으면 눌러서 시작. 떠 있는 동안 게임 시간은 멈춘다.
+(function(){var got=0,total=/*BOOT_TOTAL*/1;window.ARPG_TITLE_OPEN=true;
+window.__bootStep=function(n){got+=n;var i=document.querySelector('#bootBar i');if(i)i.style.width=Math.min(100,got/total*100).toFixed(1)+'%';};
+window.__bootClose=function(){var b=document.getElementById('boot');window.ARPG_TITLE_OPEN=false;if(!b)return;b.classList.add('out');setTimeout(function(){b.remove();},460);};
+window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return;
+  if(navigator.webdriver){b.remove();window.ARPG_TITLE_OPEN=false;return;}
+  b.classList.add('ready');document.getElementById('bootTxt').textContent='화면을 눌러 시작';
+  var go=function(e){e.stopPropagation();b.removeEventListener('pointerdown',go);removeEventListener('keydown',key,true);window.__bootClose();};
+  var key=function(e){if(document.getElementById('boot'))go(e);};
+  b.addEventListener('pointerdown',go);addEventListener('keydown',key,true);};
+})();
+</script>
 <canvas id="cv"></canvas>
 <div class="hud" id="me"><div class="ring" role="button" tabindex="0" aria-label="능력치 열기"><img class="face" id="face" alt=""><img id="ringImg" alt=""><div id="lvOrb"><b id="lvTxt">1</b><small>Lv</small></div></div>
   <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
@@ -410,11 +435,12 @@ html.app #fs{display:none}
 /*SAVE_SYNC*/
 // 길게 누르기·두 손가락 누르기로 글자 선택·메뉴·텍스트 추출이 뜨지 않게
 for (const ev of ['contextmenu', 'selectstart', 'dragstart']) document.addEventListener(ev, e => e.preventDefault());
-window.addEventListener('error', e => { const d = document.getElementById('err'); d.style.display = 'block'; d.textContent = '오류: ' + e.message + ' (' + (e.lineno || '') + ')'; });
+window.addEventListener('error', e => { if (window.__bootClose) __bootClose(); const d = document.getElementById('err'); d.style.display = 'block'; d.textContent = '오류: ' + e.message + ' (' + (e.lineno || '') + ')'; });
 </script>
 <script>
 /*ASSETS*/
 /*GAME*/
+;window.__bootReady&&__bootReady();
 </script>
 </body>
 </html>

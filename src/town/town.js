@@ -902,7 +902,7 @@ window.GAME = { NUM, P, drink, potionInfo, cast, gainExp, expNeed, targetKillsFo
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   releaseInput:releaseAll, setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
   lastVisitedTown:lastVisitedTownState,loadLastVisitedTown,markTownArrival,
-  isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings'||panel==='minigames', setOpen:v=>{panel=v;}, swing, say, setMax };
+  isOpen:()=>!!panel, isPaused:()=>panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_TITLE_OPEN, setOpen:v=>{panel=v;}, swing, say, setMax };
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
@@ -1121,7 +1121,7 @@ function drawPortalArrivalAura(){
 function frame(now){
   if(document.hidden){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
-  const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING,sdt=simPaused?0:dt;
+  const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN,sdt=simPaused?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;

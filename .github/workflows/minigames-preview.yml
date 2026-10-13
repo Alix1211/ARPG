@@ -45,7 +45,7 @@ jobs:
       - name: 실행 묶음 준비
         run: |
           mkdir -p /tmp/gqs-preview/game
-          cp game/town.html game/art_*.js /tmp/gqs-preview/game/
+          cp game/town.html game/art_* /tmp/gqs-preview/game/
           cp -r minigames /tmp/gqs-preview/
           cp tools/play-minigames-preview.bat /tmp/gqs-preview/실행하기.bat
       - uses: actions/upload-artifact@v4
