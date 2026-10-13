@@ -8,7 +8,7 @@ const NUM = G.NUM || 100;         // 수치 규모(town.js). 체력·마나·공
 const RARN = ['일반', '마법', '희귀', '전설'];
 const RARC = ['#e8dcc0', '#6fb4ff', '#ffd34d', '#ff8a2a'];
 const RART = ['#5b4630', '#2f6fb8', '#a8780a', '#c4580a'];
-const SLOTN = { w1: '무기1', w2: '무기2', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
+const SLOTN = { w1: '검', w2: '지팡이', w3: '활', w4: '창', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
 // 무기별 한 번 피해 배율(검=100% 기준). docs/weapons.md
 const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 1.4 };
@@ -140,23 +140,25 @@ function enchantReroll(it,index){
   finalizeName(it);syncHud();saveGame();
   return {ok:true,old:enchantAffixText(old),fresh:enchantAffixText(fresh),affix:fresh};
 }
-const slotOk=(it,s)=>it.kind==='weapon'?(s==='w1'||s==='w2'):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
+// 2026-10-14 4무기 체계(케인): 무기는 종류별 고정 칸에 동시에 장착하고, 공격 버튼 X자 구역으로 자동 전환한다. 격투(건틀릿)는 보류.
+const WSLOT={sword:'w1',staff:'w2',bow:'w3',spear:'w4'},WSLOTS=['w1','w2','w3','w4'],isWSlot=s=>WSLOTS.includes(s);
+const slotOk=(it,s)=>it.kind==='weapon'?(WSLOT[it.wt]===s):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
 const BAG_PAGE=42,BAG_MAX_PAGES=5,BAG=BAG_PAGE*BAG_MAX_PAGES,bag=new Array(BAG).fill(null);
 const BAG_UPGRADE=[10000,30000,50000,100000];let bagPages=1,bagPage=0;
 const bagLimit=()=>bagPages*BAG_PAGE;
 function bagFreeIndex(){for(let i=0;i<bagLimit();i++)if(!bag[i])return i;return -1;}
 const STASH=56,stash=new Array(STASH).fill(null);
-const eq={w1:null,w2:null,head:null,body:null,hands:null,feet:null,neck:null,ring1:null,ring2:null};
-let cur='w1';
-// 새 성장판: 시험용 4무기는 제거. 시작 무기 하나만 들고 나머지는 직접 파밍.
-eq.w1=make({kind:'weapon',wt:'bow',g:1,rar:0});
+const eq={w1:null,w2:null,w3:null,w4:null,head:null,body:null,hands:null,feet:null,neck:null,ring1:null,ring2:null};
+let cur='w3';
+// 새 성장판: 시작 무기 하나(활)만 들고 나머지는 직접 파밍.
+eq.w3=make({kind:'weapon',wt:'bow',g:1,rar:0});
 
 function totals(){
   const t={atk:0,matk:0,atkPct:0,matkPct:0,as:0,crit:0,critDmg:0,fire:0,ice:0,skill:0,def:0,hp:0,mp:0,ms:0,coin:0,find:0,luck:0};
   for(const s in eq){
     const it=eq[s];if(!it)continue;
-    if((s==='w1'||s==='w2')&&s!==cur)continue;
+    if(isWSlot(s)&&s!==cur)continue;
     const st=itemStats(it);for(const k in st)t[k]=(t[k]||0)+st[k];
   }
   return t;
@@ -209,7 +211,8 @@ function syncHud(){
   atkIc.src = w ? A.icons[w.icon] : '';
   G.setWeapon(w);
   atkIc.style.visibility = w ? 'visible' : 'hidden';
-  $('swapNo').textContent = cur === 'w1' ? '1' : '2';
+  $('swapNo').textContent = '';
+  syncAtkZones();
   if (typeof syncQS === 'function') syncQS();
   $('lvTxt').textContent = G.P.lv;
   const d = derived();
@@ -220,15 +223,31 @@ atk.addEventListener('pointerdown', e => {
   if (G.isOpen()) return;
   if (G.near()) { G.act(); return; }
   try { atk.setPointerCapture(e.pointerId); } catch (er) {}
+  pickZoneWeapon(e);
   G.swing(eq[cur] ? eq[cur].wt : null); G.setHold(true);   // 누르고 있는 동안 계속 공격
 });
+// X자 공격 버튼: 위=창, 아래=활, 왼쪽=검, 오른쪽=지팡이(케인 시안 attack_selector). 누른 구역 무기로 즉시 바꿔 들고 공격.
+const ZONE_SLOT={up:'w4',down:'w3',left:'w1',right:'w2'},ZONE_NAME={w1:'검',w2:'지팡이',w3:'활',w4:'창'};
+function zoneAt(e){const r=atk.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);return Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');}
+function switchWeapon(slot,quiet){
+  if(!isWSlot(slot)||slot===cur)return !!eq[slot];
+  if(!eq[slot]){if(!quiet)G.say(ZONE_NAME[slot]+' 칸이 비어 있습니다');return false;}
+  qsSaveCur();cur=slot;qsLoadCur();syncHud();saveGame();return true;
+}
+function pickZoneWeapon(e){if(e&&e.clientX!=null)switchWeapon(ZONE_SLOT[zoneAt(e)]);}
+function syncAtkZones(){
+  if(!atk.querySelector('.atkz')&&A.kit&&A.kit.atk_all){
+    atk.style.backgroundImage='url('+A.kit.atk_all+')';atk.classList.add('xsel');
+    for(const [z,k] of [['up','atk_spear'],['down','atk_bow'],['left','atk_sword'],['right','atk_magic']]){const im=document.createElement('img');im.className='atkz';im.dataset.z=z;im.alt='';im.src=A.kit[k];atk.append(im);}
+  }
+  for(const im of atk.querySelectorAll('.atkz')){const sl=ZONE_SLOT[im.dataset.z];im.classList.toggle('zon',sl===cur&&!!eq[sl]);im.classList.toggle('zdim',sl!==cur&&!!eq[sl]);im.classList.toggle('zno',!eq[sl]);}
+  atkIc.style.display=atk.classList.contains('xsel')?'none':'';
+}
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) atk.addEventListener(ev, () => G.setHold(false));
 addEventListener('blur', () => G.setHold(false));
 $('swap').addEventListener('pointerdown', e => {
   e.preventDefault(); if (G.isOpen()) return;
-  const o = cur === 'w1' ? 'w2' : 'w1';
-  if (!eq[o]){ G.say('무기2 칸이 비어 있습니다'); return; }
-  cur = o; syncHud(); G.say(`${eq[cur].name}(으)로 바꿔 들었습니다`);
+  const i=WSLOTS.indexOf(cur);for(let k=1;k<=4;k++){const o=WSLOTS[(i+k)%4];if(eq[o]){switchWeapon(o);G.say(`${eq[cur].name}(으)로 바꿔 들었습니다`);return;}}
 });
 $('bagBtn').addEventListener('click', () => openChar('equip'));
 $('me').querySelector('.ring').addEventListener('click', () => openChar('stat'));
@@ -253,6 +272,10 @@ requestAnimationFrame(frame);
 const QPOS = [[-49, -88], [27, -102], [-99, -39], [-95, 32], [-47, 85]];   // 큰 버튼 가운데 기준
 const SWAPPOS = [30, 88];
 const QS = [null, null, null, null, null];
+// 무기별 스킬 칸(케인 2026-10-14): 무기를 바꾸면 둘레 5칸도 그 무기 것으로 바뀐다.
+const QSW={w1:[null,null,null,null,null],w2:[null,null,null,null,null],w3:[null,null,null,null,null],w4:[null,null,null,null,null]};
+function qsSaveCur(){if(QSW[cur])for(let i=0;i<5;i++)QSW[cur][i]=QS[i];}
+function qsLoadCur(){if(QSW[cur])for(let i=0;i<5;i++)QS[i]=QSW[cur][i];}
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
   ['백마법', ['holy1_heal', 'holy2_shield', 'holy3_revive']], ['검', ['sword1', 'sword2', 'sword3']], ['창', ['spear1', 'spear2', 'spear3']], ['활', ['bow1', 'bow2', 'bow3']], ['무투', ['fist1', 'fist2', 'fist3']]];
 const SKW = { sword: 'sword', spear: 'spear', bow: 'bow', fist: 'gauntlet' };   // 무기 스킬: 맞는 무기면 100%, 아니면 피해 60%·마나 1.5배 (막지 않음). 마법: 지팡이 기준(지팡이 +25% 보너스는 2026-10-04 제거)
@@ -338,8 +361,7 @@ function syncQS(){
     b.style.backgroundImage=`url(${id?quickIcon(id):K.ring})`;
     b.dataset.glyph=id==='townPortal'?'↩':'';
     b.classList.toggle('empty',!id);
-    const nw=id&&needWeapon(id),off=nw&&(!eq[cur]||eq[cur].wt!==nw);
-    b.dataset.pen=id==='townPortal'?'':(off?'60%':'');
+    b.dataset.pen='';   // 4무기 체계: 무기 불일치 패널티 없음
   });
 }
 skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
@@ -348,8 +370,7 @@ skBtns.forEach((b, i) => b.addEventListener('pointerdown', e => {
   if (G.isOpen()) return;
   const id=QS[i];if(!id||!quickLearned(id))return;
   if(id==='townPortal'){G.useTownPortal();return;}
-  const nw=needWeapon(id),wt=eq[cur]?eq[cur].wt:null;
-  G.cast(id,nw?(wt===nw?{dmg:1,mp:1}:{dmg:.6,mp:1.5}):{dmg:1,mp:1});
+  G.cast(id,{dmg:1,mp:1});   // 4무기 체계: 무기 불일치 패널티 없음
 }));
 (function cdLoop(){ skBtns.forEach((b, i) => { const id = QS[i]; b.querySelector('i').style.setProperty('--cd', id ? G.cdLeft(id) + 'turn' : '0turn'); }); requestAnimationFrame(cdLoop); })();
 // 끌어다 놓기 (손가락·마우스 모두)
@@ -387,7 +408,7 @@ addEventListener('pointerup',e=>{
 
 // ---- 캐릭터 창 ----
 // 키트 그림 좌표(원본 픽셀): 장비창 kit_c_02, 가방 kit_c_01, 능력치 kit_c_02b
-const EQS = { head: [72, 107], w1: [72, 196], hands: [72, 287], ring1: [71, 393], neck: [337, 107], w2: [337, 196], body: [337, 286], feet: [340, 379], ring2: [339, 472] };
+const EQS = { head: [72, 107], w1: [72, 196], hands: [72, 287], ring1: [71, 393], neck: [337, 107], w2: [337, 196], body: [337, 286], feet: [340, 379], ring2: [339, 472], w3: [160, 470], w4: [248, 470] };
 const EQ_OFF = [[161, 467], [249, 467]];   // 허리띠·별 칸: 지금은 안 씀
 const INV = { x: 80, y: 117, px: 65.5, py: 66.8, w: 60, h: 62 };
 let tab = 'equip', pickSel = null, identifyVendor = false;
@@ -436,7 +457,7 @@ function render(){
       const [x, y] = EQS[s], it = eq[s];
       const b = slotEl(it, x, y, 76, 77, () => tapEq(s), pickSel && pickSel.from === 'eq' && pickSel.slot === s);
       const lab = el('span', 'slab' + (it ? ' hide' : ''), SLOTN[s]); b.append(lab);
-      if ((s === 'w1' || s === 'w2') && s === cur && it) b.append(el('span', 'held', '손에 듦'));
+      if (isWSlot(s) && s === cur && it) b.append(el('span', 'held', '손에 듦'));
       bindItemSlot(b,{from:'eq',slot:s});L.append(b);
     }
     for (const [x, y] of EQ_OFF){ const o = el('div', 'off'); o.style.cssText = `left:${x}px;top:${y}px;width:74px;height:78px`; L.append(o); }
@@ -541,13 +562,13 @@ function cmpLine(o, it){
   }
   return out;
 }
-const CMPN = { w1: '무기1', w2: '무기2', ring1: '왼손 반지', ring2: '오른손 반지' };
+const CMPN = { w1: '검', w2: '지팡이', w3: '활', w4: '창', ring1: '왼손 반지', ring2: '오른손 반지' };
 // 가방 장비를 고르면 정보창 왼쪽에 "지금 낀 장비" 카드를 붙인다. 무기·반지는 두 장, 나머지는 한 장.
 function cmpCards(it){
-  const slots = it.kind === 'weapon' ? ['w1', 'w2'] : it.kind === 'ring' ? ['ring1', 'ring2'] : [it.kind];
+  const slots = it.kind === 'weapon' ? [WSLOT[it.wt]].filter(Boolean) : it.kind === 'ring' ? ['ring1', 'ring2'] : [it.kind];
   const box = el('div', 'icmp');
   for (const s of slots){
-    const o = eq[s], c = el('div', 'ccard'), held = (s === 'w1' || s === 'w2') && s === cur && !!o;
+    const o = eq[s], c = el('div', 'ccard'), held = isWSlot(s) && s === cur && !!o;
     c.append(el('div', 'ctag' + (held ? ' held' : ''), (CMPN[s] || SLOTN[s]) + (held ? ' · 손에 듦' : '')));
     if (o){
       const nm = el('div', 'cname', o.name); nm.style.color = RART[o.rar]; c.append(nm);
@@ -560,7 +581,7 @@ function cmpCards(it){
   return box;
 }
 function targetSlot(it){
-  if (it.kind === 'weapon') return eq.w1 ? (eq.w2 ? cur : 'w2') : 'w1';
+  if (it.kind === 'weapon') return WSLOT[it.wt] || null;
   if (it.kind === 'ring') return eq.ring1 ? (eq.ring2 ? 'ring1' : 'ring2') : 'ring1';
   return it.kind;
 }
@@ -616,7 +637,9 @@ function showInfo(it, from){
   }
   if (from === 'bag'){
     if (it.kind === 'weapon'){
-      for (const s of ['w1', 'w2']){ const b = el('button', 'btn', `${SLOTN[s]}에 장착`); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
+      const s = WSLOT[it.wt];
+      if (!s) row.append(el('div','isub','격투 무기는 지금 장착할 수 없습니다(무기 4종 체계).'));
+      else { const b = el('button', 'btn', `${SLOTN[s]} 칸에 장착`); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
     } else if (it.kind === 'ring'){
       for (const s of ['ring1', 'ring2']){ const b = el('button', 'btn', s === 'ring1' ? '왼손 반지' : '오른손 반지'); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, s); row.append(b); }
     } else { const b = el('button', 'btn', '장착'); b.type = 'button'; b.disabled=!canEquip(it); b.onclick = () => equip(it, it.kind); row.append(b); }
@@ -630,16 +653,17 @@ function showInfo(it, from){
   I.classList.add('on');
 }
 function equip(it, s){
-  if(!slotOk(it,s)||!canEquip(it)){G.say('착용 레벨이 부족합니다. Lv'+it.requiredLevel+'부터 착용할 수 있습니다.');return false;}
+  if(!slotOk(it,s)){G.say(it.kind==='weapon'&&!WSLOT[it.wt]?'격투 무기는 지금 장착할 수 없습니다.':'이 칸에는 착용할 수 없습니다.');return false;}
+  if(!canEquip(it)){G.say('착용 레벨이 부족합니다. Lv'+it.requiredLevel+'부터 착용할 수 있습니다.');return false;}
   const i = bag.indexOf(it); if (i < 0) return;
   bag[i] = eq[s]; eq[s] = it;
-  if ((s === 'w1' || s === 'w2') && !eq[cur]) cur = s;
+  if (isWSlot(s) && !eq[cur]){ qsSaveCur(); cur = s; qsLoadCur(); }
   pickSel = { from: 'eq', slot: s }; tab = 'equip'; render(); showInfo(it, 'eq'); syncHud();saveGame();
 }
 function unequip(s){
   const i = bag.indexOf(null); if (i < 0){ G.say('가방이 가득 찼습니다'); return; }
   bag[i] = eq[s]; eq[s] = null;
-  if (s === cur && !eq[cur]){ const o = s === 'w1' ? 'w2' : 'w1'; if (eq[o]) cur = o; }
+  if (s === cur && !eq[cur]){ const o = WSLOTS.find(x=>eq[x]); if (o){ qsSaveCur(); cur = o; qsLoadCur(); } }
   pickSel = { from: 'bag', i }; render(); showInfo(bag[i], 'bag'); syncHud();saveGame();
 }
 
@@ -680,7 +704,7 @@ function inventoryDrop(source,target){
     if(target.i<0||target.i>=b.length)return false;
     [a[source.i],b[target.i]]=[b[target.i],a[source.i]];
   }
-  if(!eq[cur])cur=eq.w1?'w1':eq.w2?'w2':'w1';pickSel=null;$('iinfo').classList.remove('on');render();syncHud();saveGame();return true;
+  if(!eq[cur]){const o=WSLOTS.find(x=>eq[x]);if(o){qsSaveCur();cur=o;qsLoadCur();}}pickSel=null;$('iinfo').classList.remove('on');render();syncHud();saveGame();return true;
 }
 function cancelItemDrag(){if(!itemDrag)return;if(itemDrag.holdTimer)clearTimeout(itemDrag.holdTimer);itemDrag.node.classList.remove('dragging');if(itemDrag.ghost)itemDrag.ghost.remove();itemDrag=null;}
 function bindItemSlot(node,ref){
@@ -715,7 +739,7 @@ function quickMove(ref){
   if(ref.from!=='bag')return;
   if(tab==='shop'){inventoryDrop(ref,{from:'merchant'});return;}
   if(tab==='stash'){const i=stash.indexOf(null);if(i<0){G.say('창고가 가득 찼습니다.');return;}inventoryDrop(ref,{from:'stash',i});return;}
-  const slots=(it.kind==='weapon'?['w1','w2']:it.kind==='ring'?['ring1','ring2']:[it.kind]).filter(s=>s in eq);
+  const slots=(it.kind==='weapon'?[WSLOT[it.wt]].filter(Boolean):it.kind==='ring'?['ring1','ring2']:[it.kind]).filter(s=>s in eq);
   if(!slots.length)return;
   inventoryDrop(ref,{from:'eq',slot:slots.find(s=>!eq[s])||(slots.includes(cur)?cur:slots[0])});
 }
@@ -766,7 +790,7 @@ function saveGame(){
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,release:1,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
-      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,pot:POT,scr:SCR,qs:QS,
+      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,qsw:(qsSaveCur(),QSW),pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,lastVisitedTown:G.lastVisitedTown?G.lastVisitedTown():null,
       minigames:window.MINIGAMES?MINIGAMES.saveData():null,
       telemetry:window.TELEMETRY?TELEMETRY.saveData():null,companion:window.COMPANION?COMPANION.saveData():null,
@@ -784,8 +808,13 @@ function loadGame(){
   bagPages=Math.max(1,Math.min(BAG_MAX_PAGES,d.bagPages|0||1));bagPage=Math.max(0,Math.min(bagPages-1,d.bagPage|0));
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
   for(let i=0;i<STASH;i++)stash[i]=d.stash&&d.stash[i]||null;
-  for(const k in eq)eq[k]=d.eq&&d.eq[k]||null;
-  cur=d.cur==='w2'&&eq.w2?'w2':'w1';
+  for(const k in eq)eq[k]=null;
+  {const src=d.eq||{},held=src[d.cur]||null,spare=[];
+   for(const k in src){const it=src[k];if(!it)continue;
+     if(it.kind==='weapon'){const sl=WSLOT[it.wt];if(sl&&!eq[sl])eq[sl]=it;else spare.push(it);}
+     else if(k in eq&&!isWSlot(k))eq[k]=it;else spare.push(it);}
+   for(const it of spare){const i=bag.indexOf(null);if(i>=0)bag[i]=it;}   // 격투 무기·같은 종류 중복은 가방으로
+   cur=held&&held.kind==='weapon'&&WSLOT[held.wt]&&eq[WSLOT[held.wt]]===held?WSLOT[held.wt]:(WSLOTS.find(x=>eq[x])||'w3');}
   if(d.pot){
     for(const k of ['hp','mp','dual']){
       const src=d.pot[k];
@@ -796,7 +825,10 @@ function loadGame(){
     syncPot();
   }
   if(d.scr){SCR.portal=Math.max(0,Math.min(SCR_MAX,d.scr.portal|0));SCR.ident=Math.max(0,Math.min(SCR_MAX,d.scr.ident|0));}
-  if(d.qs)for(let i=0;i<5;i++)QS[i]=d.qs[i]&&(d.qs[i]==='townPortal'||A.skicon[d.qs[i]])?d.qs[i]:null;
+  {const okId=id=>id&&(id==='townPortal'||A.skicon[id])?id:null;
+   if(d.qsw&&typeof d.qsw==='object'){for(const k of WSLOTS)for(let i=0;i<5;i++)QSW[k][i]=okId(d.qsw[k]&&d.qsw[k][i]);}
+   else if(d.qs){for(const k of WSLOTS)for(let i=0;i<5;i++)QSW[k][i]=okId(d.qs[i]);}   // 예전 단일 퀵슬롯은 모든 무기에 복사
+   qsLoadCur();}
   // unid 필드가 없는 이전 저장 장비는 falsy이므로 모두 감정 완료로 취급한다.
   let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
   const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
