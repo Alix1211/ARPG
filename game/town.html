@@ -398,6 +398,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="backupMessage" role="status" aria-live="polite"></div>
 </div>
 <small>움직일 수 없을 때 탈출하면 큰 마을로 돌아갑니다.</small>
+<div class="row"><button class="btn" id="newGame" type="button" style="background:#7a2a20;color:#fff2dc">새로 시작(초기화)</button></div>
 <div class="row"><button class="btn" id="escapeStuck" type="button">끼었을 때 탈출하기</button><button class="btn ghost" id="settingsClose" type="button" data-close>닫기</button></div>
 </div>
 <div class="pan frame" id="msg"><b id="msgT"></b><div id="msgB"></div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" type="button" data-close>확인</button></div></div>
@@ -427,7 +428,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0001</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0016</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -8213,11 +8214,15 @@ function saveGame(){
       minigames:window.MINIGAMES?MINIGAMES.saveData():null,
       telemetry:window.TELEMETRY?TELEMETRY.saveData():null,companion:window.COMPANION?COMPANION.saveData():null,
       trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
+    // 초기화 뒤 새 회차가 처음 저장되면 초기화 표시를 지운다(이 저장이 드라이브의 옛 저장보다 최신이 되어 위로 올라감).
+    if(localStorage.getItem('arpg_reset_pending'))localStorage.removeItem('arpg_reset_pending');
   }catch(e){}
 }
 function loadGame(){
   let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null');}catch(e){}
   if(!d||d.v!==3||d.release!==1)return null;
+  // 초기화 직후: 앱이 드라이브에서 되살려 온 '초기화 전' 저장은 무시하고 새로 시작한다.
+  {const rp=+(localStorage.getItem('arpg_reset_pending')||0);if(rp&&(d.t||0)<rp)return null;}
   if(window.MINIGAMES)MINIGAMES.loadData(d.minigames);
   bagPages=Math.max(1,Math.min(BAG_MAX_PAGES,d.bagPages|0||1));bagPage=Math.max(0,Math.min(bagPages-1,d.bagPage|0));
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
@@ -8257,7 +8262,12 @@ if(saved){
   });
 }
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
-window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.setItem('arpg_reset_pending',String(Date.now()));localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+// 설정창 '새로 시작(초기화)': 두 번 눌러야 지워진다. 지난 회차 플레이 기록은 arpg_playlog에 보관된다.
+{const b=document.getElementById('newGame');
+ if(b){let armed=false,tm=0;
+  b.addEventListener('click',()=>{if(!armed){armed=true;b.textContent='정말 처음부터? 한 번 더 누르기';tm=setTimeout(()=>{armed=false;b.textContent='새로 시작(초기화)';},4000);}
+   else{clearTimeout(tm);window.UI.reset();}});}}
 // 테스트용 초기화 버튼: 두 번 눌러야 지워진다. 정식 시작 전에 false로.
 const TEST_RESET_BUTTON=false;
 {const b=document.getElementById('resetBtn');
