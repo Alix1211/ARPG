@@ -1122,14 +1122,15 @@ function drawPortalArrivalAura(){
 function frame(now){
   if(document.hidden){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
-  const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN,sdt=simPaused?0:dt;
+  const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN;
+  const impactPause=skillShowTick(dt,simPaused),sdt=simPaused||impactPause?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
   const locked=typeof playerControlLocked==='function'&&playerControlLocked();
-  P.moving = !simPaused && !panel && !locked && mag > 0.15;
-  if (P.hold && !simPaused && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
+  P.moving = !simPaused && !impactPause && !panel && !locked && mag > 0.15;
+  if (P.hold && !simPaused && !impactPause && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
   if (P.moving){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
@@ -1150,7 +1151,7 @@ function frame(now){
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = MWp < vw ? (MWp - vw) / 2 : Math.max(0, Math.min(MWp - vw, camX)); camY = MHp < vh ? (MHp - vh) / 2 : Math.max(0, Math.min(MHp - vh, camY));
   const DUN=MAP==='dungeon', INDOOR=MAP==='inn';
-  if(!simPaused){
+  if(!simPaused&&!impactPause){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
     if(typeof updateCompanion==='function')updateCompanion(sdt);
@@ -1160,12 +1161,13 @@ function frame(now){
   }
 
   if (INDOOR){ ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#120a05'; ctx.fillRect(0, 0, cv.width, cv.height); }
-  ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX * dpr * Z, -camY * dpr * Z);
+  const kick=simPaused?0:SKILL_SHOW.shake;
+  ctx.setTransform(dpr * Z, 0, 0, dpr * Z, -camX*dpr*Z+Math.sin(T*97)*kick*dpr, -camY*dpr*Z+Math.cos(T*83)*kick*dpr*.6);
   ctx.imageSmoothingQuality = 'high';
   drawGroundViewport(G,camX,camY,vw,vh);
   if(!DUN&&!INDOOR)drawGroundFx(camX,camY,vw,vh);
   if (typeof drawEncounterGround === 'function') drawEncounterGround(sdt);
-  vfxGroundPass();
+  vfxGroundPass();skillShowGround();
 
   const list = sprites.filter(s => s.x + s.w / 2 > camX && s.x - s.w / 2 < camX + vw && s.y > camY && s.y - s.h < camY + vh);
   list.push({ me: true, key: P.y });
@@ -1222,13 +1224,14 @@ function frame(now){
   if(typeof drawTownTestCompanionsForced==='function')drawTownTestCompanionsForced();
   if(window.QUEST)QUEST.draw();
   if(!DUN&&!INDOOR)drawLeaves(camX,camY,vw,vh);
-  drawFx(sdt); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
+  drawFx(sdt);skillShowTop(); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   if(typeof drawCompanionFx==='function')drawCompanionFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   DAY.t = (DAY.t + sdt / DAYLEN) % 1;
   if(!DUN&&!INDOOR)drawDay(camX,camY);else if($('place').textContent!==CUR.name)$('place').textContent=CUR.name;
   if (typeof drawDungeonShade === 'function') drawDungeonShade(camX, camY);
   if(!DUN&&!INDOOR)drawRain(VW,VH);
+  skillShowScreen();
 
   const tag = $('tag');
   if (near && !panel){
@@ -1366,6 +1369,7 @@ function guideShot(s, dt){
 function drawShots(dt){
   drawPops(dt);
   for (const s of shots){
+    if(s.visualMapKey&&s.visualMapKey!==skillShowMapKey()){s.done=true;s.blast=0;continue;}
     if (s.wait > 0){ s.wait -= dt; continue; }   // 알갱이는 조금씩 시간차로 나간다
     if (!s.done) guideShot(s, dt);
     s.t += dt;
@@ -1417,6 +1421,7 @@ function drawShots(dt){
   while (shots.length && shots[0].done && (!shots[0].blast || shots[0].bt > 0.3)) shots.shift();
 }
 function boom(s,t){
+  if(s.skillId&&s.visualStage>=2)skillShowImpact(skillElement(s.skillId),s.x,s.y+14,Math.min(150,s.blast||60),s.visualStage);
   const vx=s.vx,vy=s.vy;s.done=true;s.vx=s.vy=0;
   const hit=(u)=>{
     const dir=[Math.sign(u.x-s.x)||Math.sign(vx)||1,Math.sign((u.y-30)-s.y)||Math.sign(vy)||0];
@@ -1459,6 +1464,7 @@ function cast(id,mod){
   const cm=combatNow(),cost=Math.max(k.mp===0?0:1,Math.round(k.mp*NUM*mod.mp*(1-(cm.manaReduce||0)/100)));
   if(P.mp<cost){say('마나가 부족합니다');return false;}
   P.mp-=cost;CD[id]=k.cd;syncBars();
+  const shotAt=shots.length,zoneAt=zones.length,fxAt=sfx.length;
   const d=faceVec(),home=(P.passives&&P.passives.magicGuide)||0;
   const skillMul=(1+(rank-1)*.18)*(1+(cm.skill||0)/100);
   if(id==='fire1'){
@@ -1492,6 +1498,7 @@ function cast(id,mod){
   // 공통 규칙: 스킬을 쓰면 다른 슬롯도 잠깐 잠기고, 큰 스킬은 시전 중 제자리에 선다
   for(const o in SK)if(o!==id)CD[o]=Math.max(CD[o]||0,Math.min(GCD,SK[o].cd));
   if(k.root)P.castRoot=k.root;
+  skillShowStart(id,d,rank,shotAt,zoneAt,fxAt);
   return true;
 }
 // 빙결 보호막: 들어온 피해를 먼저 막이 받는다. 남은 피해만 돌려준다.
@@ -1687,17 +1694,20 @@ function weaponLayersFor(actor,weapon,atk,busy=true){
 }
 function weaponLayers(){return weaponLayersFor(P,WPN,P.atk,atkBusy());}
 function drawMe(){
-  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x, P.y, 17, 6, 0, 0, 7); ctx.fill();
-  const busy = atkBusy(), dir = busy ? P.atk.dir : P.dir, flip = busy ? P.atk.flip : P.flip;
+  const pose=skillShowPose();
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(P.x,P.y,17*pose.shadow,6*pose.shadow,0,0,7); ctx.fill();
+  const busy = atkBusy(), dir = pose.dir||(busy ? P.atk.dir : P.dir), flip = pose.dir?pose.flip:(busy ? P.atk.flip : P.flip);
   const frames = playerFrames(dir);
-  const fr = frames[P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
+  const fr = frames[pose.frame!=null?pose.frame:P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
   const h = 98, w = h * 170 / 172, by = P.y + h * (11 / 344);
   const L = weaponLayers();
   ctx.save();
+  ctx.translate(P.x+pose.x,P.y+pose.y);ctx.rotate(pose.rot);ctx.scale(pose.sx,pose.sy);ctx.translate(-P.x,-P.y);
   if (flip && dir === 'side'){ ctx.translate(P.x, 0); ctx.scale(-1, 1); ctx.translate(-P.x, 0); }
   if (L.back) L.back();
   ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h);
   if (L.front) L.front();
+  if(SKILL_SHOW.pose)skillShowWeapon(SKILL_SHOW.pose);
   ctx.restore();
 }
 

@@ -260,12 +260,15 @@ function vfxSkill(f, k, x, y, r){
       return true;
     }
     case 'holyshield': case 'resurrection':{
+      vfxPlay('heal_arrow',x,y+40,r*2.7,k,{base:true,alpha:.9});
+      vfxPlay('heal_pink',x,y+28,r*2,k,{base:true,alpha:.65});
       const a=1-k,R=r*(.4+.6*k);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle='#ffe8a0';ctx.lineWidth=5*a+1;
       for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(x,y+20-i*25*k,R*(1-i*.18),R*.4,0,0,7);ctx.stroke();}
       if(f.type==='resurrection'){ctx.strokeStyle='#fffce1';ctx.lineWidth=9*a;ctx.beginPath();ctx.moveTo(x,y-160*k);ctx.lineTo(x,y+15);ctx.moveTo(x-30,y-75*k);ctx.lineTo(x+30,y-75*k);ctx.stroke();}
       ctx.restore();return true;
     }
     case 'thunderstrike':{
+      vfxPlay('burst_volt_0',x,y+30,r*2.9,k,{base:true,alpha:.85});
       vfxZig(x-24,y-260,x,y+14,28,Math.floor(k*12),sd,1-k,6,'#9faeff','#ffffff');
       vfxBlast('volt',sd,x,y+14,r,k);return true;
     }
@@ -274,14 +277,16 @@ function vfxSkill(f, k, x, y, r){
       for (let i = 0; i < 9; i++){
         const row = i % 3, idx = Math.floor(i / 3) - 1, dist = r * (.3 + .3 * row) * (.4 + .6 * e), lat = idx * dist * .5;
         const ki = Math.max(0, Math.min(1, (k - row * .07) / .8));
-        vfxBlast('ice', sd + i + 1, x + Math.cos(a) * dist - Math.sin(a) * lat, y + 10 + Math.sin(a) * dist + Math.cos(a) * lat, 24 + row * 6, ki);
+        const ix=x+Math.cos(a)*dist-Math.sin(a)*lat,iy=y+10+Math.sin(a)*dist+Math.cos(a)*lat;
+        vfxBlast('ice',sd+i+1,ix,iy,24+row*6,ki);
+        vfxDraw('shot_ice',ix,iy,50+row*18,{rot:a-VFX_HEAD.shot_ice*Math.PI/180,alpha:1-k});
       }
       return true;
     }
     case 'spearthrust': return vfxHitSpark(sd,x,y,r*1.05,k,f.crit?'crit':'hit');
-    case 'spearburst': vfxHitSpark(sd,x,y,r*.85,k,'crit');vfxDust(sd+9,x,y+18,r*.7,k);return true;
+    case 'spearburst': vfxPlay('hit_rock_0',x,y+18,r*2.2,k,{base:true});vfxHitSpark(sd,x,y,r*.85,k,'crit');vfxDust(sd+9,x,y+18,r*.7,k);return true;
     case 'fistdash': return vfxHitSpark(sd,x,y,r*1.15,k,'crit');
-    case 'quake': vfxDust(sd,x,y+16,r*.9,k);vfxHitSpark(sd+3,x,y,r*.75,k,'hit');return true;
+    case 'quake': vfxPlay('status_ground_stone',x,y+18,r*2,k,{sy:.6});vfxDust(sd,x,y+16,r*.9,k);vfxHitSpark(sd+3,x,y,r*.75,k,'hit');return true;
     case 'hit':   return vfxHitSpark(sd, x, y, r * 1.15, k, f.crit ? 'crit' : 'hit');
     case 'hurt':  return vfxHitSpark(sd, x, y, r * 1.0, k, 'hurt');
     case 'kill':  return vfxDust(sd, x, y + 8, Math.max(34, r * 1.1), k);
@@ -321,14 +326,15 @@ const VFX_AURA = { shot_fire:'#ff8a2a', shot_ice:'#7ddcff', shot_dark:'#a050ff',
 const VFX_PSHOT = { ice:'shot_ice', fire:'shot_fire', dark:'shot_dark', blade:'shot_blade', wave:'shot_holy' };
 function vfxShot(s, a){
   if(s.kind==='spear'){
-    ctx.save();ctx.translate(s.x,s.y);ctx.rotate(a);ctx.globalCompositeOperation='lighter';
-    ctx.strokeStyle='rgba(255,214,120,.35)';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(-30,0);ctx.lineTo(18,0);ctx.stroke();
-    ctx.strokeStyle='#fff7d6';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(17,0);ctx.stroke();
-    ctx.fillStyle='#ffd06a';ctx.beginPath();ctx.moveTo(29,0);ctx.lineTo(14,-7);ctx.lineTo(14,7);ctx.closePath();ctx.fill();ctx.restore();return true;
+    const a0=a+Math.PI/2;
+    for(let i=3;i>0;i--)vfxDraw('shot_holy',s.x-Math.cos(a)*i*25,s.y-Math.sin(a)*i*25,65,{rot:a-VFX_HEAD.shot_holy*Math.PI/180,alpha:.14*(4-i)});
+    wDrawWeapon({wt:'spear',img:WIMG.spear_01},s.x-Math.cos(a)*35,s.y-Math.sin(a)*35,a0,1.25);return true;
   }
+  if(s.kind==='bow'&&s.skillId){skillDrawArrow(s.x,s.y,a,1.05);return true;}
   if (s.kind === 'bolt') return vfxBoltOrb(s);
   const nm = VFX_PSHOT[s.kind] || '';
   if (!nm || !vfxReady(nm)) return false;
+  if(s.skillId&&s.visualStage>=2){for(let i=3;i>0;i--)vfxDraw(nm,s.x-Math.cos(a)*i*24,s.y-Math.sin(a)*i*24,(nm==='shot_blade'?s.hw*2:75)*(1-i*.12),{rot:a-(VFX_HEAD[nm]||0)*Math.PI/180,alpha:(4-i)*.13});if(s.kind==='wave')vfxDraw('ring_gold',s.x,s.y,115,{rot:a,sy:.8,alpha:.65});}
   vfxAura(s.x, s.y, VFX_AURA[nm], nm === 'shot_blade' ? (s.hw || 60) * .8 : s.pellet ? 16 : 36);
   const w = s.pellet ? 30 : nm === 'shot_blade' ? (s.hw || 60) * 2.6 : nm === 'shot_ice' ? 78 : nm === 'shot_holy' ? 84 : nm === 'shot_dark' ? 76 : 70;
   return vfxDraw(nm, s.x, s.y, w, { rot: a - (VFX_HEAD[nm] || 0) * Math.PI / 180, alpha: 1 });
@@ -366,7 +372,7 @@ function vfxChain(f, k){
     ctx.globalAlpha = a; ctx.strokeStyle = '#fffbe0'; ctx.lineWidth = 3.2 * (1 - k) + 1.2; path(); ctx.stroke();
   }
   ctx.restore();
-  for (let i = 1; i < p.length; i++) vfxBlast('volt', Math.floor(f.seed) + i, p[i].x, p[i].y + 22, 34, k);
+  for (let i = 1; i < p.length; i++){vfxBlast('volt',Math.floor(f.seed)+i,p[i].x,p[i].y+22,34,k);vfxPlay('burst_volt_0',p[i].x,p[i].y+35,125,k,{base:true,alpha:.85});}
   return true;
 }
 // ---- 바닥 층: 캐릭터·몬스터보다 아래에 깔리는 효과 (town.js 그리기 순서에서 스프라이트 앞에 부름) ----
@@ -391,6 +397,7 @@ function vfxGroundPass(){
 // ---- 시간이 걸리는 효과(운석·파멸의 링): 바닥 층 ----
 function vfxZonesGround(){
   for (const z of zones){
+    if(skillShowZoneGround(z))continue;
     if(z.type==='spearfall'&&!z.hit){
       const k=Math.min(1,z.t/z.delay),yy=z.y-250*(1-k);ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#fff1b0';ctx.lineWidth=8*(1-k)+2;
       ctx.beginPath();ctx.moveTo(z.x,yy-80);ctx.lineTo(z.x,z.y-10);ctx.stroke();ctx.restore();
@@ -443,6 +450,7 @@ function vfxZonesGround(){
 // ---- 위 층: 떨어지는 운석, 링을 따라 솟는 어둠 ----
 function vfxZonesTop(){
   for (const z of zones){
+    if(skillShowZoneTop(z))continue;
     if(z.type==='blizzard'||z.type==='swamp'){
       ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,(z.dur-z.t)*3));
       for(let i=0;i<24;i++){

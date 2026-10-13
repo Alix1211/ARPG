@@ -1038,6 +1038,22 @@ window.__FD={
   warp(tx,ty){P.x=tx*TS;P.y=ty*TS;return true;},
   state(){const fm=MAPS.field||{},st=fm.fieldStart||{x:2.5,y:20},en=fm.fieldEnd||{x:56.5,y:8},grid=fm.grid||null;let walkable=0;if(grid)for(const row of grid)for(const v of row)walkable+=v?1:0;return {map:MAP,theme:fieldTheme,leg:fieldLeg,legs:fieldLegs,villageReturn:fieldVillageReturn?{...fieldVillageReturn}:null,tier:FIELD_TIER[fieldTheme]||1,serial:fieldSerial,buildMs:Math.round(fieldBuildMs),monsters:monsters.filter(m=>!m.removed).length,props:fm.props?fm.props.length:0,dungeons:fm.props?fm.props.filter(p=>p.kind==='dungeon').length:0,drops:dropsLoot.filter(d=>!d.picked).length,hp:P.hp,gold:P.gold,stuckSpawns:monsters.filter(m=>!m.dead&&(pointInSolid(m.x,m.y,10)||(CUR&&CUR.grid&&gridBlocked(m.x,m.y,10)))).length,layout:fm.props?fm.props.slice(4,12).map(p=>[Math.round(p.x),Math.round(p.y),p.k]):[],village:fm.blds?fm.blds.map(b=>({name:b.name,kind:b.kind,market:b.market,x:Math.round(b.x),y:Math.round(b.y)})):[],fieldSize:fm.map?{w:fm.map.w,h:fm.map.h}:null,outdoorDungeon:!!grid,rooms:fm.rooms?fm.rooms.length:0,walkableCells:walkable,start:{x:st.x,y:st.y},end:{x:en.x,y:en.y}};},
   hitFirst(){const m=monsters.find(x=>!x.dead);if(!m)return false;hitMonster(m,[1,0],true,m.hp+5);return true;},
+  debugSkillTarget(distance=110){
+    // 검사 전용: 벽/소품에 투사체가 막히지 않는 빈 시험 구간을 찾는다.
+    const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;
+    const grid=CUR&&CUR.grid;if(!grid)return false;
+    for(let ty=3;ty<grid.length-3;ty++)for(let tx=3;tx<grid[ty].length-5;tx++){
+      const x=(tx+.5)*TS,y=(ty+.5)*TS;let clear=true;
+      for(let q=0;q<=distance+32;q+=12){
+        if(pointInSolid(x+q,y,32)||gridBlocked(x+q,y,32)||pointInSolid(x+q,y-44,12)||gridBlocked(x+q,y-44,12)){clear=false;break;}
+      }
+      if(!clear)continue;
+      P.x=x;P.y=y;P.dir='side';P.flip=false;P.atk=null;
+      for(const other of monsters)if(other!==m)other.removed=true;
+      m.x=x+distance;m.y=y;m.vx=m.vy=0;m.stun=99;return true;
+    }
+    return false;
+  },
   debugTarget(dx,dy,freeze){
     const m=monsters.find(x=>!x.dead&&!x.removed);if(!m)return false;
     for(const x of monsters)if(x!==m)x.removed=true;

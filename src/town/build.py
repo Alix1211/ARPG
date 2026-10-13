@@ -798,7 +798,7 @@ for name in ('town', 'field', 'dungeon', 'boss', 'event'):
         BGMF[name] = 'data:audio/mpeg;base64,' + base64.b64encode(open(f, 'rb').read()).decode()
 # 전투 이펙트 그림(assets/vfx, tools/vfx_slice.py로 시트에서 자른 것). 쓰는 종류만, 종류별 최대 크기로 줄여 담는다.
 VFXA = {}
-VFX_MAX = {'burst_': 224, 'hit_': 128, 'shot_': 128, 'ring_': 256, 'heal_': 240, 'status_icon_': 56, 'status_down_': 56, 'status_ground_': 128}
+VFX_MAX = {'burst_': 320, 'hit_': 192, 'shot_': 192, 'ring_': 256, 'heal_': 240, 'status_icon_': 56, 'status_down_': 56, 'status_ground_': 224, 'vortex': 256}
 for f in sorted(_g.glob(R + 'vfx/*.png')):
     nm = os.path.basename(f)[:-4]
     mx = next((v for k, v in VFX_MAX.items() if nm.startswith(k)), 0)
@@ -882,7 +882,7 @@ A = dict(questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mai
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
 js = source('tier_match.js') + '\n' + source('town.js')
-js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('telemetry.js') + '\n' + source('field_dungeon.js') + '\n' + source('companion.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('backup.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js'))
+js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skill_presentation.js') + '\n' + source('skills2.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('telemetry.js') + '\n' + source('field_dungeon.js') + '\n' + source('companion.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('backup.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js'))
 html = source('shell.html').replace('/*SAVE_SYNC*/', source('save_sync.js'))
 js += '\n' + source('minigames.js') + '\n' + source('ui.js')
 import time as _t

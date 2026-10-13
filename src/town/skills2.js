@@ -238,6 +238,7 @@ function castExtra(id, d, rank, cm, mod, skillMul){
 
 // 관통 투사체가 한 대상에 처음 닿았을 때
 function pierceHit(s, t){
+  if(s.skillId&&s.visualStage>=2)skillShowImpact(skillElement(s.skillId),t.x,t.y,Math.min(95,s.hw||65),s.visualStage);
   hitTarget(t, [Math.sign(t.x - s.x) || Math.sign(s.vx) || 1, Math.sign(s.vy) * .4 || 0], !!s.stagger, s.dmg);
   if (s.status) applyMonsterStatus(t, s.status, s.statusDur || 2.5);
   sfx.push({ type:s.fx || 'impact', t:0, x:t.x, y:t.y - (t.h || 60) * .5, r:34 });
@@ -247,7 +248,7 @@ function pierceHit(s, t){
 function updZones(dt){
   for (let i = zones.length - 1; i >= 0; i--){
     const z = zones[i];
-    if (typeof MAP !== 'undefined' && z.map !== MAP){ zones.splice(i, 1); continue; }
+    if ((typeof MAP !== 'undefined' && z.map !== MAP)||(z.visualMapKey&&z.visualMapKey!==skillShowMapKey())){ zones.splice(i, 1); continue; }
     z.t += dt;
     if (z.type === 'blizzard' || z.type === 'swamp' || z.type === 'thunderstorm'){
       if(z.type==='blizzard'){z.x=P.x;z.y=P.y;}
@@ -260,7 +261,7 @@ function updZones(dt){
           if(z.freeze && Math.random()<z.freeze)applyMonsterStatus(target,'freeze',.6);
           if(z.paralyze)applyMonsterStatus(target,'freeze',1);
         }
-        if(thunder){z.hits++;sfx.push({type:'thunderstrike',t:0,x:center.x,y:center.y-14,r:z.R});}
+        if(thunder){skillShowImpact('volt',center.x,center.y,z.R,3);z.hits++;sfx.push({type:'thunderstrike',t:0,x:center.x,y:center.y-14,r:z.R});}
       }
       if(z.t>z.dur+.05)zones.splice(i,1);
     } else if(z.type==='spearcombo'){
@@ -274,7 +275,7 @@ function updZones(dt){
       }
       if(z.hits>=3&&z.t>z.dur)zones.splice(i,1);
     } else if(z.type==='spearfall'){
-      if(!z.hit&&z.t>=z.delay){z.hit=true;for(const target of combatTargets())if(skGround(target,z)<z.r+14)hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,38);
+      if(!z.hit&&z.t>=z.delay){z.hit=true;skillShowImpact('stone',z.x,z.y,z.r,3);for(const target of combatTargets())if(skGround(target,z)<z.r+14)hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,38);
         sfx.push({type:'spearburst',t:0,x:z.x,y:z.y-12,r:z.r});}
       if(z.t>z.delay+.45)zones.splice(i,1);
     } else if(z.type==='arrowrain'){
@@ -285,12 +286,13 @@ function updZones(dt){
     } else if(z.type==='fistquake'){
       while(z.hits<3&&z.t>=z.nextTick){z.nextTick+=z.interval;z.hits++;
         for(const target of combatTargets())if(skGround(target,z)<z.R+14){hitTarget(target,[Math.sign(target.x-z.x)||1,Math.sign(target.y-z.y)||0],true,z.dmg,28);applyMonsterStatus(target,'slow',1.5);}
+        skillShowImpact('stone',z.x,z.y,z.R*(.7+z.hits*.1),3);
         sfx.push({type:'quake',t:0,x:z.x,y:z.y-8,r:z.R*(.7+z.hits*.1)});
       }
       if(z.hits>=3&&z.t>z.dur)zones.splice(i,1);
     } else if (z.type === 'meteor'){
       if (!z.hit && z.t >= z.delay){
-        z.hit = true;
+        z.hit = true;skillShowImpact('fire',z.x,z.y,z.r,3);
         for (const t of combatTargets()) if (skGround(t, z) < z.r){ hitTarget(t, [Math.sign(t.x - z.x) || 1, Math.sign(t.y - z.y) || 0], true, z.dmg); applyMonsterStatus(t, 'burn', 3.5); }
         sfx.push({ type:'fireburst', t:0, x:z.x, y:z.y - 14, r:z.r });
       }
@@ -311,6 +313,7 @@ function updZones(dt){
       }
       if (z.t > z.dur + .3) zones.splice(i, 1);
     } else if (z.type === 'voidring'){
+      if(!z.visualHit&&z.t>.14){z.visualHit=true;skillShowImpact('dark',z.x,z.y,z.R*.6,3);}
       const e = Math.min(1, z.t / z.dur), cr = z.R * (1 - Math.pow(1 - e, 2));
       for (const t of combatTargets()){
         if (z.hit.has(t) || skGround(t, z) > cr + 14) continue;
