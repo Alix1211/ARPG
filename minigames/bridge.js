@@ -35,9 +35,12 @@
     };
     const appendSettlement=res=>{
       if(!res)return;
+      const l=res.loot||{},lootText=res.lootRolls
+        ?`<br>전리품 판정 <b>${res.lootRolls}회</b> · 획득 ${l.found||0}개${l.discardTrade?` · 화물칸 초과 폐기 ${l.discardTrade}개`:''}${l.discardBag?` · 가방 초과 폐기 ${l.discardBag}개`:''}`
+        :'<br>전리품 판정 없음';
       const extra=res.outcome==='clear'
-        ?`<br><br>정산 <b>+${res.reward.toLocaleString('ko-KR')}G</b>${res.jackpot?' · <b>대박 보너스!</b>':''}`
-        :`<br><br>이번 판 보너스 골드는 없습니다. 획득한 소품·조각은 유지됩니다.`;
+        ?`<br><br>정산 <b>+${res.reward.toLocaleString('ko-KR')}G</b>${res.jackpot?' · <b>대박 보너스!</b>':''}${lootText}`
+        :`<br><br>이번 판 보너스 골드는 없습니다.${lootText}`;
       textBox.insertAdjacentHTML('beforeend',extra);
     };
     document.addEventListener('click',e=>{
