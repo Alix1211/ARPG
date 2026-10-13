@@ -93,6 +93,11 @@ function make(spec){
   if(roll&&it.aff.length>=UNID_MIN_AFFIXES){it.unid=true;it.name='미확인 '+base.name;}
   it.price=spec.price||Math.max(10,Math.round(16*mul*[1,2.2,5,12][it.rar]));return it;
 }
+function makeLoot(spec){
+  return {id:seq++,kind:spec.kind||'junk',icon:spec.icon||'food_bottle',name:spec.name||'잡동사니',
+    tier:Math.max(1,Math.min(7,spec.tier||1)),rar:0,st:{},aff:[],price:Math.max(1,spec.price||1),desc:spec.desc||''};
+}
+function itemIconSrc(it){return (A.icons&&A.icons[it.icon])||(A.lootIcons&&A.lootIcons[it.icon])||'';}
 function canEquip(it){return G.P.lv>=(it.requiredLevel||1);}
 function itemStats(it){
   const st=Object.assign({},it&&it.st||{});
@@ -379,7 +384,7 @@ function slotEl(it, x, y, w, h, onTap, selected){
   const s = el('button', 'slot'); s.type = 'button';
   s.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
   if (it){
-    const im = el('img'); im.src = A.icons[it.icon]; im.alt = it.name; s.append(im);
+    const im = el('img'); im.src = itemIconSrc(it); im.alt = it.name; s.append(im);
     s.style.setProperty('--rc', RARC[it.rar]); s.classList.add('has');
     if (it.requiredLevel && G.P && it.requiredLevel > G.P.lv){ s.classList.add('lvlock'); s.append(el('span', 'lvtag', 'Lv' + it.requiredLevel)); }
     if(it.unid)s.append(el('span','unidtag','?'));
@@ -552,11 +557,24 @@ function identifyItem(it,via='self'){
 }
 function showInfo(it, from){
   const I = $('iinfo'); I.innerHTML = '';
+  if(!ALL_GEAR.includes(it.kind)){
+    const nm=el('div','iname',it.name);nm.style.color=RART[0];I.append(nm);
+    const cat=it.kind==='material'?'재료':'잡동사니';
+    I.append(el('div','isub',cat+' · T'+(it.tier||1)));
+    if(it.desc)I.append(el('div','isub',it.desc));
+    const ic=el('img','iic');ic.src=itemIconSrc(it);I.append(ic);
+    const row=el('div','ibtns');
+    if(from==='bag'){
+      const d=el('button','btn ghost',it.locked?'잠금 해제 후 버리기':'버리기');d.type='button';d.disabled=!!it.locked;
+      d.onclick=()=>{if(it.locked)return;if(d.dataset.ok){bag[pickSel.i]=null;pickSel=null;I.classList.remove('on');render();saveGame();}else{d.dataset.ok=1;d.textContent='정말 버리기';}};row.append(d);
+    }
+    I.append(row);I.classList.add('on');return;
+  }
   const nm = el('div', 'iname', it.name); nm.style.color = RART[it.rar]; I.append(nm);
   I.append(el('div', 'isub', `${RARN[it.rar]} · ${it.kind === 'weapon' ? WN[it.wt] : SLOTN[targetSlot(it)]}`));
   I.append(el('div','isub',`T${it.tier} · 착용 Lv${it.requiredLevel||1}`));
   if (it.kind === 'weapon') I.append(el('div', 'isub', WINFO[it.wt]));
-  const ic = el('img', 'iic'); ic.src = A.icons[it.icon]; I.append(ic);
+  const ic = el('img', 'iic'); ic.src = itemIconSrc(it); I.append(ic);
   const ul = el('ul', 'ist');
   cmpLine(it, null).forEach(li => ul.append(li));
   if(it.unid)for(let i=0;i<(it.aff||[]).length;i++)ul.append(el('li','unidline','???'));
@@ -692,7 +710,7 @@ window.UI = {
   addScroll(k,n){const had=SCR[k]|0;SCR[k]=Math.min(SCR_MAX,had+n);syncMmBtn();if($('char').classList.contains('on'))render();return SCR[k]-had;},
   scrolls:()=>({portal:SCR.portal,ident:SCR.ident}),scrollMax:SCR_MAX,
   useScroll(k){if(!(SCR[k]>0))return false;SCR[k]--;syncMmBtn();if($('char').classList.contains('on'))render();saveGame();return true;},
-  make,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
+  make,makeLoot,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
   enchantItems:()=>[...Object.entries(eq).filter(([,it])=>it).map(([slot,it])=>({from:'eq',slot,it})),...bag.slice(0,bagLimit()).map((it,i)=>it?{from:'bag',i,it}:null).filter(Boolean)],
   enchantCost,enchantAffixText,enchantReroll,enchantToggleLock,
   merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=bagLimit()||bag[i])return false;bag[i]=it;return true;},add(it){const i=bagFreeIndex();if(i<0)return false;bag[i]=it;return true;},
