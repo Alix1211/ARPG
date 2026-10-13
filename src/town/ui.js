@@ -283,9 +283,10 @@ $('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWA
 const POT = { hp:[3,0,0,0,0,0,0], mp:[2,0,0,0,0,0,0], dual:[0,0,0,0,0,0,0] };
 const SCR = { portal: 0, ident: 0 }, SCR_MAX = 20;   // 스크롤(포탈·감정): 한 종류당 20장까지
 const potEl = { hp: $('potHp'), mp: $('potMp'), dual: $('potDual') };
-potEl.hp.style.cssText += `left:${C0 - 60}px;top:${C0 - 172}px`;
-potEl.mp.style.cssText += `left:${C0 + 6}px;top:${C0 - 172}px`;
-potEl.dual.style.cssText += `left:${C0 + 72}px;top:${C0 - 172}px`;
+// 물약 3개는 간격 58px로 붙여서 오른쪽 끝(보라)이 화면 밖으로 밀리지 않게 한다.
+potEl.hp.style.cssText += `left:${C0 - 80}px;top:${C0 - 172}px`;
+potEl.mp.style.cssText += `left:${C0 - 22}px;top:${C0 - 172}px`;
+potEl.dual.style.cssText += `left:${C0 + 36}px;top:${C0 - 172}px`;
 function potionTierOwned(k){
   const a=POT[k]||[],want=G.levelTier?G.levelTier(G.P.lv):1;
   if(a[want-1]>0)return want;

@@ -1074,9 +1074,10 @@ function drawMini(camX, camY){
     const pulse=.5+.5*Math.sin(T*6.2),r=3.8+pulse*2.8;
     for(const q of QUEST.minimapTargets()){
       const x=q.x*sx,y=q.y*sy;
+      const main=q.tone!=='side';   // 월드 퀘스트 표시와 같은 색: 메인 노랑, 서브 하늘색
       mx.save();mx.globalAlpha=.35+.65*pulse;
-      mx.fillStyle='#ff2419';mx.beginPath();mx.arc(x,y,r+4,0,7);mx.fill();
-      mx.globalAlpha=1;mx.fillStyle='#ff3328';mx.strokeStyle='#fff2df';mx.lineWidth=1.4;
+      mx.fillStyle=main?'#ffb300':'#3fa3ff';mx.beginPath();mx.arc(x,y,r+4,0,7);mx.fill();
+      mx.globalAlpha=1;mx.fillStyle=main?'#ffda55':'#9fd8ff';mx.strokeStyle=main?'#5a3205':'#173a5c';mx.lineWidth=1.4;
       mx.beginPath();mx.arc(x,y,r,0,7);mx.fill();mx.stroke();mx.restore();
     }
   }

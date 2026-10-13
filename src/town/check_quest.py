@@ -179,7 +179,7 @@ async def main():
         assert await pg.locator('#questTrack .qtrack').count()==5
         assert await pg.locator('#mainQuestTrack .mainQtrack').count()==1
         # 현재 진행 단계의 NPC만 미니맵 목표로 노출된다.
-        mini=await ev('() => QUEST.minimapTargets()')
+        mini=[m for m in await ev('() => QUEST.minimapTargets()') if m['tone']=='main']
         assert len(mini)==1 and mini[0]['kind']=='npc',mini
         target_no=await ev("() => A.mainQuests.quests[0].steps[0].npc")
         target_pos=await ev("no => {const n=A.npcs.find(n=>n.no===no);return [n.x,n.y]}",target_no)

@@ -66,7 +66,7 @@ function questMiniTargets(){
     if(!Number.isFinite(x)||!Number.isFinite(y))return;
     const k=Math.round(x)+':'+Math.round(y);
     if(seen.has(k))return;seen.add(k);
-    out.push({x,y,id,kind});
+    const q=questDef(id);out.push({x,y,id,kind,tone:questKind(q)==='main'?'main':'side'});
   };
   let activeMain=false;
   for(const q of ALL_QUESTS){
@@ -88,6 +88,8 @@ function questMiniTargets(){
       if(n&&(questMapMatches(next.start)||n.questStartAlias===next.start.map))add(n.x,n.y,next.id,'start');
     }
   }
+  // 월드에서 머리 위 !/? 표시가 뜨는 NPC는 미니맵에도 같은 색으로 찍는다(메인 노랑, 서브 하늘색).
+  for(const n of npcs){const a=questNpcAction(n);if(a&&!a.waiting)add(n.x,n.y,a.q.id,a.start?'start':'npc');}
   return out;
 }
 function questAccept(id){
