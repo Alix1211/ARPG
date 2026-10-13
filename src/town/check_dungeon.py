@@ -39,6 +39,17 @@ async def main():
         st=await ev("() => __DUN.state()")
         assert st['floor']==4 and st['blocked'] is False and st['moves']>=2,st
 
+        # 항아리는 장식물이 아니라 실제 파괴 대상이다. 랜덤 방에 항아리가 나올 때까지 짧게 재생성해 확인한다.
+        jars=0
+        for _ in range(6):
+            ok=await ev("() => __DUN.go(2)"); assert ok is True,ok
+            await pg.wait_for_timeout(120)
+            jars=await ev("() => __DUN.breakables()")
+            if jars: break
+        assert jars>0,jars
+        assert await ev("() => __DUN.debugBreakFirst()") is True
+        assert await ev("() => __DUN.breakables()")==jars-1
+
         # 필드 동굴 1층에서 위로 나오면 성 밖 던전 입구가 아니라 들어왔던 필드로 돌아간다.
         await ev("() => __FD.enter('summer',2)"); await pg.wait_for_timeout(900)
         await ev("() => __DUN.restoreEntry('cave',{theme:'summer',leg:2,legs:2,x:50*48,y:10*48,dir:'front'})")
