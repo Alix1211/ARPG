@@ -427,7 +427,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1013-2305</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0001</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1136,6 +1136,7 @@ const SELL_BASE = {
   head: {1:20, 2:40}, body: {1:35, 2:70}, hands: {1:15, 2:30}, feet: {1:15, 2:30},
   ring: 120, neck: 150
 };
+const ARMOR_SELL_RATIO = { head:.55, body:.95, hands:.4, feet:.4 };
 const SHOP_BUY_RATE = {
   arms:    { weapon:1.00, armor:1.00, accessory:0.60, material:0.60, potion:0.50, junk:0.50 },
   pawn:    { weapon:0.85, armor:0.85, accessory:1.20, material:1.00, potion:0.70, junk:1.00 },
@@ -1177,8 +1178,9 @@ function baseSellValue(it){
   if (!it) return 1;
   let v = 10;
   if (it.kind === 'weapon') v = (SELL_BASE.weapon[it.g] || Math.round(75 * Math.max(1, it.g - 1)));
-  else if (['head','body','hands','feet'].includes(it.kind)) v = (SELL_BASE[it.kind][it.g] || SELL_BASE[it.kind][2]);
-  else if (it.kind === 'ring' || it.kind === 'neck') v = SELL_BASE[it.kind];
+  // 방어구·장신구도 무기처럼 등급/티어에 따라 오른다(예전엔 등급 1·2 표만 있어 티어와 무관하게 고정이었음).
+  else if (['head','body','hands','feet'].includes(it.kind)) v = (SELL_BASE[it.kind][it.g] || Math.max(SELL_BASE[it.kind][2], Math.round(75 * Math.max(1, (it.g || 2) - 1) * ARMOR_SELL_RATIO[it.kind])));
+  else if (it.kind === 'ring' || it.kind === 'neck') v = Math.round(SELL_BASE[it.kind] * (1 + .5 * (Math.max(1, it.tier || 1) - 1)));
   else v = Math.max(1, it.price || 10);
   return v * (1 + (it.rar || 0));
 }
@@ -3751,8 +3753,9 @@ window.__CHAT={
   const fresh=()=>({
     schema:1, startedAt:Date.now(), playMs:0,
     totals:{deaths:0,kills:0,bossKills:0,damageIn:0,damageOut:0,portals:0,campRests:0,
-      potions:{hp:0,mp:0},goldEarned:0,goldSpent:0,loot:{normal:0,magic:0,rare:0,legendary:0}},
-    levels:[], zones:[], events:[], active:null
+      potions:{hp:0,mp:0,dual:0},goldEarned:0,goldSpent:0,loot:{normal:0,magic:0,rare:0,legendary:0}},
+    levels:[], zones:[], events:[], active:null,
+    features:{}   // 기능별 사용: {ms, opens, goldIn, goldOut}
   });
   let data=fresh(),ready=false,lastTick=Date.now();
 
@@ -3807,13 +3810,37 @@ window.__CHAT={
   function potion(k){if(!ready||!(k in data.totals.potions))return;data.totals.potions[k]++;addZone('potions',1);}
   function portal(home){if(!ready)return;data.totals.portals++;event('portal',{home:home&&home.map||'town',theme:home&&home.theme||null});}
   function camp(){if(!ready)return;data.totals.campRests++;event('camp',{theme:data.active&&data.active.theme||null,leg:data.active&&data.active.leg||null});}
+  // 지금 쓰고 있는 기능 이름: 열린 창(상점·교역·길드 등) > 미니게임 종류 > 현재 장소
+  function feature(){
+    try{
+      if(typeof panel!=='undefined'&&panel){
+        if(panel==='minigames')return 'mini:'+((window.MINIGAMES&&MINIGAMES.active)||'menu');
+        return String(panel);
+      }
+      if(typeof MAP!=='undefined')return (MAP==='field'||MAP==='dungeon'||MAP==='cave')?'hunt:'+MAP:'walk:'+MAP;
+    }catch(e){}
+    return 'other';
+  }
+  let curFeature=null;
+  function feat(name){return data.features[name]||(data.features[name]={ms:0,opens:0,goldIn:0,goldOut:0});}
+  function sampleFeature(){
+    if(!ready||document.hidden)return;
+    const name=feature();
+    if(name!==curFeature){curFeature=name;feat(name).opens++;}
+    feat(name).ms+=1000;
+  }
+  setInterval(sampleFeature,1000);
   function gold(delta){
     if(!ready||!Number.isFinite(delta)||!delta)return;
     if(delta>0)data.totals.goldEarned+=Math.round(delta);else data.totals.goldSpent+=Math.round(-delta);
+    const f=feat(feature());if(delta>0)f.goldIn+=Math.round(delta);else f.goldOut+=Math.round(-delta);
   }
   function levelUp(from,to){
     if(!ready||to<=from)return;pulse();
-    for(let lv=from+1;lv<=to;lv++)data.levels.push({lv,playMs:data.playMs,deaths:data.totals.deaths,gold:window.GAME&&GAME.P?GAME.P.gold:null,at:Date.now()});
+    const Pp=window.GAME&&GAME.P,w=window.UI&&UI.currentWeapon?UI.currentWeapon():null;
+    for(let lv=from+1;lv<=to;lv++)data.levels.push({lv,playMs:data.playMs,deaths:data.totals.deaths,gold:Pp?Pp.gold:null,at:Date.now(),
+      kills:data.totals.kills,goldEarned:data.totals.goldEarned,goldSpent:data.totals.goldSpent,potions:clone(data.totals.potions),
+      weapon:w&&(w.wt||w.kind)||null,stats:Pp&&clone(Pp.stats),mastery:Pp&&clone(Pp.mastery),where:data.active&&data.active.key||null});
     if(data.levels.length>70)data.levels=data.levels.slice(-70);
   }
   function loadData(d){
@@ -3821,6 +3848,7 @@ window.__CHAT={
     if(d&&d.schema===1){
       data={...data,...clone(d),totals:{...data.totals,...clone(d.totals||{}),potions:{...data.totals.potions,...clone(d.totals&&d.totals.potions||{})},loot:{...data.totals.loot,...clone(d.totals&&d.totals.loot||{})}}};
       data.levels=Array.isArray(d.levels)?d.levels.slice(-70):[];
+      data.features=d.features&&typeof d.features==='object'?clone(d.features):{};
       data.zones=Array.isArray(d.zones)?d.zones.slice(-MAX_ZONES):[];
       data.events=Array.isArray(d.events)?d.events.slice(-MAX_EVENTS):[];
       data.active=d.active&&typeof d.active==='object'?clone(d.active):null;
@@ -3829,8 +3857,19 @@ window.__CHAT={
   }
   function saveData(){pulse();trim();return clone(data);}
   function reset(){data=fresh();lastTick=Date.now();ready=true;}
+  // 초기화해도 지난 회차 기록은 남긴다(arpg_ 로 시작해 백업·드라이브 동기화에 함께 실림). 케인 1~10레벨 반복 육성 데이터용.
+  const ARCHIVE_KEY='arpg_playlog';
+  function archive(reason){
+    try{
+      finishActive(reason||'reset');const Pp=window.GAME&&GAME.P;
+      const a=JSON.parse(localStorage.getItem(ARCHIVE_KEY)||'{"schema":1,"runs":[]}');if(!Array.isArray(a.runs))a.runs=[];
+      a.runs.push({endedAt:Date.now(),reason:reason||'reset',lv:Pp?Pp.lv:null,gold:Pp?Pp.gold:null,log:saveData()});
+      if(a.runs.length>30)a.runs=a.runs.slice(-30);
+      localStorage.setItem(ARCHIVE_KEY,JSON.stringify(a));return a.runs.length;
+    }catch(e){return 0;}
+  }
   document.addEventListener('visibilitychange',pulse);
-  window.TELEMETRY={loadData,saveData,reset,enter,finish:finishActive,damageIn,damageOut,death,kill,loot,potion,portal,camp,gold,levelUp,state:()=>saveData()};
+  window.TELEMETRY={loadData,saveData,reset,archive,enter,finish:finishActive,damageIn,damageOut,death,kill,loot,potion,portal,camp,gold,levelUp,state:()=>saveData()};
 })();
 
 // ======================= 필드 · 몬스터 =======================
@@ -7207,8 +7246,10 @@ requestAnimationFrame(frame);
   const clampTier=t=>Math.max(1,Math.min(7,Number(t)||1));
   const currentTier=()=>{const st=GAME.locationState();return st.map==='fieldvillage'?clampTier(MINI_TIER_BY_THEME[st.theme]||GAME.levelTier()):1;};
   const currentRegion=()=>{const st=GAME.locationState();return st.map==='fieldvillage'&&MINI_TIER_BY_THEME[st.theme]?st.theme:'town';};
-  const arenaMinStake=t=>1000*Math.pow(2,clampTier(t)-1);
-  const bubbleReference=t=>1000*Math.pow(2,clampTier(t)-1);
+  // 티어 상승폭은 사냥 수입 곡선(T1→T7 약 6.5배)에 맞춰 1.4배씩. 2배씩이면 T7 버블 한 판이 사냥 500마리분이 됨(2026-10-13 경제 검토).
+  const tierScale=t=>Math.round(1000*Math.pow(1.4,clampTier(t)-1)/100)*100;   // 1000,1400,2000,2700,3800,5400,7500
+  const arenaMinStake=t=>tierScale(t);
+  const bubbleReference=t=>tierScale(t);
   const bubbleFee=t=>Math.round(bubbleReference(t)*.10);
   const BUBBLE_FRAGMENT_NEEDS=[20,10,10,10,10,20];
   const bubbleCollectedUnits=state=>{
@@ -8216,7 +8257,7 @@ if(saved){
   });
 }
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
-window.UI.save=saveGame;window.UI.reset=()=>{RESETTING=true;try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.removeItem(SKEY);}catch(e){}location.reload();};
 // 테스트용 초기화 버튼: 두 번 눌러야 지워진다. 정식 시작 전에 false로.
 const TEST_RESET_BUTTON=false;
 {const b=document.getElementById('resetBtn');
