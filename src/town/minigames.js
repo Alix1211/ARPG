@@ -1,5 +1,6 @@
 // 기존 페이지를 그대로 열고, 본편의 위치·세계 상태는 메모리에 보존한다.
 // 2026-10-13 주점 3인 경제 테스트 게시 트리거
+// 2026-10-13 식자재점 UI 복귀 수정 최종 게시
 (() => {
   const clone = value => JSON.parse(JSON.stringify(value));
   const SUPPLY=[
