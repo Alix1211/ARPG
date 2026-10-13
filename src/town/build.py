@@ -788,6 +788,27 @@ for nm in ('day','night'):
 MOUNTART = {}
 for nm in ('pack','donkey','boar','ox','bear'):
     im = Image.open(R + f'trade/mount_{nm}.png').convert('RGBA'); im.thumbnail((520,520), Image.LANCZOS); MOUNTART[nm] = enc(im, 88)
+# 7티어 물약 시트: 7열 x 3행(빨강 HP / 파랑 MP / 보라 HP+MP).
+POTION_ICONS = {}
+_potion_candidates = [
+    os.path.join(ROOT, 'source_sheets', 'potions', 'potions_3x7.webp'),
+    os.path.join(ROOT, 'source_sheets', 'potions', 'potions_3x7.png'),
+    os.path.join(ROOT, '판타지 물약 아이콘 3×7 컬렉션(1).png'),
+]
+_potion_src = next((p for p in _potion_candidates if os.path.exists(p)), None)
+if _potion_src:
+    sheet = Image.open(_potion_src).convert('RGBA')
+    for row, kind in enumerate(('hp', 'mp', 'dual')):
+        for tier in range(1, 8):
+            col = tier - 1
+            x0 = round(sheet.width * col / 7); x1 = round(sheet.width * (col + 1) / 7)
+            y0 = round(sheet.height * row / 3); y1 = round(sheet.height * (row + 1) / 3)
+            im = sheet.crop((x0, y0, x1, y1))
+            bb = im.getbbox()
+            if bb: im = im.crop(bb)
+            im.thumbnail((160, 160), Image.LANCZOS)
+            POTION_ICONS[f'{kind}{tier}'] = enc(im, 90)
+
 # 퀘스트 전용 물품: 봉인 목록과 실제 아이콘을 대조하여 누락 없이 빌드한다.
 with open(os.path.join(ROOT, 'src', 'story', 'quest_items.json'), encoding='utf-8') as qf:
     QUEST_ITEM_SPEC = json.load(qf)
@@ -802,7 +823,7 @@ for item in QUEST_ITEM_SPEC['items']:
     im = Image.open(R + 'quest_items/' + item['id'] + '.png').convert('RGBA')
     im.thumbnail((128, 128), Image.LANCZOS)
     QUEST_ITEMS[item['id']] = dict(name=item['name'], icon=enc(im, 90))
-A = dict(questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
+A = dict(questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
