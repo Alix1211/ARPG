@@ -887,30 +887,44 @@ html = source('shell.html').replace('/*SAVE_SYNC*/', source('save_sync.js'))
 js += '\n' + source('minigames.js') + '\n' + source('ui.js')
 import time as _t
 html = html.replace('/*VER*/', _t.strftime('%m%d-%H%M', _t.gmtime(_t.time() + 9 * 3600)))   # 한국시간(서버가 UTC라 +9시간)
-# 그림(data:)은 따로 game/art_<해시>.js 로 뺀다 — 그림이 안 바뀌면 파일 이름도 그대로라서
-# 앱·브라우저가 한 번 받은 그림을 다시 받지 않고, 평소 업데이트는 가벼운 town.html 만 받는다.
-ART = []
-def _pull(o):
-    if isinstance(o, str) and o.startswith('data:'):
-        ART.append(o); return '@@' + str(len(ART) - 1)
-    if isinstance(o, dict): return {k: _pull(v) for k, v in o.items()}
-    if isinstance(o, list): return [_pull(v) for v in o]
-    return o
-A2 = _pull(A)
+# 그림(data:)은 game/art_<묶음>_<해시>.js 여러 개로 나눠 뺀다.
+# - 종류(최상위 키)별로 묶어서, 그림 하나를 바꿔도 그 종류 묶음만 새 이름이 되고 나머지는 앱이 받아 둔 것을 그대로 쓴다.
+# - 각 그림은 번호가 아니라 경로 이름(@@monsters3/spider/front 등)으로 찾는다. 그림을 추가해도 다른 묶음 내용이 밀리지 않는다.
+# - 배경음악은 시작 때 받지 않는다. 곡마다 art_bgm_<곡>_<해시>.js 로 두고 그 곡이 처음 필요할 때만 받는다.
 import hashlib, glob
-art_js = 'window.ART=' + json.dumps(ART) + ';'
-art_name = 'art_' + hashlib.sha1(art_js.encode()).hexdigest()[:10] + '.js'
 GAME_DIR = os.path.join(ROOT, 'game')
+BGM_FILES = {}
+for _bn, _data in list(A.get('bgm', {}).items()):
+    if isinstance(_data, str) and _data.startswith('data:'):
+        _js = '(window.BGM_DATA=window.BGM_DATA||{})[' + json.dumps(_bn) + ']=' + json.dumps(_data) + ';'
+        _fn = 'art_bgm_' + _bn + '_' + hashlib.sha1(_js.encode()).hexdigest()[:10] + '.js'
+        BGM_FILES[_fn] = _js
+        A['bgm'][_bn] = 'js:' + _fn
+ART_SPLIT = ('b', 'monsters3', 'companions', 'port', 'vfx', 'ground', 'elfSkins', 'icons', 'vils', 'out', 'camp', 'wpn', 'kit')
+ART_GROUPS = {}
+def _pull(o, path, group):
+    if isinstance(o, str) and o.startswith('data:'):
+        ART_GROUPS.setdefault(group, {})[path] = o; return '@@' + path
+    if isinstance(o, dict): return {k: _pull(v, path + '/' + str(k), group) for k, v in o.items()}
+    if isinstance(o, list): return [_pull(v, path + '/' + str(i), group) for i, v in enumerate(o)]
+    return o
+A2 = {k: _pull(v, str(k), k if k in ART_SPLIT else 'misc') for k, v in A.items()}
+ART_FILES = {}
+for _g_name in sorted(ART_GROUPS):
+    _js = 'Object.assign(window.ART=window.ART||{},' + json.dumps(ART_GROUPS[_g_name], sort_keys=True) + ');'
+    ART_FILES['art_' + _g_name + '_' + hashlib.sha1(_js.encode()).hexdigest()[:10] + '.js'] = _js
+_keep = set(ART_FILES) | set(BGM_FILES)
 for old_art in glob.glob(os.path.join(GAME_DIR, 'art_*.js')):
-    if os.path.basename(old_art) != art_name: os.remove(old_art)
-if not os.path.exists(os.path.join(GAME_DIR, art_name)):
-    with open(os.path.join(GAME_DIR, art_name), 'w', encoding='utf-8') as f: f.write(art_js)
-RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@@')?window.ART[+o.slice(2)]:o;"
+    if os.path.basename(old_art) not in _keep: os.remove(old_art)
+for _fn, _js in {**ART_FILES, **BGM_FILES}.items():
+    if not os.path.exists(os.path.join(GAME_DIR, _fn)):
+        with open(os.path.join(GAME_DIR, _fn), 'w', encoding='utf-8') as f: f.write(_js)
+RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@@')?window.ART[o.slice(2)]:o;"
            "if(Array.isArray(o))return o.map(r);if(o&&typeof o==='object'){for(const k in o)o[k]=r(o[k]);}return o;})(")
 # WebView가 이전 그림 묶음을 잘못 캐시한 경우를 끊기 위한 캐시 세대값.
 # 그림 해시는 그대로 쓰되 세대값을 올리면 APK가 반드시 새 URL로 다시 받는다.
 ART_CACHE_EPOCH = '2'
-html = html.replace('<script>\n/*ASSETS*/', '<script src="' + art_name + '?v=' + ART_CACHE_EPOCH + '"></script>\n<script>\n/*ASSETS*/')
+html = html.replace('<script>\n/*ASSETS*/', ''.join('<script src="' + _fn + '?v=' + ART_CACHE_EPOCH + '"></script>\n' for _fn in sorted(ART_FILES)) + '<script>\n/*ASSETS*/')
 html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
 with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
-print('ok', len(html) // 1024, 'KB +', art_name, len(art_js) // 1024, 'KB')
+print('ok', len(html) // 1024, 'KB + 그림', len(ART_FILES), '묶음', sum(map(len, ART_FILES.values())) // 1024, 'KB + 음악', len(BGM_FILES), '곡', sum(map(len, BGM_FILES.values())) // 1024, 'KB')
