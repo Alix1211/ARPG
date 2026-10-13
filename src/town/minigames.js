@@ -12,6 +12,7 @@
   const MINI_TIER_BY_THEME={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
   const clampTier=t=>Math.max(1,Math.min(7,Number(t)||1));
   const currentTier=()=>{const st=GAME.locationState();return st.map==='fieldvillage'?clampTier(MINI_TIER_BY_THEME[st.theme]||GAME.levelTier()):1;};
+  const currentRegion=()=>{const st=GAME.locationState();return st.map==='fieldvillage'&&MINI_TIER_BY_THEME[st.theme]?st.theme:'town';};
   const arenaMinStake=t=>1000*Math.pow(2,clampTier(t)-1);
   const bubbleReference=t=>1000*Math.pow(2,clampTier(t)-1);
   const bubbleFee=t=>Math.round(bubbleReference(t)*.10);
@@ -95,7 +96,7 @@
   }
   function enter(kind,bet=null){
     if(active||blocked()||!['tavern','bubble-pang','arena'].includes(kind))return false;
-    root.hidden=false;supply.hidden=true;active={kind,bet,paid:false,source:null,tier:clampTier(bet&&bet.tier||currentTier()),arena:null,bubbleRound:null};GAME.setOpen('minigames');
+    root.hidden=false;supply.hidden=true;active={kind,bet,paid:false,source:null,tier:clampTier(bet&&bet.tier||currentTier()),region:currentRegion(),arena:null,bubbleRound:null};GAME.setOpen('minigames');
     lobby.hidden=true;frame.hidden=false;frame.src='../minigames/'+kind+'/index.html?arpg=1';
     active.source=frame.contentWindow;return true;
   }
@@ -134,12 +135,16 @@
     finishBubbleRound(source,outcome){
       if(!child(source)||active.kind!=='bubble-pang'||!active.bubbleRound||active.bubbleRound.settled)return false;
       const r=active.bubbleRound;r.settled=true;let reward=0,jackpot=false;
+      const popped=Math.max(0,Math.floor(Number(source&&source.BUBBLE_ARPG_STATS&&source.BUBBLE_ARPG_STATS.popped)||0));
+      const lootRolls=Math.max(0,Math.min(10,Math.floor(popped/5)));
+      let loot={tier:r.tier,rolls:lootRolls,found:0,gear:0,supply:0,trade:0,junk:0,discardTrade:0,discardBag:0,none:lootRolls,names:[]};
+      if(lootRolls&&window.__FD&&__FD.grantMonsterLoot)loot=__FD.grantMonsterLoot(r.tier,lootRolls,active.region||'town')||loot;
       if(outcome==='clear'){
         data.bubbleStats.clears++;reward=Math.round(r.reference*(.80+Math.random()*.10));
         jackpot=Math.random()<.02;if(jackpot){reward+=r.reference;data.bubbleStats.jackpots++;}
         GAME.setGold(GAME.P.gold+reward);data.bubbleStats.earned+=reward;
       }
-      save();return {outcome,reward,jackpot,fee:r.fee,tier:r.tier,gold:GAME.P.gold};
+      save();return {outcome,reward,jackpot,fee:r.fee,tier:r.tier,gold:GAME.P.gold,popped,lootRolls,loot};
     },
     beginArena(source){
       if(!child(source)||active.kind!=='arena'||active.arena&&!active.arena.ended)return false;
