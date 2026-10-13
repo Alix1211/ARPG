@@ -183,10 +183,10 @@ function companionButtonText(n){
   if(!n||!n.companion||!COMPANION_DEF[n.companion])return '동행';
   if(companionState.active===n.companion)return '동행 중';
   const fee=companionFee(n.companion);
-  return (COMPANION_DEF[n.companion].kind==='gun'?'고용 ':'동행 ')+fee+'G';
+  return ((n.companion==='knight'||(A.companions&&A.companions[n.companion]&&A.companions[n.companion].mercenary))?'고용 ':'동행 ')+fee+'G';
 }
 function companionSetNpcHidden(id,hidden){
-  if(MAP==='town')hidden=hidden||!companionTownTestsEnabled;
+  if(MAP==='town'&&!(A.companions&&A.companions[id]&&A.companions[id].mercenary))hidden=hidden||!companionTownTestsEnabled;
   for(const n of npcs)if(n.companion===id)n.hide=!!hidden;
   for(let i=spots.length-1;i>=0;i--){
     const s=spots[i];if(s.kind==='npc'&&s.npc&&s.npc.companion===id&&hidden)spots.splice(i,1);
@@ -199,7 +199,7 @@ function companionSetNpcHidden(id,hidden){
 function companionWarp(){
   if(!companionState.active)return;
   companionTarget=null;
-  const [tx,ty]=COMPANION_DEF[companionState.active].kind==='sword'?companionDesiredFront():companionDesired();
+  const [tx,ty]=companionMelee(COMPANION_DEF[companionState.active])?companionDesiredFront():companionDesired();
   const q=nearestSafePosition(tx,ty);
   companionState.x=q[0];companionState.y=q[1];companionState.stuck=0;companionState.lastX=q[0];companionState.lastY=q[1];
   companionState.navPath=null;companionState.navWait=0;companionState.progressX=q[0];companionState.progressY=q[1];
@@ -207,34 +207,37 @@ function companionWarp(){
 function companionPack(c){
   if(!c||!c.active)return null;
   return {active:c.active,mode:c.mode||'hire',storyQuest:c.storyQuest||null,remaining:Math.max(0,+c.remaining||0),expired:!!c.expired,
-    damage:Math.max(1,Math.round(+c.damage||1)),x:+c.x||0,y:+c.y||0,dir:c.dir||'front',flip:!!c.flip};
+    damage:Math.max(1,Math.round(+c.damage||1)),tier:Math.max(1,Math.min(7,+c.tier||1)),skillCount:Math.max(0,+c.skillCount||0),
+    x:+c.x||0,y:+c.y||0,dir:c.dir||'front',flip:!!c.flip};
 }
 function companionSave(){
-  if(!companionState.active&&!companionParkedHire)return null;
-  const out={v:2,...(companionPack(companionState)||{active:null,mode:null})};
+  const out={v:3,...(companionPack(companionState)||{active:null,mode:null}),market:JSON.parse(JSON.stringify(mercMarket))};
   if(companionParkedHire)out.parkedHire={...companionParkedHire};
   return out;
 }
 function companionEmpty(){
-  return {active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:0,lastY:0,expireSaid:false};
+  return {active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,tier:1,skillCount:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:0,lastY:0,expireSaid:false};
 }
 function companionActivate(id,mode,extra={}){
   const q=nearestSafePosition(P.x-48,P.y+18);
   companionTarget=null;companionFx.length=0;
   companionState={active:id,mode,storyQuest:extra.storyQuest||null,remaining:mode==='hire'?Math.max(0,+extra.remaining||DAYLEN):0,
     expired:mode==='hire'&&!!extra.expired,damage:Math.max(1,Math.round(+extra.damage||basicDamage()*1.15)),
+    tier:Math.max(1,Math.min(7,+extra.tier||1)),skillCount:Math.max(0,+extra.skillCount||0),
     x:q[0],y:q[1],dir:P.dir||'front',flip:!!P.flip,t:0,cd:.15,atkT:0,lastMap:MAP,stuck:0,lastX:q[0],lastY:q[1],expireSaid:false};
   companionSetNpcHidden(id,true);
   return true;
 }
 function companionLoad(d){
   companionTarget=null;companionFx.length=0;companionParkedHire=null;
-  if(d&&d.parkedHire&&d.parkedHire.active==='knight')companionParkedHire={...d.parkedHire,mode:'hire'};
+  if(d&&d.market&&typeof d.market==='object')mercMarket={v:1,serial:+d.market.serial||0,lastDayT:Number.isFinite(+d.market.lastDayT)?+d.market.lastDayT:null,roster:Array.isArray(d.market.roster)?d.market.roster.filter(x=>MERC_IDS.includes(x)).slice(0,5):[],inn:Array.isArray(d.market.inn)?d.market.inn.filter(x=>MERC_IDS.includes(x)).slice(0,3):[],town:Array.isArray(d.market.town)?d.market.town.filter(x=>MERC_IDS.includes(x)).slice(0,2):[]};
+  if(d&&d.parkedHire&&COMPANION_DEF[d.parkedHire.active])companionParkedHire={...d.parkedHire,mode:'hire'};
   const id=d&&d.active;
   // 정식판 이전 광장 테스트 계약(v1/무모드)은 이어받지 않는다.
   if(!id||!COMPANION_DEF[id]||!d.mode){companionState=companionEmpty();return false;}
   companionState={active:id,mode:d.mode==='story'?'story':'hire',storyQuest:d.storyQuest||null,
     remaining:Math.max(0,+d.remaining||0),expired:!!d.expired,damage:Math.max(1,Math.round(+d.damage||1)),
+    tier:Math.max(1,Math.min(7,+d.tier||1)),skillCount:Math.max(0,+d.skillCount||0),
     x:Number.isFinite(+d.x)?+d.x:P.x-48,y:Number.isFinite(+d.y)?+d.y:P.y+18,dir:['front','back','side'].includes(d.dir)?d.dir:'front',flip:!!d.flip,
     t:0,cd:0,atkT:0,lastMap:MAP,stuck:0,lastX:+d.x||P.x,lastY:+d.y||P.y,expireSaid:false};
   companionSetNpcHidden(id,true);return true;
@@ -243,22 +246,27 @@ function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
   companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;
   if(MAP==='town'||MAP==='inn')buildWorld(MAP);
-  if(!silent)say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. 러스티가 여관으로 돌아갔습니다.');
+  if(!silent){const nm=COMPANION_DEF[id]&&COMPANION_DEF[id].name||'용병';say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. '+nm+'이(가) 여관으로 돌아갔습니다.');}
   if(window.UI&&UI.save)UI.save();return true;
 }
 function companionHire(id){
-  const d=COMPANION_DEF[id];if(!d||id!=='knight')return false;
-  const qs=window.QUEST&&QUEST.state?QUEST.state():null;
-  if(MAP!=='inn'||!qs||!qs.flags||!qs.flags.rusty_hireable){if($('dlgLine'))$('dlgLine').textContent='아직 정식으로 고용할 수 없습니다.';return false;}
-  if(companionState.active){if($('dlgLine'))$('dlgLine').textContent=companionState.active===id?'러스티가 이미 같이 움직이고 있습니다.':'지금은 다른 동행과 함께 움직이고 있습니다.';return false;}
+  const d=COMPANION_DEF[id];if(!d)return false;
+  const isMerc=!!(A.companions&&A.companions[id]&&A.companions[id].mercenary);
+  if(id==='hero'||(!isMerc&&id!=='knight'))return false;
+  if(id==='knight'){
+    const qs=window.QUEST&&QUEST.state?QUEST.state():null;
+    if(MAP!=='inn'||!qs||!qs.flags||!qs.flags.rusty_hireable){if($('dlgLine'))$('dlgLine').textContent='아직 정식으로 고용할 수 없습니다.';return false;}
+  }else if(!['town','inn','fieldvillage'].includes(MAP))return false;
+  if(companionState.active){if($('dlgLine'))$('dlgLine').textContent=companionState.active===id?d.name+'이(가) 이미 같이 움직이고 있습니다.':'지금은 다른 동행과 함께 움직이고 있습니다.';return false;}
   const fee=companionFee(id);
-  if(P.gold<fee){if($('dlgLine'))$('dlgLine').textContent='러스티가 금화 주머니를 한 번 보고는 시선을 돌렸습니다. “선불 부족.”';return false;}
-  setGold(P.gold-fee);companionActivate(id,'hire',{remaining:DAYLEN,damage:Math.max(1,Math.round(basicDamage()*1.15))});
-  if($('dlgLine'))$('dlgLine').textContent='러스티가 장비를 확인했습니다. “하루치 선불 확인. 귀환 조건 확인.”';
+  if(P.gold<fee){if($('dlgLine'))$('dlgLine').textContent=d.name+'이(가) 금화 주머니를 보고 고개를 저었습니다. “선불이 부족합니다.”';return false;}
+  const tier=companionCurrentTier();
+  setGold(P.gold-fee);companionActivate(id,'hire',{remaining:DAYLEN,damage:Math.max(1,Math.round(basicDamage()*1.15)),tier});
+  if($('dlgLine'))$('dlgLine').textContent=d.name+'이(가) 장비를 챙겼습니다. “T'+tier+' 지역 기준으로 맞추죠. 하루치 선불 확인.”';
   const bt=$('dlgTrade');if(bt){bt.textContent='동행 중';bt.disabled=true;}
   if(window.UI&&UI.save)UI.save();return true;
 }
-function companionHireFromDialog(n){return n&&n.companion==='knight'?companionHire('knight'):false;}
+function companionHireFromDialog(n){return n&&n.companion?companionHire(n.companion):false;}
 function companionStoryWanted(qs,map=MAP){
   for(const w of STORY_COMPANION_WINDOWS){const x=qs&&qs.active&&qs.active[w.quest];if(x&&x.step>=w.from&&x.step<w.to&&w.maps.includes(map))return w;}
   return null;
@@ -267,14 +275,14 @@ function companionStartStory(w){
   if(!w)return false;
   if(companionState.active===w.id&&companionState.mode==='story'&&companionState.storyQuest===w.quest)return false;
   if(companionState.active&&companionState.mode==='hire'&&!companionParkedHire){
-    const h=companionPack(companionState);companionParkedHire=h?{active:h.active,remaining:h.remaining,expired:h.expired,damage:h.damage}:null;
+    const h=companionPack(companionState);companionParkedHire=h?{active:h.active,remaining:h.remaining,expired:h.expired,damage:h.damage,tier:h.tier,skillCount:h.skillCount}:null;
   }
   companionState=companionEmpty();companionActivate(w.id,'story',{storyQuest:w.quest,damage:Math.max(1,Math.round(basicDamage()*1.15))});return true;
 }
 function companionStopStory(){
   if(companionState.mode!=='story')return false;
   companionTarget=null;companionFx.length=0;companionState=companionEmpty();
-  if(companionParkedHire){const h=companionParkedHire;companionParkedHire=null;companionActivate('knight','hire',{remaining:h.remaining,expired:h.expired,damage:h.damage});}
+  if(companionParkedHire){const h=companionParkedHire;companionParkedHire=null;companionActivate(h.active,'hire',{remaining:h.remaining,expired:h.expired,damage:h.damage,tier:h.tier,skillCount:h.skillCount});}
   return true;
 }
 function companionSyncStory(qs,map=MAP){
