@@ -712,6 +712,14 @@ function monsterTier(m){
   if(MAP==='field')return FIELD_TIER[fieldTheme]||1;
   return 1;
 }
+const EQUIP_DROP_BY_TIER=[.10,.10,.11,.12,.13,.14,.15];
+function equipmentDropChance(m,find=0){
+  if(m&&m.boss)return 1;
+  const tier=Math.max(1,Math.min(7,monsterTier(m)));
+  const base=EQUIP_DROP_BY_TIER[tier-1];
+  const findBonus=Math.min(.03,Math.max(0,find)/1000);
+  return Math.min(.20,base+findBonus);
+}
 function randomDropItem(m){
   if(!window.UI)return null;
   const tier=monsterTier(m),r=Math.random(),magicBoost=m&&m.caveChallenge?2:1;
@@ -740,7 +748,7 @@ function killMonster(m){
   const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.coinMul||TIER_MATCH.scales.coin[tier-1];
   const coin=Math.round((2+Math.floor(Math.random()*8))*(1+coinBonus/100)*rewardMul);
   dropsLoot.push({kind:'gold',x:m.x-8,y:m.y,amount:coin,ph:Math.random()*7});
-  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,dropChance=m.boss?1:Math.min(.68,(m.dropChance||.30)+find/250);
+  const find=(window.UI&&UI.findBonus)?UI.findBonus():0,dropChance=equipmentDropChance(m,find);
   if(Math.random()<dropChance){
     const it=randomDropItem(m);if(it)dropsLoot.push({kind:'item',x:m.x+12,y:m.y,item:it,ph:Math.random()*7});
     if(m.bossRole==='floor'&&Math.random()<.65){const it2=randomDropItem(m);if(it2)dropsLoot.push({kind:'item',x:m.x+28,y:m.y+5,item:it2,ph:2+Math.random()*5});}
