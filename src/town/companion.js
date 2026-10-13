@@ -148,10 +148,10 @@ function companionDrawMarketNpc(n){
   const src=COMPANION_IMG[n.companion];if(!src)return false;
   const d=n.mercDir||'front',arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;if(!arr||!arr.length)return false;
   const idx=n.mercMoving?1+(Math.floor((n.mercT||0)*7)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return false;
-  const h=108,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
+  const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.24)';ctx.beginPath();ctx.ellipse(n.x,n.y,17,5.5,0,0,7);ctx.fill();
   ctx.save();if(n.mercFlip&&d==='side'){ctx.translate(n.x,0);ctx.scale(-1,1);ctx.translate(-n.x,0);}
-  ctx.drawImage(im,n.x-w/2,n.y-h+4,w,h);
+  ctx.drawImage(im,n.x-w/2,n.y-h+98*(11/344),w,h);
   ctx.restore();
   return true;
 }
@@ -586,7 +586,7 @@ const MERC_WEAPON={sword:'sword',lancer:'spear',brawler:'gauntlet',archer:'bow',
 function drawCompanion(c,dt){
   const src=COMPANION_IMG[c.active];if(!src||!src.fr)return;
   const a=companionAtk&&companionAtk.id===c.active?companionAtk:null,d=a?a.dir:(c.dir||'front'),arr=src.fr[d]&&src.fr[d].length?src.fr[d]:src.fr.front;
-  const moving=!!c.moving&&!a,idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
+  const moving=!!c.moving,idx=moving?1+(Math.floor(c.t*9)%Math.max(1,arr.length-1)):0,im=arr[Math.min(idx,arr.length-1)];if(!im)return;
   const h=98,w=h*((im.naturalWidth||100)/(im.naturalHeight||100));
   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(c.x,c.y,16,5.5,0,0,7);ctx.fill();
 
@@ -602,7 +602,7 @@ function drawCompanion(c,dt){
   const weapon=a?(a.weapon||companionWeaponFor(c)):null,L=a&&weapon?weaponLayersFor(c,weapon,a,true):{back:null,front:null,lunge:[0,0]};
   ctx.save();const flip=a?a.flip:c.flip;if(flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
   if(L.back)L.back();
-  ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+4+L.lunge[1],w,h);
+  ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+98*(11/344)+L.lunge[1],w,h);
   if(L.front)L.front();
   ctx.restore();
 }

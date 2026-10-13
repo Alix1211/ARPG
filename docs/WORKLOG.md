@@ -1281,3 +1281,24 @@
 - 케인이 말한 것(결정·요청): 새 창에서도 문서를 다시 읽느라 사용량이 너무 든다. 읽기 규칙을 고칠 것.
 - 한 일: CLAUDE.md와 AGENTS.md(107줄)에서 시작 시 읽기를 AGENTS와 TASK_BOARD로 줄이고, STATUS·WORKLOG는 통째로 읽지 않고 관련 부분만 검색해 읽도록 변경. 작업일지 쓰기는 그대로 유지.
 - 남은 일: 직전 빌드(town-build-check)의 실패 원인 확인. 로그를 이 환경에서 받을 수 없어 GitHub Actions 화면에서 확인 필요.
+### 2026-10-13 (Claude) 버블팡 배경 교체 + 주점 외관 교체 (claude-pending, 빌드 보류)
+- minigames/bubble-pang/index.html(원본 v0.2.4 복원본): 배경을 bubble-bg.png로 교체, 어두운 필터·비네팅·무대 패널 투명도 완화, 구슬 속 아이템 이미지 제거(색 구슬만). 목표/보관 목록 썸네일은 그대로.
+- source_sheets/town_overhaul/player_tavern.png를 케인이 준 붉은 지붕 DUSK POB로 교체(크기·구도 동일, 위치/입구/미니게임 연결 유지). 검은 배경 제거 로직 시험 통과.
+- 마르타 위치(13.9,26.9), 야닉 발 그림 조각 제거 반영.
+- 아직 main에 올리지 않음: 케인이 '올려' 하면 병합·단일 푸시.
+- 설정창의 테스트용 '주점 · 버블팡 · 격투장' 버튼 제거(shell.html). 미니게임은 건물 입장으로만 열림. minigames.js는 버튼 없어도 오류 없게 보호, check_minigames.cjs는 MINIGAMES.open() 직접 호출로 변경. 빌드 보류.
+- 좌/우 그림이 시트에서 반대인 몬스터 4종(ogre_club, ogre_chief, darkmage, skeleton_mage) → monster_visual_v2.json에 swapLR 표시, build.py에서 left/right 교환. 숲 거미: source_sheets/spider_forest_4dir.webp가 256x64(칸당 64px)라 확대 시 깨짐 → 고해상도 원본 재제공 필요(미해결). 빌드 보류.
+- 숲 거미: 케인이 새로 그린 2x2 그림(1374x1145)을 앞·뒤·좌(왼쪽 봄)·우(오른쪽 봄) 가로 4칸(칸당 512px) 무손실 webp로 변환해 source_sheets/spider_forest_4dir.webp 교체. 숲 거미/무리장 공용. 빌드 보류.
+## 2026-10-13 (작성: GPT / ChatGPT Work)
+- 케인이 말한 것(결정·요청): claude-pending에서 git fetch origin claude-pending → git checkout -b gpt-merc-fix origin/claude-pending 실행. main 업로드/PR 금지. 지정 문서 두 개만 읽고 그림 직접 검수. Claude 수정 유지. 버블팡·시나리오 봉인 파일·물약 원본 변경 금지.
+- 한 일: 용병 10인 150프레임의 실제 몸 경계를 추출하고 시트마다 배율 하나로 170×172 공통 캔버스, 발 바닥 166에 정렬. 작은 파편 제거. 마을/동행 표시 크기 98로 통일. 기존 루크레아 공용 무기 모션 유지, 공격 중 이동 프레임과 발 기준을 주인공 방식에 맞춤. 평상시 무기 비표시 유지.
+- 한 일: 물약 원본의 불균등 행 간격으로 이웃 병 바닥이 섞이던 표시 문제 수정. 본체 21개 위치로 행 경계 산정, 동일 티어 3종 높이·바닥 기준 일치. source_sheets/potions/potions_3x7.png 원본 유지.
+- 남은 일 / 다음 사람이 알아야 할 것: gpt-merc-fix는 검토 전용. main/배포판에는 미반영. 케인은 이 가지 테스트판에서 10인 보행·5직업 공격·평상시 무기 숨김과 같은 티어 물약 크기를 실기기로 확인해야 함. 자동검사 결과는 아래 추가 기록.
+- 검증: Python/JavaScript 문법 검사 통과. 실제 원본·보정 정면/후면/측면 직접 검수. 10인 대기 방향/반전 60건 무기 비표시, 공격 180건 루크레아 공용 모션 일치 코드 실행 통과. 검증용 빠른 압축 빌드 성공, 생성 HTML의 실제 연결 WebP 150프레임 캔버스/발 기준 및 21물약 동일 티어 높이/바닥(2px 이내) 검사 통과. 원래 압축 설정은 소스에서 유지. 브라우저 다운로드 실패로 Playwright 화면/실게임 검사는 미완료.
+- 인계 보존: 작업 도중 추가된 claude-pending 최신 7045b9b를 fast-forward로 받아 주점 외관과 버블팡 추가 수정을 유지. 기준점에서 금지 파일·물약 원본 변경 없음. game/ 생성물은 커밋 제외.
+- 추가 인계 보존: 연결 도구 업로드 직전 claude-pending 최신 ba75129 위에 재배치. Claude 추가 수정과 작업일지 모두 유지.
+
+## 2026-10-13 20:08 (작성: GPT / ChatGPT Work)
+- 케인이 말한 것: gpt-merc-fix를 main에 통합, 합치기 전 git pull --rebase origin main, 원격 갱신 한 번만, game/ 직접 커밋 금지. 업로드 후 town-build-check 결과 확인.
+- 한 일: 최신 main 21c7311에 원격 gpt-merc-fix 3d3a681을 병합. 작업일지 충돌은 양쪽 내용 보존. 용병/물약 및 포함된 Claude 대기 수정 유지. game/ 생성 파일 직접 커밋 없음. Git 명령 쓰기 인증 불가로 앞서 허용된 GitHub 연결 도구로 main을 한 번만 갱신.
+- 다음 확인: 해당 병합 커밋의 town-build-check 실행 결과와 실패 시 로그를 확인해 케인에게 보고.
