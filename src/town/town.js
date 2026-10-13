@@ -545,8 +545,34 @@ const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staf
 function shopGear(base,price){
   const b=typeof base==='string'?GEAR_BASE[base]:base;return {ic:b.icon,name:b.name,slot:`T${b.tier} · 착용 Lv${b.requiredLevel}`,price,requiredLevel:b.requiredLevel,spec:{baseId:b.id,kind:b.kind}};
 }
+const POTION_PRICE={
+  hp:[0,100,180,300,450,650,850,1100],
+  mp:[0,150,270,450,675,975,1275,1650],
+  dual:[0,200,360,600,900,1300,1700,2200],
+};
+const POTION_RECOVERY={
+  // 각 티어 끝 레벨(10/20/.../70)의 균형 성장 최대치 약 30% 기준. 장비·특화에 따라 실제 비율은 달라진다.
+  hp:[0,2900,4500,6200,7800,9500,11100,12800],
+  mp:[0,2200,3500,4900,6200,7500,8800,10100],
+};
+const POTION_REGION_TIER={town:1,spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
+const POTION_NAME={hp:'체력 물약',mp:'마나 물약',dual:'회복 물약'};
+function potionInfo(kind,tier){
+  tier=Math.max(1,Math.min(7,tier|0));kind=['hp','mp','dual'].includes(kind)?kind:'hp';
+  const hp=kind==='mp'?0:POTION_RECOVERY.hp[tier],mp=kind==='hp'?0:POTION_RECOVERY.mp[tier];
+  return {kind,tier,hp,mp,price:POTION_PRICE[kind][tier],name:`T${tier} ${POTION_NAME[kind]}`,icon:kind+tier};
+}
+function potionShopTier(){
+  const region=(shopNpc&&shopNpc.market)||(CUR&&CUR.market)||'town';
+  return POTION_REGION_TIER[region]||1;
+}
+function potionGoods(tier){
+  return ['hp','mp','dual'].map(k=>{const p=potionInfo(k,tier);return {ic:p.icon,name:p.name,slot:`T${tier} 물약`,
+    desc:k==='hp'?`HP +${p.hp}`:k==='mp'?`MP +${p.mp}`:`HP +${p.hp} · MP +${p.mp}`,
+    price:p.price,potion:k,potionTier:tier};});
+}
 const GOODS = {
-  general:[{ic:'php',name:'체력 물약',slot:'물약',price:20,potion:'hp'},{ic:'pmp',name:'마나 물약',slot:'물약',price:20,potion:'mp'},
+  generalBase:[
     {ic:'scr_portal',name:'타운 포탈 스크롤',slot:'스크롤',desc:'대기시간 무시 · 최대 20장',price:100,scroll:'portal'},
     {ic:'scr_ident',name:'감정 스크롤',slot:'스크롤',desc:'어디서나 감정 · 최대 20장',price:100,scroll:'ident'},
     {ic:'bag',name:'튼튼한 배낭',slot:'가방 확장',desc:'구매할 때마다 가방 1페이지 추가',price:10000,backpack:1}]
@@ -570,7 +596,7 @@ function refreshShopStock(){
   ].filter(Boolean).map(b=>shopGear(b,shopGearPrice(b)));
   shopStock.pawn=['ring','neck'].map(k=>shopBase(tier,k)).filter(Boolean).map(b=>shopGear(b,shopGearPrice(b)));
 }
-function shopGoods(kind){if(kind==='general')return GOODS.general;refreshShopStock();return shopStock[kind]||[];}
+function shopGoods(kind){if(kind==='general')return [...potionGoods(potionShopTier()),...GOODS.generalBase];refreshShopStock();return shopStock[kind]||[];}
 let sel = null, shopNpc = null, shopMode = 'buy';
 const SELL_BASE = {
   weapon: {1:30, 2:75},
@@ -612,7 +638,7 @@ function goodsCat(it){
   return sellCat(it.spec || {kind:'junk'});
 }
 function buyPrice(it){if(it&&it.backpack&&window.UI)return UI.bagUpgradePrice()||0;const d=1-.02*((P.lifeSkills&&P.lifeSkills.discount)||0);return Math.max(1,Math.round((it.price||1)*Math.max(.90,d)));}
-function goodsOwned(it){if(it.potion){const p=UI.potions();return p[it.potion]||0;}if(it.scroll)return UI.scrolls()[it.scroll]||0;if(it.backpack)return UI.bagPages();return 0;}
+function goodsOwned(it){if(it.potion){const p=UI.potions();return (p[it.potion]&&p[it.potion][Math.max(1,Math.min(7,it.potionTier|0))-1])||0;}if(it.scroll)return UI.scrolls()[it.scroll]||0;if(it.backpack)return UI.bagPages();return 0;}
 function buyManyCount(it,want){if(it.scroll)return Math.max(0,Math.min(want,UI.scrollMax-goodsOwned(it)));return it.potion?want:1;}
 function baseSellValue(it){
   if (!it) return 1;
@@ -662,7 +688,7 @@ function renderShop(){
     const list = shopGoods(shopNpc.shop);
     list.forEach((it, i) => {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell';
-      const im = document.createElement('img'); im.src = A.icons[it.ic] || A.kit['h_' + it.ic]; im.alt = it.name; c.append(im);
+      const im = document.createElement('img'); im.src = (A.potions&&A.potions[it.ic]) || A.icons[it.ic] || A.kit['h_' + it.ic] || A.kit.ring; im.alt = it.name; c.append(im);
       if (it.requiredLevel && it.requiredLevel > P.lv){ c.classList.add('lvlock'); const lt = document.createElement('span'); lt.className = 'lvtag'; lt.textContent = 'Lv' + it.requiredLevel; c.append(lt); }
       const price = buyPrice(it);
       const pr = document.createElement('span'); pr.textContent = price; c.append(pr);
@@ -680,7 +706,7 @@ function pickBuy(it, c, price){
   if (shopMode !== 'buy') return;
   saleConfirm=null;price = price || buyPrice(it); sel = { mode:'buy', it, price };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
-  $('infoIc').src = A.icons[it.ic] || A.kit['h_' + it.ic]; $('infoName').textContent = it.name;
+  $('infoIc').src = (A.potions&&A.potions[it.ic]) || A.icons[it.ic] || A.kit['h_' + it.ic] || A.kit.ring; $('infoName').textContent = it.name;
   const owned=(it.potion||it.scroll)?` · 보유 ${goodsOwned(it)}개`:it.backpack?` · ${goodsOwned(it)}/5페이지`:'';
   $('infoSlot').textContent = it.slot + ' · ' + (it.desc || '일반') + owned;
   $('infoPrice').textContent = it.backpack&&price<=0?'최대 확장 완료':'금화 ' + price;
@@ -718,8 +744,8 @@ function buyAt(it,idx,want=1){
   const n=buyManyCount(it,Math.max(1,want|0));if(n<1){$('shopSay').textContent=it.scroll?'스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.':'더 살 수 없습니다.';return false;}
   const total=price*n;if(P.gold<total){$('shopSay').textContent='금화가 부족합니다.';return false;}
   if(!it.potion&&!it.scroll&&(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx))){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
-  if(it.scroll)UI.addScroll(it.scroll,n);else if(it.potion)UI.addPotion(it.potion,n);else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
-  setGold(P.gold-total);UI.refresh();UI.save();if(window.QUEST)QUEST.onEvent('shop_buy',{shop:shopNpc.shop,item:it.potion?'potion:'+it.potion:it.scroll?'scroll:'+it.scroll:(it.spec&&it.spec.kind?it.spec.kind:(it.slot||'item')),name:it.name,count:n});$('shopSay').textContent=it.name+' '+n+'개를 샀습니다.';pickBuy(it,null,buyPrice(it));return true;
+  if(it.scroll)UI.addScroll(it.scroll,n);else if(it.potion)UI.addPotion(it.potion,it.potionTier,n);else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
+  setGold(P.gold-total);UI.refresh();UI.save();if(window.QUEST)QUEST.onEvent('shop_buy',{shop:shopNpc.shop,item:it.potion?'potion:'+it.potion+':t'+it.potionTier:it.scroll?'scroll:'+it.scroll:(it.spec&&it.spec.kind?it.spec.kind:(it.slot||'item')),name:it.name,count:n});$('shopSay').textContent=it.name+' '+n+'개를 샀습니다.';pickBuy(it,null,buyPrice(it));return true;
 }
 $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
 $('buy10').addEventListener('click',()=>{if(sel&&sel.mode==='buy')buyAt(sel.it,null,10);});
@@ -871,7 +897,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}` + (P.shield > 0 ? `  (+${Math.ceil(P.shield)})` : ''); $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { NUM, P, drink, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
+window.GAME = { NUM, P, drink, potionInfo, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, skillPrereq, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   releaseInput:releaseAll, setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,
@@ -1504,13 +1530,18 @@ function drawShield(){
   ctx.restore();
 }
 let potCd = 0;
-function drink(k){
+function drink(k,tier=1){
   if (potCd > 0) return false;
-  if (k === 'hp' ? P.hp >= P.maxHp : P.mp >= P.maxMp){ say(k === 'hp' ? '체력이 가득합니다… 아까워요' : '마나가 가득합니다… 아까워요'); return false; }
-  const v = Math.round((k === 'hp' ? P.maxHp : P.maxMp) * 0.4);
-  if (k === 'hp') P.hp = Math.min(P.maxHp, P.hp + v); else P.mp = Math.min(P.maxMp, P.mp + v);
+  const p=potionInfo(k,tier),needHp=p.hp>0&&P.hp<P.maxHp,needMp=p.mp>0&&P.mp<P.maxMp;
+  if(!needHp&&!needMp){say(k==='hp'?'체력이 가득합니다… 아까워요':k==='mp'?'마나가 가득합니다… 아까워요':'체력과 마나가 가득합니다… 아까워요');return false;}
+  const beforeHp=P.hp,beforeMp=P.mp;
+  if(p.hp)P.hp=Math.min(P.maxHp,P.hp+p.hp);
+  if(p.mp)P.mp=Math.min(P.maxMp,P.mp+p.mp);
+  const gotHp=Math.max(0,P.hp-beforeHp),gotMp=Math.max(0,P.mp-beforeMp);
   if(window.TELEMETRY)TELEMETRY.potion(k);
-  potCd = 1; syncBars(); pops.push({ x: P.x, y: P.y - 100, t: 0, txt: '+' + v, heal: k === 'hp', mana: k === 'mp' });
+  potCd=1;syncBars();
+  if(gotHp)pops.push({x:P.x-10,y:P.y-100,t:0,txt:'+'+gotHp,heal:true,mana:false});
+  if(gotMp)pops.push({x:P.x+12,y:P.y-(gotHp?124:100),t:0,txt:'+'+gotMp,heal:false,mana:true});
   return true;
 }
 function updSkills(dt){
