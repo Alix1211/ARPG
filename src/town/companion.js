@@ -25,7 +25,7 @@ const MERC_IDS=Object.keys(COMPANION_DEF).filter(id=>A.companions&&A.companions[
 const companionMelee=d=>!!d&&['sword','brawler','lancer'].includes(d.kind);
 const companionRanged=d=>!!d&&['gun','archer','mage'].includes(d.kind);
 const MERC_TIER_THEME={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
-let mercMarket={v:1,serial:0,lastDayT:null,roster:[],inn:[],town:[]};
+let mercMarket={v:2,lastDayT:null,sets:{}};
 
 // 정식판 기본값은 광장 시험 인원 비노출.
 let companionTownTestsEnabled=false;
@@ -54,25 +54,36 @@ function companionFee(id){
 }
 function companionStateCopy(){const o=JSON.parse(JSON.stringify(companionState));o.parkedHire=companionParkedHire?{...companionParkedHire}:null;o.market=JSON.parse(JSON.stringify(mercMarket));return o;}
 function companionIsActive(id){return !!companionState.active&&(!id||companionState.active===id);}
-function companionCurrentTier(){
+function companionSettlementKey(mapId=MAP){
   try{
     const st=typeof locationState==='function'?locationState():null;
-    if(st&&st.map==='fieldvillage')return Math.max(1,Math.min(7,MERC_TIER_THEME[st.theme]||1));
+    if(mapId==='fieldvillage')return st&&st.theme||'spring';
+    if(mapId==='inn')return st&&st.map==='fieldvillage'?(st.theme||'spring'):'town';
   }catch(e){}
-  return 1;
+  return 'town';
+}
+function companionCurrentTier(){
+  const key=companionSettlementKey();
+  return key==='town'?1:Math.max(1,Math.min(7,MERC_TIER_THEME[key]||1));
 }
 function companionMercReady(){return MERC_IDS.length>=5;}
-function companionRotateMarket(force=false){
+function companionMarketSet(key=companionSettlementKey(),create=true){
+  if(!mercMarket.sets||typeof mercMarket.sets!=='object')mercMarket.sets={};
+  if(!mercMarket.sets[key]&&create)mercMarket.sets[key]={serial:0,roster:[],inn:[],town:[]};
+  return mercMarket.sets[key]||null;
+}
+function companionRotateMarket(force=false,key=companionSettlementKey(),doSave=true){
   if(!companionMercReady())return false;
-  if(!force&&mercMarket.roster.length===5)return false;
+  const market=companionMarketSet(key,true);
+  if(!force&&market.roster.length===5)return false;
   const pool=MERC_IDS.filter(id=>!(companionState.active===id&&companionState.mode==='hire'));
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
-  mercMarket.roster=pool.slice(0,5);
-  mercMarket.inn=mercMarket.roster.slice(0,3);
-  mercMarket.town=mercMarket.roster.slice(3,5);
-  mercMarket.serial=(mercMarket.serial||0)+1;
+  market.roster=pool.slice(0,5);
+  market.inn=market.roster.slice(0,3);
+  market.town=market.roster.slice(3,5);
+  market.serial=(market.serial||0)+1;
   mercMarket.lastDayT=typeof DAY!=='undefined'?DAY.t:null;
-  if(window.UI&&UI.save)UI.save();
+  if(doSave&&window.UI&&UI.save)UI.save();
   return true;
 }
 function companionMarketLine(id){
@@ -87,30 +98,35 @@ function companionMarketNpc(id,x,y,roam=false){
     mercT:0,mercDir:'front',mercFlip:false,img:im,ph:Math.random()*7,key:y};
 }
 function companionEnsureMarket(mapId=MAP){
-  if(!companionMercReady()||!['town','inn'].includes(mapId))return false;
-  if(!mercMarket.roster||mercMarket.roster.length!==5)companionRotateMarket(true);
-  const want=(mapId==='inn'?mercMarket.inn:mercMarket.town).filter(id=>id!==companionState.active);
+  if(!companionMercReady()||!['town','inn','fieldvillage'].includes(mapId))return false;
+  const key=companionSettlementKey(mapId),market=companionMarketSet(key,true);
+  if(!market.roster||market.roster.length!==5)companionRotateMarket(true,key,false);
+  const want=(mapId==='inn'?market.inn:market.town).filter(id=>id!==companionState.active);
   const positions=mapId==='inn'
     ? [[2.9*TS,7.05*TS],[7.0*TS,7.45*TS],[11.45*TS,7.15*TS]]
-    : [[8.7*TS,18.1*TS],[19.2*TS,19.2*TS]];
+    : mapId==='fieldvillage'
+      ? [[11.6*TS,17.2*TS],[20.4*TS,17.2*TS]]
+      : [[8.7*TS,18.1*TS],[19.2*TS,19.2*TS]];
   for(let i=0;i<want.length&&i<positions.length;i++){
     const id=want[i];if(npcs.some(n=>n.mercenaryMarket&&n.companion===id))continue;
-    const n=companionMarketNpc(id,positions[i][0],positions[i][1],mapId==='town');if(!n)continue;
+    const n=companionMarketNpc(id,positions[i][0],positions[i][1],mapId!=='inn');if(!n)continue;
     npcs.push(n);sprites.push(n);spots.push({name:n.name,x:n.x,y:n.y+6,r:52,kind:'npc',npc:n});
   }
   return true;
 }
 function companionUpdateMarket(dt){
-  if((MAP==='town'||MAP==='inn')&&companionMercReady()&&!npcs.some(n=>n.mercenaryMarket))companionEnsureMarket(MAP);
+  if(['town','inn','fieldvillage'].includes(MAP)&&companionMercReady()&&!npcs.some(n=>n.mercenaryMarket))companionEnsureMarket(MAP);
   if(companionMercReady()&&typeof DAY!=='undefined'){
     const prev=mercMarket.lastDayT;
     if(prev!=null&&prev>.82&&DAY.t<.18){
-      companionRotateMarket(true);
-      if(MAP==='town'||MAP==='inn'){buildWorld(MAP);return;}
+      const keys=Object.keys(mercMarket.sets||{});if(!keys.length)keys.push(companionSettlementKey());
+      for(const key of keys)companionRotateMarket(true,key,false);
+      if(window.UI&&UI.save)UI.save();
+      if(['town','inn','fieldvillage'].includes(MAP)){buildWorld(MAP);return;}
     }
     mercMarket.lastDayT=DAY.t;
   }
-  if(MAP!=='town')return;
+  if(!['town','fieldvillage'].includes(MAP))return;
   for(const n of npcs){
     if(!n.mercenaryMarket||!n.mercRoam||n.hide)continue;
     n.mercMoving=false;n.mercWait-=dt;n.mercT+=dt;
