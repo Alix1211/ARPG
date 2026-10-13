@@ -105,6 +105,7 @@ for (const n of npcs){
   sprites.push(n);
   spots.push({ name: n.name, x: n.x, y: n.y + 6, r: 50, kind: 'npc', npc: n });
 }
+  if(window.COMPANION&&COMPANION.ensureMarket)COMPANION.ensureMarket(id);
   if((id==='town'||id==='fieldvillage')&&townPortalReturn){
     const [px,py]=portalAnchor(id);
     sprites.push({portal:true,x:px,y:py,w:112,h:98,key:py-2});
@@ -513,7 +514,8 @@ function emergencyEscape(){
 function openDlg(n){
   talking = n;
   $('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
-  $('dlgImg').src = A.port[n.k]; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
+  const cport=n.companion&&A.companions&&A.companions[n.companion]&&A.companions[n.companion].port;
+  $('dlgImg').src = cport||A.port[n.k]||''; $('dlgName').textContent = n.name; $('dlgTitle').textContent = n.title;
   $('dlgLine').textContent = n.line;
   const smithy=n.at==='smithy';
   $('dlgTrade').hidden = !n.shop && !n.go && !n.companion && !smithy;
@@ -1147,9 +1149,10 @@ function frame(now){
   for (const s of list){
     if (s.hide) continue;
     if (s.me){ drawPortalArrivalAura();drawMe();drawShield(); continue; }
-    if (s.companion){ if(typeof drawCompanion==='function')drawCompanion(s.companion,sdt); continue; }
+    if (s.companion&&typeof s.companion==='object'){ if(typeof drawCompanion==='function')drawCompanion(s.companion,sdt); continue; }
     if (s.portal){drawTownPortal(s);continue;}
     if (s.vil){ drawVil(s.vil); continue; }
+    if (s.mercenaryMarket&&window.COMPANION&&COMPANION.drawMarketNpc){COMPANION.drawMarketNpc(s);continue;}
     if (s.mon){ drawMonster(s.mon, sdt); continue; }
     if (s.dummy){ // 맞으면 흔들림
       const d = s.dummy; d.wob = Math.max(0, d.wob - dt * 2.2); d.ph += dt * 22;
