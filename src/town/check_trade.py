@@ -28,6 +28,10 @@ async def main():
         assert await pg.evaluate("() => TRADE.goods.length") == 25
         assert await pg.evaluate("() => Object.keys(TRADE.regions).length") == 8
         assert await pg.evaluate("() => A.npcs.some(n=>n.shop==='trade' && n.title==='교역소 직원')")
+        # 필드에서 주운 무역품은 구매비 없이 화물칸에 바로 적재된다.
+        assert await pg.evaluate("() => TRADE.addLoot('barley',2)") == 2
+        barley=await pg.evaluate("() => TRADE.cargo().barley")
+        assert barley and barley['qty']==2 and barley['avg']==0,barley
 
         # 대표 장거리 차익: 봄의 밀 -> 화산
         q=await pg.evaluate("""() => ({
