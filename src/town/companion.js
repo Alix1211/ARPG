@@ -9,6 +9,24 @@ const COMPANION_DEF={
   // 러스티: 플레이어 주변을 유지하는 후방 지원 사수.
   knight:{name:'러스티',title:'이계의 용병',kind:'gun',range:390,aggro:370,pursuit:470,attackCd:.72,speed:205,warpIdle:520,warpCombat:700,stuckCombat:3.0}
 };
+
+const MERC_JOB_PROFILE={
+  sword:{range:76,aggro:610,pursuit:780,attackCd:.66,speed:248,warpIdle:680,warpCombat:1240,stuckCombat:1.8},
+  brawler:{range:62,aggro:590,pursuit:740,attackCd:.44,speed:258,warpIdle:660,warpCombat:1180,stuckCombat:1.7},
+  lancer:{range:112,aggro:620,pursuit:800,attackCd:.78,speed:235,warpIdle:700,warpCombat:1280,stuckCombat:1.9},
+  archer:{range:430,aggro:400,pursuit:520,attackCd:.86,speed:210,warpIdle:540,warpCombat:760,stuckCombat:3.0},
+  mage:{range:365,aggro:390,pursuit:500,attackCd:1.02,speed:205,warpIdle:540,warpCombat:740,stuckCombat:3.0},
+};
+for(const [id,src] of Object.entries(A.companions||{})){
+  if(!src||!src.mercenary||!MERC_JOB_PROFILE[src.job])continue;
+  COMPANION_DEF[id]={name:src.name,title:src.title,kind:src.job,...MERC_JOB_PROFILE[src.job]};
+}
+const MERC_IDS=Object.keys(COMPANION_DEF).filter(id=>A.companions&&A.companions[id]&&A.companions[id].mercenary);
+const companionMelee=d=>!!d&&['sword','brawler','lancer'].includes(d.kind);
+const companionRanged=d=>!!d&&['gun','archer','mage'].includes(d.kind);
+const MERC_TIER_THEME={spring:1,summer:2,autumn:3,winter:4,ice:5,volcano:6,swamp:7};
+let mercMarket={v:1,serial:0,lastDayT:null,roster:[],inn:[],town:[]};
+
 // 정식판 기본값은 광장 시험 인원 비노출.
 let companionTownTestsEnabled=false;
 let companionTarget=null;
@@ -28,7 +46,7 @@ for(const id in (A.companions||{})){
   COMPANION_IMG[id]={...src,fr};
 }
 const companionFx=[];
-let companionState={active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
+let companionState={active:null,mode:null,storyQuest:null,remaining:0,expired:false,damage:0,tier:1,skillCount:0,x:0,y:0,dir:'front',flip:false,t:0,cd:0,atkT:0,lastMap:'',stuck:0,lastX:0,lastY:0,expireSaid:false};
 
 function companionFee(id){
   if(!COMPANION_DEF[id])return 0;
