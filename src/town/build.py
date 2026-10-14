@@ -768,12 +768,7 @@ for k, name, cx, by, wt, col, kind in outmap.OUT_PROPS:
 onpcs = []
 _liner = next(n for n in npcs if n['no'] == 1)
 for k, name, title, cx, by, hh, line, act in outmap.OUT_NPCS:
-    if k == 'guard_cap':
-        # 성 안쪽 라이너와 동일 인물. 퀘스트 접근성을 위해 성 밖 갈림길에도 중복 배치한다.
-        onpcs.append(dict(k=_liner['k'], no=1, name='라이너', title='성문 경비병', x=cx*TS, y=by*TS,
-                          w=_liner['w'], h=_liner['h'], line='성 안에서도 봤겠지만, 밖에선 길부터 확인하십시오.',
-                          shop=None, go=None, at=None, questStartAlias='town'))
-        continue
+    # (2026-10-14 케인) 성 밖 갈림길의 라이너 중복 배치 제거: 나가면 라이너 위치가 바뀌어 보였음. 여긴 그냥 투구 쓴 경비병.
     im = Image.open(R + f'npc_guard/{k}.png').convert('RGBA'); w = hh * im.width / im.height
     if k not in assets: assets[k] = enc(im.resize((round(w * SCALE), round(hh * SCALE)), Image.LANCZOS), 88)
     pt = im.copy(); pt.thumbnail((520, 600), Image.LANCZOS); PORT[k] = enc(pt, 88)
