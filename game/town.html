@@ -224,6 +224,14 @@ html.app #fs{display:none}
 #stick.act{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff70,#ffffff35);box-shadow:0 2px 6px #0005}
 #cluster{position:fixed;right:max(24px,calc(env(safe-area-inset-right) + 24px));bottom:74px;width:124px;height:124px;pointer-events:none}
+.qsp{position:absolute;left:58px;right:52px;top:100px;bottom:52px;display:flex;flex-direction:column;justify-content:space-evenly;gap:10px;padding:12px 14px;border-radius:16px;background:#efe0bd;box-shadow:inset 0 0 0 2px #c9a46a,0 2px 8px #0004}
+.qsnote{font:700 13px "Noto Sans KR",sans-serif;color:#5a3a1c;background:#fff6e2c0;border-radius:8px;padding:7px 10px;line-height:1.35}
+.qsrow{display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:12px;background:#3a240f22}
+.qsrow.now{background:#c9923e44;box-shadow:inset 0 0 0 2px #c9923e}
+.qsrow b{width:92px;font:800 13px "Noto Sans KR",sans-serif;color:#4a2a12;line-height:1.2}
+.qss{width:58px;height:58px;border-radius:50%;border:3px solid #b07a34;background:#2a1a0c center/100% 100% no-repeat;box-shadow:0 2px 4px #0006;padding:0}
+.qss.empty{background:#3a2614;border-style:dashed;opacity:.75}
+.skc.pick{outline:4px solid #ffd76a;outline-offset:2px;border-radius:50%;box-shadow:0 0 14px #ffd76a}
 #atk.xsel{background-size:100% 100%!important}
 #atk .atkz{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity .12s}
 #atk .atkz.zon{opacity:1;filter:brightness(1.45) saturate(1.2) drop-shadow(0 0 9px #ffd76a) drop-shadow(0 0 3px #fff3c0)}
@@ -434,7 +442,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0910</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0930</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -8029,8 +8037,32 @@ addEventListener('pointerup',e=>{
     else{const old=QS.indexOf(d.id);if(old>=0)QS[old]=null;QS[i]=d.id;}
   }else if(d.from!=null)QS[d.from]=null;
   if(d.moved)dragSuppressClickUntil=Date.now()+350;
+  else if(d.from==null&&tab==='skill'&&$('char').classList.contains('on')){qsPick=qsPick===d.id?null:d.id;drag=null;render();return;}   // 스킬 톡 = 선택
   drag=null;syncQS();saveGame();
 });
+// 휴대폰에서 스킬 목록을 끌면 스크롤로 넘어가 끌기가 취소된다 → 멈춘 끌기 정리
+addEventListener('pointercancel',()=>{if(!drag)return;ghost.style.display='none';$('cluster').classList.remove('drop');drag=null;});
+let qsPick=null;   // 스킬 탭: 등록하려고 고른 스킬
+function renderQsPanel(R){
+  R.style.backgroundImage=`url(${K['01']})`;qsSaveCur();
+  R.append(el('div','btitle','무기별 스킬 칸'));
+  const box=el('div','qsp');R.append(box);
+  box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽에서 스킬을 누른 뒤, 넣을 칸을 누르세요 · 등록된 칸을 누르면 비웁니다'));
+  for(const sl of WSLOTS){
+    const row=el('div','qsrow'+(sl===cur?' now':''));row.append(el('b','',ZONE_NAME[sl]+(sl===cur?' · 사용 중':'')+(eq[sl]?'':' · 무기 없음')));
+    for(let i=0;i<5;i++){
+      const id=QSW[sl][i],b=el('button','qss'+(id?'':' empty'));b.type='button';
+      if(id)b.style.backgroundImage=`url(${quickIcon(id)})`;
+      b.onclick=()=>{
+        if(qsPick){const k=QSW[sl].indexOf(qsPick);if(k>=0)QSW[sl][k]=null;QSW[sl][i]=qsPick;qsPick=null;}
+        else if(id)QSW[sl][i]=null;else return;
+        qsLoadCur();syncQS();saveGame();render();
+      };
+      row.append(b);
+    }
+    box.append(row);
+  }
+}
 
 // ---- 캐릭터 창 ----
 // 키트 그림 좌표(원본 픽셀): 장비창 kit_c_02, 가방 kit_c_01, 능력치 kit_c_02b
@@ -8048,7 +8080,7 @@ function fit(){
 addEventListener('resize', fit);
 function openChar(t){ identifyVendor=false;tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
 function openIdentifyVendor(){openChar('equip');identifyVendor=true;return true;}
-function closeChar(){ identifyVendor=false;cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
+function closeChar(){ identifyVendor=false;qsPick=null;$('cluster').style.visibility='';cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
 for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
@@ -8091,12 +8123,12 @@ function render(){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
     const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
     const skhead=el('div','skhead'+((Pp.skillPts||0)>0?' pointpulse':''),`전투 스킬 · 보유 ${Pp.skillPts||0}P`);
-    pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 액티브는 퀵슬롯으로 끌어 놓을 수 있습니다.'));
+    pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 스킬을 누른 뒤 오른쪽 무기별 칸을 누르면 등록됩니다.'));
     for(const [gname,ids] of SKG){
       const row=el('div','skrow');row.append(el('b','',gname));
       for(const id of ids){
         const wrap=el('div','skcwrap'),rank=skillRank(id),impl=IMPLEMENTED.has(id),pre=G.skillPrereq?G.skillPrereq(id):{id:null,ok:true},preOk=rank>0||pre.ok;
-        const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock'));c.type='button';
+        const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock')+(qsPick===id?' pick':''));c.type='button';
         const preTxt=pre.id&&!preOk?` · 선행 ${SKN[pre.id]||pre.id} Lv3 필요`:'';
         c.title=SKN[id]?SKN[id]+' · '+SKD[id]+preTxt+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
         if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
@@ -8150,7 +8182,9 @@ function render(){
   $('tabSk').classList.toggle('pointpulse',(Pp.skillPts||0)>0);
   // 오른쪽: 일반 가방 / 무역품 화물칸
   const R = $('bagPane'); R.innerHTML = '';
-  if (tab === 'trade' && window.TRADE){
+  $('cluster').style.visibility = tab === 'skill' ? 'hidden' : '';
+  if (tab === 'skill'){ renderQsPanel(R); }
+  else if (tab === 'trade' && window.TRADE){
     TRADE.renderCargo(R);
   } else {
     R.style.backgroundImage = `url(${K['01']})`;
