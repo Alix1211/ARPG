@@ -954,7 +954,7 @@ RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@
 ART_CACHE_EPOCH = '2'
 _kb = {_fn: max(1, len(_js) // 1024) for _fn, _js in ART_FILES.items()}
 html = html.replace('/*TITLE*/', TITLE_FILE).replace('/*BOOT_TOTAL*/1', str(sum(_kb.values())))
-html = html.replace('<script>\n/*ASSETS*/', ''.join('<script src="' + _fn + '?v=' + ART_CACHE_EPOCH + '" onload="__bootStep(' + str(_kb[_fn]) + ')"></script>\n' for _fn in sorted(ART_FILES)) + '<script>\n/*ASSETS*/')
+html = html.replace('/*ART_LIST*/[]', json.dumps([[_fn + '?v=' + ART_CACHE_EPOCH, _kb[_fn]] for _fn in sorted(ART_FILES)]))   # 그림 묶음은 다시 받기 되는 로더가 받는다(shell.html)
 html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
 with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
 print('ok', len(html) // 1024, 'KB + 그림', len(ART_FILES), '묶음', sum(map(len, ART_FILES.values())) // 1024, 'KB + 음악', len(BGM_FILES), '곡', sum(map(len, BGM_FILES.values())) // 1024, 'KB')
