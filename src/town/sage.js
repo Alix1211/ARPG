@@ -88,8 +88,16 @@ function sageTick(dt){
 }
 function sageDraw(){
  for(const [k,b] of Object.entries(sageBuffs)){
-  vfxDraw(k==='guard'?'ring_blue':'ring_gold',P.x,P.y,120,{sy:.55,rot:T*.4,alpha:Math.min(1,b.t)*.65});
-  if(k==='guard')vfxDraw('heal_arrow',P.x,P.y-40,115,{alpha:.3});
+  // 케인 2026-10-14: 몸에 걸쳐 돌던 타원(ring) 제거. 버프마다 색이 다른 작은 빛 알갱이가 몸을 따라 피어오른다.
+  const col={attack:'255,120,70',speed:'150,235,255',vitality:'130,255,140',guard:'140,195,255'}[k]||'255,230,150';
+  const al=Math.min(1,b.t);ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let j=0;j<6;j++){
+   const ph=(T*.7+j/6)%1,ang=j*1.047+T*1.3,x=P.x+Math.cos(ang)*(16+6*Math.sin(j)),y=P.y-4-ph*64;
+   ctx.globalAlpha=al*.75*Math.sin(ph*Math.PI);ctx.fillStyle='rgb('+col+')';
+   ctx.beginPath();ctx.arc(x,y,2.4,0,7);ctx.fill();
+   ctx.globalAlpha*=.35;ctx.beginPath();ctx.arc(x,y,6,0,7);ctx.fill();
+  }
+  ctx.restore();
  }
  for(const a of sageActs){
   const s=a.s,k=Math.min(1,a.t/s.dur),fade=Math.max(0,1-(a.t-s.dur)/.6),ang=Math.atan2(a.d[1],a.d[0]);
