@@ -10,7 +10,7 @@
   - 케인 결정: 대화창 초상은 정상 비율(8등신). 필드 그림은 꼬마 그대로.
   - NPC 25 + 카엘렌·러스티·???·현자 + 용병 10 = 39장, 루크레아 1장 → `assets/portraits/<키>.webp`. 빌드가 있으면 이걸 쓰고 없으면 예전 꼬마 초상.
   - 원본 시트·루크레아 원본은 `source_sheets/portraits_8head/`. 케인은 구글 드라이브 `ARPG/new`에도 백업.
-  - 대화창 초상 높이 250→400px. 루크레아 대사는 HUD 얼굴 대신 `A.lucrea`.
+  - 대화창 초상: 허벅지(위 58%)에서 잘라 높이 330px, 아래 가장자리 흐리게(케인 결정: 전신은 이상함). 원본 전신은 그대로 보관. 루크레아 대사는 HUD 얼굴 대신 `A.lucrea`.
   - [ ] 루크레아 표정 15종(`portraits_8head/lucrea/lucrea_expressions_1~5.png`, 3개씩): 대사별 표정 바꾸기는 아직 안 함.
   - 새 NPC를 추가하면 같은 화풍 8등신 초상을 `assets/portraits/npc_XX.webp`로 넣을 것.
 

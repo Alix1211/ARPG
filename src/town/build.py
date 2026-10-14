@@ -384,7 +384,9 @@ face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((105, 4
 def _port8(key, fallback=None):
     _p = os.path.join(R, 'portraits', key + '.webp')
     if not os.path.exists(_p): return fallback
-    _im = Image.open(_p).convert('RGBA'); _im.thumbnail((640, 800), Image.LANCZOS)
+    _im = Image.open(_p).convert('RGBA'); _im = _im.crop(_im.getbbox())
+    _im = _im.crop((0, 0, _im.width, round(_im.height * 0.58))); _im = _im.crop(_im.getbbox())   # 허벅지에서 자름(케인 결정)
+    _im.thumbnail((700, 660), Image.LANCZOS)
     return enc(_im, 86)
 # ---- 본편 반복 등장 캐릭터 초상(기존 사용자 제공 에셋 재사용) ----
 STORY_CHARS={}
