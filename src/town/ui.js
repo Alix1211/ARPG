@@ -419,7 +419,7 @@ function renderQsPanel(R){
   R.style.backgroundImage=`url(${K['01']})`;qsSaveCur();
   R.append(el('div','btitle','무기별 스킬 칸'));
   const box=el('div','qsp');R.append(box);
-  box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽 스킬을 누른 뒤 칸을 누르거나, 끌어다 칸에 놓으세요 · 등록된 칸을 누르면 비웁니다'));
+  box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽 스킬을 누른 뒤 넣을 칸을 누르세요 · 등록된 칸을 누르면 비웁니다'));
   for(const sl of WSLOTS){
     const row=el('div','qsrow'+(sl===cur?' now':''));row.append(el('b','',ZONE_NAME[sl]+(sl===cur?' · 사용 중':'')+(eq[sl]?'':' · 무기 없음')));
     for(let i=0;i<5;i++){
@@ -490,7 +490,6 @@ function render(){
       if (isWSlot(s) && s === cur && it) b.append(el('span', 'held', '손에 듦'));
       bindItemSlot(b,{from:'eq',slot:s});L.append(b);
     }
-    for (const [x, y] of EQ_OFF){ const o = el('div', 'off'); o.style.cssText = `left:${x}px;top:${y}px;width:74px;height:78px`; L.append(o); }
   } else if(tab==='skill'){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
     const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
@@ -503,7 +502,7 @@ function render(){
         const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock')+(qsPick===id?' pick':''));c.type='button';
         const preTxt=pre.id&&!preOk?` · 선행 ${SKN[pre.id]||pre.id} Lv3 필요`:'';
         c.title=SKN[id]?SKN[id]+' · '+SKD[id]+preTxt+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
-        if(impl&&rank>0){c.addEventListener('pointerdown',e=>startDrag(e,id,null));c.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick===id?null:id;render();});}   // 톡 = 고르기, 끌어서 오른쪽 칸에 놓기도 됨
+        if(impl&&rank>0){c.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')startDrag(e,id,null);});c.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick===id?null:id;render();});}   // 톡 = 고르기, 끌어서 오른쪽 칸에 놓기도 됨
         wrap.append(c,el('span','skrank',SAGE.skills[id]?`Lv${rank}/${SAGE.skills[id].max}`:impl?`Lv${rank}/5`:'-'));
         if(impl&&!SAGE.skills[id]){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5||!preOk;plus.title=!preOk?`선행 스킬 ${SKN[pre.id]||pre.id} Lv3 필요`:'';plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
         row.append(wrap);
@@ -525,7 +524,7 @@ function render(){
       const ic=el('button','skc life'+(key==='townPortal'&&!locked&&rank>0?' drag':''));ic.type='button';ic.style.backgroundImage=`url(${lifeIcon(key)})`;ic.title=key==='townPortal'&&!locked&&rank>0?'누른 뒤 오른쪽 칸을 눌러 등록':dv.name;
       if(key==='townPortal'&&!locked&&rank>0){
         if(qsPick==='townPortal')ic.classList.add('pick');
-        ic.addEventListener('pointerdown',e=>startDrag(e,'townPortal',null));ic.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick==='townPortal'?null:'townPortal';render();});   // 톡 = 고르기, 끌어 놓기도 됨
+        ic.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')startDrag(e,'townPortal',null);});ic.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick==='townPortal'?null:'townPortal';render();});   // 톡 = 고르기, 끌어 놓기도 됨
       }
       const desc=locked?`Lv${dv.unlock} 해금`:(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1]);
       const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=e=>{e.stopPropagation();G.investLife(key);};

@@ -1262,7 +1262,7 @@ function frame(now){
     const tx = near.kind === 'npc' ? near.npc.x : P.x;
     tag.style.left = ((tx - camX) * Z) + 'px'; tag.style.top = ((ty - camY) * Z) + 'px';
   } else tag.style.display = 'none';
-  if(now>=miniDrawAt){drawMini(camX,camY);miniDrawAt=now+100;}
+  drawMini(camX,camY);   // 케인 요청: 미니맵은 매 프레임(10Hz 제한은 끊겨 보임)
   drawBubble(dt, camX, camY);
   requestAnimationFrame(frame);
 }
