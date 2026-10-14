@@ -403,8 +403,32 @@ addEventListener('pointerup',e=>{
     else{const old=QS.indexOf(d.id);if(old>=0)QS[old]=null;QS[i]=d.id;}
   }else if(d.from!=null)QS[d.from]=null;
   if(d.moved)dragSuppressClickUntil=Date.now()+350;
+  else if(d.from==null&&tab==='skill'&&$('char').classList.contains('on')){qsPick=qsPick===d.id?null:d.id;drag=null;render();return;}   // 스킬 톡 = 선택
   drag=null;syncQS();saveGame();
 });
+// 휴대폰에서 스킬 목록을 끌면 스크롤로 넘어가 끌기가 취소된다 → 멈춘 끌기 정리
+addEventListener('pointercancel',()=>{if(!drag)return;ghost.style.display='none';$('cluster').classList.remove('drop');drag=null;});
+let qsPick=null;   // 스킬 탭: 등록하려고 고른 스킬
+function renderQsPanel(R){
+  R.style.backgroundImage=`url(${K['01']})`;qsSaveCur();
+  R.append(el('div','btitle','무기별 스킬 칸'));
+  const box=el('div','qsp');R.append(box);
+  box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽에서 스킬을 누른 뒤, 넣을 칸을 누르세요 · 등록된 칸을 누르면 비웁니다'));
+  for(const sl of WSLOTS){
+    const row=el('div','qsrow'+(sl===cur?' now':''));row.append(el('b','',ZONE_NAME[sl]+(sl===cur?' · 사용 중':'')+(eq[sl]?'':' · 무기 없음')));
+    for(let i=0;i<5;i++){
+      const id=QSW[sl][i],b=el('button','qss'+(id?'':' empty'));b.type='button';
+      if(id)b.style.backgroundImage=`url(${quickIcon(id)})`;
+      b.onclick=()=>{
+        if(qsPick){const k=QSW[sl].indexOf(qsPick);if(k>=0)QSW[sl][k]=null;QSW[sl][i]=qsPick;qsPick=null;}
+        else if(id)QSW[sl][i]=null;else return;
+        qsLoadCur();syncQS();saveGame();render();
+      };
+      row.append(b);
+    }
+    box.append(row);
+  }
+}
 
 // ---- 캐릭터 창 ----
 // 키트 그림 좌표(원본 픽셀): 장비창 kit_c_02, 가방 kit_c_01, 능력치 kit_c_02b
@@ -422,7 +446,7 @@ function fit(){
 addEventListener('resize', fit);
 function openChar(t){ identifyVendor=false;tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
 function openIdentifyVendor(){openChar('equip');identifyVendor=true;return true;}
-function closeChar(){ identifyVendor=false;cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
+function closeChar(){ identifyVendor=false;qsPick=null;$('cluster').style.visibility='';cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
 for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
@@ -465,12 +489,12 @@ function render(){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
     const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
     const skhead=el('div','skhead'+((Pp.skillPts||0)>0?' pointpulse':''),`전투 스킬 · 보유 ${Pp.skillPts||0}P`);
-    pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 액티브는 퀵슬롯으로 끌어 놓을 수 있습니다.'));
+    pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 스킬을 누른 뒤 오른쪽 무기별 칸을 누르면 등록됩니다.'));
     for(const [gname,ids] of SKG){
       const row=el('div','skrow');row.append(el('b','',gname));
       for(const id of ids){
         const wrap=el('div','skcwrap'),rank=skillRank(id),impl=IMPLEMENTED.has(id),pre=G.skillPrereq?G.skillPrereq(id):{id:null,ok:true},preOk=rank>0||pre.ok;
-        const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock'));c.type='button';
+        const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock')+(qsPick===id?' pick':''));c.type='button';
         const preTxt=pre.id&&!preOk?` · 선행 ${SKN[pre.id]||pre.id} Lv3 필요`:'';
         c.title=SKN[id]?SKN[id]+' · '+SKD[id]+preTxt+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
         if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
@@ -524,7 +548,9 @@ function render(){
   $('tabSk').classList.toggle('pointpulse',(Pp.skillPts||0)>0);
   // 오른쪽: 일반 가방 / 무역품 화물칸
   const R = $('bagPane'); R.innerHTML = '';
-  if (tab === 'trade' && window.TRADE){
+  $('cluster').style.visibility = tab === 'skill' ? 'hidden' : '';
+  if (tab === 'skill'){ renderQsPanel(R); }
+  else if (tab === 'trade' && window.TRADE){
     TRADE.renderCargo(R);
   } else {
     R.style.backgroundImage = `url(${K['01']})`;

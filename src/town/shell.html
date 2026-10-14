@@ -224,6 +224,14 @@ html.app #fs{display:none}
 #stick.act{opacity:1}
 #knob{position:absolute;left:36px;top:36px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffffff70,#ffffff35);box-shadow:0 2px 6px #0005}
 #cluster{position:fixed;right:max(24px,calc(env(safe-area-inset-right) + 24px));bottom:74px;width:124px;height:124px;pointer-events:none}
+.qsp{position:absolute;left:58px;right:52px;top:100px;bottom:52px;display:flex;flex-direction:column;justify-content:space-evenly;gap:10px;padding:12px 14px;border-radius:16px;background:#efe0bd;box-shadow:inset 0 0 0 2px #c9a46a,0 2px 8px #0004}
+.qsnote{font:700 13px "Noto Sans KR",sans-serif;color:#5a3a1c;background:#fff6e2c0;border-radius:8px;padding:7px 10px;line-height:1.35}
+.qsrow{display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:12px;background:#3a240f22}
+.qsrow.now{background:#c9923e44;box-shadow:inset 0 0 0 2px #c9923e}
+.qsrow b{width:92px;font:800 13px "Noto Sans KR",sans-serif;color:#4a2a12;line-height:1.2}
+.qss{width:58px;height:58px;border-radius:50%;border:3px solid #b07a34;background:#2a1a0c center/100% 100% no-repeat;box-shadow:0 2px 4px #0006;padding:0}
+.qss.empty{background:#3a2614;border-style:dashed;opacity:.75}
+.skc.pick{outline:4px solid #ffd76a;outline-offset:2px;border-radius:50%;box-shadow:0 0 14px #ffd76a}
 #atk.xsel{background-size:100% 100%!important}
 #atk .atkz{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity .12s}
 #atk .atkz.zon{opacity:1;filter:brightness(1.45) saturate(1.2) drop-shadow(0 0 9px #ffd76a) drop-shadow(0 0 3px #fff3c0)}
