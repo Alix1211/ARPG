@@ -507,8 +507,8 @@ NPC = [
  (43, '페닉스', '금고 관리인', 'manor_vault', -1, '잠시만요. 열쇠가 열셋… 열넷… 맞군요. 이제 말씀하시죠.', None),
  (28, '고르던', '전당포 주인', 'townhouse_pawn', -1, '어서 오게. 물건은 천천히 꺼내. 급하게 꺼내는 사람 물건은 대개 사연이 붙어 있더군.', 'pawn'),
  (15, '오토', '촌장', 'cottage_thatch', 1, '허허, 왔나. 방금 차를 너무 진하게 우려서 말이지. 젊을 땐 이런 것도 잘 맞췄는데.', None),
- (1,  '라이너', '성문 경비병', ('gate', 21.85, 31.7), 1, '출입 기록부터… 아, 또 자네군요. 이름은 압니다. 그래도 적는 건 적어야 합니다.', None),
- (2,  '에다', '성문 경비병', ('gate', 24.15, 31.7), -1, '또 나가? 라이너는 기록부터 하라겠지만 난 신발부터 볼래. 진흙 묻은 채로 들어오지 마.', None),
+ (1,  '라이너', '성문 경비병', ('gate', 21.0, 25.2), 1, '출입 기록부터… 아, 또 자네군요. 이름은 압니다. 그래도 적는 건 적어야 합니다.', None),
+ (2,  '에다', '성문 경비병', ('gate', 24.9, 25.2), -1, '또 나가? 라이너는 기록부터 하라겠지만 난 신발부터 볼래. 진흙 묻은 채로 들어오지 마.', None),
  (6,  '미나', '꽃장수', ('free', 19.0, 18.6), 1, '저기… 오늘은 노란 꽃이 좀 많이 폈어요. 어제는 하나도 없었는데. 이상하죠?', None),
 ]
 for qn in MAIN_QUEST_DATA.get('npcs',[]):
@@ -768,7 +768,7 @@ for k, name, cx, by, wt, col, kind in outmap.OUT_PROPS:
 onpcs = []
 _liner = next(n for n in npcs if n['no'] == 1)
 for k, name, title, cx, by, hh, line, act in outmap.OUT_NPCS:
-    # (2026-10-14 케인) 성 밖 갈림길의 라이너 중복 배치 제거: 나가면 라이너 위치가 바뀌어 보였음. 여긴 그냥 투구 쓴 경비병.
+    # (2026-10-14 케인) 성 밖 갈림길의 라이너 중복 배치 제거. 대신 라이너·에다를 성문 안쪽(마을 쪽) 길 양옆으로 옮겨 걸어서 말 걸 수 있게 함.
     im = Image.open(R + f'npc_guard/{k}.png').convert('RGBA'); w = hh * im.width / im.height
     if k not in assets: assets[k] = enc(im.resize((round(w * SCALE), round(hh * SCALE)), Image.LANCZOS), 88)
     pt = im.copy(); pt.thumbnail((520, 600), Image.LANCZOS); PORT[k] = enc(pt, 88)
