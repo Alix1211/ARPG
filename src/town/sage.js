@@ -37,7 +37,7 @@ function sageCast(id,d,rank,cm,mod,skillMul){
  if(s.mode==='buff'){
   const oldHp=P.maxHp;sageBuffs[s.buff]={t:12,max:12,id,value:s.value,mapKey:skillShowMapKey()};
   if(s.buff==='vitality'&&window.UI){UI.refresh();P.hp=Math.min(P.maxHp,P.hp+Math.max(0,P.maxHp-oldHp));syncBars();}
-  sfx.push({type:'holyshield',t:0,x:P.x,y:P.y-25,r:90});skillShowImpact('holy',P.x,P.y,85,2);return true;
+  return true; // 번쩍임은 sageDraw에서 버프 색으로(예전 금빛 고리·분홍 치유 그림은 뺌)
  }
  let targets=s.mode==='mark'?combatTargets().filter(t=>Math.hypot(t.x-P.x,t.y-P.y)<s.R).slice(0,8):[];
  if(s.mode==='mark'&&!targets.length){say('표식을 새길 상대가 없습니다.');return false;}
@@ -108,18 +108,15 @@ function sageTick(dt){
  }
 }
 function sageDraw(){
- let bi=0;
+ // 케인 2026-10-14: 버프는 쓰는 순간에만 그 색으로 한 번 번쩍이고, 유지 중엔 몸에 아무것도 붙이지 않는다(상단 버프 줄이 표시).
  for(const [k,b] of Object.entries(sageBuffs)){
-  // 케인 2026-10-14: 몸에 걸쳐 돌던 타원(ring) 제거. 버프마다 색이 다른 작은 빛 알갱이가 몸 둘레를 따라 피어오른다.
-  // 버프끼리 자리를 엇갈려 겹쳐도 하얗게 뭉치지 않게 한다.
+  const e=(b.max||12)-b.t;if(e>.6)continue;
   const col={attack:'255,120,70',speed:'120,225,255',vitality:'110,240,120',guard:'140,195,255'}[k]||'255,230,150';
-  const al=Math.min(1,b.t),off=bi++*.33;ctx.save();
-  for(let j=0;j<4;j++){
-   const ph=(T*.6+j/4+off)%1,ang=j*1.571+off*2.1+T*1.1,x=P.x+Math.cos(ang)*24,y=P.y-6-ph*70+Math.sin(ang)*5;
-   ctx.globalAlpha=al*.85*Math.sin(ph*Math.PI);ctx.fillStyle='rgba('+col+',.35)';
-   ctx.beginPath();ctx.arc(x,y,4,0,7);ctx.fill();
-   ctx.fillStyle='rgb('+col+')';ctx.beginPath();ctx.arc(x,y,1.8,0,7);ctx.fill();
-  }
+  const q=e/.6,cy=P.y-45;ctx.save();ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(P.x,cy,4,P.x,cy,40+50*q);g.addColorStop(0,'rgba('+col+','+(.55*(1-q))+')');g.addColorStop(1,'rgba('+col+',0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(P.x,cy,40+50*q,0,7);ctx.fill();
+  ctx.fillStyle='rgb('+col+')';ctx.globalAlpha=1-q;
+  for(let j=0;j<10;j++){const a=j*.628+.3,r=18+62*q;ctx.beginPath();ctx.arc(P.x+Math.cos(a)*r,cy+Math.sin(a)*r*.8-20*q,2.4*(1-q)+.6,0,7);ctx.fill();}
   ctx.restore();
  }
  for(const a of sageActs){

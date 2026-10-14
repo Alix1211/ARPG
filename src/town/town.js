@@ -1541,6 +1541,7 @@ function breakShield(){
   sfx.push({type:'iceburst',t:0,x:P.x,y:P.y-30,r:150});
 }
 function drawShield(){
+  return; // 케인 2026-10-14: 몸을 덮던 큰 타원은 쓰지 않는다(윤곽 빛은 drawMe, 남은 시간은 상단 버프 줄).
   if(!(P.shield>0))return;
   const holy=P.shieldKind==='holy',k=Math.max(0,Math.min(1,P.shield/(P.shieldMax||1)));
   let al=.6+.4*k;if(P.shieldT<2)al*=.55+.45*Math.sin(T*16);
@@ -1729,7 +1730,12 @@ function drawMe(){
   ctx.translate(P.x+pose.x,P.y+pose.y);ctx.rotate(pose.rot);ctx.scale(pose.sx,pose.sy);ctx.translate(-P.x,-P.y);
   if (flip && dir === 'side'){ ctx.translate(P.x, 0); ctx.scale(-1, 1); ctx.translate(-P.x, 0); }
   if (L.back) L.back();
-  ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h);
+  // 케인 2026-10-14: 보호막은 몸에 덮던 타원 대신 캐릭터 윤곽을 따라 빛이 감싼다(신성=금빛, 얼음=하늘빛).
+  if (P.shield > 0){
+    let al = .55 + .45 * Math.max(0, Math.min(1, P.shield / (P.shieldMax || 1))); if (P.shieldT < 2) al *= .45 + .55 * Math.abs(Math.sin(T * 8));
+    ctx.save(); ctx.shadowColor = P.shieldKind === 'holy' ? `rgba(255,215,90,${al})` : `rgba(120,215,255,${al})`; ctx.shadowBlur = 14;
+    ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h); ctx.shadowBlur = 7; ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h); ctx.restore();
+  } else ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h);
   if (L.front) L.front();
   if(SKILL_SHOW.pose)skillShowWeapon(SKILL_SHOW.pose);
   ctx.restore();
