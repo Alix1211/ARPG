@@ -345,7 +345,9 @@ function gainExp(amount){
     showLevelNotice('LEVEL UP!  Lv'+P.lv+' · 능력 +'+addStat+'P · 스킬 +'+addSkill+'P'+(addLife?' · 생활 +'+addLife+'P':''));
     say(['좋아, 더 강해졌네!','좋았어! 포인트부터 잘 써야지.','한 단계 올랐네. 어디에 투자할까?'][P.lv%3]);
   }
-  if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
+  if(window.UI&&UI.refresh)UI.refresh();
+  if(ups){P.hp=P.maxHp;P.mp=P.maxMp;syncBars();}   // 레벨업하면 체력·마나 가득(케인 2026-10-14)
+  if(window.UI&&UI.save)UI.save();return true;
 }
 
 // ======================= 입력 =======================
@@ -756,7 +758,8 @@ function sellAt(idx){
   $('shopSay').textContent='금화 '+price+'닢을 받았습니다.';return true;
 }
 function buyAt(it,idx,want=1){
-  if(!shopGoods(shopNpc.shop).includes(it))return false;
+  // 물약 목록은 열 때마다 새로 만들어지므로 같은 객체가 아니어도 종류·티어가 같으면 이 상점 물건으로 인정한다(10-13 이후 물약 구매 불가 버그).
+  {const g=shopGoods(shopNpc.shop);if(!g.includes(it)&&!(it.potion&&g.some(x=>x.potion===it.potion&&x.potionTier===it.potionTier)))return false;}
   const price=buyPrice(it);
   if(it.backpack){if(price<=0){$('shopSay').textContent='가방을 이미 최대로 확장했습니다.';return false;}if(P.gold<price){$('shopSay').textContent='금화가 부족합니다.';return false;}if(!UI.expandBag())return false;setGold(P.gold-price);UI.refresh();UI.save();$('shopSay').textContent='가방 한 페이지가 늘었습니다.';renderShop();return true;}
   const n=buyManyCount(it,Math.max(1,want|0));if(n<1){$('shopSay').textContent=it.scroll?'스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.':'더 살 수 없습니다.';return false;}
