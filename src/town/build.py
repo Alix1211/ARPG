@@ -684,6 +684,9 @@ for f in sorted(_g.glob(R + 'ui/hud_icons/*.png')):
     n = os.path.basename(f)[:-4]
     if not n[:2].isdigit() or int(n[:2]) > 27: continue
     im = Image.open(f).convert('RGBA'); im.thumbnail((112, 112), Image.LANCZOS); SKI[n.split('_', 1)[1]] = enc(im, 88)
+# 고대 엘프 무예 전용 아이콘: assets/ui/sage_icons/<스킬id>.png (예: sword4_whirl.png). 없으면 기존 아이콘을 빌려 씀.
+for f in sorted(_g.glob(R + 'ui/sage_icons/*.png')):
+    im = Image.open(f).convert('RGBA'); im = im.crop(im.getbbox()); im.thumbnail((112, 112), Image.LANCZOS); SKI[os.path.basename(f)[:-4]] = enc(im, 88)
 ef = Image.open(R + 'characters/elf/front_0.png').convert('RGBA'); ef = ef.crop(ef.getbbox())
 ELF_FRONT = enc(ef, 90)
 

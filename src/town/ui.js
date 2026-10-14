@@ -296,7 +296,7 @@ const SKD = { holy2_shield:'강한 피해 흡수막 5초, 4단계부터 8초. �
   bow1:'맹독 화살 한 발, 명중 시 지속 독 피해', bow2:'부채꼴로 화살 여러 발', bow3:'넓은 구역에 화살 비, 맞은 적 둔화',
   fist1:'짧게 돌진해 쳐올리며 적의 준비동작을 끊음', fist2:'앞으로 뻗는 투기, 4랭크부터 관통', fist3:'제자리에서 3연속 원형 충격파, 둔화' };
 for(const [id,s] of Object.entries(window.SAGE?SAGE.skills:{})){IMPLEMENTED.add(id);SKN[id]=s.name;SKD[id]=s.desc;}
-for(const [label,prefix] of [['검 · 고대 무예','sword'],['활 · 고대 무예','bow'],['창 · 고대 무예','spear'],['격투 · 고대 무예','fist']])SKG.push([label,Object.keys(SAGE.skills).filter(id=>id.startsWith(prefix))]);
+for(const [label,prefix] of [['검 · 고대 무예','sword'],['활 · 고대 무예','bow'],['창 · 고대 무예','spear']])SKG.push([label,Object.keys(SAGE.skills).filter(id=>id.startsWith(prefix))]);
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
 const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};

@@ -17,7 +17,10 @@ const SAGE_SKILLS={
  fist6_guard:{name:'금강체',desc:'12초 동안 추가 피해 감소 25%와 밀려남 저항. 보호막과 함께 사용 가능.',mp:12,cd:25,mode:'buff',buff:'guard',value:25,icon:'holy2_shield'},
  fist7_dance:{name:'파쇄연무',desc:'주변 적을 잔상으로 열 번 연타하고 마지막 일격으로 밀어냅니다.',mp:32,cd:32,mode:'dance',dur:1.7,hits:10,R:220,mul:.65,icon:'fist3'}
 };
-for(const [id,s] of Object.entries(SAGE_SKILLS)){s.price=null;s.max=s.max||1;SK[id]={mp:s.mp,cd:s.cd};SK2[id]=SK[id];P.skillLv[id]=P.skillLv[id]||0;A.skicon[id]=A.skicon[s.icon];}
+// 수업료(케인 확정 2026-10-14): 1단계 Lv10 3,000G / 2단계 Lv25 12,000G / 3단계 Lv40 40,000G / 궁극기 Lv55 120,000G. 차징샷처럼 여러 단계는 단계마다 같은 값.
+const SAGE_TUITION={4:[10,3000],5:[25,12000],6:[40,40000],7:[55,120000]};
+const SAGE_HIDDEN=id=>id.startsWith('fist');   // 격투가 보류(장비 착용 불가) → 판매·스킬창에서 숨김
+for(const [id,s] of Object.entries(SAGE_SKILLS)){const t=SAGE_TUITION[+(id.match(/(\d)_/)||[])[1]]||[99,null];s.lv=t[0];s.price=t[1];s.max=s.max||1;SK[id]={mp:s.mp,cd:s.cd};SK2[id]=SK[id];P.skillLv[id]=P.skillLv[id]||0;A.skicon[id]=A.skicon[id]||A.skicon[s.icon];}
 const sageActs=[],sageBuffs={};
 let sageEchoImage=null;
 function sageEcho(){if(sageEchoImage)return sageEchoImage;const im=EL.front[0];if(!im.complete||!im.naturalWidth)return im;const c=document.createElement("canvas");c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext("2d");g.drawImage(im,0,0);g.globalCompositeOperation="source-atop";g.fillStyle="rgba(125,225,244,.42)";g.fillRect(0,0,c.width,c.height);sageEchoImage=c;return c;}
@@ -119,8 +122,9 @@ function sageClear(){sageActs.length=0;for(const k of Object.keys(sageBuffs))del
 function sageLearn(id){
  const s=SAGE_SKILLS[id],rank=P.skillLv[id]||0;
  if(!s||MAP!=='sage'||!talking||talking.shop!=='sage'||!Number.isFinite(s.price)||s.price<=0||rank>=s.max)return false;
+ if(P.lv<s.lv){say('Lv'+s.lv+'부터 배울 수 있습니다.');return false;}
  if(P.gold<s.price){say('금화가 부족합니다.');return false;}
- P.gold-=s.price;P.skillLv[id]=rank+1;syncBars();if(window.UI){UI.refresh();UI.save();}sageOpenShop();return true;
+ setGold(P.gold-s.price);P.skillLv[id]=rank+1;syncBars();if(window.UI){UI.refresh();UI.save();}say('「'+s.name+'」을(를) 익혔습니다. 스킬 창에서 무기별 칸에 등록하세요.');sageOpenShop();return true;
 }
 function sageOpenShop(){
  if(MAP!=='sage'||!talking||talking.shop!=='sage')return;
@@ -128,13 +132,13 @@ function sageOpenShop(){
  $('dlgLine').style.whiteSpace='pre-line';
  $('dlgLine').textContent='배우고 싶은 것을 골라 보렴. 손에 익을 때까지 옆에서 봐 줄게.\n\n…할인? 후후, 너도 참. 차는 한 잔 더 줄 수 있단다.';
  let shop=$('sageShop');if(!shop){shop=document.createElement('div');shop.id='sageShop';shop.style.cssText='margin:8px 0;max-height:42vh;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;';$('dlgLine').parentNode.append(shop);}shop.hidden=false;shop.style.display='grid';shop.innerHTML='';
- for(const [group,prefix] of [['검','sword'],['활','bow'],['창','spear'],['격투','fist']]){
+ for(const [group,prefix] of [['검','sword'],['활','bow'],['창','spear']]){
   const h=document.createElement('b');h.textContent=group;h.style.gridColumn='1 / -1';shop.append(h);
   for(const [id,s] of Object.entries(SAGE_SKILLS).filter(([id])=>id.startsWith(prefix))){
    const b=document.createElement('button');b.type='button';b.dataset.skill=id;
    b.style.cssText='min-height:90px;padding:9px;background:#23362c;color:#fff1cc;border:1px solid #b49b59;border-radius:8px;text-align:left;font-size:14px;font-family:inherit;';
-   const rank=P.skillLv[id]||0;b.textContent=s.name+'\n'+s.desc+'\n'+(rank>=s.max?'학습 완료':s.price===null?'수업료 미정':s.price+' G');b.style.whiteSpace='pre-line';
-   b.disabled=s.price===null||rank>=s.max||P.gold<s.price;b.addEventListener('click',()=>sageLearn(id));const card=document.createElement('div');card.style.cssText='display:flex;flex-direction:column;gap:5px;';card.append(b);
+   const rank=P.skillLv[id]||0;b.textContent=s.name+'\n'+s.desc+'\n'+(rank>=s.max?'학습 완료':s.price===null?'수업료 미정':s.price.toLocaleString()+' G · Lv'+s.lv+(s.max>1?' · '+(rank+1)+'/'+s.max+'단계':''));b.style.whiteSpace='pre-line';
+   b.disabled=s.price===null||rank>=s.max||P.gold<s.price||P.lv<s.lv;if(P.lv<s.lv&&rank<s.max)b.style.opacity='.55';b.addEventListener('click',()=>sageLearn(id));const card=document.createElement('div');card.style.cssText='display:flex;flex-direction:column;gap:5px;';card.append(b);
    const trial=document.createElement('button');trial.type='button';trial.textContent='수련장에서 시험';trial.style.cssText='padding:8px;background:#655332;color:#fff4d8;border:1px solid #c9b16c;border-radius:6px;font-size:14px;font-family:inherit;';trial.addEventListener('click',()=>sageTrial(id));if(s.max===3){trial.textContent='3단계 시험';for(const rank of [1,2]){const t=trial.cloneNode(true);t.textContent=rank+'단계 시험';t.addEventListener('click',()=>sageTrial(id,rank));card.append(t);}}card.append(trial);shop.append(card);
   }
  }
