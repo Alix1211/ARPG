@@ -12,13 +12,17 @@
   let data=fresh(),ready=false,lastTick=Date.now();
 
   const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
-  function pulse(){
-    const now=Date.now(),dt=Math.max(0,Math.min(10000,now-lastTick));lastTick=now;
-    if(ready&&!document.hidden&&dt>0){
-      data.playMs=(data.playMs||0)+dt;
-      if(data.active)data.active.ms=(data.active.ms||0)+dt;
-    }
-  }
+  // 플레이 시간: 1초마다, 화면이 보이고 최근 90초 안에 손·키·패드 입력이 있었을 때만 센다(켜 두고 딴일 하는 시간 제외, 케인 2026-10-14)
+  const IDLE_MS=90000;let lastInput=Date.now();
+  const touchInput=()=>{lastInput=Date.now();};
+  for(const ev of ['pointerdown','pointermove','keydown','wheel','touchstart'])addEventListener(ev,touchInput,{capture:true,passive:true});
+  function padInput(){try{for(const p of (navigator.getGamepads?navigator.getGamepads():[])||[]){if(!p)continue;if(p.buttons.some(b=>b&&b.pressed)||p.axes.some(v=>Math.abs(v)>.2)){lastInput=Date.now();return;}}}catch(e){}}
+  const isActive=()=>ready&&!document.hidden&&Date.now()-lastInput<IDLE_MS;
+  function pulse(){lastTick=Date.now();}
+  setInterval(()=>{
+    const now=Date.now(),dt=Math.max(0,Math.min(2000,now-lastTick));lastTick=now;padInput();
+    if(isActive()&&dt>0){data.playMs=(data.playMs||0)+dt;if(data.active)data.active.ms=(data.active.ms||0)+dt;}
+  },1000);
   function trim(){if(data.zones.length>MAX_ZONES)data.zones.splice(0,data.zones.length-MAX_ZONES);if(data.events.length>MAX_EVENTS)data.events.splice(0,data.events.length-MAX_EVENTS);}
   function locKey(loc){
     if(!loc)return 'none';
@@ -76,7 +80,7 @@
   let curFeature=null;
   function feat(name){return data.features[name]||(data.features[name]={ms:0,opens:0,goldIn:0,goldOut:0});}
   function sampleFeature(){
-    if(!ready||document.hidden)return;
+    if(!isActive())return;
     const name=feature();
     if(name!==curFeature){curFeature=name;feat(name).opens++;}
     feat(name).ms+=1000;
