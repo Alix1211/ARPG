@@ -117,6 +117,28 @@ function questComplete(q){
   }
   questSave();return true;
 }
+// 대사 한 줄: "이름(표정): 말" 이면 말하는 사람 초상·이름·표정으로 바꾸고 이름은 떼고 보여 줌. 이름이 없으면 지문(회색).
+const LUC_FACE_KEYS=['밝음','놀람','따짐','흐뭇','능청','뾰로통','격분','신남','못마땅','곤란','상처지침','상처담담','상처울적','상처아픔','상처미소'];
+function questSpeaker(name){
+  if(name==='루크레아')return {name,title:'',port:A.lucrea||A.face,luc:true};
+  const n=(A.npcs||[]).find(x=>x.name===name);if(n)return {name,title:n.title||'',port:A.port[n.k]||A.face};
+  const qn=((A.mainQuests&&A.mainQuests.npcs)||[]).find(x=>x.name===name),no=qn?qn.no:({'레온':25,'제니':32})[name];
+  if(no&&A.port['npc_'+String(no).padStart(2,'0')])return {name,title:(qn&&qn.title)||'',port:A.port['npc_'+String(no).padStart(2,'0')]};
+  for(const k in (A.storyChars||{})){const c=A.storyChars[k];if(c.name===name)return {name,title:c.title||'',port:c.port};}
+  return null;
+}
+function questShowLine(line){
+  const m=/^([^:：()\n]{1,14}?)(?:\(([^)]{1,8})\))?\s*[:：]\s*([\s\S]*)$/.exec(line||'');
+  const el=$('dlgLine');
+  if(!m){el.textContent=line||'';el.classList.add('narr');return;}
+  const who=m[1].trim(),face=m[2],sp=questSpeaker(who);
+  el.textContent=m[3];el.classList.remove('narr');
+  $('dlgName').textContent=who;
+  if(sp){
+    let port=sp.port;if(sp.luc&&face&&A.lucreaFace&&A.lucreaFace[face])port=A.lucreaFace[face];
+    if(port)$('dlgImg').src=port;$('dlgTitle').textContent=sp.title;
+  }else $('dlgTitle').textContent='';
+}
 function questDecorateDialog(n){
   questDialog=null;
   const btn=$('dlgQuest'),a=questNpcAction(n);btn.hidden=!a;
@@ -132,14 +154,14 @@ function questBeginDialog(n,a){
   if(s&&s.type==='deliver'&&(mainQuestState.items[s.item]||0)<(s.need||1)){say('전달할 물품이 부족합니다.');return false;}
   questDialog={id:a.q.id,npc:n.no,start:a.start,step:mainQuestState.active[a.q.id]?.step,index:0,lines:a.start?a.q.intro:(s.lines||[])};
   $('dlgTrade').hidden=true;$('dlgTalk').hidden=true;
-  $('dlgLine').textContent=questDialog.lines[0]||'';
+  questShowLine(questDialog.lines[0]||'');
   $('dlgQuest').textContent='다음';$('dlgQuest').onclick=questNextDialog;return true;
 }
 function questNextDialog(){
   const d=questDialog,q=d&&questDef(d.id),n=d&&questNpc(d.npc);
   if(!d||!q||!n||Math.hypot(P.x-n.x,P.y-n.y)>90)return false;
-  if(++d.index<d.lines.length){$('dlgLine').textContent=d.lines[d.index];return true;}
-  questDialog=null;
+  if(++d.index<d.lines.length){questShowLine(d.lines[d.index]);return true;}
+  questDialog=null;$('dlgLine').classList.remove('narr');
   let ok=false;
   if(d.start)ok=questAccept(q.id);
   else{
@@ -254,14 +276,14 @@ function questOpenSpecial(q,s){
   talking=null;show('dlg');$('dlgMainRow').hidden=false;$('dlgInnRow').hidden=true;
   $('dlgImg').src=ch.port;$('dlgName').textContent=ch.name;$('dlgTitle').textContent=ch.title||'';
   $('dlgTrade').hidden=true;$('dlgTalk').hidden=true;$('dlgQuest').hidden=false;
-  $('dlgLine').textContent=questDialog.lines[0]||'';$('dlgQuest').textContent='다음';$('dlgQuest').onclick=questNextSpecial;
+  questShowLine(questDialog.lines[0]||'');$('dlgQuest').textContent='다음';$('dlgQuest').onclick=questNextSpecial;
   return true;
 }
 function questNextSpecial(){
   const d=questDialog,q=d&&questDef(d.id);
   if(!d||!d.special||!q)return false;
-  if(++d.index<d.lines.length){$('dlgLine').textContent=d.lines[d.index];return true;}
-  const a=mainQuestState.active[q.id],step=d.step;questDialog=null;closeAll();
+  if(++d.index<d.lines.length){questShowLine(d.lines[d.index]);return true;}
+  const a=mainQuestState.active[q.id],step=d.step;questDialog=null;$('dlgLine').classList.remove('narr');closeAll();
   if(a&&a.step===step)return questAdvance(q);
   return false;
 }

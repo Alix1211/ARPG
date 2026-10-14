@@ -388,6 +388,11 @@ def _port8(key, fallback=None):
     _im = _im.crop((0, 0, _im.width, round(_im.height * 0.58))); _im = _im.crop(_im.getbbox())   # 허벅지에서 자름(케인 결정)
     _im.thumbnail((700, 660), Image.LANCZOS)
     return enc(_im, 86)
+# 루크레아 표정 15종(대사 '루크레아(표정):' 으로 바뀜). 상처 5종은 이름 앞에 '상처'
+LUC_FACE = {}
+for _i, _nm in enumerate(['밝음','놀람','따짐','흐뭇','능청','뾰로통','격분','신남','못마땅','곤란','상처지침','상처담담','상처울적','상처아픔','상처미소'], 1):
+    _e = _port8(f'lucrea_e{_i:02d}')
+    if _e: LUC_FACE[_nm] = _e
 # ---- 본편 반복 등장 캐릭터 초상(기존 사용자 제공 에셋 재사용) ----
 STORY_CHARS={}
 for sid,nm,title,folder in [
@@ -895,7 +900,7 @@ import sage_map
 SAGE_MAP = sage_map.prepare(ROOT, R, TS, enc, assets, PORT)
 if _port8('sage'): PORT['sage_idle_0'] = _port8('sage')   # 현자 대화 초상
 SAGE_MAP['props'].append({**next(p for p in oprops if p['kind']=='dummy'), 'x':1150, 'y':730, 'name':'수련용 허수아비'})
-A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
+A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), lucreaFace=LUC_FACE, b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
