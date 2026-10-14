@@ -94,7 +94,7 @@ function sageDraw(){
  for(const a of sageActs){
   const s=a.s,k=Math.min(1,a.t/s.dur),fade=Math.max(0,1-(a.t-s.dur)/.6),ang=Math.atan2(a.d[1],a.d[0]);
   if(s.mode==='spin'){
-   for(let j=0;j<3;j++){const q=a.t*10+j*2.09;vfxDraw('shot_blade',P.x+Math.cos(q)*s.R*.65,P.y-35+Math.sin(q)*s.R*.36,140,{rot:q,alpha:fade*.8});}
+   // 케인 2026-10-14: 몸 주위를 같이 돌던 원반 칼날(shot_blade) 3개는 뺐다. 회전하는 무기만 남긴다.
    wDrawWeapon({wt:a.id.startsWith('spear')?'spear':'sword',img:WIMG[(a.id.startsWith('spear')?'spear':'sword')+'_01']},P.x+Math.cos(a.t*10)*45,P.y-45+Math.sin(a.t*10)*22,a.t*10,1.4);
   }else if(s.mode==='charge'){
    if(a.t<.7){vfxDraw('ring_gold',a.x,a.y-44,110*(1-k*.5),{rot:-a.t*5,alpha:.9});for(let j=0;j<5;j++)vfxDraw('hit_spark_'+j,a.x+Math.cos(j*1.26+a.t*4)*(60*(1-k)),a.y-44+Math.sin(j*1.26+a.t*4)*30,22,{add:true,alpha:.8});}
