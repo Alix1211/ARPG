@@ -380,6 +380,12 @@ for _wt in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
 
 face = Image.open(R + 'characters/elf/front_0.png').convert('RGBA').crop((105, 45, 275, 215)).resize((128, 128), Image.LANCZOS)   # 얼굴 중심 정사각
 
+# ---- 대화창 8등신 초상(케인 제공 2026-10-14). assets/portraits/<키>.webp 가 있으면 꼬마 초상 대신 사용 ----
+def _port8(key, fallback=None):
+    _p = os.path.join(R, 'portraits', key + '.webp')
+    if not os.path.exists(_p): return fallback
+    _im = Image.open(_p).convert('RGBA'); _im.thumbnail((640, 800), Image.LANCZOS)
+    return enc(_im, 86)
 # ---- 본편 반복 등장 캐릭터 초상(기존 사용자 제공 에셋 재사용) ----
 STORY_CHARS={}
 for sid,nm,title,folder in [
@@ -388,11 +394,11 @@ for sid,nm,title,folder in [
 ]:
     im=Image.open(R+f'characters/{folder}/front_0.png').convert('RGBA')
     pt=im.copy(); pt.thumbnail((520,560),Image.LANCZOS)
-    STORY_CHARS[sid]=dict(name=nm,title=title,port=enc(pt,88))
+    STORY_CHARS[sid]=dict(name=nm,title=title,port=_port8(sid) or enc(pt,88))
 
 _shadow=Image.open(R+'npc_hd/npc_35.png' if os.path.exists(R+'npc_hd/npc_35.png') else R+'npc/npc_35.png').convert('RGBA')
 _shadow.thumbnail((520,560),Image.LANCZOS)
-STORY_CHARS['shadow']=dict(name='???',title='',port=enc(_shadow,88))
+STORY_CHARS['shadow']=dict(name='???',title='',port=_port8('shadow') or enc(_shadow,88))
 
 # ---- 동행 캐릭터 걷기 프레임(카엘렌 스토리 합류 / 러스티 여관 용병) ----
 COMPANIONS={}
@@ -474,7 +480,7 @@ for sid,nm,title,filename,job,gender in _MERC_SPECS:
             arr.append(enc(canvas,88))
         fr[d]=arr
     pt=cells[0].copy(); pt.thumbnail((520,560),Image.LANCZOS)
-    COMPANIONS[sid]=dict(name=nm,title=title,fr=fr,port=enc(pt,88),mercenary=True,job=job,gender=gender)
+    COMPANIONS[sid]=dict(name=nm,title=title,fr=fr,port=_port8(sid) or enc(pt,88),mercenary=True,job=job,gender=gender)
 
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
@@ -506,7 +512,7 @@ npcs = []
 for no, name, title, where, side, line, shop in NPC:
     hd = R + f'npc_hd/npc_{no:02d}.png'
     im = Image.open(hd if os.path.exists(hd) else R + f'npc/npc_{no:02d}.png').convert('RGBA')
-    pt = im.copy(); pt.thumbnail((520, 560), Image.LANCZOS); PORT[f'npc_{no:02d}'] = enc(pt, 88)
+    pt = im.copy(); pt.thumbnail((520, 560), Image.LANCZOS); PORT[f'npc_{no:02d}'] = _port8(f'npc_{no:02d}') or enc(pt, 88)
     h = 100; w = h * im.width / im.height
     key = f'npc_{no:02d}'
     assets[key] = enc(im.resize((round(w * SCALE), round(h * SCALE)), Image.LANCZOS), 88)
@@ -544,7 +550,7 @@ for _no in sorted(_story_portrait_nos):
     if not os.path.exists(_src):
         raise FileNotFoundError(f'퀘스트 초상 누락: {_key}')
     _im=Image.open(_src).convert('RGBA'); _pt=_im.copy(); _pt.thumbnail((520,560),Image.LANCZOS)
-    PORT[_key]=enc(_pt,88)
+    PORT[_key]=_port8(_key) or enc(_pt,88)
 
 
 # ---- 큰 마을 여관 실내(1단계) ----
@@ -885,8 +891,9 @@ for item in QUEST_ITEM_SPEC['items']:
     QUEST_ITEMS[item['id']] = dict(name=item['name'], icon=enc(im, 90))
 import sage_map
 SAGE_MAP = sage_map.prepare(ROOT, R, TS, enc, assets, PORT)
+if _port8('sage'): PORT['sage_idle_0'] = _port8('sage')   # 현자 대화 초상
 SAGE_MAP['props'].append({**next(p for p in oprops if p['kind']=='dummy'), 'x':1150, 'y':730, 'name':'수련용 허수아비'})
-A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
+A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()

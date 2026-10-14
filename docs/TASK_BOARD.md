@@ -6,6 +6,14 @@
 
 ## 지금 해야 할 일
 
+- [~] **대화창 8등신 초상 교체 (Claude, 2026-10-14)**
+  - 케인 결정: 대화창 초상은 정상 비율(8등신). 필드 그림은 꼬마 그대로.
+  - NPC 25 + 카엘렌·러스티·???·현자 + 용병 10 = 39장, 루크레아 1장 → `assets/portraits/<키>.webp`. 빌드가 있으면 이걸 쓰고 없으면 예전 꼬마 초상.
+  - 원본 시트·루크레아 원본은 `source_sheets/portraits_8head/`. 케인은 구글 드라이브 `ARPG/new`에도 백업.
+  - 대화창 초상 높이 250→400px. 루크레아 대사는 HUD 얼굴 대신 `A.lucrea`.
+  - [ ] 루크레아 표정 15종(`portraits_8head/lucrea/lucrea_expressions_1~5.png`, 3개씩): 대사별 표정 바꾸기는 아직 안 함.
+  - 새 NPC를 추가하면 같은 화풍 8등신 초상을 `assets/portraits/npc_XX.webp`로 넣을 것.
+
 - [~] **DUSK POB 주점 외관 이미지 교체** (claude-pending에 반영, 빌드·실기기 확인 대기)
   - 케인이 제공한 새 붉은 지붕·금장 주점 외관으로 현재 `player_tavern` 이미지 교체.
   - 기존 큰 마을의 주점 위치/입구/미니게임 연결은 유지.

@@ -244,7 +244,7 @@ function questPortrait(s){
     const key='npc_'+String(s.portraitNpc).padStart(2,'0'),n=A.npcs.find(x=>x.no===s.portraitNpc);
     return {name:s.speaker||(n&&n.name)||'???',title:s.title!=null?s.title:((n&&n.title)||''),port:A.port[key]||A.face};
   }
-  return {name:s.speaker||'루크레아',title:s.title||'',port:A.face};
+  return {name:s.speaker||'루크레아',title:s.title||'',port:A.lucrea||A.face};
 }
 function questOpenSpecial(q,s){
   const a=q&&mainQuestState.active[q.id];if(!a||!s)return false;
