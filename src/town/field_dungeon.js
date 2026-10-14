@@ -526,7 +526,7 @@ function rawPlayerDamage(v,label){
   v=Math.max(1,Math.round(v*(1-Math.min(75,cm.damageReduce||0)/100)));
   if(P.shield>0){v=absorbShield(v);if(v<=0)return;}   // 빙결 보호막이 먼저 받는다
   const actual=Math.min(P.hp,v);if(window.TELEMETRY)TELEMETRY.damageIn(actual);
-  P.hp=Math.max(0,P.hp-v);syncBars();if(window.CHATTER)CHATTER.hurt();
+  P.hp=Math.max(0,P.hp-v);syncBars();if(window.CHATTER)CHATTER.hurt();if(window.PAD)PAD.rumble(.2,.5,110);
   pops.push({x:P.x,y:P.y-95,t:0,txt:(label?label+' ':'')+'-'+v,enemy:true});
   if(P.hp<=0)defeatPlayer();
 }
@@ -835,6 +835,7 @@ function killMonster(m){
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
   if(window.GUILD)GUILD.onKill(m);
   if(window.QUEST)QUEST.onKill(m);
+  if(m&&m.boss&&window.PAD)PAD.rumble(1,1,500);   // 보스 처치 진동
 }
 function appendEncounterSprites(list,camX,camY,vw,vh){
   if(!combatMap())return;

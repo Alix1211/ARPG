@@ -896,4 +896,14 @@ const TEST_RESET_BUTTON=false;
  if(b&&TEST_RESET_BUTTON){b.hidden=false;let armed=false,tm=0;
   b.addEventListener('click',()=>{if(!armed){armed=true;b.textContent='정말 지울까요?';tm=setTimeout(()=>{armed=false;b.textContent='초기화';},3500);}
    else{clearTimeout(tm);window.UI.reset();}});}}
+// 게임패드용 손잡이(gamepad.js가 호출)
+window.UI.pad={
+  weapon(slot){if(G.near()){G.act();return;}switchWeapon(slot);G.swing(eq[cur]?eq[cur].wt:null);G.setHold(true);},
+  hold(on){G.setHold(on);},
+  skill(i){const b=skBtns[i];if(b)b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true}));},
+  pot(k){const b=potEl[k];if(b)b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true}));},
+  bag(){if(!G.isOpen())openChar('equip');},
+  charOpen(){return $('char').classList.contains('on');},
+  closeChar(){closeChar();}
+};
 })();

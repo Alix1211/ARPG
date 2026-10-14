@@ -346,7 +346,7 @@ function gainExp(amount){
     say(['좋아, 더 강해졌네!','좋았어! 포인트부터 잘 써야지.','한 단계 올랐네. 어디에 투자할까?'][P.lv%3]);
   }
   if(window.UI&&UI.refresh)UI.refresh();
-  if(ups){P.hp=P.maxHp;P.mp=P.maxMp;syncBars();}   // 레벨업하면 체력·마나 가득(케인 2026-10-14)
+  if(ups){P.hp=P.maxHp;P.mp=P.maxMp;syncBars();if(window.PAD)PAD.rumble(.6,.6,350);}   // 레벨업하면 체력·마나 가득(케인 2026-10-14)
   if(window.UI&&UI.save)UI.save();return true;
 }
 
@@ -918,7 +918,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}` + (P.shield > 0 ? `  (+${Math.ceil(P.shield)})` : ''); $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { NUM, P, drink, potionInfo, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
+window.GAME = { padMove:(x,y)=>{if(joy.id==null&&joyTouch==null){joy.dx=x;joy.dy=y;}}, NUM, P, drink, potionInfo, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, skillPrereq, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   releaseInput:releaseAll, setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,

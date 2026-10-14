@@ -241,6 +241,7 @@ html.app #fs{display:none}
 #atk:active .atkc{filter:brightness(1.35) drop-shadow(0 0 8px #ffd76a)}
 #atk .atkz.zno{opacity:.85;filter:grayscale(1) brightness(.22)}
 #swap{display:none!important}
+body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!important}   /* 패드 쓰는 동안 화면 버튼 숨김(물약 개수는 보임) */
 #atk{position:absolute;inset:0;border:0;padding:0;border-radius:50%;background:var(--ring) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 4px 6px #000a);transition:transform .08s}
 #atk:active{transform:scale(.95)}
 #atkIc{position:absolute;left:22%;top:22%;width:56%;height:56%;object-fit:contain;filter:drop-shadow(0 2px 2px #0008)}
@@ -415,6 +416,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="backupMessage" role="status" aria-live="polite"></div>
 </div>
 <small>움직일 수 없을 때 탈출하면 큰 마을로 돌아갑니다.</small>
+<div class="row" style="justify-content:flex-start;font-size:13px;color:#6f5b45">게임패드: <span id="padInfo" style="margin-left:6px;font-weight:800">패드 버튼을 눌러 보세요</span></div>
 <div class="row"><button class="btn" id="newGame" type="button" style="background:#7a2a20;color:#fff2dc">새로 시작(초기화)</button></div>
 <div class="row"><button class="btn" id="escapeStuck" type="button">끼었을 때 탈출하기</button><button class="btn ghost" id="settingsClose" type="button" data-close>닫기</button></div>
 </div>
