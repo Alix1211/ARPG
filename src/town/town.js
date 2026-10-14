@@ -686,7 +686,8 @@ function sellRate(it){
   const cat = sellCat(it), shop = shopNpc ? shopNpc.shop : 'general';
   return SHOP_BUY_RATE[shop]?.[cat] || 0.60;
 }
-function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0),u=it&&it.unid?.50:1;return Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)*u));}
+// 케인 2026-10-14: 1티어 목걸이·반지를 사서 되팔면 이익이 나던 무한 돈 구멍 차단. 상점에서 산 물건(paid)은 산 값의 절반까지만 받는다.
+function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0),u=it&&it.unid?.50:1;let v=Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)*u));if(it&&it.paid>0)v=Math.max(1,Math.min(v,Math.floor(it.paid*.5)));return v;}
 function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
 function shopMarketText(){ return '장비는 지역 시세와 무관 · 사는 값은 비싸고 되파는 값은 헐값입니다.'; }
 function openShop(n){
@@ -765,7 +766,7 @@ function buyAt(it,idx,want=1){
   const n=buyManyCount(it,Math.max(1,want|0));if(n<1){$('shopSay').textContent=it.scroll?'스크롤은 '+UI.scrollMax+'장까지만 들 수 있습니다.':'더 살 수 없습니다.';return false;}
   const total=price*n;if(P.gold<total){$('shopSay').textContent='금화가 부족합니다.';return false;}
   if(!it.potion&&!it.scroll&&(UI.bagFull()||idx!=null&&UI.bagItems().some(x=>x.i===idx))){$('shopSay').textContent='가방에 빈 칸이 필요합니다.';return false;}
-  if(it.scroll)UI.addScroll(it.scroll,n);else if(it.potion)UI.addPotion(it.potion,it.potionTier,n);else{const gear=UI.make({...it.spec,price});if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
+  if(it.scroll)UI.addScroll(it.scroll,n);else if(it.potion)UI.addPotion(it.potion,it.potionTier,n);else{const gear=UI.make({...it.spec,price});gear.paid=price;if(!(idx==null?UI.add(gear):UI.addAt(gear,idx)))return false;}
   setGold(P.gold-total);UI.refresh();UI.save();if(window.QUEST)QUEST.onEvent('shop_buy',{shop:shopNpc.shop,item:it.potion?'potion:'+it.potion+':t'+it.potionTier:it.scroll?'scroll:'+it.scroll:(it.spec&&it.spec.kind?it.spec.kind:(it.slot||'item')),name:it.name,count:n});$('shopSay').textContent=it.name+' '+n+'개를 샀습니다.';pickBuy(it,null,buyPrice(it));return true;
 }
 $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
