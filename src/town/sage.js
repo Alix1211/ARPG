@@ -35,7 +35,7 @@ function sageBonus(k){return sageBuffs[k]&&sageBuffs[k].t>0?sageBuffs[k].value:0
 function sageCast(id,d,rank,cm,mod,skillMul){
  const s=SAGE_SKILLS[id];if(!s)return false;
  if(s.mode==='buff'){
-  const oldHp=P.maxHp;sageBuffs[s.buff]={t:12,value:s.value,mapKey:skillShowMapKey()};
+  const oldHp=P.maxHp;sageBuffs[s.buff]={t:12,max:12,id,value:s.value,mapKey:skillShowMapKey()};
   if(s.buff==='vitality'&&window.UI){UI.refresh();P.hp=Math.min(P.maxHp,P.hp+Math.max(0,P.maxHp-oldHp));syncBars();}
   sfx.push({type:'holyshield',t:0,x:P.x,y:P.y-25,r:90});skillShowImpact('holy',P.x,P.y,85,2);return true;
  }
@@ -53,10 +53,31 @@ function sageStrike(a,x,y,r,mul,d=a.d,kb=28){
  for(const t of combatTargets())if(Math.hypot(t.x-x,(t.y-y)*1.15)<r+12)hitTarget(t,d,true,Math.round(a.damage*mul),kb);
  skillShowImpact('stone',x,y,r,3);
 }
+// 케인 2026-10-14: 상단 초상화 옆 버프 아이콘 + 남은 시간(고대 엘프 버프·보호막).
+const sageHudEls={};let sageHudBox=null;
+function sageBuffHud(){
+ if(!sageHudBox)sageHudBox=document.getElementById('buffs');if(!sageHudBox)return;
+ const list=[];
+ for(const [k,b] of Object.entries(sageBuffs))list.push({key:k,icon:A.skicon[b.id],t:b.t,max:b.max||12,name:(SAGE_SKILLS[b.id]||{}).name||''});
+ if(P.shield>0&&P.shieldT>0){const sid=P.shieldKind==='ice'?'ice1':'holy2_shield';list.push({key:'shield',icon:A.skicon[sid],t:P.shieldT,name:'보호막'});}
+ const seen={};
+ for(const it of list){
+  seen[it.key]=1;let e=sageHudEls[it.key];
+  if(!e){e=document.createElement('div');e.className='bf';e.innerHTML='<i></i><b></b>';sageHudBox.appendChild(e);sageHudEls[it.key]=e;e._max=0;e._icon='';}
+  if(it.t>e._max+.05)e._max=it.max||it.t;            // 새로 걸리거나 다시 걸면 최대치 갱신
+  if(e._icon!==it.icon){e._icon=it.icon;e.style.backgroundImage=it.icon?`url(${it.icon})`:'';}
+  e.title=it.name;
+  e.firstChild.style.setProperty('--p',(1-Math.max(0,Math.min(1,it.t/(e._max||1))))*360+'deg');
+  const s=Math.ceil(it.t)+'';if(e.lastChild.textContent!==s)e.lastChild.textContent=s;
+  e.classList.toggle('end',it.t<3);
+ }
+ for(const k of Object.keys(sageHudEls))if(!seen[k]){sageHudEls[k].remove();delete sageHudEls[k];}
+}
 function sageTick(dt){
  let refresh=false;
  for(const [k,b] of Object.entries(sageBuffs)){b.t-=dt;if(b.t<=0||P.hp<=0){delete sageBuffs[k];if(k==='vitality')refresh=true;}}
  if(refresh&&window.UI)UI.refresh();
+ sageBuffHud();
  for(let i=sageActs.length-1;i>=0;i--){
   const a=sageActs[i],s=a.s;if(a.mapKey!==skillShowMapKey()||P.hp<=0){sageActs.splice(i,1);continue;}a.t+=dt;
   while(a.done<s.hits&&a.t>=a.next){
@@ -87,15 +108,17 @@ function sageTick(dt){
  }
 }
 function sageDraw(){
+ let bi=0;
  for(const [k,b] of Object.entries(sageBuffs)){
-  // 케인 2026-10-14: 몸에 걸쳐 돌던 타원(ring) 제거. 버프마다 색이 다른 작은 빛 알갱이가 몸을 따라 피어오른다.
-  const col={attack:'255,120,70',speed:'150,235,255',vitality:'130,255,140',guard:'140,195,255'}[k]||'255,230,150';
-  const al=Math.min(1,b.t);ctx.save();ctx.globalCompositeOperation='lighter';
-  for(let j=0;j<6;j++){
-   const ph=(T*.7+j/6)%1,ang=j*1.047+T*1.3,x=P.x+Math.cos(ang)*(16+6*Math.sin(j)),y=P.y-4-ph*64;
-   ctx.globalAlpha=al*.75*Math.sin(ph*Math.PI);ctx.fillStyle='rgb('+col+')';
-   ctx.beginPath();ctx.arc(x,y,2.4,0,7);ctx.fill();
-   ctx.globalAlpha*=.35;ctx.beginPath();ctx.arc(x,y,6,0,7);ctx.fill();
+  // 케인 2026-10-14: 몸에 걸쳐 돌던 타원(ring) 제거. 버프마다 색이 다른 작은 빛 알갱이가 몸 둘레를 따라 피어오른다.
+  // 버프끼리 자리를 엇갈려 겹쳐도 하얗게 뭉치지 않게 한다.
+  const col={attack:'255,120,70',speed:'120,225,255',vitality:'110,240,120',guard:'140,195,255'}[k]||'255,230,150';
+  const al=Math.min(1,b.t),off=bi++*.33;ctx.save();
+  for(let j=0;j<4;j++){
+   const ph=(T*.6+j/4+off)%1,ang=j*1.571+off*2.1+T*1.1,x=P.x+Math.cos(ang)*24,y=P.y-6-ph*70+Math.sin(ang)*5;
+   ctx.globalAlpha=al*.85*Math.sin(ph*Math.PI);ctx.fillStyle='rgba('+col+',.35)';
+   ctx.beginPath();ctx.arc(x,y,4,0,7);ctx.fill();
+   ctx.fillStyle='rgb('+col+')';ctx.beginPath();ctx.arc(x,y,1.8,0,7);ctx.fill();
   }
   ctx.restore();
  }

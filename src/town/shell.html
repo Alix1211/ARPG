@@ -177,6 +177,7 @@ html.app #fs{display:none}
 .bar.hp i{background:linear-gradient(#ff7a6a,#d2291f 60%,#a51a14)}
 .bar.mp i{background:linear-gradient(#7cc4ff,#2a6fd6 60%,#1d4fa8)}
 .bar span{position:absolute;left:var(--l);width:var(--w);top:var(--t);height:var(--h);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;text-align:center;color:#fff;font-weight:800;text-shadow:0 1px 1px #000}
+#buffs{display:flex;gap:5px;margin-left:30px;margin-top:2px;pointer-events:none}#buffs:empty{display:none}#buffs .bf{position:relative;width:30px;height:30px;border-radius:50%;background:#1a1410 center/cover no-repeat;box-shadow:0 0 0 1.5px #d9b45a,0 1px 3px #000}#buffs .bf i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.62) var(--p,0deg),transparent 0)}#buffs .bf b{position:absolute;left:0;right:0;bottom:-13px;text-align:center;font:800 11px sans-serif;color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}#buffs .bf.end{animation:bfBlink .5s steps(2) infinite}@keyframes bfBlink{50%{opacity:.35}}
 .coin{color:#ffe08a;font-weight:800;font-size:13px;text-shadow:0 1px 2px #000,0 0 3px #000;margin-left:30px}
 #bagBtn{position:relative;flex:none;margin-top:16px;width:50px;height:50px;border:0;padding:0;border-radius:50%;background:var(--tab0) center/100% 100% no-repeat;pointer-events:auto;filter:drop-shadow(0 2px 3px #0009)}
 #questTrack{left:max(12px,env(safe-area-inset-left));top:112px;width:286px;display:none;flex-direction:column;gap:2px;pointer-events:auto;cursor:pointer}
@@ -392,7 +393,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 </script>
 <canvas id="cv"></canvas>
 <div class="hud" id="me"><div class="ring" role="button" tabindex="0" aria-label="능력치 열기"><img class="face" id="face" alt=""><img id="ringImg" alt=""><div id="lvOrb"><b id="lvTxt">1</b><small>Lv</small></div></div>
-  <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
+  <div class="bars"><div class="bar hp"><div class="tr"><i></i></div><span id="hpTxt"></span></div><div class="bar mp"><div class="tr"><i></i></div><span id="mpTxt"></span></div><div class="coin" id="gold">금화 0</div><div id="buffs"></div></div><button id="bagBtn" type="button" aria-label="가방"></button></div>
 <div id="questItemNotice" role="status" aria-live="polite"></div>
 <div class="hud" id="questTrack" aria-label="진행 중 길드 의뢰 최대 5개"></div>
 <div class="hud" id="mainQuestTrack" aria-label="본편 진행"></div>
