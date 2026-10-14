@@ -661,8 +661,8 @@ s2b = Image.open(R + 'ui/kit_c/kit_c_02b.png').convert('RGBA')
 KIT['hpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_hp.png').convert('RGBA'), 92); KIT['mpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_mp.png').convert('RGBA'), 92)   # tools/hud_clean.py로 테두리만 깨끗하게 잘라 낸 막대
 KIT['pring'] = enc(Image.open(R + 'ui/hud_clean/portrait_ring.png').convert('RGBA'), 92)
 # 4무기 X자 공격 버튼(케인 제공 2026-10-14): 전체 원판 + 구역별 강조 그림(같은 캔버스 위치)
-for _k, _f in [('atk_all','attack_all'),('atk_spear','spear_top'),('atk_sword','sword_left'),('atk_magic','magic_right'),('atk_bow','bow_bottom')]:
-    _im = Image.open(os.path.join(ROOT, 'source_sheets', 'ui', 'attack_selector', _f + '.png')).convert('RGBA').resize((256, 256), Image.LANCZOS)
+for _k, _f in [('atk_all','attack_all'),('atk_spear','spear_top'),('atk_sword','sword_left'),('atk_magic','magic_right'),('atk_bow','bow_bottom'),('atk_center','attack_center')]:
+    _im = Image.open(os.path.join(ROOT, 'source_sheets', 'ui', 'attack_selector', _f + '.png')).convert('RGBA').resize((320, 320), Image.LANCZOS)
     KIT[_k] = enc(_im, 88)   # 안쪽을 뚫은 초상화 고리
 rg = Image.open(R + 'ui/hud_icons/ring_empty.png').convert('RGBA'); rg.thumbnail((200, 200), Image.LANCZOS); KIT['ring'] = enc(rg, 90)
 SKI = {}

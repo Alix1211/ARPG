@@ -228,17 +228,21 @@ atk.addEventListener('pointerdown', e => {
 });
 // X자 공격 버튼: 위=창, 아래=활, 왼쪽=검, 오른쪽=지팡이(케인 시안 attack_selector). 누른 구역 무기로 즉시 바꿔 들고 공격.
 const ZONE_SLOT={up:'w4',down:'w3',left:'w1',right:'w2'},ZONE_NAME={w1:'검',w2:'지팡이',w3:'활',w4:'창'};
-function zoneAt(e){const r=atk.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);return Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');}
+// 가운데 원(반지름 36%) = 지금 무기로 공격만. 대각선 경계(두 방향 차이 20% 안)도 무기 그대로. 가장자리를 확실히 눌러야 무기 변경
+function zoneAt(e){const r=atk.getBoundingClientRect(),R=r.width/2,dx=e.clientX-(r.left+R),dy=e.clientY-(r.top+R),ax=Math.abs(dx),ay=Math.abs(dy);
+  if(Math.hypot(dx,dy)<R*.36)return null;if(Math.abs(ax-ay)<Math.max(ax,ay)*.2)return null;
+  return ax>ay?(dx<0?'left':'right'):(dy<0?'up':'down');}
 function switchWeapon(slot,quiet){
   if(!isWSlot(slot)||slot===cur)return !!eq[slot];
   if(!eq[slot]){if(!quiet)G.say(ZONE_NAME[slot]+' 칸이 비어 있습니다');return false;}
   qsSaveCur();cur=slot;qsLoadCur();syncHud();saveGame();return true;
 }
-function pickZoneWeapon(e){if(e&&e.clientX!=null)switchWeapon(ZONE_SLOT[zoneAt(e)]);}
+function pickZoneWeapon(e){if(!e||e.clientX==null)return;const z=zoneAt(e);if(z)switchWeapon(ZONE_SLOT[z]);}
 function syncAtkZones(){
   if(!atk.querySelector('.atkz')&&A.kit&&A.kit.atk_all){
     atk.style.backgroundImage='url('+A.kit.atk_all+')';atk.classList.add('xsel');
     for(const [z,k] of [['up','atk_spear'],['down','atk_bow'],['left','atk_sword'],['right','atk_magic']]){const im=document.createElement('img');im.className='atkz';im.dataset.z=z;im.alt='';im.src=A.kit[k];atk.append(im);}
+    if(A.kit.atk_center){const c=document.createElement('img');c.className='atkc';c.alt='';c.src=A.kit.atk_center;atk.append(c);}
   }
   for(const im of atk.querySelectorAll('.atkz')){const sl=ZONE_SLOT[im.dataset.z];im.classList.toggle('zon',sl===cur&&!!eq[sl]);im.classList.toggle('zdim',sl!==cur&&!!eq[sl]);im.classList.toggle('zno',!eq[sl]);}
   atkIc.style.display=atk.classList.contains('xsel')?'none':'';
@@ -269,8 +273,8 @@ requestAnimationFrame(frame);
 
 
 // ---- 퀵슬롯 5칸 (케인 시안 위치). 비워 두고, 스킬 탭에서 끌어다 놓아 채움 ----
-const QPOS = [[-49, -88], [27, -102], [-99, -39], [-95, 32], [-47, 85]];   // 큰 버튼 가운데 기준
-const SWAPPOS = [30, 88];
+const QPOS = [[-49, -88], [27, -102], [-99, -39], [-95, 32], [-47, 85]].map(([x,y])=>[Math.round(x*1.12),Math.round(y*1.12)]);   // 공격 버튼 1.3배에 맞춰 바깥으로   // 큰 버튼 가운데 기준
+const SWAPPOS = [35, 104];
 const QS = [null, null, null, null, null];
 // 무기별 스킬 칸(케인 2026-10-14): 무기를 바꾸면 둘레 5칸도 그 무기 것으로 바뀐다.
 const QSW={w1:[null,null,null,null,null],w2:[null,null,null,null,null],w3:[null,null,null,null,null],w4:[null,null,null,null,null]};
@@ -302,7 +306,7 @@ const lifeIcon=id=>A.skicon[LIFE_ICON[id]]||K.ring;
 const quickLearned=id=>id==='townPortal'?((G.P.lifeSkills&&G.P.lifeSkills.townPortal)||0)>0:skillLearned(id);
 const quickIcon=id=>id==='townPortal'?lifeIcon('townPortal'):A.skicon[id];
 const skBtns = [...document.querySelectorAll('.sk')];
-const C0 = 62;
+const C0 = 80.5;   // 공격 버튼(161px) 가운데
 skBtns.forEach((b, i) => { b.style.left = (C0 + QPOS[i][0]) + 'px'; b.style.top = (C0 + QPOS[i][1]) + 'px'; b.hidden = false; });
 $('swap').style.left = (C0 + SWAPPOS[0]) + 'px'; $('swap').style.top = (C0 + SWAPPOS[1]) + 'px';
 // 물약 버튼 3개: 빨강 HP / 파랑 MP / 보라 HP+MP, 각 7티어.
