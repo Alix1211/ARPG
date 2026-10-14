@@ -7,3 +7,7 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+
+# 빌드 중 생기는 임시 캐시
+src/town/.generated_town_overhaul/
+src/town/.ground_cache_town_overhaul.png
