@@ -539,7 +539,7 @@ function openDlg(n){
   $('dlgTrade').disabled = false;
   $('dlgTrade').textContent = smithy?'인챈트':n.companion&&window.COMPANION?COMPANION.buttonText(n):n.go==='field'?'지역 고르기':n.go==='dungeon'?'던전으로':n.shop==='inn'?'여관 들어가기':n.shop==='trade'?'교역하기':n.shop==='guild'?'의뢰 보기':'거래';
   if(n.companion&&window.COMPANION&&COMPANION.isActive(n.companion))$('dlgTrade').disabled=true;
-  const gx=$('dlgGuildExam');if(gx)gx.hidden=n.shop!=='guild';
+  const gx=$('dlgGuildExam');if(gx)gx.hidden=true;   // 케인 요청: 하르트 대화창에서 승급시험 버튼 제거(게시판 '승급 시험'으로만)
   show('dlg');
   $('dlgTalk').hidden=false;if(window.QUEST)QUEST.decorateDialog(n);
   if(n.shop==='sage'){ $('dlgTrade').textContent='무예 배우기';SAGE.talk(); }

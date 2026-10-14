@@ -293,7 +293,7 @@ function guildRender(){
   guildRenderBribe();guildRenderExam();
 }
 function guildOpen(exam=false){
-  closeAll();panel='guild';$('guild').classList.add('on');if(exam)guildExamPanelOpen=true;guildRender();
+  closeAll();panel='guild';$('guild').classList.add('on');guildExamPanelOpen=!!exam;guildRender();   // 게시판을 열 때마다 시험 칸은 접힌 채로
 }
 function guildOpenExam(){guildExamPanelOpen=true;guildOpen(true);}
 function guildClose(){$('guild').classList.remove('on');if(panel==='guild')panel=null;}
