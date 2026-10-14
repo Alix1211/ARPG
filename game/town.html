@@ -442,7 +442,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0930</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1014-0950</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -8031,13 +8031,19 @@ addEventListener('pointermove',e=>{if(drag){if(e.cancelable)e.preventDefault();m
 addEventListener('pointerup',e=>{
   if(!drag)return;
   ghost.style.display='none';$('cluster').classList.remove('drop');
-  const d=drag,i=quickDropIndex(e.clientX,e.clientY);
+  const d=drag;
+  if(d.from==null&&tab==='skill'&&$('char').classList.contains('on')){   // 스킬 탭: 오른쪽 무기별 칸에 놓기(톡은 click이 처리)
+    drag=null;if(!d.moved)return;
+    const t=document.elementFromPoint(e.clientX,e.clientY),q=t&&t.closest&&t.closest('.qss');
+    if(q&&q.dataset.sl){dragSuppressClickUntil=Date.now()+350;const sl=q.dataset.sl,k=+q.dataset.i,o=QSW[sl].indexOf(d.id);if(o>=0)QSW[sl][o]=null;QSW[sl][k]=d.id;qsPick=null;qsLoadCur();syncQS();saveGame();render();}
+    return;
+  }
+  const i=quickDropIndex(e.clientX,e.clientY);
   if(i>=0){
     if(d.from!=null){const tmp=QS[i];QS[i]=d.id;QS[d.from]=tmp;}
     else{const old=QS.indexOf(d.id);if(old>=0)QS[old]=null;QS[i]=d.id;}
   }else if(d.from!=null)QS[d.from]=null;
   if(d.moved)dragSuppressClickUntil=Date.now()+350;
-  else if(d.from==null&&tab==='skill'&&$('char').classList.contains('on')){qsPick=qsPick===d.id?null:d.id;drag=null;render();return;}   // 스킬 톡 = 선택
   drag=null;syncQS();saveGame();
 });
 // 휴대폰에서 스킬 목록을 끌면 스크롤로 넘어가 끌기가 취소된다 → 멈춘 끌기 정리
@@ -8047,11 +8053,11 @@ function renderQsPanel(R){
   R.style.backgroundImage=`url(${K['01']})`;qsSaveCur();
   R.append(el('div','btitle','무기별 스킬 칸'));
   const box=el('div','qsp');R.append(box);
-  box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽에서 스킬을 누른 뒤, 넣을 칸을 누르세요 · 등록된 칸을 누르면 비웁니다'));
+  box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽 스킬을 누른 뒤 칸을 누르거나, 끌어다 칸에 놓으세요 · 등록된 칸을 누르면 비웁니다'));
   for(const sl of WSLOTS){
     const row=el('div','qsrow'+(sl===cur?' now':''));row.append(el('b','',ZONE_NAME[sl]+(sl===cur?' · 사용 중':'')+(eq[sl]?'':' · 무기 없음')));
     for(let i=0;i<5;i++){
-      const id=QSW[sl][i],b=el('button','qss'+(id?'':' empty'));b.type='button';
+      const id=QSW[sl][i],b=el('button','qss'+(id?'':' empty'));b.type='button';b.dataset.sl=sl;b.dataset.i=i;
       if(id)b.style.backgroundImage=`url(${quickIcon(id)})`;
       b.onclick=()=>{
         if(qsPick){const k=QSW[sl].indexOf(qsPick);if(k>=0)QSW[sl][k]=null;QSW[sl][i]=qsPick;qsPick=null;}
@@ -8131,7 +8137,7 @@ function render(){
         const c=el('button','skc'+(impl&&rank>0&&preOk?'':' lock')+(qsPick===id?' pick':''));c.type='button';
         const preTxt=pre.id&&!preOk?` · 선행 ${SKN[pre.id]||pre.id} Lv3 필요`:'';
         c.title=SKN[id]?SKN[id]+' · '+SKD[id]+preTxt+(rank>0?'':' (아직 배우지 않음)'):'추후 구현';c.style.backgroundImage=`url(${A.skicon[id]})`;
-        if(impl&&rank>0)c.addEventListener('pointerdown',e=>{e.preventDefault();startDrag(e,id,null);});
+        if(impl&&rank>0){c.addEventListener('pointerdown',e=>startDrag(e,id,null));c.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick===id?null:id;render();});}   // 톡 = 고르기, 끌어서 오른쪽 칸에 놓기도 됨
         wrap.append(c,el('span','skrank',SAGE.skills[id]?`Lv${rank}/${SAGE.skills[id].max}`:impl?`Lv${rank}/5`:'-'));
         if(impl&&!SAGE.skills[id]){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank>=5||!preOk;plus.title=!preOk?`선행 스킬 ${SKN[pre.id]||pre.id} Lv3 필요`:'';plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};wrap.append(plus);}
         row.append(wrap);
@@ -8150,12 +8156,10 @@ function render(){
     const lg=el('div','lifegrid');pane.append(lg);
     for(const [key,dv] of Object.entries(G.LIFE_DEF||{})){
       const rank=(Pp.lifeSkills&&Pp.lifeSkills[key])||0,locked=Pp.lv<dv.unlock,tile=el('div','skilltile'+(locked?' lock':''));
-      const ic=el('button','skc life'+(key==='townPortal'&&!locked&&rank>0?' drag':''));ic.type='button';ic.style.backgroundImage=`url(${lifeIcon(key)})`;ic.title=key==='townPortal'&&!locked&&rank>0?'길게 눌러 퀵슬롯에 등록 / 탭하여 사용':dv.name;
+      const ic=el('button','skc life'+(key==='townPortal'&&!locked&&rank>0?' drag':''));ic.type='button';ic.style.backgroundImage=`url(${lifeIcon(key)})`;ic.title=key==='townPortal'&&!locked&&rank>0?'누른 뒤 오른쪽 칸을 눌러 등록':dv.name;
       if(key==='townPortal'&&!locked&&rank>0){
-        let moved=false,sx=0,sy=0;
-        ic.addEventListener('pointerdown',e=>{e.preventDefault();sx=e.clientX;sy=e.clientY;moved=false;startDrag(e,'townPortal',null);});
-        ic.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>10)moved=true;});
-        ic.addEventListener('click',e=>{if(moved||dragClickSuppressed())return;e.preventDefault();closeChar();G.useTownPortal();});
+        if(qsPick==='townPortal')ic.classList.add('pick');
+        ic.addEventListener('pointerdown',e=>startDrag(e,'townPortal',null));ic.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick==='townPortal'?null:'townPortal';render();});   // 톡 = 고르기, 끌어 놓기도 됨
       }
       const desc=locked?`Lv${dv.unlock} 해금`:(dv.desc[Math.max(0,rank-1)]||dv.desc[dv.desc.length-1]);
       const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=e=>{e.stopPropagation();G.investLife(key);};
