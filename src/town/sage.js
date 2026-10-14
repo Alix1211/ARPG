@@ -1,17 +1,17 @@
 // 고대 엘프의 무예. 가격은 케인 확정 전 null: 무료 학습·임의 과금 금지.
 const SAGE_SKILLS={
- sword4_whirl:{name:'휠윈드',desc:'몸을 회전시키며 2초 동안 주변을 여섯 번 벱니다.',mp:18,cd:12,mode:'spin',dur:2,hits:6,R:155,mul:.9,icon:'sword2'},
+ sword4_whirl:{name:'휠윈드',desc:'몸을 회전시키며 2초 동안 주변을 여섯 번 벱니다.',mp:18,cd:12,mode:'spin',dur:2,hits:6,R:155,mul:2.2,icon:'sword2'},
  sword5_fury:{name:'투사의 맹세',desc:'12초 동안 물리 공격력 30% 증가.',mp:12,cd:25,mode:'buff',buff:'attack',value:30,icon:'sword1'},
- sword6_quake:{name:'어스퀘이크',desc:'땅을 쳐 전방으로 이어지는 세 충격파. 적을 밀어냅니다.',mp:20,cd:14,mode:'quake',dur:.9,hits:3,R:85,mul:1.4,icon:'fist3'},
- sword7_judgment:{name:'단죄의 일섬',desc:'짧은 준비 뒤 돌진 베기와 세 번의 잔류 참격.',mp:32,cd:32,mode:'judgment',dur:1.1,hits:4,R:270,mul:1.6,icon:'sword3'},
- bow4_circle:{name:'윤무 사격',desc:'한 바퀴 회전하며 열두 방향으로 화살을 쏩니다.',mp:16,cd:10,mode:'arrows',dur:.6,hits:12,R:0,mul:1.1,icon:'bow2'},
- bow5_charge:{name:'차징샷',desc:'기를 모아 관통 사격. 학습 단계별 공격력 150 / 200 / 300%.',mp:13,cd:7,mode:'charge',dur:.9,hits:1,R:0,mul:1,icon:'bow1',max:3},
+ sword6_quake:{name:'어스퀘이크',desc:'땅을 쳐 전방으로 이어지는 세 충격파. 적을 밀어냅니다.',mp:20,cd:14,mode:'quake',dur:.9,hits:3,R:85,mul:3.5,icon:'fist3'},
+ sword7_judgment:{name:'단죄의 일섬',desc:'짧은 준비 뒤 돌진 베기와 세 번의 잔류 참격.',mp:32,cd:32,mode:'judgment',dur:1.1,hits:4,R:270,mul:6,icon:'sword3'},
+ bow4_circle:{name:'윤무 사격',desc:'한 바퀴 회전하며 열두 방향으로 화살을 쏩니다.',mp:16,cd:10,mode:'arrows',dur:.6,hits:12,R:0,mul:3,icon:'bow2'},
+ bow5_charge:{name:'차징샷',desc:'기를 모아 관통 사격. 학습 단계별 공격력 400 / 600 / 800%.',mp:13,cd:7,mode:'charge',dur:.9,hits:1,R:0,mul:1,icon:'bow1',max:3},
  bow6_agility:{name:'바람 걸음',desc:'12초 동안 이동속도 35% 증가.',mp:10,cd:24,mode:'buff',buff:'speed',value:35,icon:'bow3'},
- bow7_mark:{name:'사냥꾼의 낙인',desc:'주변 최대 여덟 적에게 표식. 잠시 뒤 심판의 화살이 관통합니다.',mp:30,cd:30,mode:'mark',dur:1.1,hits:1,R:360,mul:4.8,icon:'bow3'},
- spear4_wheel:{name:'선풍창',desc:'긴 창을 회전시켜 넓은 범위를 네 번 휩씁니다.',mp:18,cd:12,mode:'spin',dur:1.3,hits:4,R:200,mul:1.05,icon:'spear1'},
+ bow7_mark:{name:'사냥꾼의 낙인',desc:'주변 최대 여덟 적에게 표식. 잠시 뒤 심판의 화살이 관통합니다.',mp:30,cd:30,mode:'mark',dur:1.1,hits:1,R:360,mul:20,icon:'bow3'},
+ spear4_wheel:{name:'선풍창',desc:'긴 창을 회전시켜 넓은 범위를 네 번 휩씁니다.',mp:18,cd:12,mode:'spin',dur:1.3,hits:4,R:200,mul:3.2,icon:'spear1'},
  spear5_vigor:{name:'불굴의 숨결',desc:'12초 동안 최대 체력 30% 증가. 증가분만큼 체력도 확보합니다.',mp:14,cd:28,mode:'buff',buff:'vitality',value:30,icon:'holy1_heal'},
- spear6_spirit:{name:'관통 기창',desc:'창을 던지는 자세로 거대한 관통 기운을 발사합니다.',mp:16,cd:9,mode:'spirit',dur:.35,hits:1,R:0,mul:3.5,icon:'spear2'},
- spear7_heaven:{name:'천창강림',desc:'도약 후 거대한 창의 환영과 두 겹의 충격파를 내리꽂습니다.',mp:34,cd:34,mode:'heaven',dur:1.1,hits:2,R:230,mul:3,icon:'spear3'},
+ spear6_spirit:{name:'관통 기창',desc:'창을 던지는 자세로 거대한 관통 기운을 발사합니다.',mp:16,cd:9,mode:'spirit',dur:.35,hits:1,R:0,mul:6,icon:'spear2'},
+ spear7_heaven:{name:'천창강림',desc:'도약 후 거대한 창의 환영과 두 겹의 충격파를 내리꽂습니다.',mp:34,cd:34,mode:'heaven',dur:1.1,hits:2,R:230,mul:12,icon:'spear3'},
  fist4_clones:{name:'분신술',desc:'네 분신이 주변을 번갈아 타격하는 여덟 연격.',mp:20,cd:14,mode:'clones',dur:1.5,hits:8,R:170,mul:.7,icon:'fist1'},
  fist5_barrage:{name:'연환권격',desc:'전방 중거리로 다섯 권격을 빠르게 연사합니다.',mp:16,cd:9,mode:'barrage',dur:.7,hits:5,R:0,mul:.85,icon:'fist2'},
  fist6_guard:{name:'금강체',desc:'12초 동안 추가 피해 감소 25%와 밀려남 저항. 보호막과 함께 사용 가능.',mp:12,cd:25,mode:'buff',buff:'guard',value:25,icon:'holy2_shield'},
@@ -85,7 +85,7 @@ function sageTick(dt){
    if(s.mode==='spin'){a.x=P.x;a.y=P.y;sageStrike(a,a.x,a.y,s.R,s.mul);}
    else if(s.mode==='quake'){sageStrike(a,a.x+a.d[0]*(70+n*75),a.y+a.d[1]*(70+n*75),s.R,s.mul,a.d,55);}
    else if(s.mode==='arrows'){sageProjectile(a,ang+n*Math.PI/6,'bow',s.mul);}
-   else if(s.mode==='charge'){sageProjectile(a,ang,'bow',[1.5,2,3][Math.min(2,a.rank-1)],1050,1.05,30);skillShowImpact('holy',a.x,a.y,65,2);}
+   else if(s.mode==='charge'){sageProjectile(a,ang,'bow',[4,6,8][Math.min(2,a.rank-1)],1050,1.05,30);skillShowImpact('holy',a.x,a.y,65,2);}
    else if(s.mode==='spirit'){sageProjectile(a,ang,'spear',s.mul,760,1,40);}
    else if(s.mode==='barrage'){sageProjectile(a,ang,'wave',s.mul,660,.52,25);}
    else if(s.mode==='mark'){
