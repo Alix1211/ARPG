@@ -1165,6 +1165,8 @@ function drawPortalArrivalAura(){
 }
 function frame(now){
   if(document.hidden){last=now;requestAnimationFrame(frame);return;}
+  // 미니게임(주점·격투장·버블)이 화면을 덮는 동안은 마을을 다시 그리지 않는다(마지막 장면이 그대로 남고, 닫으면 바로 이어 그린다).
+  if(panel==='minigames'){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN;
   const impactPause=skillShowTick(dt,simPaused),sdt=simPaused||impactPause?0:dt;
