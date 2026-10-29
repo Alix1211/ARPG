@@ -928,7 +928,17 @@ window.GAME = { padMove:(x,y)=>{if(joy.id==null&&joyTouch==null){joy.dx=x;joy.dy
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
-const drops = [], splash = [], leaves = [], birds = [];
+const splash = [], leaves = [], birds = [];
+// 비 품질: 2=전체, 1=약식(막·튀김 없음), 0=끔. 폰이 실제로 느려지면 스스로 낮추고 기억한다(저장 안 되는 환경이면 이번 실행만).
+let rainQ = 2; try { const q = localStorage.getItem('arpg_rain_q'); if (q === '0' || q === '1') rainQ = Number(q); } catch (e) {}
+let rainLastT = 0, rainSlow = 0, rainEma = 16.7;
+const RAIN_LAYERS = [];
+function rainTile(T, n, lMin, lMax, alpha, lw){
+  const c = document.createElement('canvas'); c.width = c.height = T; const g = c.getContext('2d');
+  g.strokeStyle = `rgba(210,225,255,${alpha})`; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath();
+  for (let i = 0; i < n; i++){ const l = rand(lMin, lMax), x = rand(8, T - 4), y = rand(l + 2, T - 4); g.moveTo(x, y); g.lineTo(x - l * 0.22, y - l); }
+  g.stroke(); return c;
+}
 const clouds = Array.from({ length: 5 }, () => ({ x: rand(-400, MWp), y: rand(0, MHp), r: rand(260, 460), s: rand(0.6, 1.1) }));
 let birdT = rand(6, 14);
 function weather(dt, camX, camY, vw, vh){
@@ -941,23 +951,27 @@ function weather(dt, camX, camY, vw, vh){
     c.x += 9 * c.s * W.wind * dt; c.y += 2.5 * c.s * dt;
     if (c.x - c.r > MWp){ c.x = -c.r * 1.5; c.y = rand(0, MHp); }
   }
-  // 비
-  const want = Math.floor(W.rain * 220);
-  while (drops.length < want) drops.push({ x: rand(0, vw), y: rand(-vh, 0), v: rand(620, 820), l: rand(10, 18) });
-  if (drops.length > want) drops.length = want;
-  for (const d of drops){
-    d.y += d.v * dt; d.x += d.v * 0.22 * dt;
-    if (d.y > vh){
-      if (Math.random() < 0.35) splash.push({ x: camX + d.x, y: camY + rand(0, vh), t: 0 });
-      d.y = rand(-40, 0); d.x = rand(-80, vw);
+  // 비 (그리기는 미리 만든 무늬를 펼치므로 여기서는 튀김과 성능 감시만 한다)
+  const nowMs = performance.now();
+  if (rainLastT && W.rain > 0.6){
+    const d = nowMs - rainLastT;
+    if (d < 200){
+      rainEma = rainEma * 0.95 + d * 0.05;
+      if (rainEma > 28) rainSlow += d / 1000; else rainSlow = Math.max(0, rainSlow - d / 1000);
+      if (rainSlow > 4 && rainQ > 0){
+        rainQ--; rainSlow = 0; rainEma = 16.7; splash.length = 0;
+        try { localStorage.setItem('arpg_rain_q', String(rainQ)); } catch (e) {}
+      }
     }
   }
+  rainLastT = nowMs;
+  if (rainQ >= 2 && W.rain > 0.1 && splash.length < 12 && Math.random() < dt * 14 * W.rain) splash.push({ x: camX + rand(0, vw), y: camY + rand(0, vh), t: 0 });
   for (const s of splash) s.t += dt;
   while (splash.length && splash[0].t > 0.4) splash.shift();
   // 꽃잎·나뭇잎
   for (const tr of trees){
     if (tr.x < camX - 200 || tr.x > camX + vw + 200 || tr.y < camY - 100 || tr.y - tr.h > camY + vh + 100) continue;
-    if (Math.random() < dt * (tr.pink ? 0.9 : 0.35) * (1 + W.rain)){
+    if (leaves.length < 40 && Math.random() < dt * (tr.pink ? 0.9 : 0.35) * (1 + W.rain * 0.5)){
       leaves.push({ x: tr.x + rand(-tr.w * 0.35, tr.w * 0.35), y: tr.y - tr.h * rand(0.45, 0.85), fy: tr.y + rand(-10, 40),
         vx: rand(8, 22), vy: rand(14, 26), ph: rand(0, 7), t: 0, pink: tr.pink, rot: rand(0, 6) });
     }
@@ -1013,11 +1027,19 @@ function drawLeaves(camX,camY,vw,vh){
   ctx.globalAlpha = 1;
 }
 function drawRain(vw, vh){
-  if (W.rain < 0.02) return;
-  ctx.fillStyle = `rgba(30,45,80,${0.22 * W.rain})`; ctx.fillRect(0, 0, vw, vh);
-  ctx.strokeStyle = `rgba(210,225,255,${0.45 * W.rain})`; ctx.lineWidth = 1.2; ctx.beginPath();
-  for (const d of drops){ ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - d.l * 0.22, d.y - d.l); }
-  ctx.stroke();
+  if (W.rain < 0.02 || rainQ <= 0) return;
+  if (!RAIN_LAYERS.length){
+    for (const [T, n, l0, l1, al, lw, v] of [[256, 9, 11, 18, 0.45, 1.2, 760], [192, 6, 16, 26, 0.25, 1.0, 560]])
+      RAIN_LAYERS.push({ T, v, pat: ctx.createPattern(rainTile(T, n, l0, l1, al, lw), 'repeat') });
+  }
+  if (rainQ >= 2){ ctx.fillStyle = `rgba(30,45,80,${0.22 * W.rain})`; ctx.fillRect(0, 0, vw, vh); }
+  const t = performance.now() / 1000;
+  ctx.globalAlpha = W.rain;
+  for (let i = 0; i < (rainQ >= 2 ? RAIN_LAYERS.length : 1); i++){
+    const L = RAIN_LAYERS[i], ox = (t * L.v * 0.22) % L.T, oy = (t * L.v) % L.T;
+    ctx.save(); ctx.translate(ox, oy); ctx.fillStyle = L.pat; ctx.fillRect(-ox - 1, -oy - 1, vw + 2, vh + 2); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }
 
 
