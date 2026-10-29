@@ -449,7 +449,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1029-2340</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1029-2352</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1706,6 +1706,8 @@ function drawPortalArrivalAura(){
 }
 function frame(now){
   if(document.hidden){last=now;requestAnimationFrame(frame);return;}
+  // 미니게임(주점·격투장·버블)이 화면을 덮는 동안은 마을을 다시 그리지 않는다(마지막 장면이 그대로 남고, 닫으면 바로 이어 그린다).
+  if(panel==='minigames'){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN;
   const impactPause=skillShowTick(dt,simPaused),sdt=simPaused||impactPause?0:dt;
