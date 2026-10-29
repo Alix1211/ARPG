@@ -380,7 +380,7 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 <div id="boot"><div id="bootImg" style="background-image:url('art_title_eaf8c58e80.webp')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div>
 <script>
 // 시작·로딩 화면: 그림 묶음을 받는 동안 막대를 채우고, 다 받으면 눌러서 시작. 떠 있는 동안 게임 시간은 멈춘다.
-(function(){var got=0,total=34482;window.ARPG_TITLE_OPEN=true;
+(function(){var got=0,total=34479;window.ARPG_TITLE_OPEN=true;
 window.__bootStep=function(n){got+=n;var i=document.querySelector('#bootBar i');if(i)i.style.width=Math.min(100,got/total*100).toFixed(1)+'%';};
 window.__bootClose=function(){var b=document.getElementById('boot');window.ARPG_TITLE_OPEN=false;if(!b)return;b.classList.add('out');setTimeout(function(){b.remove();},460);};
 window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return;
@@ -449,7 +449,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1015-0857</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 1029-2340</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -1469,7 +1469,17 @@ window.GAME = { padMove:(x,y)=>{if(joy.id==null&&joyTouch==null){joy.dx=x;joy.dy
 
 // ======================= 날씨와 생기 =======================
 const W = { state: 'clear', t: rand(55, 90), rain: 0, wind: 1 };
-const drops = [], splash = [], leaves = [], birds = [];
+const splash = [], leaves = [], birds = [];
+// 비 품질: 2=전체, 1=약식(막·튀김 없음), 0=끔. 폰이 실제로 느려지면 스스로 낮추고 기억한다(저장 안 되는 환경이면 이번 실행만).
+let rainQ = 2; try { const q = localStorage.getItem('arpg_rain_q'); if (q === '0' || q === '1') rainQ = Number(q); } catch (e) {}
+let rainLastT = 0, rainSlow = 0, rainEma = 16.7;
+const RAIN_LAYERS = [];
+function rainTile(T, n, lMin, lMax, alpha, lw){
+  const c = document.createElement('canvas'); c.width = c.height = T; const g = c.getContext('2d');
+  g.strokeStyle = `rgba(210,225,255,${alpha})`; g.lineWidth = lw; g.lineCap = 'round'; g.beginPath();
+  for (let i = 0; i < n; i++){ const l = rand(lMin, lMax), x = rand(8, T - 4), y = rand(l + 2, T - 4); g.moveTo(x, y); g.lineTo(x - l * 0.22, y - l); }
+  g.stroke(); return c;
+}
 const clouds = Array.from({ length: 5 }, () => ({ x: rand(-400, MWp), y: rand(0, MHp), r: rand(260, 460), s: rand(0.6, 1.1) }));
 let birdT = rand(6, 14);
 function weather(dt, camX, camY, vw, vh){
@@ -1482,23 +1492,27 @@ function weather(dt, camX, camY, vw, vh){
     c.x += 9 * c.s * W.wind * dt; c.y += 2.5 * c.s * dt;
     if (c.x - c.r > MWp){ c.x = -c.r * 1.5; c.y = rand(0, MHp); }
   }
-  // 비
-  const want = Math.floor(W.rain * 220);
-  while (drops.length < want) drops.push({ x: rand(0, vw), y: rand(-vh, 0), v: rand(620, 820), l: rand(10, 18) });
-  if (drops.length > want) drops.length = want;
-  for (const d of drops){
-    d.y += d.v * dt; d.x += d.v * 0.22 * dt;
-    if (d.y > vh){
-      if (Math.random() < 0.35) splash.push({ x: camX + d.x, y: camY + rand(0, vh), t: 0 });
-      d.y = rand(-40, 0); d.x = rand(-80, vw);
+  // 비 (그리기는 미리 만든 무늬를 펼치므로 여기서는 튀김과 성능 감시만 한다)
+  const nowMs = performance.now();
+  if (rainLastT && W.rain > 0.6){
+    const d = nowMs - rainLastT;
+    if (d < 200){
+      rainEma = rainEma * 0.95 + d * 0.05;
+      if (rainEma > 28) rainSlow += d / 1000; else rainSlow = Math.max(0, rainSlow - d / 1000);
+      if (rainSlow > 4 && rainQ > 0){
+        rainQ--; rainSlow = 0; rainEma = 16.7; splash.length = 0;
+        try { localStorage.setItem('arpg_rain_q', String(rainQ)); } catch (e) {}
+      }
     }
   }
+  rainLastT = nowMs;
+  if (rainQ >= 2 && W.rain > 0.1 && splash.length < 12 && Math.random() < dt * 14 * W.rain) splash.push({ x: camX + rand(0, vw), y: camY + rand(0, vh), t: 0 });
   for (const s of splash) s.t += dt;
   while (splash.length && splash[0].t > 0.4) splash.shift();
   // 꽃잎·나뭇잎
   for (const tr of trees){
     if (tr.x < camX - 200 || tr.x > camX + vw + 200 || tr.y < camY - 100 || tr.y - tr.h > camY + vh + 100) continue;
-    if (Math.random() < dt * (tr.pink ? 0.9 : 0.35) * (1 + W.rain)){
+    if (leaves.length < 40 && Math.random() < dt * (tr.pink ? 0.9 : 0.35) * (1 + W.rain * 0.5)){
       leaves.push({ x: tr.x + rand(-tr.w * 0.35, tr.w * 0.35), y: tr.y - tr.h * rand(0.45, 0.85), fy: tr.y + rand(-10, 40),
         vx: rand(8, 22), vy: rand(14, 26), ph: rand(0, 7), t: 0, pink: tr.pink, rot: rand(0, 6) });
     }
@@ -1554,11 +1568,19 @@ function drawLeaves(camX,camY,vw,vh){
   ctx.globalAlpha = 1;
 }
 function drawRain(vw, vh){
-  if (W.rain < 0.02) return;
-  ctx.fillStyle = `rgba(30,45,80,${0.22 * W.rain})`; ctx.fillRect(0, 0, vw, vh);
-  ctx.strokeStyle = `rgba(210,225,255,${0.45 * W.rain})`; ctx.lineWidth = 1.2; ctx.beginPath();
-  for (const d of drops){ ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - d.l * 0.22, d.y - d.l); }
-  ctx.stroke();
+  if (W.rain < 0.02 || rainQ <= 0) return;
+  if (!RAIN_LAYERS.length){
+    for (const [T, n, l0, l1, al, lw, v] of [[256, 9, 11, 18, 0.45, 1.2, 760], [192, 6, 16, 26, 0.25, 1.0, 560]])
+      RAIN_LAYERS.push({ T, v, pat: ctx.createPattern(rainTile(T, n, l0, l1, al, lw), 'repeat') });
+  }
+  if (rainQ >= 2){ ctx.fillStyle = `rgba(30,45,80,${0.22 * W.rain})`; ctx.fillRect(0, 0, vw, vh); }
+  const t = performance.now() / 1000;
+  ctx.globalAlpha = W.rain;
+  for (let i = 0; i < (rainQ >= 2 ? RAIN_LAYERS.length : 1); i++){
+    const L = RAIN_LAYERS[i], ox = (t * L.v * 0.22) % L.T, oy = (t * L.v) % L.T;
+    ctx.save(); ctx.translate(ox, oy); ctx.fillStyle = L.pat; ctx.fillRect(-ox - 1, -oy - 1, vw + 2, vh + 2); ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }
 
 
@@ -8770,7 +8792,7 @@ window.UI.pad={
 // 케인 2026-10-15: 그림 묶음을 받다 끊기면(휴대폰 인터넷 흔들림) 예전엔 그림이 빠진 채 시작해 화면이 깨지거나 멈췄다.
 // 묶음마다 최대 4번 다시 받고, 모두 받은 뒤에만 게임을 시작한다. 끝내 못 받으면 '다시 시도' 버튼을 보여 준다.
 (function(){
-  var files=[["art_b_0716835fd0.js?v=2", 7484], ["art_camp_880dac059c.js?v=2", 608], ["art_companions_3b01f69b52.js?v=2", 3412], ["art_elfSkins_e10dbed3ed.js?v=2", 1539], ["art_ground_c77d3a6e80.js?v=2", 1581], ["art_icons_395695f602.js?v=2", 1453], ["art_kit_2a89528818.js?v=2", 659], ["art_misc_0003a9ff63.js?v=2", 4955], ["art_monsters3_ae52735f4b.js?v=2", 6558], ["art_out_7f455a0c84.js?v=2", 629], ["art_port_cd228b4dd1.js?v=2", 1855], ["art_vfx_62a631b2b0.js?v=2", 2295], ["art_vils_dc98808dd4.js?v=2", 854], ["art_wpn_9285992181.js?v=2", 600]],left=files.length,failed=false;
+  var files=[["art_b_cb655ded48.js?v=2", 7484], ["art_camp_880dac059c.js?v=2", 608], ["art_companions_3b01f69b52.js?v=2", 3412], ["art_elfSkins_e10dbed3ed.js?v=2", 1539], ["art_ground_6b229c7361.js?v=2", 1580], ["art_icons_832b346aa9.js?v=2", 1452], ["art_kit_2a89528818.js?v=2", 659], ["art_misc_7b5f42ddbc.js?v=2", 4955], ["art_monsters3_ae52735f4b.js?v=2", 6558], ["art_out_7f455a0c84.js?v=2", 629], ["art_port_cd228b4dd1.js?v=2", 1855], ["art_vfx_5ffd4cca8b.js?v=2", 2295], ["art_vils_dc98808dd4.js?v=2", 854], ["art_wpn_a5552eae30.js?v=2", 599]],left=files.length,failed=false;
   function start(){var g=document.getElementById('gameMain');var s=document.createElement('script');s.text=g.textContent;g.remove();document.body.appendChild(s);}
   function fail(){if(failed)return;failed=true;var t=document.getElementById('bootTxt');if(t)t.textContent='그림 파일을 받지 못했습니다. 인터넷을 확인해 주세요.';
     var ui=document.getElementById('bootUi');if(ui&&!document.getElementById('bootRetry')){var b=document.createElement('button');b.id='bootRetry';b.type='button';b.textContent='다시 시도';
