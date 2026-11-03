@@ -10,6 +10,10 @@ const GAIA_WHIP_RANGE=520,GAIA_WHIP_M=10,GAIA_CLUB_M=22;
 const GAIA_M_LOW=8,GAIA_M_RESUME=40,GAIA_M_START=45;   // M이 8 밑이면 카일 곁으로 돌아와 맞고, 40이 되면 다시 싸운다
 const GAIA_KO_TIME=15;                                    // 쓰러진 동료가 일어나기까지(초). 카일이 쓰러지면 기존처럼 전원 마을 부활
 const gaiaFx=[];
+// 균형 조정값(시뮬레이션으로 맞춤). take=동료가 받는 피해 배율, mGuard=M이 가득일 때 추가로 줄어드는 비율,
+// out=동료 공격력 배율, mDmg=M이 가득일 때 추가 공격력 배율, hpMul=동료 최대 체력 배율, heal=실비아 치유 비율.
+const GAIA_TUNE={take:.4,mGuard:.4,out:2,mDmg:1.5,hpMul:1,heal:.3};
+window.GAIA_TUNE=GAIA_TUNE;
 const gaiaMembers=[];
 const gaiaTargets=[null,null],gaiaAttacks=[null,null];
 let gaiaHudWait=0;
@@ -23,7 +27,7 @@ for(let i=0;i<GAIA_PARTY_IDS.length;i++){
   if(COMPANION_IMG[id])COMPANION_IMG[id].name=GAIA_PARTY_NAMES[i];
 }
 
-function gaiaStatMax(i){return Math.max(NUM,Math.round(P.maxHp*(i===0?1.3:1.05)));}
+function gaiaStatMax(i){return Math.max(NUM,Math.round(P.maxHp*(i===0?1.3:1.05)*GAIA_TUNE.hpMul));}
 function gaiaManaMax(i){return Math.max(NUM,Math.round(P.maxMp*(i===0?.65:1.55)));}
 function gaiaMakeMember(i,previous){
   const c=companionEmpty(),id=GAIA_PARTY_IDS[i],q=nearestSafePosition(P.x+(i===0?-70:70),P.y+24);
@@ -68,7 +72,7 @@ function gaiaRefreshStats(c,i){
   if(c.maxMp!==maxMp){c.mp=Math.min(maxMp,c.mp+Math.max(0,maxMp-c.maxMp));c.maxMp=maxMp;}
   c.tier=Math.max(1,Math.min(7,Math.ceil((P.lv||1)/10)));
   // 두 히로인은 카일보다 기본 전투력이 높고, 카일의 지원으로 더 강해진다.
-  c.damage=Math.max(1,Math.round(basicDamage()*(i===0?1.6:1.45)*(1+c.m/GAIA_M_MAX*.75)));
+  c.damage=Math.max(1,Math.round(basicDamage()*(i===0?1.6:1.45)*(1+c.m/GAIA_M_MAX*GAIA_TUNE.mDmg)*GAIA_TUNE.out));
 }
 function gaiaUpdate(dt){
   gaiaEnsure();
@@ -174,7 +178,7 @@ function gaiaCast(c,dt){
   if(c.castCd>0||!combatMap())return;
   const all=[P,...gaiaMembers.filter(x=>!x.ko&&x.hp>0)];
   if(c.m>=45&&all.some(x=>x.hp<x.maxHp*.6)){
-    for(const x of all){x.hp=Math.min(x.maxHp,x.hp+Math.round(x.maxHp*.3));pops.push({x:x.x,y:x.y-95,t:0,txt:'치유',heal:true});}
+    for(const x of all){x.hp=Math.min(x.maxHp,x.hp+Math.round(x.maxHp*GAIA_TUNE.heal));pops.push({x:x.x,y:x.y-95,t:0,txt:'치유',heal:true});}
     c.m-=45;c.castCd=4;if(typeof syncBars==='function')syncBars();return;
   }
   if(c.m>=65&&!(P.shield>0)&&monsters.some(m=>m&&!m.dead&&!m.removed&&Math.hypot(m.x-P.x,m.y-P.y)<420)){
@@ -198,7 +202,7 @@ function gaiaEnemyTarget(m){
 }
 function gaiaHit(c,dmg){
   if(!c||!gaiaMembers.includes(c)||c.ko||c.hp<=0)return false;
-  dmg=Math.max(1,Math.round(dmg));
+  dmg=Math.max(1,Math.round(dmg*GAIA_TUNE.take*(1-GAIA_TUNE.mGuard*c.m/GAIA_M_MAX)));
   if(c.shield>0){const ab=Math.min(c.shield,dmg);c.shield-=ab;dmg-=ab;if(c.shield<=0)c.shield=0;if(dmg<=0)return true;}
   c.hp=Math.max(0,c.hp-dmg);
   pops.push({x:c.x,y:c.y-92,t:0,txt:'-'+dmg,enemy:true});
@@ -248,7 +252,7 @@ Object.assign(window.COMPANION,{
   hire:()=>false,hireFromDialog:()=>false,
   ensureMarket:()=>false,ensureTownTests:()=>{},
 });
-window.GAIA_PARTY={enabled:true,members:()=>gaiaMembers,recall:gaiaRecall,
+window.GAIA_PARTY={enabled:true,debugMonsters:()=>monsters,members:()=>gaiaMembers,recall:gaiaRecall,
   friendlySwing:gaiaFriendlySwing,whip:gaiaWhip,drawWhip:gaiaDrawWhip,enemyTarget:gaiaEnemyTarget,hit:gaiaHit,
   heal:gaiaHeal,needs:gaiaNeeds,reset:gaiaResetParty};
 if($('gaiaRecallBtn'))$('gaiaRecallBtn').addEventListener('click',()=>gaiaRecall(false));
