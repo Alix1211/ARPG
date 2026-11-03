@@ -509,15 +509,15 @@ function faceMonster(m,dx,dy){
   if(Math.abs(dx)>Math.abs(dy)*.8){ m.face=dx<0?'left':'right'; }
   else m.face=dy<0&&m.imgs.back?'back':'front';
 }
-function defeatPlayer(){
-  if(tryRevivePlayer())return;
+function defeatPlayer(partyDefeat=false){
+  if(!partyDefeat&&!(window.GAIA_PARTY&&GAIA_PARTY.enabled)&&tryRevivePlayer())return;
   if(window.SAGE)SAGE.clear();
   if(typeof onCompanionPlayerDefeat==='function')onCompanionPlayerDefeat();
   if(window.TELEMETRY)TELEMETRY.death({gold:P.gold});
   if(window.GUILD)GUILD.onDefeat();
   const lost=Math.floor(P.gold*.15); setGold(Math.max(0,P.gold-lost)); P.hp=P.maxHp; P.mp=P.maxMp; syncBars();
   for(const k in PLAYER_STATUS) PLAYER_STATUS[k]=0;P.shield=0;syncBars();
-  say(lost?('쓰러졌습니다. 금화 '+lost+'닢을 잃었습니다.'):'쓰러졌습니다.');
+  say(lost?('파티가 전멸했습니다. 세 사람 모두 마을에서 부활합니다. 금화 '+lost+'닢을 잃었습니다.'):'파티가 전멸했습니다. 세 사람 모두 마을에서 부활합니다.');
   travel('town',[23*TS,22.2*TS],'front');
 }
 function rawPlayerDamage(v,label){
@@ -625,6 +625,10 @@ function updEncounters(dt){
   for(const h of enemyHazards){
     h.t+=dt;
     if(!h.done&&h.t>=h.delay){h.done=true;if(Math.hypot(P.x-h.x,(P.y-30)-h.y)<h.r)hurtPlayer(h.dmg,P.x-h.x,P.y-h.y,h.status||'',h.status==='slow'?2.5:0);}
+    if(h.done&&h.t>=h.delay&&!h.gaiaHit&&window.GAIA_PARTY){
+      h.gaiaHit=true;
+      for(const c of GAIA_PARTY.members())if(Math.hypot(c.x-h.x,(c.y-30)-h.y)<h.r)GAIA_PARTY.hit(c,h.dmg);
+    }
   }
   for(let i=enemyHazards.length-1;i>=0;i--) if(enemyHazards[i].t>enemyHazards[i].life)enemyHazards.splice(i,1);
 
@@ -633,6 +637,9 @@ function updEncounters(dt){
     if(!s.done&&blocked(s.x,s.y)){s.done=true;continue;}
     if(!s.done&&Math.hypot(s.x-P.x,s.y-(P.y-35))<18){
       s.done=true; hurtPlayer(s.dmg,s.vx,s.vy,s.status,s.statusDur);
+    }
+    if(!s.done&&window.GAIA_PARTY){
+      for(const c of GAIA_PARTY.members())if(!s.done&&Math.hypot(s.x-c.x,s.y-(c.y-35))<20){s.done=true;GAIA_PARTY.hit(c,s.dmg);}
     }
     if(s.t>s.life) s.done=true;
   }
@@ -660,7 +667,8 @@ function updEncounters(dt){
       if(m.cfT<=0){m.cfT=.35+Math.random()*.4;const ca=Math.random()*6.283;m.cfx=Math.cos(ca);m.cfy=Math.sin(ca);}
       m.chargeWind=0;m.chargeT=0;faceMonster(m,m.cfx,m.cfy);moveMonster(m,m.cfx*m.sp*.7*dt,m.cfy*m.sp*.7*dt);continue;
     }
-    const dx=P.x-m.x,dy=P.y-m.y,d=Math.hypot(dx,dy),moveMul=m.slowT>0?.58:1;
+    const victim=window.GAIA_PARTY?GAIA_PARTY.enemyTarget(m):P;
+    const dx=victim.x-m.x,dy=victim.y-m.y,d=Math.hypot(dx,dy),moveMul=m.slowT>0?.58:1;
     const groupDistance=m.packId?Math.hypot(P.x-m.packX,P.y-m.packY):0;
     if(d<280&&(!m.packId||groupDistance<m.packRadius)){
       m.state='chase'; faceMonster(m,dx,dy);{const qd=d||1;m.fdx=dx/qd;m.fdy=dy/qd;}
@@ -670,7 +678,11 @@ function updEncounters(dt){
         if(m.cd<=0){enemyShot(m,dx,dy,270,m.shotStatus,m.shotStatus||'bolt',1);monAct(m,'shoot',.3,dx,dy);m.cd=1.45+Math.random()*.65;}
       } else if(!m.ranged&&d<42){
         m.rdy=.25;
-        if(m.cd<=0){hurtPlayer(m.dmg,dx,dy,m.touchStatus,m.touchStatus==='slow'?2.4:0);monAct(m,'lunge',.26,dx,dy);m.cd=.9+Math.random()*.35;}
+        if(m.cd<=0){
+          if(victim===P)hurtPlayer(m.dmg,dx,dy,m.touchStatus,m.touchStatus==='slow'?2.4:0);
+          else GAIA_PARTY.hit(victim,m.dmg);
+          monAct(m,'lunge',.26,dx,dy);m.cd=.9+Math.random()*.35;
+        }
       } else if(d>30){
         moveMonster(m,dx/d*m.sp*moveMul*dt,dy/d*m.sp*moveMul*dt);
       }

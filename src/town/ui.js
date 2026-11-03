@@ -548,7 +548,7 @@ function render(){
     const expMax=Pp.lv>=70?1:G.expNeed(Pp.lv),bars=[[Pp.hp,d.maxHp,106],[Pp.mp,d.maxMp,141],[Pp.lv>=70?1:Pp.exp,expMax,176]];
     bars.forEach(([v,m,y],i)=>{const t=el('div','sbar');t.style.top=(y-1)+'px';const f=el('i','b'+i);f.style.width=Math.max(0,Math.min(100,v/m*100))+'%';t.append(f);t.append(el('span','',i===2?(Pp.lv>=70?'MAX LEVEL':`경험치 ${v} / ${m}`):`${v} / ${m}`));L.append(t);});
     d.rows.forEach(([key,n,v,sub],i)=>{const r=el('div','srow');r.style.top=(232+i*47.7)+'px';r.append(el('b','',n),el('em','',v),el('small','',sub));if(key){const plus=el('button','statplus','+');plus.type='button';plus.disabled=(Pp.statPts||0)<1;plus.onclick=()=>G.investStat(key);r.append(plus);}L.append(r);});
-    const lv=el('div','slv');lv.append(document.createTextNode(`${Pp.name||'루크레아'} · Lv${Pp.lv} · T${G.levelTier(Pp.lv)} · `));
+    const lv=el('div','slv');lv.append(document.createTextNode(`${Pp.name||'카일'} · Lv${Pp.lv} · T${G.levelTier(Pp.lv)} · `));
     lv.append(el('span',(Pp.statPts||0)>0?'pointpulse':'',`능력 ${Pp.statPts||0}P`),document.createTextNode(' · '),el('span',(Pp.skillPts||0)>0?'pointpulse':'',`스킬 ${Pp.skillPts||0}P`),document.createTextNode(` · 생활 ${Pp.lifePts||0}P`));L.append(lv);
   }
   $('tabSt').classList.toggle('pointpulse',(Pp.statPts||0)>0);
@@ -814,8 +814,8 @@ window.UI = {
   isOpen: () => $('char').classList.contains('on'), close: closeChar,
 };
 // ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
-const SKEY='arpg_save_v3';
-try{localStorage.removeItem('arpg_save_v1');localStorage.removeItem('arpg_save_v2');}catch(e){}
+// 별도 실험판은 골든 퀘스트의 원본 저장/드라이브 동기화 데이터를 덮어쓰지 않는다.
+const SKEY='gaia_continent_save_v1';
 let RESETTING=false;
 function saveGame(){
   if(RESETTING||window.ARPG_BACKUP_RESTORING)return;
@@ -829,14 +829,14 @@ function saveGame(){
       telemetry:window.TELEMETRY?TELEMETRY.saveData():null,companion:window.COMPANION?COMPANION.saveData():null,
       trade:window.TRADE?TRADE.saveData():null,guild:window.GUILD?GUILD.saveData():null,quests:window.QUEST?QUEST.saveData():null}));
     // 초기화 뒤 새 회차가 처음 저장되면 초기화 표시를 지운다(이 저장이 드라이브의 옛 저장보다 최신이 되어 위로 올라감).
-    if(localStorage.getItem('gqs_reset_pending'))localStorage.removeItem('gqs_reset_pending');
+    if(localStorage.getItem('gaia_continent_reset_pending'))localStorage.removeItem('gaia_continent_reset_pending');
   }catch(e){}
 }
 function loadGame(){
   let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null');}catch(e){}
   if(!d||d.v!==3||d.release!==1)return null;
   // 초기화 직후: 앱이 드라이브에서 되살려 온 '초기화 전' 저장은 무시하고 새로 시작한다.
-  {const rp=+(localStorage.getItem('gqs_reset_pending')||0);if(rp&&(d.t||0)<rp)return null;}
+  {const rp=+(localStorage.getItem('gaia_continent_reset_pending')||0);if(rp&&(d.t||0)<rp)return null;}
   if(window.MINIGAMES)MINIGAMES.loadData(d.minigames);
   bagPages=Math.max(1,Math.min(BAG_MAX_PAGES,d.bagPages|0||1));bagPage=Math.max(0,Math.min(bagPages-1,d.bagPage|0));
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
@@ -864,7 +864,7 @@ function loadGame(){
    qsLoadCur();}
   // unid 필드가 없는 이전 저장 장비는 falsy이므로 모두 감정 완료로 취급한다.
   let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
-  const P=G.P;P.name=d.name||P.name||'루크레아';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
+  const P=G.P;P.name='카일';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;P.reviveReadyAt=+d.reviveReadyAt||0;P.reviveArmed=!!d.reviveArmed;P.reviveRank=Math.max(1,Math.min(5,+d.reviveRank||1));
   if(G.syncLifeUnlocks)G.syncLifeUnlocks(true);G.setGold(d.gold|0);if(window.COMPANION)COMPANION.loadData(d.companion);if(window.TRADE)TRADE.loadData(d.trade);if(window.GUILD)GUILD.loadData(d.guild);if(window.QUEST)QUEST.loadData(d.quests);return d;
@@ -884,7 +884,7 @@ if(saved){
   });
 }
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
-window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.setItem('gqs_reset_pending',String(Date.now()));localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.setItem('gaia_continent_reset_pending',String(Date.now()));localStorage.removeItem(SKEY);}catch(e){}location.reload();};
 // 설정창 '새로 시작(초기화)': 두 번 눌러야 지워진다. 지난 회차 플레이 기록은 arpg_playlog에 보관된다.
 {const b=document.getElementById('newGame');
  if(b){let armed=false,tm=0;

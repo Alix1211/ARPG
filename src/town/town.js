@@ -14,6 +14,11 @@ let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
 for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
 const BI = {}; for (const k in A.b) BI[k] = load(A.b[k]);
 const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
+// 가이아 대륙 실험 브랜치: 기존 루크레아의 스킨은 보존하고,
+// 카엘렌의 빨간 망토 걷기 프레임을 카일의 조작 모션으로 재사용한다.
+const GAIA_PARTY_MODE=true;
+const GAIA_HERO_FR={};
+for(const d of ['front','back','side'])GAIA_HERO_FR[d]=((A.companions||{}).hero?.fr?.[d]||[]).map(load);
 const ELSKIN = {};
 for (const wt in (A.elfSkins || {})){
   ELSKIN[wt] = {};
@@ -21,11 +26,13 @@ for (const wt in (A.elfSkins || {})){
 }
 function combatOutfitMap(){ return !['town','inn','fieldvillage'].includes(MAP); }
 function playerFrames(dir){
+  if(GAIA_PARTY_MODE&&GAIA_HERO_FR[dir]?.length)return GAIA_HERO_FR[dir];
   const wt = (typeof WPN !== 'undefined' && WPN && WPN.wt) || null;
   const skin = combatOutfitMap() && wt && ELSKIN[wt];
   return skin && skin[dir] || EL[dir];
 }
 $('face').src = A.face; $('ringImg').src = A.kit.pring;
+if(GAIA_PARTY_MODE&&A.storyChars?.hero?.port)$('face').src=A.storyChars.hero.port;
 $('tag').style.backgroundImage = `url(${A.ui['06']})`;
 document.documentElement.style.setProperty('--panel', `url(${A.ui['04']})`);
 document.documentElement.style.setProperty('--slot', `url(${A.ui['14']})`);
@@ -130,7 +137,7 @@ buildWorld('town');
 // ======================= 플레이어 =======================
 // 수치 규모: 체력·마나·공격·방어·경험치 같은 정수 수치는 '기준 단위 × NUM'으로 다룬다(세분화된 수치 변화용). 스킬표(SK)·몬스터 기준값 등은 기준 단위로 적고 쓰는 곳에서 곱한다.
 const NUM = 100;
-const P = { name:'루크레아', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
+const P = { name:'카일', x:23*TS, y:22.2*TS, r:11, dir:'back', flip:false, moving:false, t:0, gold:300,
   hp:40*NUM, mp:28*NUM, maxHp:40*NUM, maxMp:28*NUM, lv:1, exp:0, statPts:0, skillPts:0, lifePts:0,
   stats:{str:5,vit:5,int:5,mag:6,dex:8,luck:3},
   mastery:{sword:{lv:0,xp:0},spear:{lv:0,xp:0},gauntlet:{lv:0,xp:0},bow:{lv:0,xp:0},staff:{lv:0,xp:0}},
@@ -1351,6 +1358,7 @@ function updAtk(dt){
     }
     hits.sort((p, q) => p[0] - q[0]);
     hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger, undefined, w.kb));
+    if(GAIA_PARTY_MODE&&window.GAIA_PARTY)GAIA_PARTY.friendlySwing(d,w);
     if(typeof breakDungeonPropsMelee==='function')breakDungeonPropsMelee(P.x,P.y,d,w);
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
@@ -1601,11 +1609,14 @@ function drawShield(){
 let potCd = 0;
 function drink(k,tier=1){
   if (potCd > 0) return false;
-  const p=potionInfo(k,tier),needHp=p.hp>0&&P.hp<P.maxHp,needMp=p.mp>0&&P.mp<P.maxMp;
+  const p=potionInfo(k,tier),party=GAIA_PARTY_MODE&&window.GAIA_PARTY?GAIA_PARTY:null;
+  const needHp=p.hp>0&&(P.hp<P.maxHp||(party&&party.needs('hp')));
+  const needMp=p.mp>0&&(P.mp<P.maxMp||(party&&party.needs('mp')));
   if(!needHp&&!needMp){say(k==='hp'?'체력이 가득합니다… 아까워요':k==='mp'?'마나가 가득합니다… 아까워요':'체력과 마나가 가득합니다… 아까워요');return false;}
   const beforeHp=P.hp,beforeMp=P.mp;
-  if(p.hp)P.hp=Math.min(P.maxHp,P.hp+p.hp);
-  if(p.mp)P.mp=Math.min(P.maxMp,P.mp+p.mp);
+  if(p.hp)P.hp=party?P.maxHp:Math.min(P.maxHp,P.hp+p.hp);
+  if(p.mp)P.mp=party?P.maxMp:Math.min(P.maxMp,P.mp+p.mp);
+  if(party)party.heal(k);
   const gotHp=Math.max(0,P.hp-beforeHp),gotMp=Math.max(0,P.mp-beforeMp);
   if(window.TELEMETRY)TELEMETRY.potion(k);
   potCd=1;syncBars();

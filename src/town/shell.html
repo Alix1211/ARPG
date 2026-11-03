@@ -198,6 +198,12 @@ html.app #fs{display:none}
 #mmPortal:active{transform:scale(.94)}
 
 #place{pointer-events:auto;cursor:pointer;right:max(10px,env(safe-area-inset-right));top:166px;width:190px;text-align:center;color:var(--paper);font-weight:800;font-size:13px;text-shadow:0 1px 2px #000}
+#gaiaPartyHud{right:max(10px,env(safe-area-inset-right));top:196px;width:180px;padding:7px 10px;box-sizing:border-box;background:#26170ddd;border:1px solid #c99c56;border-radius:10px;color:#ffe7bb;font:800 11px sans-serif;text-shadow:0 1px 2px #000;z-index:2}
+.gaiaMember{margin:3px 0 6px}.gaiaMember .gaiaLabel{display:flex;justify-content:space-between;margin-bottom:3px}
+.gaiaMeter{height:7px;border-radius:4px;overflow:hidden;background:#100a08;margin-bottom:3px}
+.gaiaMeter i{display:block;height:100%;width:100%;background:linear-gradient(#ff9a87,#c82e2c)}
+.gaiaMeter.m i{background:linear-gradient(#ffdc74,#f29f28)}
+#gaiaRecallBtn{right:max(10px,env(safe-area-inset-right));top:311px;pointer-events:auto;z-index:3;border:2px solid #c99c56;border-radius:9px;background:#332016ee;color:#ffe9bd;font:800 12px sans-serif;padding:6px 12px;touch-action:manipulation}
 #fs{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:10px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
 #settingsBtn{right:max(196px,calc(env(safe-area-inset-right) + 196px));top:44px;pointer-events:auto;border:2px solid #b07a35;background:#2c160acc;color:#f3e6c8;border-radius:8px;font-size:12px;font-weight:700;padding:5px 8px}
 #settings{left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 100px));max-height:calc(100dvh - 90px);overflow-y:auto;box-sizing:content-box;padding:4px 0;text-align:center;touch-action:pan-y}
@@ -400,6 +406,11 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div class="hud" id="mm"><canvas id="mmc" width="276" height="198"></canvas></div>
 <button class="hud" id="mmPortal" type="button" aria-label="타운 포탈"><span id="mmPortalCd"></span><span id="mmPortalScr"></span></button>
 <div class="hud" id="place">마을</div>
+<div class="hud" id="gaiaPartyHud" aria-label="아가사와 실비아 체력 및 M 게이지">
+  <div class="gaiaMember"><div class="gaiaLabel"><span>아가사</span><span id="gaiaNum0"></span></div><div class="gaiaMeter"><i id="gaiaHp0"></i></div><div class="gaiaMeter m"><i id="gaiaM0"></i></div></div>
+  <div class="gaiaMember"><div class="gaiaLabel"><span>실비아</span><span id="gaiaNum1"></span></div><div class="gaiaMeter"><i id="gaiaHp1"></i></div><div class="gaiaMeter m"><i id="gaiaM1"></i></div></div>
+</div>
+<button type="button" id="gaiaRecallBtn" class="hud">동료 집합</button>
 <button class="hud" id="fs" type="button">전체화면</button><button class="hud" id="settingsBtn" type="button">⚙ 설정</button><button class="hud" id="resetBtn" type="button" hidden>초기화</button>
 <div class="hud" id="joy"></div><div id="stick"><div id="knob"></div></div>
 <div id="cluster"><button id="atk" type="button" aria-label="공격"><img id="atkIc" alt=""><span id="atkCap"></span></button><button class="sk" data-i="0" type="button" hidden><i></i></button><button class="sk" data-i="1" type="button" hidden><i></i></button><button class="sk" data-i="2" type="button" hidden><i></i></button><button class="sk" data-i="3" type="button" hidden><i></i></button><button class="sk" data-i="4" type="button" hidden><i></i></button><button class="pot" id="potHp" type="button" aria-label="체력 물약"><b>0</b></button><button class="pot" id="potMp" type="button" aria-label="마나 물약"><b>0</b></button><button class="pot" id="potDual" type="button" aria-label="체력·마나 회복 물약"><b>0</b></button><button id="swap" type="button" aria-label="무기 교체"><small id="swapNo">1</small></button></div>
