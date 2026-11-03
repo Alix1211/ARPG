@@ -10,9 +10,12 @@ const GAIA_WHIP_RANGE=520,GAIA_WHIP_M=10,GAIA_CLUB_M=22;
 const GAIA_M_LOW=8,GAIA_M_RESUME=40,GAIA_M_START=45;   // M이 8 밑이면 카일 곁으로 돌아와 맞고, 40이 되면 다시 싸운다
 const GAIA_KO_TIME=15;                                    // 쓰러진 동료가 일어나기까지(초). 카일이 쓰러지면 기존처럼 전원 마을 부활
 const gaiaFx=[];
-// 균형 조정값(시뮬레이션으로 맞춤). take=동료가 받는 피해 배율, mGuard=M이 가득일 때 추가로 줄어드는 비율,
-// out=동료 공격력 배율, mDmg=M이 가득일 때 추가 공격력 배율, hpMul=동료 최대 체력 배율, heal=실비아 치유 비율.
-const GAIA_TUNE={take:.4,mGuard:.4,out:2,mDmg:1.5,hpMul:1,heal:.3};
+// 균형 조정값(시뮬레이션으로 맞춤). 동료는 M이 찰수록만 강해진다(M 0이면 기본 능력).
+// take=M 0일 때 동료가 받는 피해 배율, mGuard=M이 가득일 때 추가로 줄어드는 비율,
+// out=M 0일 때 동료 공격력 배율, mDmg=M이 가득일 때 추가 공격력 배율, hpMul=동료 최대 체력 배율, heal=실비아 치유 비율,
+// mob=가이아 몬스터 난이도(체력·공격력 배율, 몬스터 생성 시 적용 — 단일 조절값).
+const GAIA_TUNE={take:.8,mGuard:.5,out:1.4,mDmg:1.5,hpMul:1,heal:.3,mob:1};
+const GAIA_HEAL_M=35,GAIA_SHIELD_M=55;   // 실비아 치유·보호막의 M 소모량
 window.GAIA_TUNE=GAIA_TUNE;
 const gaiaMembers=[];
 const gaiaTargets=[null,null],gaiaAttacks=[null,null];
@@ -20,6 +23,9 @@ let gaiaHudWait=0;
 const gaiaUpdateOriginal=updateCompanion;
 const gaiaDrawOriginal=drawCompanion;
 
+// 세 명이 뭉쳐서 조심조심 다닌다: 몹 탐지·추격 범위를 좁힌다(아가사는 카일 곁 가까이에서만 싸움).
+Object.assign(COMPANION_DEF.merc_f_sword,{aggro:300,pursuit:330,warpCombat:760});
+Object.assign(COMPANION_DEF.merc_f_mage,{aggro:300,pursuit:360,warpCombat:760});
 for(let i=0;i<GAIA_PARTY_IDS.length;i++){
   const id=GAIA_PARTY_IDS[i];
   if(COMPANION_DEF[id])COMPANION_DEF[id].name=GAIA_PARTY_NAMES[i];
@@ -92,7 +98,10 @@ function gaiaUpdate(dt){
       continue;
     }
     if(c.shield>0){c.shieldT-=dt;if(c.shieldT<=0)c.shield=0;}
-    if(c.m<GAIA_M_LOW)c.gaiaReturn=true;else if(c.m>=GAIA_M_RESUME)c.gaiaReturn=false;
+    if(c.m<GAIA_M_LOW)c.mLow=true;else if(c.m>=GAIA_M_RESUME)c.mLow=false;
+    // 실비아: 아가사가 쓰러졌거나 자기 체력이 위험하면 앞에 나서지 않고 카일 곁에서 치유·보호막만 쓴다.
+    const support=i===1&&(gaiaMembers[0].ko||c.hp<c.maxHp*.45);
+    c.gaiaReturn=!!c.mLow||support;
     if(!gaiaInLeash(c)){gaiaRecall(true);break;}
     companionState=c;companionTarget=gaiaTargets[i];companionAtk=gaiaAttacks[i];
     // 원래 AI는 고용 시간제한을 'hire'에만 적용하므로 party 모드에는 제한이 없다.
@@ -122,12 +131,23 @@ function gaiaDraw(c,dt){
 }
 function gaiaFriendlySwing(dir,weapon){
   gaiaEnsure();
+  const hit=[];
   for(const c of gaiaMembers){
     if(c.ko||c.hp<=0)continue;
     const dx=c.x-P.x,dy=c.y-P.y,dist=Math.hypot(dx,dy),along=dx*dir[0]+dy*dir[1];
     if(dist>Math.min(120,weapon.reach||90)||along<0)continue;
     if(weapon.cone&&dist>20&&along/dist<=Math.cos(weapon.cone*Math.PI/180))continue;
     if(!weapon.cone&&Math.abs(dx*dir[1]-dy*dir[0])>(weapon.width||38))continue;
+    hit.push(c);
+  }
+  // 조준 보정: 근처(200 이내)에서 M이 가장 낮은 동료는 방향이 빗나가도 함께 맞아 M을 받는다(실비아도 굶지 않게).
+  let low=null;
+  for(const c of gaiaMembers){
+    if(c.ko||c.hp<=0||Math.hypot(c.x-P.x,c.y-P.y)>200)continue;
+    if(!low||c.m<low.m)low=c;
+  }
+  if(low&&!hit.includes(low))hit.push(low);
+  for(const c of hit){
     // 아군을 때려서는 쓰러뜨리지 않는다(체력 1 아래로 내려가지 않음).
     const dmg=Math.max(1,Math.round(c.maxHp*.012));
     c.hp=Math.max(1,c.hp-dmg);c.m=Math.min(GAIA_M_MAX,c.m+GAIA_CLUB_M);
@@ -172,24 +192,29 @@ function gaiaKO(c,i){
   const k=i!=null?i:gaiaMemberIndex(c);if(k>=0){gaiaTargets[k]=null;gaiaAttacks[k]=null;}
   pops.push({x:c.x,y:c.y-95,t:0,txt:'쓰러짐!',enemy:true});
 }
-// 실비아: M으로 전체 치유(M 45)·전체 보호막(M 65). 카일도 함께 받는다.
+// 실비아: M으로 전체 치유·전체 보호막. 카일도 함께 받는다.
+// 우선순위: ① 누가 35% 밑이면 즉시 치유 ② 몹이 가까우면 보호막 ③ 둘 이상이 60% 밑이거나 한 명이 50% 밑이면 치유.
+function gaiaHealAll(c,all){
+  for(const x of all){x.hp=Math.min(x.maxHp,x.hp+Math.round(x.maxHp*GAIA_TUNE.heal));pops.push({x:x.x,y:x.y-95,t:0,txt:'치유',heal:true});}
+  c.m-=GAIA_HEAL_M;c.castCd=3.5;if(typeof syncBars==='function')syncBars();
+}
 function gaiaCast(c,dt){
   c.castCd=Math.max(0,(c.castCd||0)-dt);
   if(c.castCd>0||!combatMap())return;
   const all=[P,...gaiaMembers.filter(x=>!x.ko&&x.hp>0)];
-  if(c.m>=45&&all.some(x=>x.hp<x.maxHp*.6)){
-    for(const x of all){x.hp=Math.min(x.maxHp,x.hp+Math.round(x.maxHp*GAIA_TUNE.heal));pops.push({x:x.x,y:x.y-95,t:0,txt:'치유',heal:true});}
-    c.m-=45;c.castCd=4;if(typeof syncBars==='function')syncBars();return;
-  }
-  if(c.m>=65&&!(P.shield>0)&&monsters.some(m=>m&&!m.dead&&!m.removed&&Math.hypot(m.x-P.x,m.y-P.y)<420)){
+  const crit=all.some(x=>x.hp<x.maxHp*.35),low=all.filter(x=>x.hp<x.maxHp*.6).length,mid=all.some(x=>x.hp<x.maxHp*.5);
+  const near=monsters.some(m=>m&&!m.dead&&!m.removed&&Math.hypot(m.x-P.x,m.y-P.y)<420);
+  if(crit&&c.m>=GAIA_HEAL_M){gaiaHealAll(c,all);return;}
+  if(near&&!(P.shield>0)&&c.m>=GAIA_SHIELD_M){
     for(const x of all){
       const v=Math.round(x.maxHp*.2);
       if(x===P){P.shield=v;P.shieldMax=v;P.shieldT=8;P.shieldKind='holy';}
       else{x.shield=v;x.shieldT=8;}
       pops.push({x:x.x,y:x.y-95,t:0,txt:'보호막',mana:true});
     }
-    c.m-=65;c.castCd=5;if(typeof syncBars==='function')syncBars();
+    c.m-=GAIA_SHIELD_M;c.castCd=4.5;if(typeof syncBars==='function')syncBars();return;
   }
+  if((low>=2||mid)&&c.m>=GAIA_HEAL_M)gaiaHealAll(c,all);
 }
 function gaiaEnemyTarget(m){
   gaiaEnsure();let best=P,dist=Math.hypot(P.x-m.x,P.y-m.y);
@@ -202,7 +227,7 @@ function gaiaEnemyTarget(m){
 }
 function gaiaHit(c,dmg){
   if(!c||!gaiaMembers.includes(c)||c.ko||c.hp<=0)return false;
-  dmg=Math.max(1,Math.round(dmg*GAIA_TUNE.take*(1-GAIA_TUNE.mGuard*c.m/GAIA_M_MAX)));
+  dmg=Math.max(1,Math.round(dmg*GAIA_TUNE.take*(1-GAIA_TUNE.mGuard*c.m/GAIA_M_MAX)));   // M이 찰수록 덜 아프다
   if(c.shield>0){const ab=Math.min(c.shield,dmg);c.shield-=ab;dmg-=ab;if(c.shield<=0)c.shield=0;if(dmg<=0)return true;}
   c.hp=Math.max(0,c.hp-dmg);
   pops.push({x:c.x,y:c.y-92,t:0,txt:'-'+dmg,enemy:true});

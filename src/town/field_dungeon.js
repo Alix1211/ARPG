@@ -390,6 +390,7 @@ function createMonster(id,x,y,opts={}){
   const d=MOBDEF[id],st=matchedMonsterStats(id,P.lv,opts.floor||0,opts.bossRole||'');
   st.hp*=NUM;st.dmg*=NUM;st.exp*=NUM;
   if(opts.caveChallenge){st.hp*=1.4;st.dmg*=1.4;}
+  if(window.GAIA_TUNE){st.hp*=GAIA_TUNE.mob;st.dmg*=GAIA_TUNE.mob;}   // 가이아 몬스터 난이도 단일 조절값
   const baseW=82*d.bodySize,w=baseW*(d.rank==='boss'?1.2:1);
   return {...st,monster:1,type:id,family:d.family,name:d.name,elite:d.rank==='elite',boss:d.rank==='boss',baseW,w,h:w,x,y,maxHp:st.hp,
     sp:d.sp*(1+(d.tier-1)*.025),ranged:d.ranged||0,range:d.range||42,skill:d.skill||'',

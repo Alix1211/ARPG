@@ -91,11 +91,12 @@ def prelude_and_suffix():
                   + ",port:window.ART['gaiakyle/port']};")
     wimgs = weapon_images()
     for icon, im in wimgs.items():
-        art["wpn/" + icon] = _enc(im)
+        art["gaiawpn/" + icon] = _enc(im)
         small = im.copy()
         small.thumbnail((96, 96), Image.LANCZOS)
         art["icons/" + icon] = _enc(small)
     if wimgs:
+        suffix += "A.gaiaWpn={" + ",".join(f"'{k}':window.ART['gaiawpn/{k}']" for k in wimgs) + "};"
         suffix += ("(A.tierCatalog.gear||[]).forEach(g=>{const n=" + json.dumps(weapon_names(), ensure_ascii=False)
                    + "[g.id];if(n)g.name=n;});")
     if not art:

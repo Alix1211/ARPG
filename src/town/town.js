@@ -1306,11 +1306,12 @@ function frame(now){
 // 몸 그림(무기 없음) 위·아래에 무기 아이콘(5종×10등급)을 따로 그려 얹는다.
 // 무기 아이콘은 모두 "끝이 위, 손잡이가 아래"로 서 있다. 각도 0 = 끝이 위, 시계 방향이 +.
 const WIMG = {}; for (const k in A.wpn) WIMG[k] = load(A.wpn[k]);
+const GAIA_WIMG = {}; if(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&A.gaiaWpn) for (const k in A.gaiaWpn) GAIA_WIMG[k] = load(A.gaiaWpn[k]);   // 방망이(카일 전용). 동료는 WIMG의 원래 검·지팡이를 그대로 쓴다
 let WPN=null;
 function combatNow(){return window.UI&&UI.combatMods?UI.combatMods():{phys:WPN?WPN.dmg:1,magic:WPN?WPN.dmg:1,as:0,crit:5,critDmg:150,fire:0,ice:0,skill:0,manaReduce:0,move:0};}
 function setWeapon(it){
   const st=it?(window.UI&&UI.itemStats?UI.itemStats(it):it.st||{}):{};
-  WPN=it?{wt:it.wt,img:WIMG[it.icon],dmg:st.atk||st.matk||1,item:it}:null;
+  WPN=it?{wt:it.wt,img:(GAIA_WIMG[it.icon]||WIMG[it.icon]),dmg:st.atk||st.matk||1,item:it}:null;
   const cm=combatNow();
   for(const k in WB)DUR[k]=WB[k].dur/(1+Math.max(0,cm.as||0)/100);
 }
@@ -1333,6 +1334,7 @@ const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: �
 const DUR = {}; for (const k in WB) DUR[k] = WB[k].dur;
 const PI = Math.PI;
 function wDrawWeapon(weapon, x, y, ang, sc = 1, mir = false){
+  if(GAIA_PARTY_MODE&&weapon&&weapon===WPN&&weapon.wt==='bow')return;   // 가이아: 채찍은 손에 든 그림 없이 코드로 그린 효과만
   const im = weapon && weapon.img; if (!im || !im.complete || !im.naturalWidth) return;
   const L = WL[weapon.wt] * sc, w = L * im.naturalWidth / im.naturalHeight;
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang); if (mir) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -L * GRIP[weapon.wt], w, L); ctx.restore();

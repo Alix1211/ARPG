@@ -697,10 +697,11 @@ for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
     for g in range(1, 11):
         im = Image.open(R + f'weapons/{t}_{g:02d}.png').convert('RGBA'); im = im.crop(im.getbbox())
         im.thumbnail((200, 200), Image.LANCZOS); WPNI[f'{t}_{g:02d}'] = enc(im, 88)
-# 가이아: 방망이(검 칸)·채찍(활 칸) 그림으로 교체. 규칙은 gaia_sheets.py 와 같다.
+# 가이아: 방망이·채찍 손에 든 그림은 카일 전용(A.gaiaWpn). 동료는 원래 검·지팡이 그림(WPNI)을 그대로 쓴다.
 import gaia_sheets
+GAIA_WPNI = {}
 for _k, _im in gaia_sheets.weapon_images().items():
-    WPNI[_k] = enc(_im, 88)
+    GAIA_WPNI[_k] = enc(_im, 88)
 s2b = Image.open(R + 'ui/kit_c/kit_c_02b.png').convert('RGBA')
 KIT['hpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_hp.png').convert('RGBA'), 92); KIT['mpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_mp.png').convert('RGBA'), 92)   # tools/hud_clean.py로 테두리만 깨끗하게 잘라 낸 막대
 KIT['pring'] = enc(Image.open(R + 'ui/hud_clean/portrait_ring.png').convert('RGBA'), 92)
@@ -930,7 +931,7 @@ SAGE_MAP = sage_map.prepare(ROOT, R, TS, enc, assets, PORT)
 if _port8('sage'): PORT['sage_idle_0'] = _port8('sage')   # 현자 대화 초상
 SAGE_MAP['props'].append({**next(p for p in oprops if p['kind']=='dummy'), 'x':1150, 'y':730, 'name':'수련용 허수아비'})
 A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, gaiaKyle=GAIA_KYLE, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), lucreaFace=LUC_FACE, b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
-         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
+         map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, gaiaWpn=GAIA_WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
 js = source('tier_match.js') + '\n' + source('town.js')
