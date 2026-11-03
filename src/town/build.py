@@ -462,9 +462,13 @@ def _merc_body(cell):
     cell.putalpha(Image.fromarray(cleaned))
     return cell.crop(Image.fromarray(mask.astype('uint8') * 255).getbbox())
 
-for sid,nm,title,filename,job,gender in _MERC_SPECS:
-    src=_merc_sheet_path(filename)
-    if not src: raise SystemExit('용병 이미지 파일을 찾을 수 없습니다: '+filename)
+# 가이아 대륙 브랜치: 카일·아가사·실비아 전용 걷기 시트(5열×3행, 정면/후면/측면). 영상에서 뽑은 그림.
+GAIA_SHEETS={'merc_f_sword':'agatha.png','merc_f_mage':'sylvia.png'}
+def _gaia_sheet_path(name):
+    p=os.path.join(ROOT,'source_sheets','gaia',name)
+    return p if os.path.exists(p) else None
+
+def _sheet_frames(src):
     sheet=Image.open(src).convert('RGBA')
     cells=[]
     for row in range(3):
@@ -486,8 +490,25 @@ for sid,nm,title,filename,job,gender in _MERC_SPECS:
             canvas.alpha_composite(body,((170-body.width)//2,166-body.height))
             arr.append(enc(canvas,88))
         fr[d]=arr
+    return fr,cells
+
+for sid,nm,title,filename,job,gender in _MERC_SPECS:
+    src=(_gaia_sheet_path(GAIA_SHEETS[sid]) if sid in GAIA_SHEETS else None) or _merc_sheet_path(filename)
+    if not src: raise SystemExit('용병 이미지 파일을 찾을 수 없습니다: '+filename)
+    fr,cells=_sheet_frames(src)
     pt=cells[0].copy(); pt.thumbnail((520,560),Image.LANCZOS)
     COMPANIONS[sid]=dict(name=nm,title=title,fr=fr,port=_port8(sid) or enc(pt,88),mercenary=True,job=job,gender=gender)
+
+# 카일: 조작 캐릭터 전용 걷기 프레임과 얼굴(HUD). 시트가 없으면 None이라 기존 카엘렌 프레임을 그대로 쓴다.
+GAIA_KYLE=None
+_kp=_gaia_sheet_path('kyle.png')
+if _kp:
+    _kfr,_kcells=_sheet_frames(_kp)
+    _kc=_kcells[0]
+    _head=_kc.crop((0,0,_kc.width,min(_kc.height,_kc.width)))
+    _sq=Image.new('RGBA',(max(_head.width,_head.height),)*2)
+    _sq.alpha_composite(_head,((_sq.width-_head.width)//2,0))
+    GAIA_KYLE=dict(fr=_kfr,port=enc(_sq.resize((128,128),Image.LANCZOS),90))
 
 ui = {}
 for k in ['03', '04', '05', '06', '14', '15']:
@@ -898,7 +919,7 @@ import sage_map
 SAGE_MAP = sage_map.prepare(ROOT, R, TS, enc, assets, PORT)
 if _port8('sage'): PORT['sage_idle_0'] = _port8('sage')   # 현자 대화 초상
 SAGE_MAP['props'].append({**next(p for p in oprops if p['kind']=='dummy'), 'x':1150, 'y':730, 'name':'수련용 허수아비'})
-A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), lucreaFace=LUC_FACE, b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
+A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, gaiaKyle=GAIA_KYLE, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), lucreaFace=LUC_FACE, b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()

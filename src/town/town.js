@@ -18,7 +18,7 @@ const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
 // 카엘렌의 빨간 망토 걷기 프레임을 카일의 조작 모션으로 재사용한다.
 const GAIA_PARTY_MODE=true;
 const GAIA_HERO_FR={};
-for(const d of ['front','back','side'])GAIA_HERO_FR[d]=((A.companions||{}).hero?.fr?.[d]||[]).map(load);
+for(const d of ['front','back','side'])GAIA_HERO_FR[d]=((A.gaiaKyle&&A.gaiaKyle.fr?.[d])||(A.companions||{}).hero?.fr?.[d]||[]).map(load);
 const ELSKIN = {};
 for (const wt in (A.elfSkins || {})){
   ELSKIN[wt] = {};
@@ -32,7 +32,7 @@ function playerFrames(dir){
   return skin && skin[dir] || EL[dir];
 }
 $('face').src = A.face; $('ringImg').src = A.kit.pring;
-if(GAIA_PARTY_MODE&&A.storyChars?.hero?.port)$('face').src=A.storyChars.hero.port;
+if(GAIA_PARTY_MODE&&(A.gaiaKyle?.port||A.storyChars?.hero?.port))$('face').src=A.gaiaKyle?.port||A.storyChars.hero.port;
 $('tag').style.backgroundImage = `url(${A.ui['06']})`;
 document.documentElement.style.setProperty('--panel', `url(${A.ui['04']})`);
 document.documentElement.style.setProperty('--slot', `url(${A.ui['14']})`);
