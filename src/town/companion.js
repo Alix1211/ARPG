@@ -337,6 +337,7 @@ function companionLOS(x1,y1,x2,y2){
 }
 function companionPickTarget(){
   if(!companionState.active||!combatMap())return null;
+  if(companionState.gaiaReturn){companionTarget=null;return null;}   // 가이아: M이 바닥이면 카일 곁으로 돌아와 맞는다
   const c=companionState,d=COMPANION_DEF[c.active];let best=null,score=1e9;
   // 이미 물고 있는 적은 인식 경계를 넘거나 다른 적이 가까워져도 전투를 이어간다.
   if(companionMelee(d)&&companionTarget&&monsters.includes(companionTarget)&&!companionTarget.dead&&!companionTarget.removed&&

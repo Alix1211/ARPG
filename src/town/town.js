@@ -19,6 +19,7 @@ const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
 const GAIA_PARTY_MODE=true;
 // 케인 2026-11-03: 세 명이 작아 보여 그리는 크기만 키운다(발 위치 기준, 무기 모션도 함께 커짐). 판정 범위는 그대로.
 const GAIA_DRAW_SCALE=1.12;
+const GAIA_KYLE_MELEE=0.45;   // 카일 몽둥이가 몹에게 주는 데미지 배율(잡몹 하나 상대하는 정도, 케인 2026-11-03)
 function gaiaScaleAround(x,y){if(!GAIA_PARTY_MODE)return;ctx.translate(x,y);ctx.scale(GAIA_DRAW_SCALE,GAIA_DRAW_SCALE);ctx.translate(-x,-y);}
 const GAIA_HERO_FR={};
 for(const d of ['front','back','side'])GAIA_HERO_FR[d]=((A.gaiaKyle&&A.gaiaKyle.fr?.[d])||(A.companions||{}).hero?.fr?.[d]||[]).map(load);
@@ -1360,12 +1361,14 @@ function updAtk(dt){
       else if (along > -10 && along < w.reach && side < w.width) hits.push([along, t]);
     }
     hits.sort((p, q) => p[0] - q[0]);
-    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger, undefined, w.kb));
+    hits.slice(0, w.pierce || 99).forEach(([, t]) => hitTarget(t, d, w.stagger, GAIA_PARTY_MODE?Math.max(1,Math.round(basicDamage()*GAIA_KYLE_MELEE)):undefined, w.kb));
     if(GAIA_PARTY_MODE&&window.GAIA_PARTY)GAIA_PARTY.friendlySwing(d,w);
     if(typeof breakDungeonPropsMelee==='function')breakDungeonPropsMelee(P.x,P.y,d,w);
   }
   if (!a.shot && k > 0.45 && (a.wt === 'bow' || a.wt === 'staff')){
     a.shot = true;
+    if(GAIA_PARTY_MODE&&a.wt==='bow'&&window.GAIA_PARTY)GAIA_PARTY.whip();   // 가이아: 활 칸이 채찍(동료 겨냥 M 보급)
+    else{
     const d = a.dir === 'front' ? [0, 1] : a.dir === 'back' ? [0, -1] : [a.flip ? -1 : 1, 0];
     const w=WB[a.wt],home=a.wt==='staff'?((P.passives&&P.passives.magicGuide)||0):0,homeRange=home?260+home*90:0;
     // 활은 사거리 안 가장 가까운 적을 조준해 직선으로 쏜다(유도는 없음). 예전엔 4방향 고정이라 대각선 적을 거의 못 맞혔다.
@@ -1374,6 +1377,7 @@ function updAtk(dt){
     const sx=a.wt==='staff'?P.x+ux*24:P.x+(a.dir==='side'?d[0]*30:0);
     const sy=a.wt==='staff'?P.y-44+uy*24:P.y+(a.dir==='front'?-34:a.dir==='back'?-80:-44);
     shots.push({x:sx,y:sy,vx:aim.vx,vy:aim.vy,speed:w.speed,t:0,life:w.life,kind:a.wt,blast:w.blast||0,home,homeRange,target:aim.target});
+    }
   }
   if (k > 1.2) P.atk = null;
 }
