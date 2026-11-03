@@ -99,9 +99,10 @@ function gaiaUpdate(dt){
     }
     if(c.shield>0){c.shieldT-=dt;if(c.shieldT<=0)c.shield=0;}
     if(c.m<GAIA_M_LOW)c.mLow=true;else if(c.m>=GAIA_M_RESUME)c.mLow=false;
-    // 실비아: 아가사가 쓰러졌거나 자기 체력이 위험하면 앞에 나서지 않고 카일 곁에서 치유·보호막만 쓴다.
-    const support=i===1&&(gaiaMembers[0].ko||c.hp<c.maxHp*.45);
-    c.gaiaReturn=!!c.mLow||support;
+    // 실비아: 자기 체력이 위험하면 앞에 나서지 않고 카일 곁에서 치유·보호막만 쓴다.
+    // 아가사가 쓰러졌을 때는 카일 곁을 지키되 카일 기준 250 이내의 몹은 직접 원거리 공격으로 잡는다.
+    if(i===1)COMPANION_DEF.merc_f_mage.aggro=gaiaMembers[0].ko?250:300;
+    c.gaiaReturn=!!c.mLow||(i===1&&c.hp<c.maxHp*.45);
     if(!gaiaInLeash(c)){gaiaRecall(true);break;}
     companionState=c;companionTarget=gaiaTargets[i];companionAtk=gaiaAttacks[i];
     // 원래 AI는 고용 시간제한을 'hire'에만 적용하므로 party 모드에는 제한이 없다.
@@ -214,7 +215,8 @@ function gaiaCast(c,dt){
     }
     c.m-=GAIA_SHIELD_M;c.castCd=4.5;if(typeof syncBars==='function')syncBars();return;
   }
-  if((low>=2||mid)&&c.m>=GAIA_HEAL_M)gaiaHealAll(c,all);
+  // 아가사가 쓰러져 혼자 싸울 때는 급할 때(35% 미만)만 치유하고, 평소에는 공격에 M을 쓴다.
+  if(!gaiaMembers[0].ko&&(low>=2||mid)&&c.m>=GAIA_HEAL_M)gaiaHealAll(c,all);
 }
 function gaiaEnemyTarget(m){
   gaiaEnsure();let best=P,dist=Math.hypot(P.x-m.x,P.y-m.y);
