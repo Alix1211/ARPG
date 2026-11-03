@@ -1547,3 +1547,9 @@
 - `cast()` 수정: 동료가 빌려 쓸 때는 카일 슬롯 잠금·연출을 건드리지 않음.
 - 옛 `check_gaia_party.cjs`는 M 시작값 45·피해 계수 변경을 못 따라가 이미 어긋나 있었음(M 단언만 고침, 이후 단언은 여전히 낡음).
 - 아직 안 한 것: 무기 인물 고정(다른 무기 못 낌)·메인 버튼 두 칸(그림 대기), 장비창 3탭과 동료 자체 스탯·장비, 고대 엘프 길 막기, 컷인, 수치 시뮬레이션 맞춤(지금은 높은 레벨 스킬 우선 시전이라 M이 빨리 닳음).
+
+## 2026-11-03 인물 입상(누끼) 정리
+- 케인이 GPT로 만든 입상 시트 17장(카일·아가사·실비아, 일상복/속옷)을 받아 분류·누끼. 2×2 시트는 칸 대신 인물 덩어리별로 나눔(몸이 칸 경계를 넘는 뒷모습·엎드린 포즈 때문). 누끼는 isnet-anime(onnx)로 처리(rembg 모델 파일을 GitHub 릴리스에서 받아 직접 실행), 잡티 제거·가장자리 다듬기 후 인물 영역만 잘라 저장. 정면 전신 속옷 2장은 원래 투명이라 그대로 자름.
+- 일상복 24장 → `assets/gaia_cast/{kyle,agatha,sylvia}/표정이름.webp` + `INDEX.md`. 카일 8(talk/angry/whip/club/laugh/sad/tired_torn/pain), 아가사 8(smile_plead/laugh/tired_torn/pain/talk/angry/shy/scared), 실비아 8(talk_staff/angry/shy/scared/plead/laugh/tired_torn/pain).
+- 속옷 38장(아가사 17·실비아 21) → `assets_private/gaia_cast_under/`, `.gitignore` 처리(공개 저장소 금지, 지침서 3). 저장소가 현재 공개(private=false)라 올리지 않음. 케인 말: "속옷은 여관이나 특수상황에 쓰일 이미지". 색인은 폴더 안 `INDEX.md`.
+- 아직 게임에는 연결 안 함(케인이 말을 끝낸 뒤 일괄 반영). 실비아 엉덩이 자국 시트(spank)는 피부색이 흰색이라 기존 갈색 피부와 다름 → 케인 확인 필요.

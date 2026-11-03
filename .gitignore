@@ -14,3 +14,6 @@ src/town/.ground_cache_town_overhaul.png
 
 # 가이아 시험판 빌드 결과(용량이 커서 저장소에 올리지 않음)
 gaia_preview/
+
+# 속옷·화보 이미지는 공개 저장소에 올리지 않음(지침서 3)
+assets_private/
