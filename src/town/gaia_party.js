@@ -14,7 +14,7 @@ const gaiaFx=[];
 // take=M 0일 때 동료가 받는 피해 배율, mGuard=M이 가득일 때 추가로 줄어드는 비율,
 // out=M 0일 때 동료 공격력 배율, mDmg=M이 가득일 때 추가 공격력 배율, hpMul=동료 최대 체력 배율, heal=실비아 치유 비율,
 // mob=가이아 몬스터 난이도(체력·공격력 배율, 몬스터 생성 시 적용 — 단일 조절값).
-const GAIA_TUNE={take:.8,mGuard:.5,out:1.4,mDmg:1.5,hpMul:1,heal:.3,mob:1};
+const GAIA_TUNE={take:.8,mGuard:.5,out:1.4,mDmg:1.5,hpMul:1,heal:.3,mob:1.3};
 const GAIA_HEAL_M=35,GAIA_SHIELD_M=55;   // 실비아 치유·보호막의 M 소모량
 window.GAIA_TUNE=GAIA_TUNE;
 const gaiaMembers=[];
