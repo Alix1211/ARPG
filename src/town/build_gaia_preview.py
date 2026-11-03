@@ -12,11 +12,13 @@ import datetime as dt
 import json
 import re
 from pathlib import Path
+import sys
 from zipfile import ZIP_DEFLATED, ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 GAME = ROOT / "game"
 OUTPUT = ROOT / "gaia_preview"
 
@@ -41,6 +43,10 @@ def main() -> None:
     manifest = old_main.lstrip("\r\n").split("\n", 1)[0]
     if not (manifest.startswith("const A=") and manifest.endswith(");")):
         raise RuntimeError("기존 그림 목록을 인식하지 못했습니다.")
+    # 케인이 영상에서 뽑은 카일·아가사·실비아 걷기 그림을 시험판에만 끼워 넣는다(전체 빌드 불필요).
+    import gaia_sheets
+    gaia_pre, gaia_suf = gaia_sheets.prelude_and_suffix()
+    manifest = gaia_pre + manifest + gaia_suf
     art_list = json.loads(only_match(r"var files=(\[.*?\]),left=files\.length", original, "그림 파일"))
     title = only_match(r"(art_title_[0-9a-f]{10}\.webp)", original, "시작 화면")
 
