@@ -52,7 +52,10 @@ const GUILD_EXAM_SCENE=[
 let guildNowOverride=null;
 let guildExamPanelOpen=false;
 let guildAbandonArmed=0;
-let guildState={seq:1,board:[],active:[],completed:0,rank:0,rankDone:0,dayKey:'',todayAccepted:0,bribeCount:0,exam:null};
+let guildState={seq:1,board:[],active:[],completed:0,rank:0,rankDone:0,dayKey:'',todayAccepted:0,bribeCount:0,exam:null,squatDay:'',squatGot:0,squatRatio:0};
+// 가이아(케인 2026-11-04): 길드에서 의뢰를 직접 받지 못한다. 아침에 여관 2층에서 아가사가 스쿼트 단련을 하고,
+// 그 점수만큼 길드에서 의뢰를 받아 온다(gaia_squat.js). 게시판에는 아가사가 가져온 것만 올라오고, 교역이 잠겨 있어 납품 의뢰는 만들지 않는다.
+const GUILD_CARRY_TYPES=['kill_any','kill_type','floor','kill_type','kill_any','kill_type'];
 
 function guildNow(){return guildNowOverride==null?Date.now():guildNowOverride;}
 function guildDayKey(ms=guildNow()){
@@ -102,7 +105,13 @@ function guildMake(type,idx){
   }
   return q;
 }
+function guildCarry(n){
+  guildState.board=[];
+  for(let i=0;i<n;i++){const idx=guildState.seq;guildState.board.push(guildMake(GUILD_CARRY_TYPES[i%GUILD_CARRY_TYPES.length],idx));}
+  return guildState.board.length;
+}
 function guildGenerate(){
+  if(GAIA_PARTY_MODE)return;
   const types=['kill_any','kill_any','kill_type','kill_type','floor','delivery'];
   while(guildState.board.length<6){
     const idx=guildState.seq,type=types[(guildState.seq-1)%types.length];
@@ -290,6 +299,12 @@ function guildRender(){
   if(!guildState.active.length)a.innerHTML='<div class="gq"><small>진행 중인 의뢰가 없습니다.</small></div>';
   for(const q of guildState.active)a.append(guildCard(q,true));
   for(const q of guildState.board)b.append(guildCard(q,false));
+  if(GAIA_PARTY_MODE){
+    const head=b.previousElementSibling;if(head)head.textContent='아가사가 가져온 의뢰 · 아침 단련 후에만 올라옵니다';
+    if(!guildState.board.length)b.innerHTML='<div class="gq"><small>'+(guildState.squatDay===guildState.dayKey
+      ?(guildState.squatGot>0?'오늘 가져온 의뢰는 모두 받았습니다. 내일 아침 단련 뒤에 새 의뢰가 올라옵니다.':'오늘은 아가사가 의뢰를 받아 오지 못했습니다. 내일 아침 다시 도전하세요.')
+      :'직접 받을 수 있는 의뢰가 없습니다. 아침에 여관 2층 숙소에서 아가사와 단련을 하면, 아가사가 길드에서 의뢰를 받아 옵니다.')+'</small></div>';
+  }
   guildRenderBribe();guildRenderExam();
 }
 function guildOpen(exam=false){
@@ -304,8 +319,10 @@ function guildLoadData(d){
   guildState={
     seq:+d.seq||1,board:Array.isArray(d.board)?d.board:[],active:Array.isArray(d.active)?d.active:[],completed:d.completed|0,
     rank:migratedRank,rankDone:Number.isFinite(+d.rankDone)?Math.max(0,+d.rankDone|0):0,dayKey:d.dayKey||guildDayKey(),
-    todayAccepted:Math.max(0,+d.todayAccepted|0),bribeCount:Math.max(0,Math.min(3,+d.bribeCount|0)),exam:d.exam&&typeof d.exam==='object'?d.exam:null
+    todayAccepted:Math.max(0,+d.todayAccepted|0),bribeCount:Math.max(0,Math.min(3,+d.bribeCount|0)),exam:d.exam&&typeof d.exam==='object'?d.exam:null,
+    squatDay:typeof d.squatDay==='string'?d.squatDay:'',squatGot:Math.max(0,Math.min(6,+d.squatGot|0)),squatRatio:Math.max(0,Math.min(1,+d.squatRatio||0))
   };
+  if(GAIA_PARTY_MODE&&guildState.squatDay!==guildState.dayKey)guildState.board=[];   // 옛 저장의 직접 수락용 게시판은 비운다
   guildSyncDay(false);guildGenerate();guildTrack();
 }
 const examBtn=$('guildExamBtn');if(examBtn)examBtn.addEventListener('click',()=>{guildExamPanelOpen=!guildExamPanelOpen;guildRender();});
@@ -315,7 +332,7 @@ window.GUILD={
   startExam:guildStartExam,finishExam:guildFinishExam,abandonExam:guildAbandonExam,payBribe:guildPayBribe,
   saveData:guildSaveData,loadData:guildLoadData,refreshTrack:guildTrack,state:()=>JSON.parse(JSON.stringify(guildState)),
   dayKey:guildDayKey,setNow(ms){guildNowOverride=ms==null?null:+ms;guildSyncDay(false);guildRender();return guildDayKey();},
-  examFee:guildExamFee,bribeFee:guildBribeFee,dailyCap:guildDailyCap,rankName:guildRankName,
+  carry:guildCarry,examFee:guildExamFee,bribeFee:guildBribeFee,dailyCap:guildDailyCap,rankName:guildRankName,
   debugComplete(id){const q=guildState.active.find(x=>x.id===id);if(!q)return false;if(q.type==='delivery')return false;q.prog=q.need;guildRender();return true;},
   debugSetRank(r,done=0){guildState.rank=Math.max(0,Math.min(6,r|0));guildState.rankDone=Math.max(0,done|0);guildState.exam=null;guildState.board=[];guildGenerate();guildRender();return true;},
   debugExamPass(){if(!guildState.exam)return false;guildState.exam.status='passed';guildRender();return true;}

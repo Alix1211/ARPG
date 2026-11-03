@@ -143,7 +143,14 @@ function gaiaUpdateHud(){
     if(num)num.textContent=c.ko?'쓰러짐 '+Math.ceil(c.koT)+'초':'HP '+Math.ceil(c.hp/NUM)+' / M '+Math.round(c.m)+(c.shield>0?' 🛡':'');
   }
 }
-function gaiaAppend(list){gaiaEnsure();for(const c of gaiaMembers)if(!c.ko)list.push({companion:c,key:c.y});}
+function gaiaAppend(list){
+  gaiaEnsure();
+  for(const c of gaiaMembers){
+    if(c.ko)continue;
+    if(MAP==='inn2'&&gaiaMembers.indexOf(c)===0)continue;   // 2층 숙소에서는 아가사가 NPC로 서 있으므로 동행 아가사는 그리지 않는다
+    list.push({companion:c,key:c.y});
+  }
+}
 function gaiaDraw(c,dt){
   const i=gaiaMemberIndex(c);if(i<0)return gaiaDrawOriginal(c,dt);
   const old=companionAtk;

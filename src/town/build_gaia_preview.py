@@ -47,7 +47,8 @@ def main() -> None:
     import gaia_sheets
     gaia_pre, gaia_suf = gaia_sheets.prelude_and_suffix()
     import gaia_ui_art
-    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix()   # 새 UI 키트 그림 덮어쓰기
+    import gaia_squat_assets
+    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix() + gaia_squat_assets.suffix()   # 새 UI 키트 그림 덮어쓰기 + 여관 2층·스쿼트 자료
     art_list = json.loads(only_match(r"var files=(\[.*?\]),left=files\.length", original, "그림 파일"))
     title = only_match(r"(art_title_[0-9a-f]{10}\.webp)", original, "시작 화면")
 
@@ -55,7 +56,7 @@ def main() -> None:
         "vfx.js", "skill_presentation.js", "skills2.js", "sage.js", "inn.js",
         "chat.js", "telemetry.js", "field_dungeon.js", "companion.js", "gaia_party.js", "gaia_skills.js", "gaia_hud.js",
         "dungeon.js", "sound.js", "bgm.js", "backup.js", "trade.js",
-        "guild.js", "quest.js",
+        "guild.js", "quest.js", "gaia_squat.js",
     ]
     js = read("tier_match.js") + "\n" + read("town.js").replace(
         "/*FIELD_DUNGEON*/", "\n".join(read(name) for name in modules)

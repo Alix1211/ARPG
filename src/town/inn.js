@@ -14,6 +14,14 @@ function leaveInn(){
   if(r.map==='fieldvillage'&&MAPS.fieldvillage)return travel('fieldvillage',[r.x,r.y],r.dir||'front');
   return travel('town',[r.x||MAPS.inn.back[0],r.y||MAPS.inn.back[1]],r.dir||'front');
 }
+function enterInn2(){
+  if(MAP!=='inn'||!MAPS.inn2)return false;
+  return travel('inn2',MAPS.inn2.spawn,'back');
+}
+function leaveInn2(){
+  if(MAP!=='inn2')return false;
+  return travel('inn',[5.9*TS,3.9*TS],'front');
+}
 function innReturnState(){return innReturn?{...innReturn}:null;}
 function openInnDlg(n){
   talking=n;

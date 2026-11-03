@@ -9,6 +9,7 @@ const MAPS = {
   out: { ...A.out },
   sage: { ...A.sage },
   inn: { ...A.inn },
+  ...(A.inn2?{inn2:{...A.inn2}}:{}),   // 가이아: 여관 2층 '이들 숙소'
 };
 let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
 for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
@@ -30,7 +31,7 @@ for (const wt in (A.elfSkins || {})){
   ELSKIN[wt] = {};
   for (const d in A.elfSkins[wt]) ELSKIN[wt][d] = A.elfSkins[wt][d].map(load);
 }
-function combatOutfitMap(){ return !['town','inn','fieldvillage'].includes(MAP); }
+function combatOutfitMap(){ return !['town','inn','inn2','fieldvillage'].includes(MAP); }
 function playerFrames(dir){
   if(GAIA_PARTY_MODE&&GAIA_HERO_FR[dir]?.length)return GAIA_HERO_FR[dir];
   const wt = (typeof WPN !== 'undefined' && WPN && WPN.wt) || null;
@@ -133,6 +134,8 @@ for (const n of npcs){
   }
   if (CUR.solids) solids.push(...CUR.solids);
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
+  if(id==='inn'&&MAPS.inn2)spots.push({name:'2층 숙소 계단',x:5.9*TS,y:2.95*TS,r:54,kind:'inn_stairs_up'});
+  if(id==='inn2'){spots.push({name:'아래층 계단',x:6.0*TS,y:2.95*TS,r:54,kind:'inn_stairs_down'});if(window.GAIA_SQUAT)GAIA_SQUAT.onWorld(npcs,spots,solids,sprites);}
   if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
@@ -297,7 +300,7 @@ function portalTransition(id,pos,dir,onArrive,prepare){
 let portalScrollConfirm=0;
 function useTownPortal(){
   const r=lifeRank('townPortal'),sc=window.UI&&UI.scrolls?UI.scrolls().portal:0;
-  if(MAP==='town'||MAP==='inn'||MAP==='fieldvillage'){say('이미 마을에 있습니다.');return false;}
+  if(MAP==='town'||MAP==='inn'||MAP==='inn2'||MAP==='fieldvillage'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r||0]*60000;
   let byScroll=false;
   if(!r||(P.portalReadyAt||0)>now){
@@ -454,6 +457,9 @@ function act(){
   if(near.kind==='stash'&&window.UI)return UI.openStash();
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
+  if(near.kind==='inn_stairs_up'&&typeof enterInn2==='function')return enterInn2();
+  if(near.kind==='inn_stairs_down'&&typeof leaveInn2==='function')return leaveInn2();
+  if(near.kind==='npc'&&near.npc.squatHost&&window.GAIA_SQUAT)return GAIA_SQUAT.talk(near.npc);
   if(near.kind==='minigame_tavern'&&window.MINIGAMES)return MINIGAMES.open('tavern');
   if(near.kind==='minigame_bubble'&&window.MINIGAMES)return MINIGAMES.open('bubble-pang');
   if(near.kind==='minigame_arena'&&window.MINIGAMES)return MINIGAMES.open('arena');
@@ -497,8 +503,8 @@ function travel(id,pos,dir){
   return true;
 }
 function locationState(){
-  if(MAP==='inn'&&window.__INN&&__INN.returnState){const r=__INN.returnState();if(r)return {...r};}
-  if(MAP==='inn'&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
+  if((MAP==='inn'||MAP==='inn2')&&window.__INN&&__INN.returnState){const r=__INN.returnState();if(r)return {...r};}
+  if((MAP==='inn'||MAP==='inn2')&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
   if(MAP==='field'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;}
   if(MAP==='fieldvillage'&&window.__FD){const f=__FD.state();st.theme=f.theme||'spring';st.leg=f.leg;st.legs=f.legs;st.villageReturn=f.villageReturn||null;}
@@ -564,6 +570,7 @@ function openDlg(n){
 for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', closeAll);
 const guildExamBtn=$('dlgGuildExam');if(guildExamBtn)guildExamBtn.addEventListener('click',()=>{if(talking&&talking.shop==='guild'&&window.GUILD)GUILD.openExam();});
 $('dlgTrade').addEventListener('click', () => {
+  if(talking&&talking.squatHost&&window.GAIA_SQUAT){GAIA_SQUAT.start();return;}
   if(talking&&talking.shop==='sage'){SAGE.open();return;}
   if(talking&&talking.companion&&window.COMPANION){COMPANION.hireFromDialog(talking);return;}
   if (talking.shop==='inn'){ closeAll(); if(typeof enterInn==='function')enterInn(); return; }
@@ -1213,7 +1220,7 @@ function frame(now){
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = MWp < vw ? (MWp - vw) / 2 : Math.max(0, Math.min(MWp - vw, camX)); camY = MHp < vh ? (MHp - vh) / 2 : Math.max(0, Math.min(MHp - vh, camY));
-  const DUN=MAP==='dungeon', INDOOR=MAP==='inn';
+  const DUN=MAP==='dungeon', INDOOR=MAP==='inn'||MAP==='inn2';
   if(!simPaused&&!impactPause){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
