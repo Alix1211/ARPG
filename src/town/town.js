@@ -704,7 +704,7 @@ function sellRate(it){
   return SHOP_BUY_RATE[shop]?.[cat] || 0.60;
 }
 // 케인 2026-10-14: 1티어 목걸이·반지를 사서 되팔면 이익이 나던 무한 돈 구멍 차단. 상점에서 산 물건(paid)은 산 값의 절반까지만 받는다.
-function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0),u=it&&it.unid?.50:1;let v=Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)*u));if(it&&it.paid>0)v=Math.max(1,Math.min(v,Math.floor(it.paid*.5)));return v;}
+function sellPrice(it){const o=1+.02*((P.lifeSkills&&P.lifeSkills.overcount)||0),u=it&&it.unid?.50:1;let v=Math.max(1,Math.round(baseSellValue(it)*.40*sellRate(it)*Math.min(1.10,o)*u));if(it&&it.paid>0)v=Math.max(1,Math.min(v,Math.floor(it.paid*.5)));return v*Math.max(1,(it&&it.qty)||1);}   // 겹친 잡템은 개수만큼
 function rateMark(rate){ return rate > 1.001 ? ' ▲' : rate < 0.999 ? ' ▼' : ''; }
 function shopMarketText(){ return '장비는 지역 시세와 무관 · 사는 값은 비싸고 되파는 값은 헐값입니다.'; }
 function openShop(n){
@@ -757,7 +757,7 @@ function pickSell(idx, it, c){
   const price = sellPrice(it), rate = sellRate(it);
   sel = { mode:'sell', idx, it, price, rate };
   for (const x of document.querySelectorAll('.cell')) x.classList.toggle('sel', x === c);
-  $('infoIc').src = A.icons[it.icon] || ''; $('infoName').textContent = it.name;
+  $('infoIc').src = A.icons[it.icon] || ''; $('infoName').textContent = it.name+((it.qty||1)>1?' ×'+it.qty:'');
   const names = {weapon:'무기',armor:'방어구',accessory:'장신구',material:'재료',potion:'물약',junk:'잡템'};
   $('infoSlot').textContent = (names[sellCat(it)] || '물건') + ' · ' + ['일반','마법','희귀','전설'][it.rar || 0];
   $('infoPrice').textContent = '금화 ' + price + rateMark(rate);
@@ -772,7 +772,7 @@ function sellAt(idx){
   const row=UI.bagItems().find(x=>x.i===idx);if(!row)return false;if(row.it.locked){$('shopSay').textContent='잠긴 아이템입니다.';return false;}
   const price=sellPrice(row.it),rate=sellRate(row.it);saleConfirm=null;
   UI.removeBagAt(idx);setGold(P.gold+price);sel=null;UI.refresh();renderShop();UI.save();
-  if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:row.it.kind,price,count:1});
+  if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:row.it.kind,price,count:Math.max(1,row.it.qty||1)});
   $('shopSay').textContent='금화 '+price+'닢을 받았습니다.';return true;
 }
 function buyAt(it,idx,want=1){
@@ -789,7 +789,7 @@ function buyAt(it,idx,want=1){
 $('buy').addEventListener('click',()=>{if(!sel)return;if(sel.mode==='sell'){const row=UI.bagItems().find(r=>r.i===sel.idx);if(!row||row.it.id!==sel.it.id){clearShopInfo('물건을 다시 선택해 주세요.');return;}sellAt(sel.idx);}else buyAt(sel.it);});
 $('buy10').addEventListener('click',()=>{if(sel&&sel.mode==='buy')buyAt(sel.it,null,10);});
 let bulkSaleConfirm=false;
-$('sellAll').addEventListener('click',()=>{const rows=UI.bagItems().filter(r=>!r.it.locked);if(!rows.length){$('shopSay').textContent='일괄판매할 잠금 해제 아이템이 없습니다.';bulkSaleConfirm=false;return;}const total=rows.reduce((s,r)=>s+sellPrice(r.it),0);if(!bulkSaleConfirm){bulkSaleConfirm=true;$('sellAll').textContent='확인 후 일괄판매';$('shopSay').textContent=rows.length+'개 / '+total+'G 판매합니다. 한 번 더 눌러 주세요.';return;}bulkSaleConfirm=false;$('sellAll').textContent='일괄판매';for(const r of rows.slice().sort((a,b)=>b.i-a.i))UI.removeBagAt(r.i);setGold(P.gold+total);sel=null;UI.refresh();renderShop();UI.save();if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:'bulk',price:total,count:rows.length});$('shopSay').textContent=rows.length+'개를 팔아 '+total+'G를 받았습니다.';});
+$('sellAll').addEventListener('click',()=>{const rows=UI.bagItems().filter(r=>!r.it.locked);if(!rows.length){$('shopSay').textContent='일괄판매할 잠금 해제 아이템이 없습니다.';bulkSaleConfirm=false;return;}const total=rows.reduce((s,r)=>s+sellPrice(r.it),0),cnt=rows.reduce((s,r)=>s+Math.max(1,r.it.qty||1),0);if(!bulkSaleConfirm){bulkSaleConfirm=true;$('sellAll').textContent='확인 후 일괄판매';$('shopSay').textContent=cnt+'개 / '+total+'G 판매합니다. 한 번 더 눌러 주세요.';return;}bulkSaleConfirm=false;$('sellAll').textContent='일괄판매';for(const r of rows.slice().sort((a,b)=>b.i-a.i))UI.removeBagAt(r.i);setGold(P.gold+total);sel=null;UI.refresh();renderShop();UI.save();if(window.QUEST)QUEST.onEvent('shop_sell',{shop:shopNpc.shop,kind:'bulk',price:total,count:cnt});$('shopSay').textContent=cnt+'개를 팔아 '+total+'G를 받았습니다.';});
 window.__SHOP={goods:k=>shopGoods(k),tier:()=>levelTier(P.lv),open:openShop,mode:setShopMode,price:sellPrice,buyPrice,baseValue:baseSellValue,rate:sellRate,sellAt,buyAt,clearSelection(){saleConfirm=null;clearShopInfo('물건을 선택해 주세요.');},selectBag(i){const row=UI.bagItems().find(x=>x.i===i);if(row){saleConfirm=null;pickSell(i,row.it,null);}},state:()=>({mode:shopMode,gold:P.gold})};
 
 // ======================= 대장간 인챈트 =======================

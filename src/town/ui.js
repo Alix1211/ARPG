@@ -96,7 +96,18 @@ function make(spec){
 }
 function makeLoot(spec){
   return {id:seq++,kind:spec.kind||'junk',icon:spec.icon||'food_bottle',name:spec.name||'잡동사니',
-    tier:Math.max(1,Math.min(7,spec.tier||1)),rar:0,st:{},aff:[],price:Math.max(1,spec.price||1),desc:spec.desc||''};
+    tier:Math.max(1,Math.min(7,spec.tier||1)),rar:0,st:{},aff:[],price:Math.max(1,spec.price||1),desc:spec.desc||'',...((spec.kind||'junk')==='junk'?{qty:1}:{})};
+}
+// 잡템은 같은 이름끼리 한 칸에 최대 99개까지 겹친다(2026-11-03 케인). 옛 저장의 낱개 잡템은 개수 없음=1로 본다.
+const STACK_MAX=99;
+function stackJunk(it){
+  if(!it||it.kind!=='junk')return false;
+  for(let i=0;i<bagLimit();i++){const b=bag[i];if(b&&b!==it&&b.kind==='junk'&&b.name===it.name&&(b.qty||1)<STACK_MAX){const mv=Math.min(STACK_MAX-(b.qty||1),it.qty||1);b.qty=(b.qty||1)+mv;it.qty=(it.qty||1)-mv;if(it.qty<=0)return true;}}
+  return false;
+}
+function consolidateJunk(a,n){
+  for(let i=0;i<n;i++){const x=a[i];if(!x||x.kind!=='junk')continue;
+    for(let j=i+1;j<n;j++){const y=a[j];if(!y||y.kind!=='junk'||y.name!==x.name||(x.qty||1)>=STACK_MAX)continue;const mv=Math.min(STACK_MAX-(x.qty||1),y.qty||1);x.qty=(x.qty||1)+mv;y.qty=(y.qty||1)-mv;if(y.qty<=0)a[j]=null;}}
 }
 function itemIconSrc(it){return (A.icons&&A.icons[it.icon])||(A.lootIcons&&A.lootIcons[it.icon])||'';}
 function canEquip(it){return G.P.lv>=(it.requiredLevel||1);}
@@ -521,6 +532,7 @@ function slotEl(it, x, y, w, h, onTap, selected){
     if (it.requiredLevel && G.P && it.requiredLevel > G.P.lv){ s.classList.add('lvlock'); s.append(el('span', 'lvtag', 'Lv' + it.requiredLevel)); }
     if(it.unid)s.append(el('span','unidtag','?'));
     if(it.locked)s.append(el('span','locktag','🔒'));
+    if((it.qty||1)>1)s.append(el('span','qtytag',String(it.qty)));
   }
   if (selected) s.classList.add('sel');
   s.addEventListener('click', onTap);
@@ -710,7 +722,7 @@ function showInfo(it, from){
   if(!ALL_GEAR.includes(it.kind)){
     const nm=el('div','iname',it.name);nm.style.color=RART[0];I.append(nm);
     const cat=it.kind==='material'?'재료':'잡동사니';
-    I.append(el('div','isub',cat+' · T'+(it.tier||1)));
+    I.append(el('div','isub',cat+' · T'+(it.tier||1)+((it.qty||1)>1?' · '+it.qty+'개':'')));
     if(it.desc)I.append(el('div','isub',it.desc));
     const ic=el('img','iic');ic.src=itemIconSrc(it);I.append(ic);
     const row=el('div','ibtns');
@@ -776,6 +788,7 @@ let itemDrag=null,itemClickUntil=0;
 const kindOrder=it=>{const list=it.kind==='weapon'?['sword','spear','gauntlet','bow','staff']:['head','body','hands','feet','ring','neck','material','potion','junk'],i=list.indexOf(it.kind==='weapon'?it.wt:it.kind);return i<0?99:(it.kind==='weapon'?i:5+i);};
 function sortInventory(where,by){
   const a=where==='stash'?stash:bag,n=where==='stash'?a.length:bagLimit();
+  consolidateJunk(a,n);
   const tier=(x,y)=>(y.tier||1)-(x.tier||1)||(y.rar||0)-(x.rar||0)||kindOrder(x)-kindOrder(y);
   const cmp=by==='price'?(x,y)=>__SHOP.baseValue(y)-__SHOP.baseValue(x):by==='kind'?(x,y)=>kindOrder(x)-kindOrder(y)||tier(x,y):tier;
   const filled=a.slice(0,n).filter(Boolean).map((it,i)=>({it,i})).sort((x,y)=>cmp(x.it,y.it)||x.i-y.i).map(x=>x.it);
@@ -806,7 +819,9 @@ function inventoryDrop(source,target){
     if((source.from==='stash'||target.from==='stash')&&tab!=='stash')return false;
     const a=source.from==='stash'?stash:bag,b=target.from==='stash'?stash:bag;
     if(target.i<0||target.i>=b.length)return false;
-    [a[source.i],b[target.i]]=[b[target.i],a[source.i]];
+    const tg=b[target.i];
+    if(a===b&&tg&&tg!==it&&it.kind==='junk'&&tg.kind==='junk'&&tg.name===it.name&&(tg.qty||1)<STACK_MAX){const mv=Math.min(STACK_MAX-(tg.qty||1),it.qty||1);tg.qty=(tg.qty||1)+mv;it.qty=(it.qty||1)-mv;if(it.qty<=0)a[source.i]=null;}
+    else [a[source.i],b[target.i]]=[b[target.i],a[source.i]];
   }
   if(!eq[cur]){const o=WSLOTS.find(x=>eq[x]);if(o){qsSaveCur();cur=o;qsLoadCur();}}pickSel=null;$('iinfo').classList.remove('on');render();syncHud();saveGame();return true;
 }
@@ -867,7 +882,7 @@ window.UI = {
   make,makeLoot,canEquip,equip,itemStats,identify:identifyItem,identifyCost,openIdentifyVendor,identifyVendorOpen:()=>identifyVendor,UNID_MIN_AFFIXES,inventoryDrop,sortInventory,openStash,stashOpen:()=>tab==='stash'&&$('char').classList.contains('on'),stashItems:()=>stash.map((it,i)=>it?{i,it}:null).filter(Boolean),
   enchantItems:()=>[...Object.entries(eq).filter(([,it])=>it).map(([slot,it])=>({from:'eq',slot,it})),...bag.slice(0,bagLimit()).map((it,i)=>it?{from:'bag',i,it}:null).filter(Boolean)],
   enchantCost,enchantAffixText,enchantReroll,enchantToggleLock,
-  merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=bagLimit()||bag[i])return false;bag[i]=it;return true;},add(it){const i=bagFreeIndex();if(i<0)return false;bag[i]=it;return true;},
+  merchant(){openChar('shop');},bindItemSlot,addAt(it,i){if(i<0||i>=bagLimit()||bag[i])return false;bag[i]=it;return true;},add(it){if(stackJunk(it))return true;const i=bagFreeIndex();if(i<0)return false;bag[i]=it;return true;},
   bagPages:()=>bagPages,bagPage:()=>bagPage,bagUpgradePrice:()=>BAG_UPGRADE[bagPages-1]||0,expandBag(){if(bagPages>=BAG_MAX_PAGES)return false;bagPages++;bagPage=bagPages-1;render();saveGame();return true;},
   combatMods,findBonus,coinBonus,skillRank,currentWeapon:()=>eq[cur],
   quickSlots:()=>QS.slice(),assignQuick(i,id){if(i<0||i>=5||!quickLearned(id))return false;const old=QS.indexOf(id);if(old>=0)QS[old]=null;QS[i]=id;syncQS();saveGame();return true;},

@@ -1570,3 +1570,8 @@
 - 무역: `trade.js openTrade` 가이아에서 안내만, `field_dungeon.js` 무역품 드랍률 0·마을 교역상 NPC 제외, `town.js` shop==='trade' NPC(핀) 제외, `ui.js` 무역품 탭 회색 비활성(툴팁 안내).
 - 용병: `companion.js` 시장 NPC에 상호작용 지점을 만들지 않음(말 못 걺), 여관 포함 전 구역에서 배회, 파티 둘(merc_f_sword/mage)은 시장 풀에서 제외. `gaia_party.js`가 `ensureMarket`·`companionUpdateMarket`을 다시 연결(고용 함수는 계속 false).
 - 확인: 콘솔 오류 없음, 무역 탭 disabled·opacity .45, `TRADE.open` 패널 안 열림, 시장 명단에 남성 용병 5명 생성. 걸어서 NPC가 실제로 돌아다니는 모습·말 안 걸리는지는 화면 직접 확인은 안 함.
+
+## 2026-11-03 잡템 겹치기
+- 케인 확정("잡템이 겹치는게 낫겠다"). `ui.js`: 잡템(`kind:'junk'`)에 `qty`(없으면 1), `stackJunk`/`consolidateJunk`, `UI.add`가 같은 이름 스택에 먼저 합침(최대 99), 슬롯 개수 표시, 정보창 개수, 정렬 시 합침, 같은 잡템 위로 끌면 합침. `town.js`: `sellPrice`에 개수 곱, 판매·일괄판매 개수 집계, 판매 정보창 ×N. `shell.html`: `.qtytag`.
+- 확인: 철조각 105개 → 99+6 두 칸, 서로 다른 잡템은 별 칸, 판매가 99개분(693G), 저장 후 개수 유지, 콘솔 오류 없음. 실제 줍기·상점 화면은 직접 안 봄.
+- 옛 저장의 낱개 잡템은 개수 없음=1로 처리되고 정렬 버튼을 누르면 합쳐짐. 핑크 슬라임은 미구현(작업판 기록만).
