@@ -8,8 +8,9 @@ const NUM = G.NUM || 100;         // 수치 규모(town.js). 체력·마나·공
 const RARN = ['일반', '마법', '희귀', '전설'];
 const RARC = ['#e8dcc0', '#6fb4ff', '#ffd34d', '#ff8a2a'];
 const RART = ['#5b4630', '#2f6fb8', '#a8780a', '#c4580a'];
-const SLOTN = { w1: '검', w2: '지팡이', w3: '활', w4: '창', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
+const SLOTN = G.gaiaMode?{ w1: '방망이', w2: '지팡이', w3: '채찍', w4: '검', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' }:{ w1: '검', w2: '지팡이', w3: '활', w4: '창', head: '머리', body: '몸', hands: '장갑', feet: '신발', neck: '목걸이', ring1: '반지', ring2: '반지' };
 const WN = { sword: '검', spear: '창', gauntlet: '건틀릿', bow: '활', staff: '지팡이' };
+if(G.gaiaMode){WN.sword='방망이';WN.spear='검';WN.bow='채찍';}   // 가이아: 방망이·채찍=카일, 검=아가사, 지팡이=실비아
 // 무기별 한 번 피해 배율(검=100% 기준). docs/weapons.md
 const WMULT = { sword: 1.0, spear: 1.2, gauntlet: 0.5, bow: 0.7, staff: 1.4 };
 const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '조금 느림 0.5초 · 김 · 두 마리 관통', gauntlet: '아주 빠름 0.22초 · 아주 짧음 · 움찔', bow: '빠름 0.35초 · 아주 멂 · 걸어도 안 느려짐', staff: '느림 0.75초 · 중간 · 맞은 자리 폭발' };
@@ -142,7 +143,7 @@ function enchantReroll(it,index){
 }
 // 2026-10-14 4무기 체계(케인): 무기는 종류별 고정 칸에 동시에 장착하고, 공격 버튼 X자 구역으로 자동 전환한다. 격투(건틀릿)는 보류.
 const WSLOT={sword:'w1',staff:'w2',bow:'w3',spear:'w4'},WSLOTS=['w1','w2','w3','w4'],isWSlot=s=>WSLOTS.includes(s);
-const slotOk=(it,s)=>it.kind==='weapon'?(WSLOT[it.wt]===s):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
+const slotOk=(it,s)=>it.kind==='weapon'?(WSLOT[it.wt]===s&&(!G.gaiaMode||WEAPON_OK[who].includes(it.wt))):it.kind==='ring'?(s==='ring1'||s==='ring2'):it.kind===s;
 
 const BAG_PAGE=42,BAG_MAX_PAGES=5,BAG=BAG_PAGE*BAG_MAX_PAGES,bag=new Array(BAG).fill(null);
 const BAG_UPGRADE=[10000,30000,50000,100000];let bagPages=1,bagPage=0;
@@ -153,27 +154,57 @@ const eq={w1:null,w2:null,w3:null,w4:null,head:null,body:null,hands:null,feet:nu
 let cur='w3';
 // 새 성장판: 시작 무기 하나(활)만 들고 나머지는 직접 파밍.
 eq.w3=make({kind:'weapon',wt:'bow',g:1,rar:0});
+// 가이아 3인 장비: 카일은 방망이·채찍, 아가사는 검('창' 칸), 실비아는 지팡이. 방어구·반지는 누구나 낄 수 있다.
+// 장비창에서 동료 탭을 열면 eq 안의 내용을 그 인물 것으로 바꿔 끼운다(카일 것은 KYLE_SAVE에 맡김). 창을 닫으면 카일로 되돌린다.
+const KYLE_SAVE={},ALLY_EQ={agatha:{},sylvia:{}};
+for(const k of Object.keys(eq)){KYLE_SAVE[k]=null;ALLY_EQ.agatha[k]=null;ALLY_EQ.sylvia[k]=null;}
+let who='kyle',kyleCur='w3';
+const WEAPON_OK={kyle:['sword','bow'],agatha:['spear'],sylvia:['staff']};
+const WHO_NAME={kyle:'카일',agatha:'아가사',sylvia:'실비아'},WHO_WSLOT={agatha:'w4',sylvia:'w2'};
+const WHO_WEAPON_MSG={kyle:'카일은 방망이와 채찍만 쓸 수 있습니다.',agatha:'아가사는 검만 쓸 수 있습니다.',sylvia:'실비아는 지팡이만 쓸 수 있습니다.'};
+const gearOf=w=>w===who?eq:(w==='kyle'?KYLE_SAVE:ALLY_EQ[w]);
+const curOf=w=>w==='kyle'?(who==='kyle'?cur:kyleCur):WHO_WSLOT[w];
+if(G.gaiaMode){
+  eq.w1=make({kind:'weapon',wt:'sword',g:1,rar:0});cur='w1';kyleCur='w1';   // 카일 시작 장비: 방망이 + 채찍
+  ALLY_EQ.agatha.w4=make({kind:'weapon',wt:'spear',g:1,rar:0});
+  ALLY_EQ.sylvia.w2=make({kind:'weapon',wt:'staff',g:1,rar:0});
+}
+function setWho(w){
+  if(w===who||!WEAPON_OK[w])return;
+  const out=who==='kyle'?KYLE_SAVE:ALLY_EQ[who],src=w==='kyle'?KYLE_SAVE:ALLY_EQ[w];
+  for(const k of Object.keys(eq))out[k]=eq[k];
+  if(who==='kyle')kyleCur=cur;
+  for(const k of Object.keys(eq))eq[k]=src[k]||null;
+  who=w;cur=w==='kyle'?kyleCur:WHO_WSLOT[w];
+}
 
-function totals(){
-  const t={atk:0,matk:0,atkPct:0,matkPct:0,as:0,crit:0,critDmg:0,fire:0,ice:0,skill:0,def:0,hp:0,mp:0,ms:0,coin:0,find:0,luck:0};
-  for(const s in eq){
-    const it=eq[s];if(!it)continue;
-    if(isWSlot(s)&&s!==cur)continue;
+// 동료 기본 능력치: 카일이 레벨마다 받는 포인트(5, 10레벨마다 +5)와 같은 양을 역할대로 자동 배분한다(포인트 분배 없음).
+function allyBase(w){
+  const lv=G.P.lv||1,pts=lv*5+Math.floor(lv/10)*5;
+  if(w==='agatha')return {str:5+Math.round(pts*.5),vit:5+Math.round(pts*.3),int:5,mag:5,dex:8+Math.round(pts*.2),luck:3};
+  return {str:5,vit:5+Math.round(pts*.25),int:5+Math.round(pts*.5),mag:6+Math.round(pts*.25),dex:8,luck:3};
+}
+function totals(w='kyle'){
+  const t={atk:0,matk:0,atkPct:0,matkPct:0,as:0,crit:0,critDmg:0,fire:0,ice:0,skill:0,def:0,hp:0,mp:0,ms:0,coin:0,find:0,luck:0},E=gearOf(w),c=curOf(w);
+  for(const s in E){
+    const it=E[s];if(!it)continue;
+    if(isWSlot(s)&&s!==c)continue;
     const st=itemStats(it);for(const k in st)t[k]=(t[k]||0)+st[k];
   }
   return t;
 }
-function derived(){
-  const t=totals(),b=G.P.stats||{str:5,vit:5,int:5,mag:6,dex:8,luck:3};
-  const wt=eq[cur]&&eq[cur].wt, mb=wt&&G.masteryBonus?G.masteryBonus(wt):{lv:0,dmg:0,as:0};
-  const passive=G.P.passives||{}, life=G.P.lifeSkills||{};
-  const sb=window.SAGE?SAGE.bonus:()=>0;
+function derived(w='kyle'){
+  const ally=w!=='kyle',E=gearOf(w),c=curOf(w);
+  const t=totals(w),b=ally?allyBase(w):(G.P.stats||{str:5,vit:5,int:5,mag:6,dex:8,luck:3});
+  const wt=E[c]&&E[c].wt, mb=!ally&&wt&&G.masteryBonus?G.masteryBonus(wt):{lv:0,dmg:0,as:0};
+  const passive=ally?{}:(G.P.passives||{}), life=ally?{}:(G.P.lifeSkills||{});
+  const sb=!ally&&window.SAGE?SAGE.bonus:()=>0;
   const phys=Math.max(1,Math.round((t.atk+b.str*.85*NUM)*(1+t.atkPct/100)*(1+mb.dmg/100)*(1+sb('attack')/100)));
   let magicBase=t.matk+b.int*.85*NUM;
   if(wt&&wt!=='staff'){
     // 마법 공용: 같은 단계·지능·숙련의 일반 지팡이 기준 70% 보장.
     // 물리 공격 옵션은 변환하지 않는다. 직접 얻은 matk가 더 높으면 그대로 사용한다.
-    const staffBase=10*WMULT.staff*GRADE_MUL[eq[cur].g-1]*NUM;
+    const staffBase=10*WMULT.staff*GRADE_MUL[E[c].g-1]*NUM;
     magicBase=Math.max(magicBase,(staffBase+b.int*.85*NUM)*(1+mb.dmg/100)*.7);
   }
   const magic=Math.max(1,Math.round(magicBase*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
@@ -201,6 +232,7 @@ function derived(){
   };
 }
 function combatMods(){return derived();}
+window.GAIA_GEAR={derived:w=>derived(w),who:()=>who};   // 동료 전투가 자기 장비·능력치를 읽는 창구
 function findBonus(){return derived().find;}
 function coinBonus(){return derived().coin;}
 
@@ -227,18 +259,31 @@ atk.addEventListener('pointerdown', e => {
   G.swing(eq[cur] ? eq[cur].wt : null); G.setHold(true);   // 누르고 있는 동안 계속 공격
 });
 // X자 공격 버튼: 위=창, 아래=활, 왼쪽=검, 오른쪽=지팡이(케인 시안 attack_selector). 누른 구역 무기로 즉시 바꿔 들고 공격.
-const ZONE_SLOT={up:'w4',down:'w3',left:'w1',right:'w2'},ZONE_NAME={w1:'검',w2:'지팡이',w3:'활',w4:'창'};
+const GK=(G.gaiaMode&&A.gaiaKit)||null;   // 가이아 HUD 그림 묶음(없으면 예전 4무기 X자 다이얼)
+const ZONE_SLOT=GK?{up:'w1',left:'w1',down:'w3',right:'w3'}:{up:'w4',down:'w3',left:'w1',right:'w2'},ZONE_NAME=G.gaiaMode?{w1:'방망이',w2:'지팡이',w3:'채찍',w4:'검'}:{w1:'검',w2:'지팡이',w3:'활',w4:'창'};
+const KYLE_SLOTS=G.gaiaMode?['w1','w3']:['w1','w2','w3','w4'];   // 카일이 직접 드는 칸(가이아: 방망이·채찍). 검=아가사, 지팡이=실비아 몫
 // 가운데 원(반지름 36%) = 지금 무기로 공격만. 대각선 경계(두 방향 차이 20% 안)도 무기 그대로. 가장자리를 확실히 눌러야 무기 변경
 function zoneAt(e){const r=atk.getBoundingClientRect(),R=r.width/2,dx=e.clientX-(r.left+R),dy=e.clientY-(r.top+R),ax=Math.abs(dx),ay=Math.abs(dy);
+  if(GK)return Math.hypot(dx,dy)<R*.3?null:(dx<0?'left':'right');   // 가이아: 가운데 단추=지금 무기로 공격, 왼쪽 반=방망이, 오른쪽 반=채찍
   if(Math.hypot(dx,dy)<R*.36)return null;if(Math.abs(ax-ay)<Math.max(ax,ay)*.2)return null;
   return ax>ay?(dx<0?'left':'right'):(dy<0?'up':'down');}
 function switchWeapon(slot,quiet){
   if(!isWSlot(slot)||slot===cur)return !!eq[slot];
+  if(!KYLE_SLOTS.includes(slot))return false;   // 가이아: 검·지팡이는 동료의 무기
   if(!eq[slot]){if(!quiet)G.say(ZONE_NAME[slot]+' 칸이 비어 있습니다');return false;}
   qsSaveCur();cur=slot;qsLoadCur();syncHud();saveGame();return true;
 }
 function pickZoneWeapon(e){if(!e||e.clientX==null)return;const z=zoneAt(e);if(z)switchWeapon(ZONE_SLOT[z]);}
 function syncAtkZones(){
+  if(GK){
+    if(!atk.querySelector('.gkc')){
+      atk.classList.add('gkd');atk.style.backgroundImage='none';
+      for(const [z,k] of [['left','dial_club'],['right','dial_whip']]){const im=document.createElement('img');im.className='atkz gk';im.dataset.z=z;im.alt='';im.src=GK[k];atk.append(im);}
+      for(const [c,k] of [['n','dial_c_n'],['p','dial_c_p']]){const im=document.createElement('img');im.className='gkc '+c;im.alt='';im.src=GK[k];atk.append(im);}
+    }
+    for(const im of atk.querySelectorAll('.atkz.gk')){const sl=ZONE_SLOT[im.dataset.z];im.classList.toggle('zon',sl===cur&&!!eq[sl]);}
+    atkIc.style.display='none';return;
+  }
   if(!atk.querySelector('.atkz')&&A.kit&&A.kit.atk_all){
     atk.style.backgroundImage='url('+A.kit.atk_all+')';atk.classList.add('xsel');
     for(const [z,k] of [['up','atk_spear'],['down','atk_bow'],['left','atk_sword'],['right','atk_magic']]){const im=document.createElement('img');im.className='atkz';im.dataset.z=z;im.alt='';im.src=A.kit[k];atk.append(im);}
@@ -251,7 +296,7 @@ for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) atk.addEv
 addEventListener('blur', () => G.setHold(false));
 $('swap').addEventListener('pointerdown', e => {
   e.preventDefault(); if (G.isOpen()) return;
-  const i=WSLOTS.indexOf(cur);for(let k=1;k<=4;k++){const o=WSLOTS[(i+k)%4];if(eq[o]){switchWeapon(o);G.say(`${eq[cur].name}(으)로 바꿔 들었습니다`);return;}}
+  const i=KYLE_SLOTS.indexOf(cur),n=KYLE_SLOTS.length;for(let k=1;k<=n;k++){const o=KYLE_SLOTS[(i+k+n)%n];if(eq[o]&&o!==cur){switchWeapon(o);G.say(`${eq[cur].name}(으)로 바꿔 들었습니다`);return;}}
 });
 $('bagBtn').addEventListener('click', () => openChar('equip'));
 $('me').querySelector('.ring').addEventListener('click', () => openChar('stat'));
@@ -300,7 +345,7 @@ for(const [id,s] of Object.entries(window.SAGE?SAGE.skills:{})){IMPLEMENTED.add(
 const GSK=(G.gaiaMode&&window.GAIA_SK)||null;   // 가이아 스킬 표(gaia_skills.js)
 if(GSK)for(const s of Object.values(GSK.byId)){IMPLEMENTED.add(s.id);SKN[s.id]=s.name;SKD[s.id]=s.desc;}
 let skChar='kyle';   // 스킬창에서 보고 있는 인물
-for(const [label,prefix] of [['검 · 고대 무예','sword'],['활 · 고대 무예','bow'],['창 · 고대 무예','spear']])SKG.push([label,Object.keys(SAGE.skills).filter(id=>id.startsWith(prefix))]);
+if(!G.gaiaMode)for(const [label,prefix] of [['검 · 고대 무예','sword'],['활 · 고대 무예','bow'],['창 · 고대 무예','spear']])SKG.push([label,Object.keys(SAGE.skills).filter(id=>id.startsWith(prefix))]);
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
 const PASSIVE_ICON={magicGuide:'bolt2',precision:'bow2',rapid:'fist2',manaFlow:'ice2',survival:'holy2_shield',greed:'dark2'};
@@ -366,7 +411,8 @@ function syncQS(){
   skBtns.forEach((b,i)=>{
     if(QS[i]&&!quickLearned(QS[i]))QS[i]=null;
     const id=QS[i];
-    b.style.backgroundImage=`url(${id?quickIcon(id):K.ring})`;
+    b.style.backgroundImage=id?`url(${quickIcon(id)})`:(GK?'none':`url(${K.ring})`);
+    if(GK)b.classList.add('gk');
     b.dataset.glyph=id==='townPortal'?'↩':'';
     b.classList.toggle('empty',!id);
     b.dataset.pen='';   // 4무기 체계: 무기 불일치 패널티 없음
@@ -458,9 +504,9 @@ function fit(){
   wrap.style.transform = `translate(-50%,-50%) scale(${s})`;
 }
 addEventListener('resize', fit);
-function openChar(t){ identifyVendor=false;tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
+function openChar(t){ setWho('kyle');identifyVendor=false;tab = t || tab; G.closeAll(); G.setOpen('char'); $('char').classList.add('on'); document.body.classList.add('inventory-open'); pickSel = null; render(); fit(); }
 function openIdentifyVendor(){openChar('equip');identifyVendor=true;return true;}
-function closeChar(){ identifyVendor=false;qsPick=null;$('cluster').style.visibility='';cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
+function closeChar(){ setWho('kyle');identifyVendor=false;qsPick=null;$('cluster').style.visibility='';cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
 for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
@@ -490,14 +536,17 @@ function render(){
     L.style.cssText='width:458px;height:595px;background:none';renderStash(L);
   } else if (tab === 'equip'){
     L.style.backgroundImage = `url(${K['02']})`; L.style.width = '458px'; L.style.height = '595px';
-    const fig = el('img', 'fig'); fig.src = (G.gaiaMode&&A.gaiaFull&&A.gaiaFull.kyle)||A.elfFront; L.append(fig);
+    const fig = el('img', 'fig'); fig.src = (G.gaiaMode&&A.gaiaFull&&A.gaiaFull[who])||A.elfFront; L.append(fig);
+    if(G.gaiaMode&&window.GAIA_HUD){const tb=window.GAIA_HUD.tabs(who,k=>{setWho(k);pickSel=null;$('iinfo').classList.remove('on');render();});tb.classList.add('eqtabs');L.append(tb);}
     for (const s in EQS){
-      const [x, y] = EQS[s], it = eq[s];
+      if(G.gaiaMode&&isWSlot(s)&&!(who==='kyle'?KYLE_SLOTS.includes(s):WHO_WSLOT[who]===s))continue;   // 무기 칸은 그 인물 몫만 보인다
+      const [x, y] = (G.gaiaMode&&isWSlot(s)&&who!=='kyle')?EQS.w1:EQS[s], it = eq[s];   // 동료의 무기는 손에 드는 첫 칸 자리에 그린다
       const b = slotEl(it, x, y, 76, 77, () => tapEq(s), pickSel && pickSel.from === 'eq' && pickSel.slot === s);
       const lab = el('span', 'slab' + (it ? ' hide' : ''), SLOTN[s]); b.append(lab);
-      if (isWSlot(s) && s === cur && it) b.append(el('span', 'held', '손에 듦'));
+      if (isWSlot(s) && s === cur && it && who==='kyle') b.append(el('span', 'held', '손에 듦'));
       bindItemSlot(b,{from:'eq',slot:s});L.append(b);
     }
+    if(G.gaiaMode){const dv=derived(who);{const gq=el('div','geqstat');gq.innerHTML=`${who==='sylvia'?'마법':'물리'} 공격 ${who==='sylvia'?dv.magic:dv.phys}<br>최대 체력 ${dv.maxHp} · 피해 감소 ${dv.damageReduce.toFixed(1)}%`;L.append(gq);}}
   } else if(tab==='skill'){
     L.style.backgroundImage='none';L.style.width='458px';L.style.height='595px';
     const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
@@ -505,13 +554,11 @@ function render(){
     pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 스킬을 누른 뒤 오른쪽 무기별 칸을 누르면 등록됩니다.'));
     if(GSK){
       pane.lastChild.textContent='카일은 스킬 포인트로 랭크를 올립니다. 아가사·실비아는 레벨이 오르면 스킬이 열리고 랭크도 자동으로 오릅니다. 카일 스킬은 누른 뒤 오른쪽 칸에 넣습니다.';
-      const tabs=el('div','gsktabs');
-      for(const k of ['kyle','agatha','sylvia']){const b=el('button','gskt'+(skChar===k?' on':''),GSK.tree[k].name);b.type='button';b.onclick=()=>{skChar=k;qsPick=null;render();};tabs.append(b);}
-      pane.append(tabs);
+      pane.append(window.GAIA_HUD.tabs(skChar,k=>{skChar=k;qsPick=null;render();}));
       for(const s of GSK.tree[skChar].skills){
         const id=s.id,locked=Pp.lv<s.lv,own=skChar==='kyle',rank=own?skillRank(id):GSK.allyRank(id);
         const row=el('div','gskrow'+(locked?' glock':''));
-        const c=el('button','skc'+(locked||rank<1?' lock':'')+(qsPick===id?' pick':''));c.type='button';c.style.backgroundImage=`url(${A.skicon[id]||K.ring})`;c.title=s.name+' · '+s.desc;
+        const c=el('button','skc'+(locked||rank<1?' lock':'')+(GK&&locked?' glockimg':'')+(qsPick===id?' pick':''));c.type='button';c.style.backgroundImage=`url(${A.skicon[id]||K.ring})`;c.title=s.name+' · '+s.desc;
         if(own&&!locked&&rank>0){c.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')startDrag(e,id,null);});c.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick===id?null:id;render();});}
         const info=el('div','gi');info.append(el('b','',s.name),el('small','',s.desc));
         const tag=el('span','gtag',locked?`Lv${s.lv} 해금`:own?`랭크 ${rank}/5`:s.special?`Lv${s.lv} 열림`:`랭크 ${rank}/5 · 자동`);
@@ -617,7 +664,7 @@ function cmpLine(o, it){
   }
   return out;
 }
-const CMPN = { w1: '검', w2: '지팡이', w3: '활', w4: '창', ring1: '왼손 반지', ring2: '오른손 반지' };
+const CMPN = G.gaiaMode?{ w1: '방망이', w2: '지팡이', w3: '채찍', w4: '검', ring1: '왼손 반지', ring2: '오른손 반지' }:{ w1: '검', w2: '지팡이', w3: '활', w4: '창', ring1: '왼손 반지', ring2: '오른손 반지' };
 // 가방 장비를 고르면 정보창 왼쪽에 "지금 낀 장비" 카드를 붙인다. 무기·반지는 두 장, 나머지는 한 장.
 function cmpCards(it){
   const slots = it.kind === 'weapon' ? [WSLOT[it.wt]].filter(Boolean) : it.kind === 'ring' ? ['ring1', 'ring2'] : [it.kind];
@@ -708,6 +755,7 @@ function showInfo(it, from){
   I.classList.add('on');
 }
 function equip(it, s){
+  if(G.gaiaMode&&it.kind==='weapon'&&!WEAPON_OK[who].includes(it.wt)){G.say(WHO_WEAPON_MSG[who]);return false;}
   if(!slotOk(it,s)){G.say(it.kind==='weapon'&&!WSLOT[it.wt]?'격투 무기는 지금 장착할 수 없습니다.':'이 칸에는 착용할 수 없습니다.');return false;}
   if(!canEquip(it)){G.say('착용 레벨이 부족합니다. Lv'+it.requiredLevel+'부터 착용할 수 있습니다.');return false;}
   const i = bag.indexOf(it); if (i < 0) return;
@@ -845,7 +893,7 @@ function saveGame(){
   try{
     const P=G.P;
     localStorage.setItem(SKEY,JSON.stringify({v:3,release:1,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
-      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq,cur,qsw:(qsSaveCur(),QSW),pot:POT,scr:SCR,qs:QS,
+      statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq:gearOf('kyle'),cur:curOf('kyle'),gear:{agatha:gearOf('agatha'),sylvia:gearOf('sylvia')},qsw:(qsSaveCur(),QSW),pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,lastVisitedTown:G.lastVisitedTown?G.lastVisitedTown():null,
       minigames:window.MINIGAMES?MINIGAMES.saveData():null,
       telemetry:window.TELEMETRY?TELEMETRY.saveData():null,companion:window.COMPANION?COMPANION.saveData():null,
@@ -866,10 +914,20 @@ function loadGame(){
   for(const k in eq)eq[k]=null;
   {const src=d.eq||{},held=src[d.cur]||null,spare=[];
    for(const k in src){const it=src[k];if(!it)continue;
-     if(it.kind==='weapon'){const sl=WSLOT[it.wt];if(sl&&!eq[sl])eq[sl]=it;else spare.push(it);}
+     if(it.kind==='weapon'){const sl=WSLOT[it.wt];if(sl&&!eq[sl]&&(!G.gaiaMode||WEAPON_OK.kyle.includes(it.wt)))eq[sl]=it;else spare.push(it);}
      else if(k in eq&&!isWSlot(k))eq[k]=it;else spare.push(it);}
    for(const it of spare){const i=bag.indexOf(null);if(i>=0)bag[i]=it;}   // 격투 무기·같은 종류 중복은 가방으로
-   cur=held&&held.kind==='weapon'&&WSLOT[held.wt]&&eq[WSLOT[held.wt]]===held?WSLOT[held.wt]:(WSLOTS.find(x=>eq[x])||'w3');}
+   cur=held&&held.kind==='weapon'&&WSLOT[held.wt]&&eq[WSLOT[held.wt]]===held?WSLOT[held.wt]:(KYLE_SLOTS.find(x=>eq[x])||'w3');}
+  if(G.gaiaMode){
+    for(const w of ['agatha','sylvia']){
+      const src=d.gear&&d.gear[w];if(!src)continue;   // 예전 저장: 동료는 시작 장비 그대로
+      const dst=ALLY_EQ[w];for(const k in dst)dst[k]=null;
+      for(const k in src){const it=src[k];if(!it||!(k in dst))continue;
+        if(it.kind==='weapon'){if(WSLOT[it.wt]===k&&WEAPON_OK[w].includes(it.wt))dst[k]=it;else{const i=bag.indexOf(null);if(i>=0)bag[i]=it;}}
+        else dst[k]=it;}
+    }
+    kyleCur=cur;
+  }
   if(d.pot){
     for(const k of ['hp','mp','dual']){
       const src=d.pot[k];
@@ -885,7 +943,7 @@ function loadGame(){
    else if(d.qs){for(const k of WSLOTS)for(let i=0;i<5;i++)QSW[k][i]=okId(d.qs[i]);}   // 예전 단일 퀵슬롯은 모든 무기에 복사
    qsLoadCur();}
   // unid 필드가 없는 이전 저장 장비는 falsy이므로 모두 감정 완료로 취급한다.
-  let mx=0;for(const it of [...bag,...stash,...Object.values(eq)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
+  let mx=0;for(const it of [...bag,...stash,...Object.values(eq),...Object.values(KYLE_SAVE),...Object.values(ALLY_EQ.agatha),...Object.values(ALLY_EQ.sylvia)])if(it&&it.id>mx)mx=it.id;seq=mx+1;
   const P=G.P;P.name='카일';P.lv=d.lv||1;P.exp=d.exp||0;P.statPts=d.statPts|0;P.skillPts=d.skillPts|0;P.lifePts=d.lifePts|0;
   P.stats=Object.assign({},P.stats,d.stats||{});P.mastery=Object.assign({},P.mastery,d.mastery||{});P.skillLv=Object.assign({},P.skillLv,d.skillLv||{});
   P.lifeSkills=Object.assign({},P.lifeSkills||{},d.lifeSkills||{});P.passives=Object.assign({},P.passives||{},d.passives||{});P.portalReadyAt=+d.portalReadyAt||0;P.reviveReadyAt=+d.reviveReadyAt||0;P.reviveArmed=!!d.reviveArmed;P.reviveRank=Math.max(1,Math.min(5,+d.reviveRank||1));

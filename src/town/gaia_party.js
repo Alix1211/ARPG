@@ -33,7 +33,18 @@ for(let i=0;i<GAIA_PARTY_IDS.length;i++){
   if(COMPANION_IMG[id])COMPANION_IMG[id].name=GAIA_PARTY_NAMES[i];
 }
 
-function gaiaStatMax(i){return Math.max(NUM,Math.round(P.maxHp*(i===0?1.3:1.05)*GAIA_TUNE.hpMul));}
+// 동료는 자기 능력치·장비(ui.js의 장비창 탭)로 싸운다. 계산이 무거워 0.4초마다만 다시 읽는다.
+function gaiaDv(c,i){
+  if(!window.GAIA_GEAR)return null;
+  const now=performance.now();
+  if(!c._dv||now-c._dvT>400){c._dv=GAIA_GEAR.derived(i===0?'agatha':'sylvia');c._dvT=now;}
+  return c._dv;
+}
+function gaiaStatMax(i){
+  const dv=gaiaMembers[i]&&gaiaDv(gaiaMembers[i],i);
+  if(dv)return Math.max(NUM,Math.round(dv.maxHp*GAIA_TUNE.hpMul));
+  return Math.max(NUM,Math.round(P.maxHp*(i===0?1.3:1.05)*GAIA_TUNE.hpMul));
+}
 function gaiaManaMax(i){return Math.max(NUM,Math.round(P.maxMp*(i===0?.65:1.55)));}
 function gaiaMakeMember(i,previous){
   const c=companionEmpty(),id=GAIA_PARTY_IDS[i],q=nearestSafePosition(P.x+(i===0?-70:70),P.y+24);
@@ -78,7 +89,8 @@ function gaiaRefreshStats(c,i){
   if(c.maxMp!==maxMp){c.mp=Math.min(maxMp,c.mp+Math.max(0,maxMp-c.maxMp));c.maxMp=maxMp;}
   c.tier=Math.max(1,Math.min(7,Math.ceil((P.lv||1)/10)));
   // 두 히로인은 카일보다 기본 전투력이 높고, 카일의 지원으로 더 강해진다.
-  c.damage=Math.max(1,Math.round(basicDamage()*(i===0?1.6:1.45)*(1+c.m/GAIA_M_MAX*GAIA_TUNE.mDmg)*GAIA_TUNE.out*(window.GAIA_SK?GAIA_SK.buff.atk:1)));
+  const dv=gaiaDv(c,i),base=dv?(i===0?dv.phys:dv.magic):basicDamage()*(i===0?1.6:1.45);
+  c.damage=Math.max(1,Math.round(base*(1+c.m/GAIA_M_MAX*GAIA_TUNE.mDmg)*GAIA_TUNE.out*(window.GAIA_SK?GAIA_SK.buff.atk:1)));
 }
 function gaiaUpdate(dt){
   gaiaEnsure();
@@ -122,6 +134,7 @@ function gaiaUpdate(dt){
   if(gaiaHudWait<=0){gaiaHudWait=.15;gaiaUpdateHud();}
 }
 function gaiaUpdateHud(){
+  if(typeof GAIA_HUD!=='undefined'&&GAIA_HUD.update(gaiaMembers,GAIA_KO_TIME,GAIA_M_MAX))return;   // 새 카드 그림이 있으면 그쪽이 그린다
   for(let i=0;i<gaiaMembers.length;i++){
     const c=gaiaMembers[i],hp=$('gaiaHp'+i),m=$('gaiaM'+i),num=$('gaiaNum'+i);
     if(hp)hp.style.width=Math.max(0,Math.min(100,c.hp/c.maxHp*100))+'%';
@@ -235,6 +248,7 @@ function gaiaEnemyTarget(m){
 }
 function gaiaHit(c,dmg){
   if(!c||!gaiaMembers.includes(c)||c.ko||c.hp<=0)return false;
+  {const k=gaiaMembers.indexOf(c),dv=k>=0?gaiaDv(c,k):null;if(dv)dmg*=1-Math.min(75,dv.damageReduce||0)/100;}   // 동료 방어구의 피해 감소
   dmg=Math.max(1,Math.round(dmg*GAIA_TUNE.take*(window.GAIA_SK?GAIA_SK.buff.guard:1)*(1-GAIA_TUNE.mGuard*c.m/GAIA_M_MAX)));   // M이 찰수록 덜 아프다
   if(c.shield>0){const ab=Math.min(c.shield,dmg);c.shield-=ab;dmg-=ab;if(c.shield<=0)c.shield=0;if(dmg<=0)return true;}
   c.hp=Math.max(0,c.hp-dmg);

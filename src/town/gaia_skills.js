@@ -16,6 +16,7 @@ const GAIA_TREE={
   ]},
   agatha:{name:'아가사',skills:[
     {id:'sword1',lv:1,name:'강하게 베기',kind:'phys',m:14,r:125,n:1,desc:'전방 강타와 경직.'},
+    {id:'ag_slam',lv:5,name:'검 내리꽂기',kind:'phys',m:20,r:140,n:1,slam:1,icon:'fist3',desc:'검을 바닥에 내리꽂아 주변 적을 밀쳐 내고 잠깐 경직시킵니다(도발은 없음). 정예·우두머리는 덜 밀립니다.'},
     {id:'sword2',lv:10,name:'회전 베기',kind:'phys',m:19,r:120,n:2,desc:'주변 전체를 베고 밀쳐 냅니다.'},
     {id:'spear1',lv:16,name:'연속 찌르기',kind:'phys',m:16,r:110,n:1,desc:'좁은 직선 3연속 찌르기.'},
     {id:'fist1',lv:22,name:'돌진 베기',kind:'phys',m:14,r:220,n:1,desc:'짧게 돌진해 쳐올리며 적의 준비동작을 끊습니다.'},
@@ -44,7 +45,7 @@ const GAIA_TREE={
 const GAIA_PARKED=['ice1','ice2','ice3','dark1','dark2','dark3'];
 const GAIA_FEMALE_FAMILIES=['harpy','succubus'];   // 긴급 S파워 대상(여성형). 케인이 늘리거나 줄이면 여기만 고친다.
 
-const GAIA_KY_SK={ky_slap:{mp:3,cd:20},ky_rush:{mp:4,cd:10},ky_wake:{mp:5,cd:45},ky_bluff:{mp:5,cd:40},ky_run:{mp:6,cd:60},ky_charge:{mp:8,cd:90},ky_spower:{mp:4,cd:30},ky_fog:{mp:5,cd:45}};
+const GAIA_KY_SK={ag_slam:{mp:0,cd:8},ky_slap:{mp:3,cd:20},ky_rush:{mp:4,cd:10},ky_wake:{mp:5,cd:45},ky_bluff:{mp:5,cd:40},ky_run:{mp:6,cd:60},ky_charge:{mp:8,cd:90},ky_spower:{mp:4,cd:30},ky_fog:{mp:5,cd:45}};
 Object.assign(SK,GAIA_KY_SK);
 const GAIA_ALL=Object.values(GAIA_TREE).flatMap(t=>t.skills.map(s=>({...s})));
 const GAIA_BY_ID=Object.fromEntries(GAIA_ALL.map(s=>[s.id,s]));
@@ -53,8 +54,11 @@ const GAIA_OWNER=Object.fromEntries(Object.entries(GAIA_TREE).flatMap(([k,t])=>t
 const GAIA_OLD_IDS=['fire1','fire2','fire3','ice1','ice2','ice3','bolt1','bolt2','bolt3','dark1','dark2','dark3','holy1_heal','holy2_shield','holy3_revive','sword1','sword2','sword3','spear1','spear2','spear3','bow1','bow2','bow3','fist1','fist2','fist3'];
 // 새 이름이 시전 문구에도 나오게
 if(typeof SK2_POP!=='undefined')for(const s of GAIA_ALL)if(!s.kyle&&SK2_POP[s.id])SK2_POP[s.id]=s.name+'!';
-// 카일 신규 스킬 아이콘: GPT 그림 전까지 임시로 빌려 쓴다
-if(A.skicon)for(const s of GAIA_TREE.kyle.skills)if(!A.skicon[s.id]&&A.skicon[s.icon])A.skicon[s.id]=A.skicon[s.icon];
+// 신규 스킬 아이콘: GPT가 만든 카일 8종(A.gaiaKit)이 있으면 그것을, 없으면 원래 스킬 아이콘을 빌려 쓴다
+if(A.skicon)for(const s of GAIA_ALL){
+  if(A.gaiaKit&&A.gaiaKit[s.id])A.skicon[s.id]=A.gaiaKit[s.id];
+  else if(!A.skicon[s.id]&&A.skicon[s.icon])A.skicon[s.id]=A.skicon[s.icon];
+}
 
 const gaiaSk={tree:GAIA_TREE,parked:GAIA_PARKED,owner:GAIA_OWNER,byId:GAIA_BY_ID,
   buff:{atk:1,atkT:0,guard:1,guardT:0},timers:[],fogs:[]};
@@ -200,7 +204,22 @@ gaiaSk.allyTick=function(c,i,dt){
     if((c.skCd[s.id]||0)>0||c.m<s.m+GAIA_M_LOW+2)continue;
     const near=mobs.filter(m=>Math.hypot(m.x-c.x,m.y-c.y)<s.r).sort((a,b)=>Math.hypot(a.x-c.x,a.y-c.y)-Math.hypot(b.x-c.x,b.y-c.y));
     if(near.length<s.n)continue;
+    if(s.slam){gaiaSk.allySlam(c,s);c.m-=s.m;c.skCd[s.id]=(SK[s.id]&&SK[s.id].cd)||8;c.gcd=1.1;return;}
     if(gaiaProxyCast(c,s,near[0])){c.m-=s.m;c.skCd[s.id]=(SK[s.id]&&SK[s.id].cd)||3;c.gcd=1.1;return;}
+  }
+};
+
+// 아가사 Lv5 검 내리꽂기(케인 2026-11-03): 주변 광역 피해 + 밀치기 + 0.5초 경직. 도발 없음. 지진 쇄의 흔들림 효과를 재사용한다.
+gaiaSk.allySlam=function(c,s){
+  const rank=Math.max(1,gaiaSk.allyRank(s.id)),R=s.r+(rank-1)*8,dmg=Math.max(1,Math.round(c.damage*(1.8+rank*.12)));
+  sfx.push({type:'quake',t:0,x:c.x,y:c.y-8,r:R});
+  if(typeof skillShowImpact==='function')skillShowImpact('stone',c.x,c.y,R*.9,3);
+  pops.push({x:c.x,y:c.y-115,t:0,txt:s.name+'!',crit:true});
+  for(const m of combatTargets()){
+    if(!m||m.dead||m.removed)continue;
+    if(Math.hypot(m.x-c.x,(m.y-c.y)*1.3)>R+14)continue;
+    hitTarget(m,[Math.sign(m.x-c.x)||1,Math.sign(m.y-c.y)||0],true,dmg,42);
+    if(!m.dead)m.stun=Math.max(m.stun||0,.5*(m.boss||m.elite?.4:1));   // 넉백 뒤 0.5초 경직
   }
 };
 

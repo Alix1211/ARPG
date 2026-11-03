@@ -119,8 +119,10 @@ function questComplete(q){
 }
 // 대사 한 줄: "이름(표정): 말" 이면 말하는 사람 초상·이름·표정으로 바꾸고 이름은 떼고 보여 줌. 이름이 없으면 지문(회색).
 const LUC_FACE_KEYS=['밝음','놀람','따짐','흐뭇','능청','뾰로통','격분','신남','못마땅','곤란','상처지침','상처담담','상처울적','상처아픔','상처미소'];
+// 가이아: 말하는 사람 표시는 루크레아 → 카일(초상은 카일 한 장). 대사 본문의 '루크레아'는 그대로 둔다.
+const GAIA_KYLE_PORT=()=>(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE)?((A.gaiaKyle&&A.gaiaKyle.port)||(A.gaiaKit&&A.gaiaKit.port_kyle)||null):null;
 function questSpeaker(name){
-  if(name==='루크레아')return {name,title:'',port:A.lucrea||A.face,luc:true};
+  if(name==='루크레아'){const kp=GAIA_KYLE_PORT();if(kp)return {name:'카일',title:'',port:kp};return {name,title:'',port:A.lucrea||A.face,luc:true};}
   const n=(A.npcs||[]).find(x=>x.name===name);if(n)return {name,title:n.title||'',port:A.port[n.k]||A.face};
   const qn=((A.mainQuests&&A.mainQuests.npcs)||[]).find(x=>x.name===name),no=qn?qn.no:({'레온':25,'제니':32})[name];
   if(no&&A.port['npc_'+String(no).padStart(2,'0')])return {name,title:(qn&&qn.title)||'',port:A.port['npc_'+String(no).padStart(2,'0')]};
@@ -133,7 +135,7 @@ function questShowLine(line){
   if(!m){el.textContent=line||'';el.classList.add('narr');return;}
   const who=m[1].trim(),face=m[2],sp=questSpeaker(who);
   el.textContent=m[3];el.classList.remove('narr');
-  $('dlgName').textContent=who;
+  $('dlgName').textContent=(sp&&sp.name)||who;
   if(sp){
     let port=sp.port;if(sp.luc&&face&&A.lucreaFace&&A.lucreaFace[face])port=A.lucreaFace[face];
     if(port)$('dlgImg').src=port;$('dlgTitle').textContent=sp.title;
@@ -266,7 +268,9 @@ function questPortrait(s){
     const key='npc_'+String(s.portraitNpc).padStart(2,'0'),n=A.npcs.find(x=>x.no===s.portraitNpc);
     return {name:s.speaker||(n&&n.name)||'???',title:s.title!=null?s.title:((n&&n.title)||''),port:A.port[key]||A.face};
   }
-  return {name:s.speaker||'루크레아',title:s.title||'',port:A.lucrea||A.face};
+  {const kp=GAIA_KYLE_PORT(),nm=s.speaker||'루크레아';
+   if(kp&&nm==='루크레아')return {name:'카일',title:s.title||'',port:kp};
+   return {name:nm,title:s.title||'',port:A.lucrea||A.face};}
 }
 function questOpenSpecial(q,s){
   const a=q&&mainQuestState.active[q.id];if(!a||!s)return false;

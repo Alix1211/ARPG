@@ -17,6 +17,14 @@ ROOT = Path(__file__).resolve().parents[2]
 R = ROOT / "assets"
 
 
+KIT_KEYS = ["card", "hp_fill", "m_fill", "down_fill", "gather_n", "gather_p", "gather_d",
+            "dial", "dial_club", "dial_whip", "dial_c_n", "dial_c_p", "ring_ok", "ring_empty",
+            "tab_sel", "tab_un", "tab_dis", "lock", "port_kyle", "port_agatha", "port_sylvia",
+            "ky_slap", "ky_rush", "ky_wake", "ky_bluff", "ky_run", "ky_charge", "ky_spower", "ky_fog"]
+# 아가사 검 이름(임시, 그림 순서대로 단계 이름). 케인이 정하면 바꾼다.
+AGATHA_SWORD_NAMES = ["수련용 검", "철검", "강철 검", "쇠장식 검", "기사의 검", "은장식 검", "룬 검", "보석 검", "명검", "빛나는 명검"]
+
+
 def _enc(img, q=90):
     b = io.BytesIO()
     img.save(b, "WEBP", quality=q, method=6)
@@ -45,6 +53,15 @@ def art():
     out["kit/pring"] = _enc(_open("ui/hud_clean/portrait_ring.png"), 92)
     for n in ['kyle', 'agatha', 'sylvia']:
         out[f"gaiaFull/{n}"] = _enc(_open(f"gaia_full/{n}_full.png"))
+    # GPT가 만든 가이아 HUD 묶음(2026-11-03): assets/ui/gaia_kit
+    for k in KIT_KEYS:
+        out[f"gk/{k}"] = _enc(_open(f"ui/gaia_kit/{k}.png"), 92)
+    # 아가사는 검을 쓰므로 '창' 무기 칸(w4)을 검으로 쓴다: 그림은 원래 검 그림, 이름은 검 이름
+    for g in range(1, 11):
+        im = _open(f"weapons/sword_{g:02d}.png")
+        im = im.crop(im.getbbox())
+        im.thumbnail((96, 96), Image.LANCZOS)
+        out[f"icons/spear_{g:02d}"] = _enc(im, 88)
     return out
 
 
@@ -53,4 +70,8 @@ def prelude():
 
 
 def suffix():
-    return "A.gaiaFull={kyle:window.ART['gaiaFull/kyle'],agatha:window.ART['gaiaFull/agatha'],sylvia:window.ART['gaiaFull/sylvia']};"
+    kit = ",".join(f"'{k}':window.ART['gk/{k}']" for k in KIT_KEYS)
+    names = json.dumps({f"spear_{i+1:02d}": n for i, n in enumerate(AGATHA_SWORD_NAMES)}, ensure_ascii=False)
+    return ("A.gaiaFull={kyle:window.ART['gaiaFull/kyle'],agatha:window.ART['gaiaFull/agatha'],sylvia:window.ART['gaiaFull/sylvia']};"
+            "A.gaiaKit={" + kit + "};"
+            "(A.tierCatalog.gear||[]).forEach(g=>{const n=" + names + "[g.id];if(n)g.name=n;});")

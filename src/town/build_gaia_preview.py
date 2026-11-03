@@ -53,7 +53,7 @@ def main() -> None:
 
     modules = [
         "vfx.js", "skill_presentation.js", "skills2.js", "sage.js", "inn.js",
-        "chat.js", "telemetry.js", "field_dungeon.js", "companion.js", "gaia_party.js", "gaia_skills.js",
+        "chat.js", "telemetry.js", "field_dungeon.js", "companion.js", "gaia_party.js", "gaia_skills.js", "gaia_hud.js",
         "dungeon.js", "sound.js", "bgm.js", "backup.js", "trade.js",
         "guild.js", "quest.js",
     ]

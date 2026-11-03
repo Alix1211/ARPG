@@ -790,7 +790,7 @@ function randomDropItem(m){
   if(!window.UI)return null;
   const tier=monsterTier(m),r=Math.random(),magicBoost=m&&m.caveChallenge?2:1;
   if(r<.58){
-    const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)];
+    const wt=WT_LIST[Math.floor(Math.random()*WT_LIST.length)];
     return UI.make({kind:'weapon',wt,tier,rank:m&&m.rank,roll:true,magicBoost});
   }
   if(r<.90){

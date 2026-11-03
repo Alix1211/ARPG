@@ -140,7 +140,7 @@ function guildAccept(id){
 }
 function guildRandomGear(tier){
   const r=Math.random();
-  if(r<.58){const wt=['sword','spear','gauntlet','bow','staff'][Math.floor(Math.random()*5)];return UI.make({kind:'weapon',wt,tier,roll:true});}
+  if(r<.58){const wt=WT_LIST[Math.floor(Math.random()*WT_LIST.length)];return UI.make({kind:'weapon',wt,tier,roll:true});}
   if(r<.9){const kinds=['head','body','hands','feet'];return UI.make({kind:kinds[Math.floor(Math.random()*kinds.length)],tier,roll:true});}
   return UI.make({kind:Math.random()<.5?'ring':'neck',tier,roll:true});
 }

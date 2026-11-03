@@ -17,6 +17,8 @@ const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
 // 가이아 대륙 실험 브랜치: 기존 루크레아의 스킨은 보존하고,
 // 카엘렌의 빨간 망토 걷기 프레임을 카일의 조작 모션으로 재사용한다.
 const GAIA_PARTY_MODE=true;
+// 가이아: 격투(건틀릿)는 숨긴다. 방망이=sword(카일), 채찍=bow(카일), '창' 칸=아가사의 검, 지팡이=실비아.
+const WT_LIST=GAIA_PARTY_MODE?['sword','spear','bow','staff']:['sword','spear','gauntlet','bow','staff'];
 // 케인 2026-11-03: 세 명이 작아 보여 그리는 크기만 키운다(발 위치 기준, 무기 모션도 함께 커짐). 판정 범위는 그대로.
 const GAIA_DRAW_SCALE=1.12;
 const GAIA_KYLE_MELEE=0.45;   // 카일 몽둥이가 몹에게 주는 데미지 배율(잡몹 하나 상대하는 정도, 케인 2026-11-03)
@@ -126,7 +128,7 @@ for (const n of npcs){
   if (CUR.exits) exits.push(...CUR.exits);
   if(id==='out'){
     spots.push({name:'현자의 숙소',x:15*TS,y:18.3*TS,r:62,kind:'sage_entry'});
-    exits.push({x0:14*TS,x1:16*TS,y0:18.5*TS,y1:19.5*TS,to:'sage',pos:MAPS.sage.spawn,dir:'back'});
+    if(!GAIA_PARTY_MODE)exits.push({x0:14*TS,x1:16*TS,y0:18.5*TS,y1:19.5*TS,to:'sage',pos:MAPS.sage.spawn,dir:'back'});   // 가이아: 중반 이후까지 현자의 길은 막혀 있음(여는 조건 미정)
   }
   if (CUR.solids) solids.push(...CUR.solids);
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
@@ -458,7 +460,10 @@ function act(){
   if(near.kind==='questclue'&&window.QUEST)return QUEST.collect(near.questId);
   if(near.kind==='npc')return near.npc.shop==='inn'&&MAP==='inn'&&typeof openInnDlg==='function'?openInnDlg(near.npc):openDlg(near.npc);
   if (near.name === '의뢰 게시판' && window.GUILD) return GUILD.open();
-  if(near.kind==='sage_entry')return travel('sage',MAPS.sage.spawn,'back');
+  if(near.kind==='sage_entry'){
+    if(GAIA_PARTY_MODE)return say('현자의 숙소로 가는 길은 굳게 닫혀 있다. 아직은 들어갈 수 없다.');
+    return travel('sage',MAPS.sage.spawn,'back');
+  }
   if (near.kind === 'gate') return travel('out', MAPS.out.spawn, 'front');
   if (near.kind === 'exit') return travel('town', MAPS.out.back, 'back');
   if (near.kind === 'field_exit') return returnFromField();
@@ -620,7 +625,7 @@ function refreshShopStock(){
   const tier=levelTier(P.lv);if(shopStockTier===tier)return;
   shopStockTier=tier;
   shopStock.arms=[
-    ...['sword','spear','gauntlet','bow','staff'].map(w=>shopBase(tier,'weapon',w)),
+    ...WT_LIST.map(w=>shopBase(tier,'weapon',w)),
     ...['head','body','hands','feet'].map(k=>shopBase(tier,k))
   ].filter(Boolean).map(b=>shopGear(b,shopGearPrice(b)));
   shopStock.pawn=['ring','neck'].map(k=>shopBase(tier,k)).filter(Boolean).map(b=>shopGear(b,shopGearPrice(b)));
