@@ -35,6 +35,9 @@ def _body(cell):
     return cell.crop(Image.fromarray(mask.astype("uint8") * 255).getbbox())
 
 
+BODY_H, BODY_CAP = 162, 164  # build.py 의 GAIA_BODY_H/GAIA_BODY_CAP 와 같게 유지
+
+
 def frames(path):
     sheet = Image.open(path).convert("RGBA")
     cells = []
@@ -44,8 +47,8 @@ def frames(path):
                    round(sheet.width * (col + 1) / 5), round(sheet.height * (row + 1) / 3))
             cells.append(_body(sheet.crop(box)))
     heights = sorted(im.height for im in cells)
-    scale = min(150 / heights[len(heights) // 2], 160 / max(im.width for im in cells),
-                160 / max(im.height for im in cells))
+    scale = min(BODY_H / heights[len(heights) // 2], BODY_CAP / max(im.width for im in cells),
+                BODY_CAP / max(im.height for im in cells))
     out = {}
     for row, d in enumerate(DIRS):
         arr = []

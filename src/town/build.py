@@ -463,12 +463,13 @@ def _merc_body(cell):
     return cell.crop(Image.fromarray(mask.astype('uint8') * 255).getbbox())
 
 # 가이아 대륙 브랜치: 카일·아가사·실비아 전용 걷기 시트(5열×3행, 정면/후면/측면). 영상에서 뽑은 그림.
+GAIA_BODY_H,GAIA_BODY_CAP=162,164   # 케인 요청(2026-11-03): 처음 150이 작아 보여 약 8% 키움
 GAIA_SHEETS={'merc_f_sword':'agatha.png','merc_f_mage':'sylvia.png'}
 def _gaia_sheet_path(name):
     p=os.path.join(ROOT,'source_sheets','gaia',name)
     return p if os.path.exists(p) else None
 
-def _sheet_frames(src):
+def _sheet_frames(src,target=150,cap=160):
     sheet=Image.open(src).convert('RGBA')
     cells=[]
     for row in range(3):
@@ -479,8 +480,8 @@ def _sheet_frames(src):
     # 시트당 배율 하나: 보행마다 몸이 커졌다 작아지지 않도록 한다.
     # 공통 캔버스 170x172, 발 바닥 166. 무기 모션의 좌표계와 일치한다.
     heights=sorted(im.height for im in cells)
-    scale=min(150/heights[len(heights)//2],160/max(im.width for im in cells),
-              160/max(im.height for im in cells))
+    scale=min(target/heights[len(heights)//2],cap/max(im.width for im in cells),
+              cap/max(im.height for im in cells))
     fr={}
     for row,d in enumerate(['front','back','side']):
         arr=[]
@@ -495,7 +496,7 @@ def _sheet_frames(src):
 for sid,nm,title,filename,job,gender in _MERC_SPECS:
     src=(_gaia_sheet_path(GAIA_SHEETS[sid]) if sid in GAIA_SHEETS else None) or _merc_sheet_path(filename)
     if not src: raise SystemExit('용병 이미지 파일을 찾을 수 없습니다: '+filename)
-    fr,cells=_sheet_frames(src)
+    fr,cells=_sheet_frames(src,*((GAIA_BODY_H,GAIA_BODY_CAP) if sid in GAIA_SHEETS else ()))
     pt=cells[0].copy(); pt.thumbnail((520,560),Image.LANCZOS)
     COMPANIONS[sid]=dict(name=nm,title=title,fr=fr,port=_port8(sid) or enc(pt,88),mercenary=True,job=job,gender=gender)
 
@@ -503,7 +504,7 @@ for sid,nm,title,filename,job,gender in _MERC_SPECS:
 GAIA_KYLE=None
 _kp=_gaia_sheet_path('kyle.png')
 if _kp:
-    _kfr,_kcells=_sheet_frames(_kp)
+    _kfr,_kcells=_sheet_frames(_kp,GAIA_BODY_H,GAIA_BODY_CAP)
     _kc=_kcells[0]
     _head=_kc.crop((0,0,_kc.width,min(_kc.height,_kc.width)))
     _sq=Image.new('RGBA',(max(_head.width,_head.height),)*2)
