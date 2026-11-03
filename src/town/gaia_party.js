@@ -95,6 +95,7 @@ function gaiaRefreshStats(c,i){
 function gaiaUpdate(dt){
   gaiaEnsure();
   if(dt<=0)return;
+  companionUpdateMarket(dt);
   for(let i=0;i<2;i++){
     const c=gaiaMembers[i];
     gaiaRefreshStats(c,i);
@@ -297,7 +298,8 @@ Object.assign(window.COMPANION,{
   isActive:id=>!!id&&GAIA_PARTY_IDS.includes(id),
   syncStory:()=>false,
   hire:()=>false,hireFromDialog:()=>false,
-  ensureMarket:()=>false,ensureTownTests:()=>{},
+  ensureMarket:companionEnsureMarket,   // 용병 시장 NPC는 말 못 거는 배회 NPC로만 남음(companion.js 잠금)
+ ensureTownTests:()=>{},
 });
 window.GAIA_PARTY={enabled:true,debugMonsters:()=>monsters,members:()=>gaiaMembers,recall:gaiaRecall,
   friendlySwing:gaiaFriendlySwing,whip:gaiaWhip,drawWhip:gaiaDrawWhip,enemyTarget:gaiaEnemyTarget,hit:gaiaHit,

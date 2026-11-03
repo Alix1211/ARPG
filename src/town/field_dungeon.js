@@ -287,7 +287,7 @@ async function prepareFieldVillage(theme,returnState){
     ...themedVillageEdgeProps(theme)
   ].filter(p=>p&&BI[p.k]);
   const general=villageNpc('general','마을 잡화상','잡화 노점','필요한 물건은 여기서 챙겨 가세요.',9.2,11.0,theme);
-  const trader=villageNpc('trade','마을 교역상','교역 노점','이 지역 물건 시세부터 보고 가시죠.',22.8,11.0,theme);
+  const trader=GAIA_PARTY_MODE?null:villageNpc('trade','마을 교역상','교역 노점','이 지역 물건 시세부터 보고 가시죠.',22.8,11.0,theme);
   const map={name:FIELD_INFO[theme][1]+' 작은 마을',market:theme,map:{w:32,h:22,ts:TS,px:TS},ground:bg.ground,mini:bg.mini,
     blds:[b1,b2],props,npcs:[general,trader].filter(Boolean),spawn:[16*TS,19.2*TS],
     exits:[{x0:13.8*TS,x1:18.2*TS,y0:21.1*TS,y1:22*TS,fn:()=>leaveFieldVillage()}]};
@@ -734,7 +734,7 @@ function monsterTier(m){
 }
 const EQUIP_DROP_BY_TIER=[.10,.10,.11,.12,.13,.14,.15];
 const LOOT_VALUE_CAP=[20,28,36,44,52,60,72];
-const SUPPLY_DROP_RATE=.26,TRADE_DROP_RATE=.26,JUNK_DROP_RATE=.24;
+const SUPPLY_DROP_RATE=.26,TRADE_DROP_RATE=GAIA_PARTY_MODE?0:.26,JUNK_DROP_RATE=.24;
 const SUPPLY_LOOT_ICON={orange:'food_orange',berry:'food_fruit',tea:'food_pitcher',cheese:'food_cheese',bread:'food_bread',fruit:'food_fruit',tart:'food_bread',ale:'food_ale',wine:'food_wine',cider:'food_cider'};
 const TRADE_LOOT_ICON={
   wheat:'food_flour',barley:'food_flour',rice:'food_flour',potato:'food_basket',apple:'food_apple',grape:'food_grape',

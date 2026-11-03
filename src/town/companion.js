@@ -77,7 +77,7 @@ function companionRotateMarket(force=false,key=companionSettlementKey(),doSave=t
   if(!companionMercReady())return false;
   const market=companionMarketSet(key,true);
   if(!force&&market.roster.length===5)return false;
-  const pool=MERC_IDS.filter(id=>!(companionState.active===id&&companionState.mode==='hire'));
+  const pool=MERC_IDS.filter(id=>!(companionState.active===id&&companionState.mode==='hire')&&!(GAIA_PARTY_MODE&&(id==='merc_f_sword'||id==='merc_f_mage')));   // 가이아: 우리 파티 둘은 시장에서 뺌
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
   market.roster=pool.slice(0,5);
   market.inn=market.roster.slice(0,3);
@@ -110,8 +110,9 @@ function companionEnsureMarket(mapId=MAP){
       : [[8.7*TS,18.1*TS],[19.2*TS,19.2*TS]];
   for(let i=0;i<want.length&&i<positions.length;i++){
     const id=want[i];if(npcs.some(n=>n.mercenaryMarket&&n.companion===id))continue;
-    const n=companionMarketNpc(id,positions[i][0],positions[i][1],mapId!=='inn');if(!n)continue;
-    npcs.push(n);sprites.push(n);spots.push({name:n.name,x:n.x,y:n.y+6,r:52,kind:'npc',npc:n});
+    const n=companionMarketNpc(id,positions[i][0],positions[i][1],GAIA_PARTY_MODE||mapId!=='inn');if(!n)continue;
+    npcs.push(n);sprites.push(n);
+    if(!GAIA_PARTY_MODE)spots.push({name:n.name,x:n.x,y:n.y+6,r:52,kind:'npc',npc:n});   // 가이아: 용병은 말을 걸 수 없는 배회 NPC(기능은 잠금)
   }
   return true;
 }
@@ -127,7 +128,7 @@ function companionUpdateMarket(dt){
     }
     mercMarket.lastDayT=DAY.t;
   }
-  if(!['town','fieldvillage'].includes(MAP))return;
+  if(!(GAIA_PARTY_MODE?['town','fieldvillage','inn']:['town','fieldvillage']).includes(MAP))return;
   for(const n of npcs){
     if(!n.mercenaryMarket||!n.mercRoam||n.hide)continue;
     n.mercMoving=false;n.mercWait-=dt;n.mercT+=dt;

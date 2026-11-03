@@ -509,6 +509,7 @@ function openIdentifyVendor(){openChar('equip');identifyVendor=true;return true;
 function closeChar(){ setWho('kyle');identifyVendor=false;qsPick=null;$('cluster').style.visibility='';cancelItemDrag();document.body.classList.remove('inventory-open');$('shop').classList.remove('on');document.body.append($('shop')); $('char').classList.remove('on'); $('iinfo').classList.remove('on'); G.setOpen(null); syncHud(); }
 $('charClose').addEventListener('click', closeChar);
 $('char').addEventListener('click', e => { if (e.target.id === 'char') closeChar(); });
+if(G.gaiaMode){const tb=document.querySelector('[data-tab=trade]');if(tb){tb.disabled=true;tb.style.filter='grayscale(1)';tb.style.opacity='.45';tb.title='무역은 아직 열리지 않았습니다';}}   // 가이아: 무역품 탭 잠금(회색)
 for (const b of document.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { tab = b.dataset.tab; pickSel = null; $('iinfo').classList.remove('on'); render(); });
 
 function slotEl(it, x, y, w, h, onTap, selected){

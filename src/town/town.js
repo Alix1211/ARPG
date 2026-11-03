@@ -106,6 +106,7 @@ for (const p of CUR.props){
   if (p.name) spots.push({ name: p.name, x: p.x, y: p.flat ? p.y - p.h / 2 : p.y + 16, r: p.r || (p.flat ? 40 : 46), kind: p.kind || 'prop', data: p, prop: s });
 }
 for (const n of CUR.npcs){
+  if(GAIA_PARTY_MODE&&n.shop==='trade')continue;   // 가이아: 교역 NPC 잠금
   if(n.companionTest&&(!window.COMPANION||!COMPANION.townTestsEnabled()))continue;
   if(n.companionResident){
     const qs=window.QUEST&&QUEST.state?QUEST.state():null;

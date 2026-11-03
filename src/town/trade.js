@@ -193,6 +193,7 @@ function ensureTradeUI(){
   $('tradeQtyOk').onclick=()=>{const max=tradeQtyMax(tradeMode,tradeSel),n=Math.max(1,Math.min(max,parseInt($('tradeQtyInput').value,10)||1));closeTradeQty();if(max<1)return;tradeMode==='buy'?tradeBuy(tradeSel,n):tradeSell(tradeSel,n);};
 }
 function openTrade(region){
+  if(GAIA_PARTY_MODE){say('무역은 아직 열리지 않았습니다.');return;}   // 가이아: 잠금(기능은 보존, 케인 2026-11-03)
   closeAll();ensureTradeUI();tradeRegion=TRADE_REGIONS[region]?region:'town';tradeMode='buy';tradeSellAllArmed=false;panel='trade';$('trade').classList.add('on');recordSeen(tradeRegion);renderTrade();
 }
 function closeTrade(silent){closeTradeQty();tradeSellAllArmed=false;const d=$('trade');if(d)d.classList.remove('on');if(panel==='trade')panel=null;}
