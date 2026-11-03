@@ -442,7 +442,7 @@ function renderQsPanel(R){
 
 // ---- 캐릭터 창 ----
 // 키트 그림 좌표(원본 픽셀): 장비창 kit_c_02, 가방 kit_c_01, 능력치 kit_c_02b
-const EQS = { head: [72, 107], w1: [72, 196], hands: [72, 287], ring1: [71, 393], neck: [337, 107], w2: [337, 196], body: [337, 286], feet: [340, 379], ring2: [339, 472], w3: [160, 470], w4: [248, 470] };
+const EQS = { head: [63, 105], w1: [63, 193], hands: [63, 283], ring1: [63, 386], neck: [334, 104], w2: [334, 193], body: [334, 283], feet: [335, 374], ring2: [335, 465], w3: [153, 461], w4: [244, 461] };   // 새 UI 키트(강철·청색) 기준 좌표(2026-11-03)
 const EQ_OFF = [[161, 467], [249, 467]];   // 허리띠·별 칸: 지금은 안 씀
 const INV = { x: 80, y: 117, px: 65.5, py: 66.8, w: 60, h: 62 };
 let tab = 'equip', pickSel = null, identifyVendor = false;
@@ -486,7 +486,7 @@ function render(){
     L.style.cssText='width:458px;height:595px;background:none';renderStash(L);
   } else if (tab === 'equip'){
     L.style.backgroundImage = `url(${K['02']})`; L.style.width = '458px'; L.style.height = '595px';
-    const fig = el('img', 'fig'); fig.src = A.elfFront; L.append(fig);
+    const fig = el('img', 'fig'); fig.src = (G.gaiaMode&&G.gaiaHeroFr&&G.gaiaHeroFr.front&&G.gaiaHeroFr.front[0]&&G.gaiaHeroFr.front[0].src)||A.elfFront; L.append(fig);
     for (const s in EQS){
       const [x, y] = EQS[s], it = eq[s];
       const b = slotEl(it, x, y, 76, 77, () => tapEq(s), pickSel && pickSel.from === 'eq' && pickSel.slot === s);
@@ -544,7 +544,7 @@ function render(){
     TRADE.renderSummary(L);
   } else {
     L.style.backgroundImage = `url(${K['02b']})`; L.style.width = '381px'; L.style.height = '610px';
-    const face = el('img', 'sface'); face.src = A.face; L.append(face);
+    const face = el('img', 'sface'); face.src = (G.gaiaMode&&(A.gaiaKyle?.port||A.storyChars?.hero?.port))||A.face; L.append(face);
     const expMax=Pp.lv>=70?1:G.expNeed(Pp.lv),bars=[[Pp.hp,d.maxHp,106],[Pp.mp,d.maxMp,141],[Pp.lv>=70?1:Pp.exp,expMax,176]];
     bars.forEach(([v,m,y],i)=>{const t=el('div','sbar');t.style.top=(y-1)+'px';const f=el('i','b'+i);f.style.width=Math.max(0,Math.min(100,v/m*100))+'%';t.append(f);t.append(el('span','',i===2?(Pp.lv>=70?'MAX LEVEL':`경험치 ${v} / ${m}`):`${v} / ${m}`));L.append(t);});
     d.rows.forEach(([key,n,v,sub],i)=>{const r=el('div','srow');r.style.top=(232+i*47.7)+'px';r.append(el('b','',n),el('em','',v),el('small','',sub));if(key){const plus=el('button','statplus','+');plus.type='button';plus.disabled=(Pp.statPts||0)<1;plus.onclick=()=>G.investStat(key);r.append(plus);}L.append(r);});

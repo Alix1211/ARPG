@@ -684,7 +684,7 @@ KIT = {}
 for k in ['01', '02', '02b', '18', '21', '14']:
     KIT[k] = enc(Image.open(R + f'ui/kit_c/kit_c_{k}.png').convert('RGBA'), 90)
 tabs = Image.open(R + 'ui/kit_c/kit_c_11.png').convert('RGBA')
-for i, (x, y, w, h) in enumerate([(6, 4, 79, 72), (89, 4, 81, 72), (175, 5, 80, 71), (260, 4, 79, 72), (346, 3, 77, 73)]):
+for i, (x, y, w, h) in enumerate([(1, 1, 83, 75), (86, 1, 83, 75), (171, 1, 82, 75), (255, 1, 82, 75), (339, 1, 85, 75)]):
     KIT[f'tab{i}'] = enc(tabs.crop((max(0, x - 5), 0, min(tabs.width, x + w + 5), tabs.height)), 90)
 for k, f in [('swap', '29_btn_swap'), ('bag', '28_btn_bag'), ('close', '36_btn_close'), ('php', '31_btn_potion_hp'), ('pmp', '32_btn_potion_mp')]:
     im = Image.open(R + f'ui/hud_icons/{f}.png').convert('RGBA'); im.thumbnail((128, 128), Image.LANCZOS); KIT['h_' + k] = enc(im, 90)

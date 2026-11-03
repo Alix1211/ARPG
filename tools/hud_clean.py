@@ -29,7 +29,7 @@ info = dict(ring=dict(l=xs.min() / W, t=ys.min() / H, r=1 - xs.max() / W, b=1 - 
 
 # 2) 막대: 아이콘+막대 테두리만 남기고 바깥 양피지는 투명, 안쪽 채움칸은 빈 홈(어두운 바탕)으로
 s = Image.open(R + 'kit_c/kit_c_02b.png').convert('RGBA')
-for name, box in [('hp', (148, 97, 344, 129)), ('mp', (148, 132, 344, 164))]:
+for name, box in [('hp', (148, 97, 344, 129)), ('mp', (148, 137, 344, 165))]:
     c = s.crop((box[0] - 4, box[1] - 4, box[2] + 4, box[3] + 4))
     c = c.resize((c.width * S, c.height * S), Image.LANCZOS); a = np.array(c).astype(float)
     h, w = a.shape[:2]
@@ -47,8 +47,11 @@ for name, box in [('hp', (148, 97, 344, 129)), ('mp', (148, 132, 344, 164))]:
     # 채움칸(빨강/파랑) 찾기 → 어두운 홈으로 칠함
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     fill = (r > 150) & (g < 110) & (b < 110) if name == 'hp' else (b > 150) & (r < 110)
-    fill[:, : int(w * 0.175)] = False                       # 왼쪽 아이콘(하트·물방울)은 그대로
-    lab, n = nd.label(fill); sizes = nd.sum(fill, lab, range(1, n + 1)); fill = lab == (np.argmax(sizes) + 1)
+    # 왼쪽 아이콘(하트·물방울)에 붙은 덩어리는 그대로 두고, 나머지 채움칸(끝 마개 조각 포함)은 모두 빈 홈으로
+    lab, n = nd.label(fill); sizes = nd.sum(fill, lab, range(1, n + 1))
+    left = lab[:, : int(w * 0.14)]; ids, cnt = np.unique(left[left > 0], return_counts=True)
+    icon_id = ids[np.argmax(cnt)] if len(ids) else 0
+    fill = np.isin(lab, [i + 1 for i, v in enumerate(sizes) if (i + 1) != icon_id and v > 200])
     fill = nd.binary_fill_holes(nd.binary_closing(fill, iterations=2 * S))
     ys, xs = np.where(fill)
     fill = nd.binary_dilation(fill, iterations=2 * S)
