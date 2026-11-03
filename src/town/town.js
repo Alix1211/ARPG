@@ -17,6 +17,9 @@ const EL = {}; for (const d in A.elf) EL[d] = A.elf[d].map(load);
 // 가이아 대륙 실험 브랜치: 기존 루크레아의 스킨은 보존하고,
 // 카엘렌의 빨간 망토 걷기 프레임을 카일의 조작 모션으로 재사용한다.
 const GAIA_PARTY_MODE=true;
+// 케인 2026-11-03: 세 명이 작아 보여 그리는 크기만 키운다(발 위치 기준, 무기 모션도 함께 커짐). 판정 범위는 그대로.
+const GAIA_DRAW_SCALE=1.12;
+function gaiaScaleAround(x,y){if(!GAIA_PARTY_MODE)return;ctx.translate(x,y);ctx.scale(GAIA_DRAW_SCALE,GAIA_DRAW_SCALE);ctx.translate(-x,-y);}
 const GAIA_HERO_FR={};
 for(const d of ['front','back','side'])GAIA_HERO_FR[d]=((A.gaiaKyle&&A.gaiaKyle.fr?.[d])||(A.companions||{}).hero?.fr?.[d]||[]).map(load);
 const ELSKIN = {};
@@ -1764,6 +1767,7 @@ function drawMe(){
   const L = weaponLayers();
   ctx.save();
   ctx.translate(P.x+pose.x,P.y+pose.y);ctx.rotate(pose.rot);ctx.scale(pose.sx,pose.sy);ctx.translate(-P.x,-P.y);
+  gaiaScaleAround(P.x,P.y);
   if (flip && dir === 'side'){ ctx.translate(P.x, 0); ctx.scale(-1, 1); ctx.translate(-P.x, 0); }
   if (L.back) L.back();
   // 케인 2026-10-14: 보호막은 몸에 덮던 타원 대신 캐릭터 윤곽을 따라 빛이 감싼다(신성=금빛, 얼음=하늘빛).

@@ -600,7 +600,7 @@ function drawCompanion(c,dt){
     ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}ctx.drawImage(im,c.x-w/2,c.y-h+4,w,h);ctx.restore();return;
   }
   const weapon=a?(a.weapon||companionWeaponFor(c)):null,L=a&&weapon?weaponLayersFor(c,weapon,a,true):{back:null,front:null,lunge:[0,0]};
-  ctx.save();const flip=a?a.flip:c.flip;if(flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
+  ctx.save();if(typeof GAIA_PARTY_IDS!=='undefined'&&GAIA_PARTY_IDS.includes(c.active))gaiaScaleAround(c.x,c.y);const flip=a?a.flip:c.flip;if(flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
   if(L.back)L.back();
   ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+98*(11/344)+L.lunge[1],w,h);
   if(L.front)L.front();
