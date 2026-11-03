@@ -1553,3 +1553,4 @@
 - 일상복 24장 → `assets/gaia_cast/{kyle,agatha,sylvia}/표정이름.webp` + `INDEX.md`. 카일 8(talk/angry/whip/club/laugh/sad/tired_torn/pain), 아가사 8(smile_plead/laugh/tired_torn/pain/talk/angry/shy/scared), 실비아 8(talk_staff/angry/shy/scared/plead/laugh/tired_torn/pain).
 - 속옷 38장(아가사 17·실비아 21) → `assets_private/gaia_cast_under/`, `.gitignore` 처리(공개 저장소 금지, 지침서 3). 저장소가 현재 공개(private=false)라 올리지 않음. 케인 말: "속옷은 여관이나 특수상황에 쓰일 이미지". 색인은 폴더 안 `INDEX.md`.
 - 아직 게임에는 연결 안 함(케인이 말을 끝낸 뒤 일괄 반영). 실비아 엉덩이 자국 시트(spank)는 피부색이 흰색이라 기존 갈색 피부와 다름 → 케인 확인 필요.
+- (같은 날 추가) 케인 지시로 실비아 spank 시트 4장의 피부색을 갈색 기준(정면 컷의 피부 평균)으로 보정해 `assets_private/gaia_cast_under/sylvia/spank_*.png`를 교체. 원본은 작업 폴더에만 보관. 아가사 spank 시트는 손대지 않음.
