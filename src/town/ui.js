@@ -278,6 +278,7 @@ const SWAPPOS = [35, 104];
 const QS = [null, null, null, null, null];
 // 무기별 스킬 칸(케인 2026-10-14): 무기를 바꾸면 둘레 5칸도 그 무기 것으로 바뀐다.
 const QSW={w1:[null,null,null,null,null],w2:[null,null,null,null,null],w3:[null,null,null,null,null],w4:[null,null,null,null,null]};
+if(G.gaiaMode){QSW.w2=QSW.w1;QSW.w3=QSW.w1;QSW.w4=QSW.w1;}   // 가이아: 카일 스킬은 무기와 무관하므로 칸 하나를 공유
 function qsSaveCur(){if(QSW[cur])for(let i=0;i<5;i++)QSW[cur][i]=QS[i];}
 function qsLoadCur(){if(QSW[cur])for(let i=0;i<5;i++)QS[i]=QSW[cur][i];}
 const SKG = [['불', ['fire1', 'fire2', 'fire3']], ['얼음', ['ice1', 'ice2', 'ice3']], ['뇌전', ['bolt1', 'bolt2', 'bolt3']], ['암흑', ['dark1', 'dark2', 'dark3']],
@@ -296,6 +297,9 @@ const SKD = { holy2_shield:'강한 피해 흡수막 5초, 4단계부터 8초. �
   bow1:'맹독 화살 한 발, 명중 시 지속 독 피해', bow2:'부채꼴로 화살 여러 발', bow3:'넓은 구역에 화살 비, 맞은 적 둔화',
   fist1:'짧게 돌진해 쳐올리며 적의 준비동작을 끊음', fist2:'앞으로 뻗는 투기, 4랭크부터 관통', fist3:'제자리에서 3연속 원형 충격파, 둔화' };
 for(const [id,s] of Object.entries(window.SAGE?SAGE.skills:{})){IMPLEMENTED.add(id);SKN[id]=s.name;SKD[id]=s.desc;}
+const GSK=(G.gaiaMode&&window.GAIA_SK)||null;   // 가이아 스킬 표(gaia_skills.js)
+if(GSK)for(const s of Object.values(GSK.byId)){IMPLEMENTED.add(s.id);SKN[s.id]=s.name;SKD[s.id]=s.desc;}
+let skChar='kyle';   // 스킬창에서 보고 있는 인물
 for(const [label,prefix] of [['검 · 고대 무예','sword'],['활 · 고대 무예','bow'],['창 · 고대 무예','spear']])SKG.push([label,Object.keys(SAGE.skills).filter(id=>id.startsWith(prefix))]);
 const skillRank=id=>(G.P.skillLv&&G.P.skillLv[id])||0;
 const skillLearned=id=>IMPLEMENTED.has(id)&&skillRank(id)>0;
@@ -421,11 +425,11 @@ addEventListener('pointercancel',()=>{if(!drag)return;ghost.style.display='none'
 let qsPick=null;   // 스킬 탭: 등록하려고 고른 스킬
 function renderQsPanel(R){
   R.style.backgroundImage=`url(${K['01']})`;qsSaveCur();
-  R.append(el('div','btitle','무기별 스킬 칸'));
+  R.append(el('div','btitle',GSK?'카일 스킬 칸':'무기별 스킬 칸'));
   const box=el('div','qsp');R.append(box);
   box.append(el('div','qsnote',qsPick?`「${SKN[qsPick]||qsPick}」을(를) 넣을 칸을 누르세요`:'왼쪽 스킬을 누른 뒤 넣을 칸을 누르세요 · 등록된 칸을 누르면 비웁니다'));
-  for(const sl of WSLOTS){
-    const row=el('div','qsrow'+(sl===cur?' now':''));row.append(el('b','',ZONE_NAME[sl]+(sl===cur?' · 사용 중':'')+(eq[sl]?'':' · 무기 없음')));
+  for(const sl of (GSK?[cur]:WSLOTS)){
+    const row=el('div','qsrow'+(sl===cur?' now':''));row.append(el('b','',GSK?'카일 · 5칸':ZONE_NAME[sl]+(sl===cur?' · 사용 중':'')+(eq[sl]?'':' · 무기 없음')));
     for(let i=0;i<5;i++){
       const id=QSW[sl][i],b=el('button','qss'+(id?'':' empty'));b.type='button';b.dataset.sl=sl;b.dataset.i=i;
       if(id)b.style.backgroundImage=`url(${quickIcon(id)})`;
@@ -499,6 +503,24 @@ function render(){
     const pane=el('div','skpane');L.append(pane);pane.addEventListener('scroll',()=>{skillScroll=pane.scrollTop;});pane.scrollTop=skillScroll;requestAnimationFrame(()=>{pane.scrollTop=skillScroll;});
     const skhead=el('div','skhead'+((Pp.skillPts||0)>0?' pointpulse':''),`전투 스킬 · 보유 ${Pp.skillPts||0}P`);
     pane.append(skhead,el('div','sknote','액티브와 패시브가 같은 포인트를 사용합니다. 2·3번째 스킬은 바로 앞 스킬 Lv3이 필요합니다. 배운 스킬을 누른 뒤 오른쪽 무기별 칸을 누르면 등록됩니다.'));
+    if(GSK){
+      pane.lastChild.textContent='카일은 스킬 포인트로 랭크를 올립니다. 아가사·실비아는 레벨이 오르면 스킬이 열리고 랭크도 자동으로 오릅니다. 카일 스킬은 누른 뒤 오른쪽 칸에 넣습니다.';
+      const tabs=el('div','gsktabs');
+      for(const k of ['kyle','agatha','sylvia']){const b=el('button','gskt'+(skChar===k?' on':''),GSK.tree[k].name);b.type='button';b.onclick=()=>{skChar=k;qsPick=null;render();};tabs.append(b);}
+      pane.append(tabs);
+      for(const s of GSK.tree[skChar].skills){
+        const id=s.id,locked=Pp.lv<s.lv,own=skChar==='kyle',rank=own?skillRank(id):GSK.allyRank(id);
+        const row=el('div','gskrow'+(locked?' glock':''));
+        const c=el('button','skc'+(locked||rank<1?' lock':'')+(qsPick===id?' pick':''));c.type='button';c.style.backgroundImage=`url(${A.skicon[id]||K.ring})`;c.title=s.name+' · '+s.desc;
+        if(own&&!locked&&rank>0){c.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')startDrag(e,id,null);});c.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(dragClickSuppressed())return;qsPick=qsPick===id?null:id;render();});}
+        const info=el('div','gi');info.append(el('b','',s.name),el('small','',s.desc));
+        const tag=el('span','gtag',locked?`Lv${s.lv} 해금`:own?`랭크 ${rank}/5`:s.special?`Lv${s.lv} 열림`:`랭크 ${rank}/5 · 자동`);
+        row.append(c,info,tag);
+        if(own&&!locked){const plus=el('button','growplus','+');plus.type='button';plus.disabled=Pp.skillPts<1||rank<1||rank>=5;plus.onclick=e=>{e.stopPropagation();G.investSkill(id);};row.append(plus);}
+        pane.append(row);
+      }
+    }
+    else
     for(const [gname,ids] of SKG){
       const row=el('div','skrow');row.append(el('b','',gname));
       for(const id of ids){
@@ -535,7 +557,7 @@ function render(){
       tile.append(ic,el('b','stname',dv.name),el('small','stdesc',desc),plus,el('span','strank',locked?`Lv${dv.unlock}`:`Lv${rank}/${dv.max}`));lg.append(tile);
     }
     pane.append(el('div','sectionhead','무기 숙련도 · 적중할 때 자동 상승'));
-    for(const wt of ['sword','spear','gauntlet','bow','staff']){
+    for(const wt of (GSK?['sword','staff']:['sword','spear','gauntlet','bow','staff'])){
       const m=Pp.mastery[wt],need=G.masteryNeed(m.lv),row=el('div','masterrow');
       row.append(el('b','',WN[wt]),el('span','',`Lv${m.lv}/50`),el('small','',`${m.xp}/${need} · 피해 +${(m.lv*.5).toFixed(1)}% · 공속 +${(m.lv*.15).toFixed(1)}%`),el('span','',''));
       pane.append(row);

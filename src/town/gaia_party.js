@@ -78,7 +78,7 @@ function gaiaRefreshStats(c,i){
   if(c.maxMp!==maxMp){c.mp=Math.min(maxMp,c.mp+Math.max(0,maxMp-c.maxMp));c.maxMp=maxMp;}
   c.tier=Math.max(1,Math.min(7,Math.ceil((P.lv||1)/10)));
   // 두 히로인은 카일보다 기본 전투력이 높고, 카일의 지원으로 더 강해진다.
-  c.damage=Math.max(1,Math.round(basicDamage()*(i===0?1.6:1.45)*(1+c.m/GAIA_M_MAX*GAIA_TUNE.mDmg)*GAIA_TUNE.out));
+  c.damage=Math.max(1,Math.round(basicDamage()*(i===0?1.6:1.45)*(1+c.m/GAIA_M_MAX*GAIA_TUNE.mDmg)*GAIA_TUNE.out*(window.GAIA_SK?GAIA_SK.buff.atk:1)));
 }
 function gaiaUpdate(dt){
   gaiaEnsure();
@@ -104,15 +104,20 @@ function gaiaUpdate(dt){
     if(i===1)COMPANION_DEF.merc_f_mage.aggro=gaiaMembers[0].ko?250:300;
     c.gaiaReturn=!!c.mLow||(i===1&&c.hp<c.maxHp*.45);
     if(!gaiaInLeash(c)){gaiaRecall(true);break;}
-    companionState=c;companionTarget=gaiaTargets[i];companionAtk=gaiaAttacks[i];
-    // 원래 AI는 고용 시간제한을 'hire'에만 적용하므로 party 모드에는 제한이 없다.
-    gaiaUpdateOriginal(dt);
-    gaiaMembers[i]=companionState;gaiaTargets[i]=companionTarget;gaiaAttacks[i]=companionAtk;
+    if(c.daze>0){c.daze-=dt;}   // 긴급 M파워 충전 직후 멍함: 잠깐 제자리에 서 있는다
+    else{
+      companionState=c;companionTarget=gaiaTargets[i];companionAtk=gaiaAttacks[i];
+      // 원래 AI는 고용 시간제한을 'hire'에만 적용하므로 party 모드에는 제한이 없다.
+      gaiaUpdateOriginal(dt);
+      gaiaMembers[i]=companionState;gaiaTargets[i]=companionTarget;gaiaAttacks[i]=companionAtk;
+    }
     if(c.m>0)c.m=Math.max(0,c.m-dt*1.1);
+    if(window.GAIA_SK)GAIA_SK.allyTick(c,i,dt);   // 레벨로 열린 스킬을 M으로 자동 시전
     if(i===1)gaiaCast(c,dt);   // 실비아: M으로 전체 힐·보호막
     if(!gaiaInLeash(c)){gaiaRecall(true);break;}
   }
   companionState=gaiaMembers[0];companionTarget=gaiaTargets[0];companionAtk=gaiaAttacks[0];
+  if(window.GAIA_SK)GAIA_SK.tick(dt);
   gaiaHudWait-=dt;
   if(gaiaHudWait<=0){gaiaHudWait=.15;gaiaUpdateHud();}
 }
@@ -205,8 +210,9 @@ function gaiaCast(c,dt){
   const all=[P,...gaiaMembers.filter(x=>!x.ko&&x.hp>0)];
   const crit=all.some(x=>x.hp<x.maxHp*.35),low=all.filter(x=>x.hp<x.maxHp*.6).length,mid=all.some(x=>x.hp<x.maxHp*.5);
   const near=monsters.some(m=>m&&!m.dead&&!m.removed&&Math.hypot(m.x-P.x,m.y-P.y)<420);
-  if(crit&&c.m>=GAIA_HEAL_M){gaiaHealAll(c,all);return;}
-  if(near&&!(P.shield>0)&&c.m>=GAIA_SHIELD_M){
+  const canHeal=!window.GAIA_SK||GAIA_SK.unlocked('holy1_heal'),canShield=!window.GAIA_SK||GAIA_SK.unlocked('holy2_shield');
+  if(crit&&canHeal&&c.m>=GAIA_HEAL_M){gaiaHealAll(c,all);return;}
+  if(near&&canShield&&!(P.shield>0)&&c.m>=GAIA_SHIELD_M){
     for(const x of all){
       const v=Math.round(x.maxHp*.2);
       if(x===P){P.shield=v;P.shieldMax=v;P.shieldT=8;P.shieldKind='holy';}
@@ -216,7 +222,7 @@ function gaiaCast(c,dt){
     c.m-=GAIA_SHIELD_M;c.castCd=4.5;if(typeof syncBars==='function')syncBars();return;
   }
   // 아가사가 쓰러져 혼자 싸울 때는 급할 때(35% 미만)만 치유하고, 평소에는 공격에 M을 쓴다.
-  if(!gaiaMembers[0].ko&&(low>=2||mid)&&c.m>=GAIA_HEAL_M)gaiaHealAll(c,all);
+  if(canHeal&&!gaiaMembers[0].ko&&(low>=2||mid)&&c.m>=GAIA_HEAL_M)gaiaHealAll(c,all);
 }
 function gaiaEnemyTarget(m){
   gaiaEnsure();let best=P,dist=Math.hypot(P.x-m.x,P.y-m.y);
@@ -229,7 +235,7 @@ function gaiaEnemyTarget(m){
 }
 function gaiaHit(c,dmg){
   if(!c||!gaiaMembers.includes(c)||c.ko||c.hp<=0)return false;
-  dmg=Math.max(1,Math.round(dmg*GAIA_TUNE.take*(1-GAIA_TUNE.mGuard*c.m/GAIA_M_MAX)));   // M이 찰수록 덜 아프다
+  dmg=Math.max(1,Math.round(dmg*GAIA_TUNE.take*(window.GAIA_SK?GAIA_SK.buff.guard:1)*(1-GAIA_TUNE.mGuard*c.m/GAIA_M_MAX)));   // M이 찰수록 덜 아프다
   if(c.shield>0){const ab=Math.min(c.shield,dmg);c.shield-=ab;dmg-=ab;if(c.shield<=0)c.shield=0;if(dmg<=0)return true;}
   c.hp=Math.max(0,c.hp-dmg);
   pops.push({x:c.x,y:c.y-92,t:0,txt:'-'+dmg,enemy:true});
@@ -261,7 +267,7 @@ function gaiaLoad(data){
 }
 
 const gaiaFxOriginal=drawCompanionFx;
-drawCompanionFx=function(dt,behind=false){gaiaFxOriginal(dt,behind);if(!behind)gaiaDrawWhip(dt);};
+drawCompanionFx=function(dt,behind=false){gaiaFxOriginal(dt,behind);if(!behind){gaiaDrawWhip(dt);if(window.GAIA_SK)GAIA_SK.draw(dt);}};
 
 // 정식 동료 모드에서 원본 1인 용병 계약/스토리 자동 합류를 비활성화한다.
 updateCompanion=gaiaUpdate;

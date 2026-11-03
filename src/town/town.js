@@ -1560,7 +1560,12 @@ function cast(id,mod){
     if(hitN)pops.push({x:P.x,y:P.y-115,t:0,txt:spin?'회전 베기!':'강베기!',crit:true});
   }else if(SK2[id]){
     if(castExtra(id,d,rank,cm,mod,skillMul)===false){P.mp+=cost;CD[id]=0;syncBars();return false;}
+  }else if(window.GAIA_SK&&GAIA_SK.byId[id]&&GAIA_SK.byId[id].kyle){
+    // 가이아: 카일의 긴급 스킬(충전·지휘) — gaia_skills.js
+    if(GAIA_SK.kyleCast(id,d,rank,cm,skillMul)===false){P.mp+=cost;CD[id]=0;syncBars();return false;}
   }
+  // 동료가 빌려 쓰는 시전(GAIA_PROXY)은 카일의 슬롯 잠금·연출을 건드리지 않는다
+  if(window.GAIA_PROXY)return true;
   // 공통 규칙: 스킬을 쓰면 다른 슬롯도 잠깐 잠기고, 큰 스킬은 시전 중 제자리에 선다
   for(const o in SK)if(o!==id)CD[o]=Math.max(CD[o]||0,Math.min(GCD,SK[o].cd));
   if(k.root)P.castRoot=k.root;

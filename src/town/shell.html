@@ -276,6 +276,15 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 .skpane{position:absolute;inset:0;border:30px solid transparent;border-image:var(--panel) 62 fill stretch;color:var(--ink);overflow-y:auto;overflow-x:hidden;padding-right:4px;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .skhead{font-weight:900;font-size:16px;margin:-8px 0 2px;text-align:center}
 .sknote{font-size:11px;color:#6b5b45;text-align:center;margin-bottom:4px}
+.gsktabs{display:flex;gap:8px;margin:2px 0 8px}
+.gskt{flex:1;height:34px;border:2px solid #8a6b3e;border-radius:10px;background:#d9c493;color:#4a2a12;font:900 14px "Noto Sans KR",sans-serif;cursor:pointer}
+.gskt.on{background:#6d421d;color:#ffe9b5;border-color:#ffd76a;box-shadow:0 0 8px #ffd76a88}
+.gskrow{display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid #6b3d1822;min-height:56px}
+.gskrow.glock{opacity:.55}
+.gskrow .gi{flex:1;display:flex;flex-direction:column;min-width:0}
+.gskrow .gi b{font-size:13px;color:#3a2210}
+.gskrow .gi small{font-size:10.5px;color:#6b5b45;line-height:1.25}
+.gskrow .gtag{font-size:10.5px;font-weight:900;color:#6b3d18;white-space:nowrap}
 .skrow{display:flex;align-items:center;gap:6px;min-height:56px}
 .skrow>b{width:58px;font-size:13px;flex:none}
 .skcwrap{display:flex;align-items:center;gap:2px;position:relative}
