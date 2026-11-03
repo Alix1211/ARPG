@@ -1321,6 +1321,7 @@ function rollPlayerDamage(base){
 }
 const WL = { sword: 60, spear: 94, bow: 62, staff: 80, gauntlet: 24 };      // 화면에서의 길이
 const GRIP = { sword: 0.84, spear: 0.7, bow: 0.5, staff: 0.72, gauntlet: 0.5 }; // 손잡이 위치(위에서부터 비율)
+if(GAIA_PARTY_MODE){GRIP.bow=0.86;WL.bow=84;}   // 가이아: 활 칸이 채찍이라 손잡이가 아래, 길이는 조금 길게
 // 무기별 기준(같은 단계·같은 옵션일 때). 아이템 옵션이 이 값을 올리거나 내린다. docs/weapons.md
 const WB = {   // dmg: 기본 공격 한 방 배율, kb: 넉백(칸), stagger: 경직(주먹). 케인 확정 2026-10-04: 근접 우대·원거리 감쇠
   sword:    { dur: 0.62, reach: 92, cone: 90, dmg: 1.75, kb: 28 },                             // 묵직하지만 너무 느리지 않은 넓은 부채꼴, 약한 넉백(케인 2026-10-04 보정)

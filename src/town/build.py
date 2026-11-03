@@ -644,6 +644,11 @@ def icon(path):
     im = Image.open(path).convert('RGBA'); im.thumbnail((96,96), Image.LANCZOS); return enc(im,88)
 for item in CATALOG['gear']:
     ICON[item['icon']] = icon(os.path.join(ROOT,item['file']))
+# 가이아: 가방·상점 아이콘과 이름도 방망이·채찍으로(규칙은 gaia_sheets.py)
+import gaia_sheets
+gaia_sheets.rename_catalog(CATALOG)
+for _k, _im in gaia_sheets.weapon_images().items():
+    _i = _im.copy(); _i.thumbnail((96, 96), Image.LANCZOS); ICON[_k] = enc(_i, 88)
 
 # 생활 전리품 아이콘: 새 임시 그림 대신 기존 음식/소품/재료 이미지를 재사용한다.
 LOOT_ICON_FILES = {
@@ -692,6 +697,10 @@ for t in ['sword', 'spear', 'gauntlet', 'bow', 'staff']:
     for g in range(1, 11):
         im = Image.open(R + f'weapons/{t}_{g:02d}.png').convert('RGBA'); im = im.crop(im.getbbox())
         im.thumbnail((200, 200), Image.LANCZOS); WPNI[f'{t}_{g:02d}'] = enc(im, 88)
+# 가이아: 방망이(검 칸)·채찍(활 칸) 그림으로 교체. 규칙은 gaia_sheets.py 와 같다.
+import gaia_sheets
+for _k, _im in gaia_sheets.weapon_images().items():
+    WPNI[_k] = enc(_im, 88)
 s2b = Image.open(R + 'ui/kit_c/kit_c_02b.png').convert('RGBA')
 KIT['hpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_hp.png').convert('RGBA'), 92); KIT['mpbar'] = enc(Image.open(R + 'ui/hud_clean/bar_mp.png').convert('RGBA'), 92)   # tools/hud_clean.py로 테두리만 깨끗하게 잘라 낸 막대
 KIT['pring'] = enc(Image.open(R + 'ui/hud_clean/portrait_ring.png').convert('RGBA'), 92)
