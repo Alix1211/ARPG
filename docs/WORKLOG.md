@@ -1522,5 +1522,6 @@
 - 케인이 준 UI 시트를 `assets/ui/kit_c/kit_c_*.png` 같은 번호 자리에 잘라 넣음(원본 시트는 `source_sheets/gaia_ui/ui_kit_steel_blue_original.png`에 그대로 보관). 닫기 버튼(`36_btn_close`), HUD 고리·HP/MP 막대(`tools/hud_clean.py`로 재생성)도 교체.
 - 좌표 보정: 장비칸 `EQS`(ui.js), 능력치창 얼굴 `.sface`(shell.html), 탭 자르기 좌표(build.py). 가방 칸 `INV`·능력치 막대·행은 겹쳐 보고 맞는 것 확인해 그대로 둠. 칸 기능·데이터는 건드리지 않음.
 - 시험판 빌더는 예전 그림 목록을 재사용하므로 새 그림이 안 들어감 → `src/town/gaia_ui_art.py`를 추가해 시험판에서만 덮어씀(정식 빌드는 assets를 직접 읽음).
-- 가이아 모드에서 장비창 인형과 능력치창 얼굴을 카일로 쓰도록 수정. `window.GAME.gaiaMode/gaiaHeroFr`로 넘김(ui.js는 town.js와 범위가 달라 const를 못 봄). **이 수정은 적용만 하고 화면 확인 전에 중단됨 — 다음에 빌드해서 인형·얼굴이 카일로 나오는지 확인할 것.**
+- 가이아 모드에서 장비창 인형과 능력치창 얼굴을 카일로 쓰도록 수정. `window.GAME.gaiaMode/gaiaHeroFr`로 넘김(ui.js는 town.js와 범위가 달라 const를 못 봄). 확인 완료(아래 항목 참고).
 - 확인 못 한 것: 대화창·HUD 막대 실기기 모습, 장비창 칸 이름이 갑옷식(머리/검/장갑…)이라 게임의 검·지팡이·활·창 w1~w4와 이름이 안 맞음(케인 결정 필요).
+- 케인이 준 아가사·카일·실비아 전신 그림을 `assets/gaia_full/{kyle,agatha,sylvia}_full.png`로 보관(투명 배경 잔점 제거). 장비창 인형은 카일 전신(`A.gaiaFull.kyle`), 능력치창 얼굴은 카일 초상. `.fig` 크기·위치를 새 틀에 맞게 조정. 아가사·실비아 전신은 보관만 했고 아직 화면에는 쓰지 않음(동료 장비창이 생기면 사용).

@@ -47,7 +47,7 @@ def main() -> None:
     import gaia_sheets
     gaia_pre, gaia_suf = gaia_sheets.prelude_and_suffix()
     import gaia_ui_art
-    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf   # 새 UI 키트 그림 덮어쓰기
+    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix()   # 새 UI 키트 그림 덮어쓰기
     art_list = json.loads(only_match(r"var files=(\[.*?\]),left=files\.length", original, "그림 파일"))
     title = only_match(r"(art_title_[0-9a-f]{10}\.webp)", original, "시작 화면")
 

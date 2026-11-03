@@ -930,7 +930,8 @@ import sage_map
 SAGE_MAP = sage_map.prepare(ROOT, R, TS, enc, assets, PORT)
 if _port8('sage'): PORT['sage_idle_0'] = _port8('sage')   # 현자 대화 초상
 SAGE_MAP['props'].append({**next(p for p in oprops if p['kind']=='dummy'), 'x':1150, 'y':730, 'name':'수련용 허수아비'})
-A = dict(sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, gaiaKyle=GAIA_KYLE, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), lucreaFace=LUC_FACE, b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
+GAIA_FULL = {n: enc(Image.open(R + f'gaia_full/{n}_full.png').convert('RGBA'), 90) for n in ['kyle', 'agatha', 'sylvia']}   # 케인이 준 전신 그림(장비창 인형 등)
+A = dict(gaiaFull=GAIA_FULL, sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LOOT_ICONS, potions=POTION_ICONS, mainQuests=MAIN_QUEST_DATA, storyChars=STORY_CHARS, companions=COMPANIONS, gaiaKyle=GAIA_KYLE, tierCatalog=CATALOG, camp=CAMPART, mounts=MOUNTART, vfx=VFXA, inn=INN, ground=enc(ground, 80), mini=enc(mini, 80), face=enc(face, 90), lucrea=_port8('lucrea'), lucreaFace=LUC_FACE, b=assets, elf=el, elfSkins=ELF_SKINS, ui=ui,
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, gaiaWpn=GAIA_WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()

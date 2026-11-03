@@ -930,7 +930,7 @@ function syncBars(){
   document.querySelector('.bar.mp i').style.width = (P.mp / P.maxMp * 100) + '%';
   $('hpTxt').textContent = `${P.hp} / ${P.maxHp}` + (P.shield > 0 ? `  (+${Math.ceil(P.shield)})` : ''); $('mpTxt').textContent = `${P.mp} / ${P.maxMp}`;
 }
-window.GAME = { gaiaMode:GAIA_PARTY_MODE, gaiaHeroFr:GAIA_HERO_FR, padMove:(x,y)=>{if(joy.id==null&&joyTouch==null){joy.dx=x;joy.dy=y;}}, NUM, P, drink, potionInfo, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
+window.GAME = { gaiaMode:GAIA_PARTY_MODE, padMove:(x,y)=>{if(joy.id==null&&joyTouch==null){joy.dx=x;joy.dy=y;}}, NUM, P, drink, potionInfo, cast, gainExp, expNeed, targetKillsForLevel, questExp, gainQuestExp, levelTier, tierMinLevel, tierMaxLevel,
   gainMastery, masteryNeed, masteryBonus, investStat, investSkill, skillPrereq, investPassive, investLife, useTownPortal, returnTownPortal, portalState,
   PASSIVE_DEF, LIFE_DEF, syncLifeUnlocks, lifeRank, cdLeft:id=>Math.max(CD[id]||0,id==='holy3_revive'?Math.max(0,((P.reviveReadyAt||0)-Date.now())/1000):0)/(SK[id]?SK[id].cd:1), clearCd:()=>{for(const k in CD)CD[k]=0;P.castRoot=0;},
   releaseInput:releaseAll, setHold:v=>{P.hold=v;}, setWeapon, setGold, near:()=>panel?null:near, act, closeAll, emergencyEscape, locationState, resumeLocation, walkableAt, nearestSafePosition,

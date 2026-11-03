@@ -43,8 +43,14 @@ def art():
     out["kit/hpbar"] = _enc(_open("ui/hud_clean/bar_hp.png"), 92)
     out["kit/mpbar"] = _enc(_open("ui/hud_clean/bar_mp.png"), 92)
     out["kit/pring"] = _enc(_open("ui/hud_clean/portrait_ring.png"), 92)
+    for n in ['kyle', 'agatha', 'sylvia']:
+        out[f"gaiaFull/{n}"] = _enc(_open(f"gaia_full/{n}_full.png"))
     return out
 
 
 def prelude():
     return "Object.assign(window.ART=window.ART||{}," + json.dumps(art()) + ");"
+
+
+def suffix():
+    return "A.gaiaFull={kyle:window.ART['gaiaFull/kyle'],agatha:window.ART['gaiaFull/agatha'],sylvia:window.ART['gaiaFull/sylvia']};"

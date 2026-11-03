@@ -486,7 +486,7 @@ function render(){
     L.style.cssText='width:458px;height:595px;background:none';renderStash(L);
   } else if (tab === 'equip'){
     L.style.backgroundImage = `url(${K['02']})`; L.style.width = '458px'; L.style.height = '595px';
-    const fig = el('img', 'fig'); fig.src = (G.gaiaMode&&G.gaiaHeroFr&&G.gaiaHeroFr.front&&G.gaiaHeroFr.front[0]&&G.gaiaHeroFr.front[0].src)||A.elfFront; L.append(fig);
+    const fig = el('img', 'fig'); fig.src = (G.gaiaMode&&A.gaiaFull&&A.gaiaFull.kyle)||A.elfFront; L.append(fig);
     for (const s in EQS){
       const [x, y] = EQS[s], it = eq[s];
       const b = slotEl(it, x, y, 76, 77, () => tapEq(s), pickSel && pickSel.from === 'eq' && pickSel.slot === s);
