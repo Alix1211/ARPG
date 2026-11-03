@@ -16,6 +16,8 @@ from __future__ import annotations
 import base64
 import io
 import json
+
+import numpy as np
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -136,6 +138,23 @@ def _inn2():
     ), assets
 
 
+# ---------- 대화 초상: 전신 그림을 허벅지 높이까지 자르고 아래를 페더(케인 2026-11-04) ----------
+DLG_CROP = .60      # 키의 몇 %까지 남길지(허벅지 높이)
+DLG_FEATHER = .24   # 남긴 부분의 아래 몇 %를 서서히 지울지
+
+
+def _dlg_portrait(name):
+    im = Image.open(R / f"gaia_full/{name}_full.png").convert("RGBA")
+    h = int(im.height * DLG_CROP)
+    a = np.array(im.crop((0, 0, im.width, h))).astype(float)
+    f0 = int(h * (1 - DLG_FEATHER))
+    t = (np.arange(h)[f0:] - f0) / (h - f0)
+    k = np.ones(h)
+    k[f0:] = 1 - t * t * (3 - 2 * t)
+    a[:, :, 3] *= k[:, None]
+    return _enc(Image.fromarray(a.astype("uint8"), "RGBA"), 90)
+
+
 def _sq():
     if not (SQ / "squat_front_sheet_1650x912.webp").is_file():
         print("[경고] assets_private/gaia_squat 이 없어 스쿼트 단련을 빼고 빌드합니다(자료는 케인 컴퓨터/비공개 보관본).")
@@ -151,6 +170,7 @@ def _sq():
         doc=(HERE / "gaia_squat_doc.html").read_text(encoding="utf-8"),
         bgPort=img("place/villa_port.webp"), bgLand=img("place/villa_land.webp"),
         front=img("squat_front_sheet_1650x912.webp"), back=img("squat_back_sheet_1650x912.webp"),
+        room=img("place/inn_room.webp") if (SQ / "place/inn_room.webp").is_file() else None,   # 여관방 그림(스쿼트 배경·여관방 대화 배경)
         ball=img("ball.webp"), stand=_enc(stand, 92),
         fx={k: img(f"fx/{k}.webp") for k in ("ph", "pp", "fs", "fo")},
         snd={n: _file_uri(SQ / "snd" / f"{n}.ogg", "audio/ogg") for n in snd_names},
@@ -165,7 +185,7 @@ def data():
         inn2, b = _inn2()
         k, uri, p = _stairs_prop("inn_stairs", 5.9, 2.62, 1.5)
         b[k] = uri
-        _CACHE.update(inn2=inn2, b=b, stairs1=p, sq=_sq())
+        _CACHE.update(inn2=inn2, b=b, stairs1=p, sq=_sq(), dlg={n: _dlg_portrait(n) for n in ("kyle", "agatha", "sylvia")})
     return _CACHE
 
 
@@ -182,12 +202,13 @@ def apply(A):
     if not any(p.get("k") == "inn_stairs" for p in A["inn"]["props"]):
         A["inn"]["props"].append(d["stairs1"])
     A["gaiaSq"] = d["sq"]
+    A["gaiaDlg"] = d["dlg"]
 
 
 def suffix():
     """미리보기용: 그림 목록 뒤에 붙는 JS."""
     d = data()
-    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"])) + ";"
+    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"])) + ";"
             "Object.assign(A.b,D.b);A.inn2=D.inn2;"
             "if(!A.inn.props.some(p=>p.k==='inn_stairs'))A.inn.props.push(D.stairs1);"
-            "A.gaiaSq=D.sq;})();")
+            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;})();")

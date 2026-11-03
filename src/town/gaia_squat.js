@@ -46,9 +46,9 @@ function squatLaunch(){
   const S=A.gaiaSq;if(!S)return false;   // 자료(assets_private/gaia_squat)가 없는 빌드에서는 열리지 않는다
   squatEnsure();
   const tier=squatTier();
-  const cfg={background:S.bgPort,backgroundL:S.bgLand,squat:{difficulty:tier,front:S.front,back:S.back,fb:6,bb:6,ball:S.ball,stand:S.stand,noFloor:true,fx:S.fx}};
+  const cfg={background:S.room||S.bgPort,backgroundL:S.room||S.bgLand,squat:{difficulty:tier,front:S.front,back:S.back,fb:6,bb:6,ball:S.ball,stand:S.stand,noFloor:true,fx:S.fx}};
   const aud=AUDIO_SETTINGS.get();
-  const boot='<script>window.GAIA_SOUND_SOURCES='+squatSafeJson(S.snd)+';window.GAIA_SQ_LAYOUT='+squatSafeJson(SQUAT_LAYOUT)+';window.GAIA_SQ_SFX='+aud.sfx+';window.GAIA_SQ_BGM='+aud.bgm+';<\/script>';
+  const boot='<script>window.GAIA_SOUND_SOURCES='+squatSafeJson(S.snd)+';window.GAIA_SQ_LAYOUT='+squatSafeJson(SQUAT_LAYOUT)+';window.GAIA_SQ_SFX='+aud.sfx+';window.GAIA_SQ_BGM='+aud.sfx+';<\/script>';
   squatCur={tier,reported:false,result:null,npc:squatNpcRef};
   closeAll();panel='minigames';   // 게임이 멈추고 배경음악이 꺼진다
   squatFrame.srcdoc=S.doc.replace('/*LIFE_CONFIG*/',()=>squatSafeJson(cfg)).replace('<meta',()=>boot+'<meta');
@@ -74,6 +74,19 @@ function squatClose(){
   if(c.npc&&MAP==='inn2')squatTalk(c.npc);
 }
 
+// 여관방 대화 배경: 케인이 준 여관 2층 방 그림을 대화창 뒤에 깐다(대화창이 닫히면 걷힘). 이후 여관방 대화도 이 함수를 쓴다.
+let squatBackdrop=null;
+function squatRoomBackdrop(on){
+  const S=A.gaiaSq;if(!S||!S.room)return;
+  if(!squatBackdrop){
+    squatBackdrop=document.createElement('div');squatBackdrop.id='gaiaRoomBg';
+    squatBackdrop.style.cssText='position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .25s;background:#120a05 center/cover no-repeat;box-shadow:inset 0 0 160px #000c';
+    squatBackdrop.style.backgroundImage='url('+S.room+')';
+    document.body.appendChild(squatBackdrop);
+    new MutationObserver(()=>{if(!$('dlg').classList.contains('on'))squatBackdrop.style.opacity='0';}).observe($('dlg'),{attributes:true,attributeFilter:['class']});
+  }
+  squatBackdrop.style.opacity=on?'1':'0';
+}
 function squatOnWorld(npcList,spotList,solidList,spriteList){
   const n=companionMarketNpc('merc_f_sword',SQUAT_NPC[0]*TS,SQUAT_NPC[1]*TS,false);if(!n)return;
   Object.assign(n,{name:'아가사',title:'여관 2층 · 아침 단련',squatHost:true,mercRoam:false,key:n.y});
@@ -95,7 +108,8 @@ function squatLine(){
 function squatTalk(n){
   talking=n;openDlg(n);
   const done=squatDoneToday(),morning=squatMorning();
-  if($('dlgImg')&&A.gaiaKit&&A.gaiaKit.port_agatha)$('dlgImg').src=A.gaiaKit.port_agatha;
+  const dp=(A.gaiaDlg&&A.gaiaDlg.agatha)||(A.gaiaKit&&A.gaiaKit.port_agatha);if(dp)$('dlgImg').src=dp;
+  squatRoomBackdrop(true);
   $('dlgName').textContent='아가사';$('dlgTitle').textContent='여관 2층 · 아침 단련';
   $('dlgLine').textContent=squatLine();
   const b=$('dlgTrade');b.hidden=false;
@@ -108,7 +122,7 @@ function squatStart(){
   return squatLaunch();
 }
 window.GAIA_SQUAT={
-  talk:squatTalk,start:squatStart,onWorld:squatOnWorld,morning:squatMorning,doneToday:squatDoneToday,
+  talk:squatTalk,start:squatStart,roomBackdrop:squatRoomBackdrop,onWorld:squatOnWorld,morning:squatMorning,doneToday:squatDoneToday,
   count:squatCount,tier:squatTier,max:squatMax,
   state:()=>({open:!!squatCur,day:guildState.squatDay,got:guildState.squatGot,ratio:guildState.squatRatio,tier:squatTier(),max:squatMax()}),
   debugResult(ratio){if(!squatCur)return false;squatResult({ratio,score:Math.round(ratio*1000)});return squatCur.result;}   // 시험용: 게임을 치르지 않고 결과만 넣는다

@@ -8,7 +8,8 @@ const GAIA_HUD={ready:false,K:null};
   GAIA_HUD.K=K;
   const u=k=>'url('+K[k]+')';
   const css=`
-#gaiaPartyHud.gk{width:150px;height:76px;padding:0;background:none;border:0;border-radius:0;overflow:visible;text-shadow:none}
+/* 케인 2026-11-04: 동료 체력 카드가 왼쪽 의뢰 목록을 가려서 상단 중앙으로(버튼 줄과 안 겹치게 중앙에서 살짝 왼쪽) */
+#gaiaPartyHud.gk{left:calc(50% - 90px);top:6px;width:150px;height:76px;padding:0;background:none;border:0;border-radius:0;overflow:visible;text-shadow:none}
 .gcard{position:relative;width:150px;height:36px;margin:0 0 4px}
 .gcard .gport{position:absolute;left:8px;top:8.5px;width:19px;height:19px;border-radius:50%;object-fit:cover;z-index:0}
 .gcard.ko .gport{filter:grayscale(1) brightness(.7)}
@@ -18,7 +19,7 @@ const GAIA_HUD={ready:false,K:null};
 .gcard .gbar.hp{top:16.3px;height:5.6px}.gcard .gbar.m{top:26.8px;height:3.8px}
 .gcard .gfill{height:100%;width:100%;overflow:hidden;position:relative}
 .gcard .gfill img{position:absolute;left:0;top:0;width:92px;height:100%}
-#gaiaRecallBtn.gk{left:calc(max(10px,env(safe-area-inset-left)) + 158px);top:96px;width:76px;height:33px;padding:0;border:0;border-radius:0;background:${u('gather_n')} center/100% 100% no-repeat;color:#ffe9bd;font:800 11px sans-serif;text-shadow:0 1px 2px #000;display:flex;align-items:center;justify-content:center}
+#gaiaRecallBtn.gk{left:calc(50% - 53px);top:86px;width:76px;height:33px;padding:0;border:0;border-radius:0;background:${u('gather_n')} center/100% 100% no-repeat;color:#ffe9bd;font:800 11px sans-serif;text-shadow:0 1px 2px #000;display:flex;align-items:center;justify-content:center}
 #gaiaRecallBtn.gk:active:not(:disabled){background-image:${u('gather_p')};padding-top:1px}
 #gaiaRecallBtn.gk:disabled{background-image:${u('gather_d')};color:#9a9a9a;text-shadow:none}
 #atk.gkd{background:${u('dial')} center/100% 100% no-repeat!important;filter:drop-shadow(0 4px 6px #000a)}

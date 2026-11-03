@@ -120,9 +120,10 @@ function questComplete(q){
 // 대사 한 줄: "이름(표정): 말" 이면 말하는 사람 초상·이름·표정으로 바꾸고 이름은 떼고 보여 줌. 이름이 없으면 지문(회색).
 const LUC_FACE_KEYS=['밝음','놀람','따짐','흐뭇','능청','뾰로통','격분','신남','못마땅','곤란','상처지침','상처담담','상처울적','상처아픔','상처미소'];
 // 가이아: 말하는 사람 표시는 루크레아 → 카일(초상은 카일 한 장). 대사 본문의 '루크레아'는 그대로 둔다.
-const GAIA_KYLE_PORT=()=>(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE)?((A.gaiaKyle&&A.gaiaKyle.port)||(A.gaiaKit&&A.gaiaKit.port_kyle)||null):null;
+const GAIA_KYLE_PORT=()=>(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE)?((A.gaiaDlg&&A.gaiaDlg.kyle)||(A.gaiaKyle&&A.gaiaKyle.port)||(A.gaiaKit&&A.gaiaKit.port_kyle)||null):null;
 function questSpeaker(name){
   if(name==='루크레아'){const kp=GAIA_KYLE_PORT();if(kp)return {name:'카일',title:'',port:kp};return {name,title:'',port:A.lucrea||A.face,luc:true};}
+  if(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&A.gaiaDlg&&(name==='아가사'||name==='실비아'))return {name,title:'',port:A.gaiaDlg[name==='아가사'?'agatha':'sylvia']};   // 케인 2026-11-04: 대화 초상은 전신 그림을 허벅지 높이로 자른 것
   const n=(A.npcs||[]).find(x=>x.name===name);if(n)return {name,title:n.title||'',port:A.port[n.k]||A.face};
   const qn=((A.mainQuests&&A.mainQuests.npcs)||[]).find(x=>x.name===name),no=qn?qn.no:({'레온':25,'제니':32})[name];
   if(no&&A.port['npc_'+String(no).padStart(2,'0')])return {name,title:(qn&&qn.title)||'',port:A.port['npc_'+String(no).padStart(2,'0')]};
