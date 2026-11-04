@@ -13,8 +13,8 @@ const GAIA_TREE={
     {id:'ky_charge',lv:30,name:'긴급 M파워 충전',desc:'셋이 자석처럼 붙고 하트가 터집니다. 동료 M이 가득 차고 잠깐 피해가 줄지만, 직후 잠시 멍해집니다.',kyle:1,icon:'holy3_revive'},
     {id:'ky_spower',lv:34,name:'긴급 S파워',desc:'여성형 몬스터를 잠깐 스턴시킵니다. 쓸모는 없지만 웃깁니다.',kyle:1,icon:'bolt1'},
     {id:'ky_fog',lv:38,name:'긴급 독무',desc:'녹색 독안개를 뿌립니다. 안개 안의 몬스터는 우리를 쫓지 않고 헤맵니다.',kyle:1,icon:'dark2'},
-    {id:'ky_ecstasy',lv:1,name:'엑스터시',desc:'카일의 마나를 써서 아가사의 광역 내려찍기를 지휘합니다. 4컷 코믹 컷인 후 원형 충격파가 퍼집니다.',kyle:1,icon:'fist3'},
-    {id:'ky_waterfall',lv:1,name:'워터폴',desc:'카일의 마나를 써서 실비아의 광역 물폭포를 지휘합니다. 4컷 코믹 컷인 후 물줄기가 연속 낙하합니다.',kyle:1,icon:'ice3'},
+    {id:'ky_ecstasy',lv:20,name:'엑스터시',desc:'카일의 마나를 써서 아가사의 광역 내려찍기를 지휘합니다. 4컷 코믹 컷인 후 원형 충격파가 퍼집니다.',kyle:1,icon:'fist3'},
+    {id:'ky_waterfall',lv:20,name:'워터폴',desc:'카일의 마나를 써서 실비아의 광역 물폭포를 지휘합니다. 4컷 코믹 컷인 후 물줄기가 연속 낙하합니다.',kyle:1,icon:'ice3'},
   ]},
   agatha:{name:'아가사',skills:[
     {id:'sword1',lv:1,name:'강하게 베기',kind:'phys',m:14,r:125,n:1,desc:'전방 강타와 경직.'},
@@ -85,6 +85,7 @@ function gaiaMobsNear(x,y,r){return monsters.filter(m=>m&&!m.dead&&!m.removed&&!
 gaiaSk.kyleCast=function(id,d,rank,cm,skillMul){
   const fx=(type,r,x,y)=>sfx.push({type,t:0,x:x==null?P.x:x,y:y==null?P.y-30:y,r:r||80});
   if(id==='ky_ecstasy'||id==='ky_waterfall'){
+    if(P.lv<20){say('레벨 20에 열리는 고급 광역기입니다.');return false;}
     return !!(window.GAIA_ULT&&GAIA_ULT.start(id==='ky_ecstasy'?'agatha':'sylvia',skillMul));
   }
   if(id==='ky_slap'){
@@ -251,3 +252,4 @@ gaiaSk.draw=function(dt){
   }
 };
 window.GAIA_SK=gaiaSk;
+
