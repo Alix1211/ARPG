@@ -89,7 +89,7 @@ gaiaSk.kyleCast=function(id,d,rank,cm,skillMul){
     const v=Math.round(60*skillMul);best.m=Math.min(GAIA_M_MAX,best.m+v);
     const dx=best.x-P.x,dy=best.y-P.y;if(Math.abs(dx)>Math.abs(dy)){P.dir='side';P.flip=dx<0;}else{P.dir=dy<0?'back':'front';P.flip=false;}
     gaiaFx.push({kind:'whip',c:best,t:0,life:.3,fx:P.x,fy:P.y-50});
-    pops.push({x:best.x,y:best.y-95,t:0,txt:'M +'+v+' 긴급매질!',crit:true});
+    heartPop(best.x,best.y-95,v);
     return true;
   }
   if(id==='ky_rush'){

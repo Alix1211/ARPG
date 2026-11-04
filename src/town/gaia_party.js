@@ -178,7 +178,7 @@ function gaiaFriendlySwing(dir,weapon){
     // 아군을 때려서는 쓰러뜨리지 않는다(체력 1 아래로 내려가지 않음).
     const dmg=Math.max(1,Math.round(c.maxHp*.012));
     c.hp=Math.max(1,c.hp-dmg);c.m=Math.min(GAIA_M_MAX,c.m+GAIA_CLUB_M);
-    pops.push({x:c.x,y:c.y-95,t:0,txt:'M +'+GAIA_CLUB_M,crit:true});
+    heartPop(c.x,c.y-95,GAIA_CLUB_M);
   }
 }
 // 채찍: 멀리서 M이 가장 낮은 동료를 자동으로 겨냥한다. 몹에게는 데미지가 없다.
@@ -198,7 +198,7 @@ function gaiaWhip(){
   if(P.atk){P.atk.dir=P.dir;P.atk.flip=P.flip;}
   best.hp=Math.max(1,best.hp-Math.max(1,Math.round(best.maxHp*.005)));
   best.m=Math.min(GAIA_M_MAX,best.m+GAIA_WHIP_M);
-  pops.push({x:best.x,y:best.y-95,t:0,txt:'M +'+GAIA_WHIP_M,crit:true});
+  heartPop(best.x,best.y-95,GAIA_WHIP_M);
   gaiaFx.push({kind:'whip',c:best,t:0,life:.24,fx:P.x,fy:P.y-50});
   return true;
 }

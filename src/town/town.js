@@ -1420,15 +1420,38 @@ function hitTarget(t, d, stagger, dmOver, kbOver){
   pops.push({ x: t.x + (Math.random() * 16 - 8), y: t.y - t.h * 0.75, t: 0, txt: String(v), crit });
 }
 const pops = [];
+// 케인 2026-11-04: 전투 중 'M +22' 글씨가 화면을 가려서, M이 오르면 반투명 핑크 하트가 폭폭 떠오르게 바꿈(글씨 없음).
+function heartPop(x, y, v){
+  const n = Math.max(3, Math.min(7, 2 + Math.round(v / 15))), hs = [];
+  for (let i = 0; i < n; i++) hs.push({ dx: (Math.random() * 2 - 1) * 20, dl: Math.random() * .22, sz: 6 + Math.random() * 6, sw: Math.random() * 6.28, rise: 46 + Math.random() * 30 });
+  pops.push({ x, y: y + 30, t: 0, hearts: hs, life: 1.15 });
+}
+function drawHeart(x, y, s){
+  ctx.beginPath(); ctx.moveTo(x, y + s * .9);
+  ctx.bezierCurveTo(x - s * 1.5, y - s * .1, x - s * .75, y - s * 1.1, x, y - s * .35);
+  ctx.bezierCurveTo(x + s * .75, y - s * 1.1, x + s * 1.5, y - s * .1, x, y + s * .9);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
 function drawPops(dt){
   for (const p of pops){
-    p.t += dt; const k = p.t / 0.9;
+    p.t += dt;
+    if (p.hearts){
+      ctx.save(); ctx.lineWidth = 1.5;
+      for (const h of p.hearts){
+        const u = (p.t - h.dl) / (p.life - .25); if (u <= 0 || u >= 1) continue;
+        const pop = Math.min(1, u * 6), a = (u < .6 ? 1 : 1 - (u - .6) / .4) * .62;
+        ctx.globalAlpha = a; ctx.fillStyle = 'rgba(255,120,175,1)'; ctx.strokeStyle = 'rgba(255,215,235,1)';
+        drawHeart(p.x + h.dx + Math.sin(h.sw + u * 5) * 6, p.y - u * h.rise, h.sz * (.5 + .5 * pop));
+      }
+      ctx.restore(); continue;
+    }
+    const k = p.t / 0.9;
     ctx.globalAlpha = Math.max(0, 1 - k * k); ctx.font = `900 ${p.crit ? 26 : 20}px sans-serif`; ctx.textAlign = 'center';
     ctx.lineWidth = 4; ctx.strokeStyle = '#2a140a'; ctx.fillStyle = p.heal ? '#8dffb0' : p.mana ? '#8fd0ff' : p.enemy ? '#ff8f82' : p.crit ? '#ffcf3a' : '#fff4dc';
     const y = p.y - k * 34; ctx.strokeText(p.txt, p.x, y); ctx.fillText(p.txt, p.x, y);
   }
   ctx.globalAlpha = 1;
-  while (pops.length && pops[0].t > 0.9) pops.shift();
+  for (let i = pops.length - 1; i >= 0; i--) if (pops[i].t > (pops[i].life || 0.9)) pops.splice(i, 1);
 }
 function nearestShotTarget(x, y, lim = 720){
   let best = null, bd = lim;
