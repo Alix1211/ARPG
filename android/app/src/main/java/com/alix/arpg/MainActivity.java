@@ -192,7 +192,7 @@ public final class MainActivity extends Activity {
         setContentView(game);
         requestHighestRefreshRate();
         // 주소 끝에 시각을 붙여 게임 코드(town.html)는 늘 최신으로, 그림 파일(art_*.js)은 이름이 같으면 저장해 둔 것을 씀
-        if (isOnline()) game.loadUrl(REMOTE + "?t=" + System.currentTimeMillis()); else loadLocal();
+        loadLocal();   // 가이아 퀘스트 앱: 인터넷의 골든퀘스트 판은 쓰지 않고, 앱 안에 든 가이아 판만 쓴다
         ui.postDelayed(() -> { if (!remoteOk) loadLocal(); }, 40000);   // 40초 안에 못 받으면 앱 안의 예비 판으로
     }
 

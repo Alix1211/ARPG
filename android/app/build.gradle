@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId 'com.alix.arpg'
+        applicationId 'com.alix.gaiaquest'
         minSdk 26
         targetSdk 35
         versionCode ((int) (System.currentTimeMillis() / 60000L - 29000000L))   // 만든 시각 기준: 새로 만든 것이 항상 더 큼
@@ -38,18 +38,18 @@ dependencies {
 
 // 인터넷이 안 될 때 쓸 예비 판: 빌드할 때 game/town.html 과 그림 파일(art_*.js)을 앱 안에 넣는다.
 def syncWebAssets = tasks.register('syncWebAssets', Sync) {
-    from(rootProject.file('../game')) { include 'town.html', 'art_*' }
+    from(rootProject.file('gaia_web')) { include 'town.html', 'art_*' }   // 가이아 퀘스트: 앱 안에 가이아 판을 통째로 넣는다
     into(layout.buildDirectory.dir('generated/webAssets/game'))
 }
 tasks.configureEach {
     if (name.startsWith('merge') && name.endsWith('Assets')) dependsOn(syncWebAssets)
 }
 
-// 만들어진 앱 파일 이름을 arpg.apk 로도 복사
+// 만들어진 앱 파일 이름을 arpg.apk 로도 복사(가이아 앱은 gaia-quest.apk)
 tasks.configureEach { t ->
     if (t.name == 'assembleDebug') t.doLast {
         def d = layout.buildDirectory.dir('outputs/apk/debug').get().asFile
         def a = new File(d, 'app-debug.apk')
-        if (a.exists()) java.nio.file.Files.copy(a.toPath(), new File(d, 'arpg.apk').toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        if (a.exists()) java.nio.file.Files.copy(a.toPath(), new File(d, 'gaia-quest.apk').toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
     }
 }
