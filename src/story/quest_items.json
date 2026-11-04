@@ -35,12 +35,6 @@
       "visual": "closed thick old road-maintenance ledger, reddish brown leather cover, brass corner fittings"
     },
     {
-      "id": "sled_manifest",
-      "name": "묻힌 썰매 운송표",
-      "cell": 5,
-      "visual": "folded transport manifest parchment with a small blue cord and a simple sled pictogram"
-    },
-    {
       "id": "winter_resin",
       "name": "굳은 봉화 수지",
       "cell": 6,
@@ -57,12 +51,6 @@
       "name": "관리 의무 조항",
       "cell": 8,
       "visual": "narrow rolled contract clause parchment, tied with dark teal ribbon, wax tab"
-    },
-    {
-      "id": "volcano_support_chip",
-      "name": "문양 있는 받침석 파편",
-      "cell": 9,
-      "visual": "dark volcanic pedestal stone fragment with carved orange-gold geometric pattern"
     },
     {
       "id": "blank_contract",

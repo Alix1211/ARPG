@@ -156,28 +156,32 @@ async def main():
 
         # 지정한 메인 구간: 앞번호는 완료 상태로 두고, 해당 구간은 실제 수락→현장→완료를 순차 통과한다.
         if RUN_MAIN:
-            prev=[f'MAIN_{i:03d}' for i in range(1,MAIN_FROM)]
+            exist_main=set(await ev("() => A.mainQuests.quests.map(q=>q.id)"))   # 가이아에서 뺀 퀘스트(핀 관련)는 건너뜀
+            prev=[f'MAIN_{i:03d}' for i in range(1,MAIN_FROM) if f'MAIN_{i:03d}' in exist_main]
             await ev("""x=>{localStorage.removeItem('arpg_save_v3');QUEST.loadData({schema:3,active:{},completed:x,items:{},visited:[],flags:{}});GAME.P.lv=70;GAME.P.exp=0;GAME.setGold(999999);}""",prev)
             await town()
             for n in range(MAIN_FROM,MAIN_TO+1):
                 qid=f'MAIN_{n:03d}'
+                if qid not in exist_main: continue
                 npc=await ev("id=>A.mainQuests.quests.find(q=>q.id===id).start.npc",qid)
                 await run_quest(qid,npc,24)
             got=await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_'))")
             for n in range(MAIN_FROM,MAIN_TO+1):
+                if f'MAIN_{n:03d}' not in exist_main: continue
                 assert f'MAIN_{n:03d}' in got,('main chunk missing',n,got[-5:])
             snap=await ev("() => QUEST.saveData()")
             await ev("() => QUEST.loadData(null)")
             await ev("d=>QUEST.loadData(d)",snap)
             got2=await ev("() => QUEST.state().completed.filter(x=>x.startsWith('MAIN_'))")
-            assert len(got2)>=MAIN_TO,('main save restore',MAIN_FROM,MAIN_TO,len(got2))
+            assert len(got2)>=len([x for x in exist_main if int(x[5:])<=MAIN_TO]),('main save restore',MAIN_FROM,MAIN_TO,len(got2))
 
         # 지정한 서브 구간: 대상 하나만 미완료로 격리하되 실제 레벨/선행메인/NPC 수락과 모든 단계를 사용한다.
         if RUN_SIDE:
-            all_main=[f'MAIN_{i:03d}' for i in range(1,71)]
-            all_side=[f'SIDE_{i:03d}' for i in range(1,46)]
+            all_main=await ev("() => A.mainQuests.quests.map(q=>q.id)")
+            all_side=await ev("() => A.mainQuests.sideQuests.map(q=>q.id)")
             for n in range(SIDE_FROM,SIDE_TO+1):
                 qid=f'SIDE_{n:03d}'
+                if qid not in all_side: continue
                 q=await ev("id=>A.mainQuests.sideQuests.find(q=>q.id===id)",qid)
                 completed=all_main + [x for x in all_side if x!=qid]
                 await ev("""x=>{QUEST.loadData({schema:3,active:{},completed:x.completed,items:{},visited:[],flags:{}});GAME.P.lv=x.lv;GAME.P.exp=0;GAME.setGold(999999);}""",
