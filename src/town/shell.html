@@ -387,8 +387,10 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 #boot{position:fixed;inset:0;z-index:9999;background:#0b0806;transition:opacity .45s ease}
 #boot.out{opacity:0;pointer-events:none}
 #bootImg{position:absolute;inset:0;background:#0b0806 center/cover no-repeat}
-#boot::after{content:'';position:absolute;left:0;right:0;bottom:0;height:24%;background:linear-gradient(transparent,#000c);pointer-events:none}
-#bootUi{position:absolute;z-index:1;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(46vw,520px);text-align:center}
+#boot::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 52%,#0007 0%,#0000 62%),linear-gradient(transparent 70%,#0009);pointer-events:none}
+#bootMid{position:absolute;z-index:1;left:50%;top:46%;transform:translate(-50%,-50%);width:min(50vw,600px);text-align:center}
+#bootLogo{width:100%;aspect-ratio:2172/724;background:center/contain no-repeat;filter:drop-shadow(0 6px 14px #000c)}
+#bootUi{width:min(46vw,520px);margin:10px auto 0;text-align:center}
 #bootBar{height:10px;border:2px solid #c9923e;border-radius:8px;background:#0008;overflow:hidden;box-shadow:0 0 12px #0009}
 #bootBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8a5a1c,#f3c76a)}
 #bootTxt{margin-top:8px;color:#f3e6c8;font:700 clamp(13px,1.8vw,18px) "Noto Sans KR",sans-serif;text-shadow:0 2px 6px #000,0 0 2px #000;letter-spacing:.06em}
@@ -398,7 +400,7 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 </style>
 </head>
 <body>
-<div id="boot"><div id="bootImg" style="background-image:url('/*TITLE*/')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div>
+<div id="boot"><div id="bootImg" style="background-image:url('/*TITLE*/')"></div><div id="bootMid"><div id="bootLogo" style="background-image:url('/*TITLE_LOGO*/')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div></div>
 <script>
 // 시작·로딩 화면: 그림 묶음을 받는 동안 막대를 채우고, 다 받으면 눌러서 시작. 떠 있는 동안 게임 시간은 멈춘다.
 (function(){var got=0,total=/*BOOT_TOTAL*/1;window.ARPG_TITLE_OPEN=true;

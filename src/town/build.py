@@ -978,7 +978,14 @@ _tb = io.BytesIO(); _title.save(_tb, 'WEBP', quality=82, method=6); _tb = _tb.ge
 TITLE_FILE = 'art_title_' + hashlib.sha1(_tb).hexdigest()[:10] + '.webp'
 if not os.path.exists(os.path.join(GAME_DIR, TITLE_FILE)):
     with open(os.path.join(GAME_DIR, TITLE_FILE), 'wb') as f: f.write(_tb)
-_keep = set(ART_FILES) | set(BGM_FILES) | {TITLE_FILE}
+# 케인 2026-11-04: 가이아 퀘스트 로고(투명 PNG)를 시작 화면 중앙에 얹는다.
+_logo = Image.open(os.path.join(ROOT, 'source_sheets', 'ui', 'title_logo.png')).convert('RGBA')
+_logo.thumbnail((1200, 600), Image.LANCZOS)
+_lb = io.BytesIO(); _logo.save(_lb, 'WEBP', quality=88, method=6); _lb = _lb.getvalue()
+LOGO_FILE = 'art_titlelogo_' + hashlib.sha1(_lb).hexdigest()[:10] + '.webp'
+if not os.path.exists(os.path.join(GAME_DIR, LOGO_FILE)):
+    with open(os.path.join(GAME_DIR, LOGO_FILE), 'wb') as f: f.write(_lb)
+_keep = set(ART_FILES) | set(BGM_FILES) | {TITLE_FILE, LOGO_FILE}
 for old_art in glob.glob(os.path.join(GAME_DIR, 'art_*')):
     if os.path.basename(old_art) not in _keep: os.remove(old_art)
 for _fn, _js in {**ART_FILES, **BGM_FILES}.items():
@@ -990,7 +997,7 @@ RESOLVE = ("const A=(function r(o){if(typeof o==='string')return o.startsWith('@
 # 그림 해시는 그대로 쓰되 세대값을 올리면 APK가 반드시 새 URL로 다시 받는다.
 ART_CACHE_EPOCH = '2'
 _kb = {_fn: max(1, len(_js) // 1024) for _fn, _js in ART_FILES.items()}
-html = html.replace('/*TITLE*/', TITLE_FILE).replace('/*BOOT_TOTAL*/1', str(sum(_kb.values())))
+html = html.replace('/*TITLE*/', TITLE_FILE).replace('/*TITLE_LOGO*/', LOGO_FILE).replace('/*BOOT_TOTAL*/1', str(sum(_kb.values())))
 html = html.replace('/*ART_LIST*/[]', json.dumps([[_fn + '?v=' + ART_CACHE_EPOCH, _kb[_fn]] for _fn in sorted(ART_FILES)]))   # 그림 묶음은 다시 받기 되는 로더가 받는다(shell.html)
 html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
 with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
