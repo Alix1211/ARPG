@@ -15,7 +15,7 @@ const COMIC_GUILD=[
 const COMIC_TOWN=[
   {i:2,x:26.6,y:18.9,fx:{breath:.036,sway:.012,swayHz:1.0}},          // 분수 곁 금발 아가씨
   {i:1,x:23.0,y:14.8,fx:{breath:.04,sway:.016,swayHz:1.2}},           // 서 있는 흰 머리 아가씨
-  {i:0,x:29.0,y:15.4,fx:{breath:.04,sway:.02,swayHz:1.4}}             // 기는 갈색 머리 아가씨
+  {i:0,x:27.4,y:15.6,fx:{breath:.04,sway:.02,swayHz:1.4}}             // 기는 갈색 머리 아가씨
 ];
 function comicOnWorld(id,spriteList,solidList){
   const meta=A.gaiaComic;if(!meta)return;
