@@ -17,6 +17,7 @@ const COMIC_TOWN=[
   {i:1,x:23.0,y:14.8,fx:{breath:.04,sway:.016,swayHz:1.2}},           // 서 있는 흰 머리 아가씨
   {i:0,x:27.4,y:15.6,fx:{breath:.04,sway:.02,swayHz:1.4}}             // 기는 갈색 머리 아가씨
 ];
+const COMIC_SCALE={guild:1,town:.7};   // 케인: 마을 인물은 머리가 너무 커서 마을 NPC 머리 크기에 맞춘다(몸 전체를 같이 줄임)
 function comicOnWorld(id,spriteList,solidList){
   const meta=A.gaiaComic;if(!meta)return;
   const list=id==='guild'?COMIC_GUILD:id==='town'?COMIC_TOWN:null;if(!list)return;
@@ -25,9 +26,10 @@ function comicOnWorld(id,spriteList,solidList){
   for(const c of list){
     const m=arr[c.i];if(!m||!BI[m.k])continue;
     const x=c.x*TS,y=c.y*TS;
-    const n={k:m.k,img:BI[m.k],x,y,w:m.w,h:m.h,title:'장식',name:'',comic:true,fx:c.fx,ph:Math.random()*7,key:y};
+    const sc=COMIC_SCALE[id]||1,mw=m.w*sc,mh=m.h*sc;
+    const n={k:m.k,img:BI[m.k],x,y,w:mw,h:mh,title:'장식',name:'',comic:true,fx:c.fx,ph:Math.random()*7,key:y};
     spriteList.push(n);
-    solidList.push({x0:x-m.w*.3,x1:x+m.w*.3,y0:y-12,y1:y-1});
+    solidList.push({x0:x-mw*.3,x1:x+mw*.3,y0:y-12,y1:y-1});
   }
 }
 window.GAIA_COMIC={onWorld:comicOnWorld,count:()=>sprites.filter(s=>s.comic).length};
