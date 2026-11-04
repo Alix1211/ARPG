@@ -27,6 +27,7 @@ PX = 64
 SCALE = 1.5
 
 W, H = 14, 10
+SD_H = 104             # 세계에 서는 접수원 SD 그림의 높이(px, 기존 SD 인물과 같은 크기)
 DLG_CROP, DLG_FEATHER = .60, .24   # 대화 초상: 아가사·실비아와 같은 값
 
 
@@ -129,6 +130,11 @@ def build():
     if full_p.is_file():
         # 접수원은 게임 세계(전부 SD 비율)에 세우지 않고, 접수대에서 말을 걸 때 대화창 초상으로만 나온다(케인 2026-11-04).
         recep = dict(has=True, port=_recep_portrait(Image.open(full_p).convert("RGBA")))
+        sd_p = GP / "receptionist_sd.png"   # 세계에 서는 SD 그림(make_guild_sprite.py 로 게임 톤에 맞춘 것)
+        if sd_p.is_file():
+            sd = Image.open(sd_p).convert("RGBA")
+            assets["guild_recep"] = _enc(sd, 92)
+            recep.update(k="guild_recep", h=SD_H, w=SD_H * sd.width / sd.height)
     else:
         print("[경고] assets_private/gaia_guild 에 접수원 그림이 없어 접수원 없이 길드를 빌드합니다.")
     room = None

@@ -42,10 +42,10 @@ async def main():
             await pg.screenshot(path=SHOT + '/guild_in.png')
 
         # 접수대: 대화창에 접수원 초상
-        await ev(f"() => {{GAME.P.x=7*{TS};GAME.P.y=4.5*{TS};}}")
+        await ev(f"() => {{GAME.P.x=7.85*{TS};GAME.P.y=4.05*{TS}+34;}}")
         await pg.wait_for_timeout(400)
         nm = await ev("() => GAME.near()&&GAME.near().name")
-        assert nm == '접수대', nm
+        assert nm == '접수원', nm
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(400)
         r = await ev("() => [dlgName.textContent, dlgTitle.textContent, dlgLine.textContent, dlgImg.src.slice(0,22), dlgTrade.textContent, dlgTrade.hidden]")

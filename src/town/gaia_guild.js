@@ -3,7 +3,8 @@
 // 마을의 길드 홀 문으로 들어가면 접수원이 접수대에 서 있고, 길드장 하르트는 안쪽 책상에 있다. 용병들이 홀을 오간다.
 // 의뢰 게시판은 실내 벽에 걸려 있고(이름 '의뢰 게시판' → GUILD.open), 접수원·하르트에게 말을 걸어도 같은 의뢰창이 열린다.
 // ※ 접수원 대사는 모두 [임시]: 케인이 정해 주신 말투가 아직 없어서 기능 안내만 적었다(이름도 아직 '접수원').
-const GUILD_COUNTER_POS=[7.0,4.2];        // 접수대 앞(칸): 여기서 말을 걸면 접수원 초상이 뜬다
+const GUILD_RECEP_POS=[7.85,4.05];        // SD 접수원이 서는 자리(칸): 접수대 앞 오른쪽(케인이 합성해 보여 준 위치)
+const GUILD_COUNTER_POS=[7.0,4.2];        // SD 그림이 없을 때만 쓰는 말 거는 자리
 const GUILD_HART_POS=[9.2,4.2];           // 안쪽 책상 옆(칸)
 const GUILD_DOOR_FALLBACK=[1104,640];     // 길드 홀 문 앞(마을 좌표). 돌아갈 곳을 모를 때만 쓴다.
 let guildReturn=null,guildBackdrop=null;
@@ -55,10 +56,12 @@ function guildRecepTalk(n){
 function guildHallOnWorld(npcList,spotList,solidList,spriteList){
   const rc=A.gaiaGuild&&A.gaiaGuild.recep;
   if(rc&&rc.has){
-    // 접수원은 그려 세우지 않는다(마을 인물은 전부 SD 비율이라 큰 전신이 어울리지 않음). 접수대 앞에 서서 말을 걸면 대화창에 큰 초상이 나온다.
-    const x=GUILD_COUNTER_POS[0]*TS,y=GUILD_COUNTER_POS[1]*TS;
-    const n={k:'guild_recep',no:0,name:'접수원',title:'모험가 길드 · 접수대',x,y,w:0,h:0,line:guildRecepLine(),shop:'guild',at:null,guildHost:true,key:y};
-    spotList.push({name:'접수대',x:n.x,y:n.y,r:62,kind:'npc',npc:n});
+    // 세계에는 SD 접수원(rc.k)이 서고, 말을 걸면 대화창에 큰 초상이 나온다(케인 2026-11-04). SD 그림이 없는 빌드에서는 접수대 앞 자리에서만 말을 걸 수 있다.
+    const pos=rc.k?GUILD_RECEP_POS:GUILD_COUNTER_POS,x=pos[0]*TS,y=pos[1]*TS;
+    const n={k:rc.k||'guild_recep',no:0,name:'접수원',title:'모험가 길드 · 접수대',x,y,w:rc.w||0,h:rc.h||0,line:guildRecepLine(),shop:'guild',at:null,guildHost:true,
+      img:rc.k?BI[rc.k]:null,ph:Math.random()*7,key:y};
+    if(rc.k){npcList.push(n);spriteList.push(n);solidList.push({x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1});}
+    spotList.push({name:n.name,x:n.x,y:n.y+6,r:56,kind:'npc',npc:n});
   }
   const hb=(A.npcs||[]).find(v=>v.shop==='guild'&&v.name==='하르트');
   if(hb){
