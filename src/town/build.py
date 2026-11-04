@@ -999,6 +999,8 @@ ART_CACHE_EPOCH = '2'
 _kb = {_fn: max(1, len(_js) // 1024) for _fn, _js in ART_FILES.items()}
 html = html.replace('/*TITLE*/', TITLE_FILE).replace('/*TITLE_LOGO*/', LOGO_FILE).replace('/*BOOT_TOTAL*/1', str(sum(_kb.values())))
 html = html.replace('/*ART_LIST*/[]', json.dumps([[_fn + '?v=' + ART_CACHE_EPOCH, _kb[_fn]] for _fn in sorted(ART_FILES)]))   # 그림 묶음은 다시 받기 되는 로더가 받는다(shell.html)
-html = html.replace('/*ASSETS*/', RESOLVE + json.dumps(A2, ensure_ascii=False) + ');').replace('/*GAME*/', js)
+# 인라인 <script> 안에 '</script'가 그대로 들어가면 브라우저가 거기서 게임 코드를 끊어 버린다(가이아 여관 2층 문서에 들어 있음). 문자열 안에서만 쓰이므로 '<\/script'로 바꿔도 뜻이 같다.
+_safe = lambda s: s.replace('</script', '<\\/script')
+html = html.replace('/*ASSETS*/', _safe(RESOLVE + json.dumps(A2, ensure_ascii=False) + ');')).replace('/*GAME*/', _safe(js))
 with open(os.path.join(GAME_DIR, 'town.html'), 'w', encoding='utf-8') as f: f.write(html)
 print('ok', len(html) // 1024, 'KB + 그림', len(ART_FILES), '묶음', sum(map(len, ART_FILES.values())) // 1024, 'KB + 음악', len(BGM_FILES), '곡', sum(map(len, BGM_FILES.values())) // 1024, 'KB')
