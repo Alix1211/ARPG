@@ -935,10 +935,12 @@ A = dict(gaiaFull=GAIA_FULL, sage=SAGE_MAP, questItems=QUEST_ITEMS, lootIcons=LO
          map=dict(w=MW, h=MH, ts=TS, px=PX), blds=blds, props=props, npcs=npcs, icons=ICON, port=PORT, vils=vils, kit=KIT, elfFront=ELF_FRONT, wpn=WPNI, gaiaWpn=GAIA_WPNI, out=OUT, skicon=SKI, field=dict(tiles=FIELD_TILES, props=FIELD_PROPS), monsters3=MON3, monsters1=MON1, dtiles=DTI, dprops=DPR, sfx=SFXF, bgm=BGMF)
 import gaia_squat_assets   # 가이아: 여관 2층 '이들 숙소' + 아침 스쿼트 단련 자료
 gaia_squat_assets.apply(A)
+import gaia_cutin_assets
+A['gaiaCutins'] = gaia_cutin_assets.art()
 def source(name):
     with open(os.path.join(HERE, name), encoding='utf-8') as f: return f.read()
 js = source('tier_match.js') + '\n' + source('town.js')
-js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skill_presentation.js') + '\n' + source('skills2.js') + '\n' + source('sage.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('telemetry.js') + '\n' + source('field_dungeon.js') + '\n' + source('companion.js') + '\n' + source('gaia_party.js') + '\n' + source('gaia_skills.js') + '\n' + source('gaia_hud.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('backup.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js') + '\n' + source('gaia_squat.js') + '\n' + source('gaia_guild.js') + '\n' + source('gaia_comic.js') + '\n' + source('gaia_rent.js') + '\n' + source('gaia_jiggle.js'))
+js = js.replace('/*FIELD_DUNGEON*/', source('vfx.js') + '\n' + source('skill_presentation.js') + '\n' + source('skills2.js') + '\n' + source('sage.js') + '\n' + source('inn.js') + '\n' + source('chat.js') + '\n' + source('telemetry.js') + '\n' + source('field_dungeon.js') + '\n' + source('companion.js') + '\n' + source('gaia_party.js') + '\n' + source('gaia_skills.js') + '\n' + source('gaia_ultimate.js') + '\n' + source('gaia_hud.js') + '\n' + source('dungeon.js') + '\n' + source('sound.js') + '\n' + source('bgm.js') + '\n' + source('backup.js') + '\n' + source('trade.js') + '\n' + source('guild.js') + '\n' + source('quest.js') + '\n' + source('gaia_squat.js') + '\n' + source('gaia_guild.js') + '\n' + source('gaia_comic.js') + '\n' + source('gaia_rent.js') + '\n' + source('gaia_jiggle.js'))
 html = source('shell.html').replace('/*SAVE_SYNC*/', source('save_sync.js'))
 js += '\n' + source('minigames.js') + '\n' + source('ui.js') + '\n' + source('gamepad.js')
 import time as _t

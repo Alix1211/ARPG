@@ -57,13 +57,14 @@ def main() -> None:
     gaia_pre, gaia_suf = gaia_sheets.prelude_and_suffix()
     import gaia_ui_art
     import gaia_squat_assets
-    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix() + gaia_squat_assets.suffix() + gaia_audio_suffix()   # UI·여관 자료와 가이아 전투 음원
+    import gaia_cutin_assets
+    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix() + gaia_squat_assets.suffix() + gaia_audio_suffix() + gaia_cutin_assets.preview_suffix()   # UI·여관·전투 음원·컷인
     art_list = json.loads(only_match(r"var files=(\[.*?\]),left=files\.length", original, "그림 파일"))
     title = only_match(r"(art_title_[0-9a-f]{10}\.webp)", original, "시작 화면")
 
     modules = [
         "vfx.js", "skill_presentation.js", "skills2.js", "sage.js", "inn.js",
-        "chat.js", "telemetry.js", "field_dungeon.js", "companion.js", "gaia_party.js", "gaia_skills.js", "gaia_hud.js",
+        "chat.js", "telemetry.js", "field_dungeon.js", "companion.js", "gaia_party.js", "gaia_skills.js", "gaia_ultimate.js", "gaia_hud.js",
         "dungeon.js", "sound.js", "bgm.js", "backup.js", "trade.js",
         "guild.js", "quest.js", "gaia_squat.js", "gaia_guild.js", "gaia_comic.js", "gaia_rent.js", "gaia_jiggle.js",
     ]

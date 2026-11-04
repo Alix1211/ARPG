@@ -1202,14 +1202,15 @@ function frame(now){
   if(panel==='minigames'){last=now;requestAnimationFrame(frame);return;}
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN;
-  const impactPause=skillShowTick(dt,simPaused),sdt=simPaused||impactPause?0:dt;
+  const ultimatePause=!!(window.GAIA_ULT&&GAIA_ULT.tick(dt,simPaused));
+  const impactPause=skillShowTick(dt,simPaused),sdt=simPaused||impactPause||ultimatePause?0:dt;
   let dx=joy.dx,dy=joy.dy;
   if (keys.a || keys.arrowleft) dx = -1; if (keys.d || keys.arrowright) dx = 1;
   if (keys.w || keys.arrowup) dy = -1; if (keys.s || keys.arrowdown) dy = 1;
   const mag = Math.hypot(dx, dy);
   const locked=typeof playerControlLocked==='function'&&playerControlLocked();
-  P.moving = !simPaused && !impactPause && !panel && !locked && mag > 0.15;
-  if (P.hold && !simPaused && !impactPause && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
+  P.moving = !simPaused && !impactPause && !ultimatePause && !panel && !locked && mag > 0.15;
+  if (P.hold && !simPaused && !impactPause && !ultimatePause && !panel && !traveling) attack();   // 공격 버튼을 누르고 있으면 계속 공격
   if (P.moving){
     // 조이스틱을 끝까지 밀면 뛰기, 키보드는 기본 뛰기(Shift 누르면 걷기)
     const kb = !joy.dx && !joy.dy;
@@ -1371,6 +1372,7 @@ function wDrawWeapon(weapon, x, y, ang, sc = 1, mir = false){
 function wDraw(x, y, ang, sc = 1, mir = false){ return wDrawWeapon(WPN,x,y,ang,sc,mir); }
 const shots = [];
 function attack(){
+  if(window.GAIA_ULT&&GAIA_ULT.casting())return;
   if (typeof playerControlLocked === 'function' && playerControlLocked()) return;
   if (!WPN){ say('맨손입니다'); return; }
   if(P.atk&&P.atk.t<(P.atk.dur||DUR[P.atk.wt])*.75)return;
@@ -1575,6 +1577,7 @@ const SK={
 const CD = {}; const sfx = [];
 function faceVec(){ return P.dir === 'front' ? [0, 1] : P.dir === 'back' ? [0, -1] : [P.flip ? -1 : 1, 0]; }
 function cast(id,mod){
+  if(window.GAIA_ULT&&GAIA_ULT.casting())return false;
   if(typeof playerControlLocked==='function'&&playerControlLocked())return false;
   const k=SK[id],rank=(P.skillLv&&P.skillLv[id])||0;if(!k||rank<1)return false;mod=mod||{dmg:1,mp:1};
   if((CD[id]||0)>0)return false;
