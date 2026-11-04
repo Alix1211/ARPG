@@ -104,7 +104,7 @@ function companionEnsureMarket(mapId=MAP){
   if(!market.roster||market.roster.length!==5)companionRotateMarket(true,key,false);
   const want=(mapId==='inn'||mapId==='guild'?market.inn:market.town).filter(id=>id!==companionState.active);
   const positions=mapId==='guild'   // 가이아: 길드 홀(용병 셋이 오간다)
-    ? [[4.4*TS,8.3*TS],[8.0*TS,6.6*TS],[5.6*TS,5.2*TS]]
+    ? [[2.8*TS,7.95*TS],[8.7*TS,5.75*TS],[11.0*TS,8.05*TS]]   // 긴 탁자 아래 · 접수대 앞(가끔 걸음) · 둥근 탁자 앞
     : mapId==='inn'
     ? [[2.9*TS,7.05*TS],[7.0*TS,7.45*TS],[11.45*TS,7.15*TS]]
     : mapId==='fieldvillage'
@@ -113,6 +113,9 @@ function companionEnsureMarket(mapId=MAP){
   for(let i=0;i<want.length&&i<positions.length;i++){
     const id=want[i];if(npcs.some(n=>n.mercenaryMarket&&n.companion===id))continue;
     const n=companionMarketNpc(id,positions[i][0],positions[i][1],GAIA_PARTY_MODE||mapId!=='inn');if(!n)continue;
+    if(mapId==='guild'){   // 케인 2026-11-04: 길드 홀이 정신없다 → 둘은 서 있고, 하나만 가끔 짧게 걷는다
+      if(i===1){n.mercRare=true;n.mercRange=42;n.mercRangeY=28;}else n.mercRoam=false;
+    }
     npcs.push(n);sprites.push(n);
     if(!GAIA_PARTY_MODE)spots.push({name:n.name,x:n.x,y:n.y+6,r:52,kind:'npc',npc:n});   // 가이아: 용병은 말을 걸 수 없는 배회 NPC(기능은 잠금)
   }
@@ -136,9 +139,9 @@ function companionUpdateMarket(dt){
     n.mercMoving=false;n.mercWait-=dt;n.mercT+=dt;
     const dx=n.mercTx-n.x,dy=n.mercTy-n.y,dd=Math.hypot(dx,dy);
     if(n.mercWait<=0||dd<8){
-      n.mercWait=2+Math.random()*4;
-      n.mercTx=n.mercHomeX+(Math.random()*2-1)*115;
-      n.mercTy=n.mercHomeY+(Math.random()*2-1)*75;
+      n.mercWait=n.mercRare?9+Math.random()*9:2+Math.random()*4;   // 가이아 길드: 가끔만 걷는 용병은 오래 서 있다가 짧게 움직인다
+      n.mercTx=n.mercHomeX+(Math.random()*2-1)*(n.mercRange||115);
+      n.mercTy=n.mercHomeY+(Math.random()*2-1)*(n.mercRangeY||75);
       continue;
     }
     const step=Math.min(dd,42*dt),nx=n.x+dx/dd*step,ny=n.y+dy/dd*step;
