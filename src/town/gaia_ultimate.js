@@ -145,7 +145,7 @@ const GAIA_ULT = (()=>{
     if(paused&&!state.preview)return state.phase==='cutin';
     if(state.map!==MAP||(MAP==='field'&&state.mapSerial!==fieldSerial)){finish();return false;}
     if(state.phase==='cutin'){
-      state.t+=dt;drawCutin(Math.min(CUTIN_SEC,state.t));
+      state.t+=dt*2;drawCutin(Math.min(CUTIN_SEC,state.t));
       if(state.t>=CUTIN_SEC){
         state.phase='effect';state.fxT=0;state.wave=0;stage.style.opacity='0';caption.style.opacity='0';
         stage.style.filter='none';
@@ -185,12 +185,3 @@ const GAIA_ULT = (()=>{
   return {start,tick,casting,preview};
 })();
 window.GAIA_ULT=GAIA_ULT;
-
-
-// Preview is cosmetic: no level, HP, mana, cooldown or save changes.
-(()=>{const panel=document.getElementById('settings');if(!panel)return;
-const row=document.createElement('div');row.className='row';
-for(const [who,label] of [['agatha','지면 광역기 미리보기'],['sylvia','폭우 광역기 미리보기']]){
- const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=label;
- b.onclick=()=>{document.getElementById('settingsClose').click();GAIA_ULT.preview(who);};row.append(b);
-}panel.append(row);})();
