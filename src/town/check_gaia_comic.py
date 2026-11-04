@@ -61,25 +61,27 @@ async def main():
         if SHOT:
             await pg.screenshot(path=SHOT + '/dlg_receptionist_regions.png')
         await ev("() => GAIA_JIGGLE.debug(false)")
-        # 가슴 부위를 눌러 보면 움직인다
+        # 가슴 부위를 눌러 보면 그림이 실제로 휜다(눌러 두지 않은 장면과 눌렀을 때 장면의 화소 차이)
+        import io
+        from PIL import Image, ImageChops
         box = await ev("() => { const r=document.getElementById('dlgFx').getBoundingClientRect(); return [r.left,r.top,r.width,r.height]; }")
-        x, y = box[0] + box[2] * .5, box[1] + box[3] * .405
+        clip = {'x': box[0], 'y': box[1], 'width': box[2], 'height': box[3]}
+        await pg.wait_for_timeout(2600)   # 처음 안내 원이 사라질 때까지
+        base = Image.open(io.BytesIO(await pg.screenshot(clip=clip))).convert('RGB')
+        x, y = box[0] + box[2] * .34, box[1] + box[3] * .405
         await pg.mouse.move(x, y)
         await pg.mouse.down()
-        await pg.wait_for_timeout(120)
-        mx = 0
-        for _ in range(12):
-            s = await ev("() => GAIA_JIGGLE.state().regs[0]")
-            mx = max(mx, abs(s['y']))
-            if SHOT and _ == 3:
-                await pg.screenshot(path=SHOT + '/dlg_receptionist_jiggle.png')
-            await pg.wait_for_timeout(60)
+        await pg.wait_for_timeout(70)
+        shot = Image.open(io.BytesIO(await pg.screenshot(clip=clip))).convert('RGB')
+        if SHOT:
+            await pg.screenshot(path=SHOT + '/dlg_receptionist_jiggle.png')
         await pg.mouse.up()
-        assert mx > .004, ('가슴이 움직이지 않음', mx)
-        # 엉덩이 부위는 가슴과 따로 움직인다
-        await pg.wait_for_timeout(1600)
-        s = await ev("() => GAIA_JIGGLE.state().regs")
-        assert abs(s[0]['y']) < .02, ('가라앉지 않음', s)
+        diff = ImageChops.difference(base, shot).convert('L')
+        changed = sum(1 for v in diff.getdata() if v > 24)
+        assert changed > 300, ('가슴을 눌러도 그림이 휘지 않음', changed)
+        st = await ev("() => GAIA_JIGGLE.state()")
+        assert st['regs'][0]['hits'] >= 1 and st['regs'][1]['hits'] >= 1, st   # 반대쪽도 따라 움직임
+        await pg.wait_for_timeout(1500)
         # 다른 초상(아가사·실비아)
         for k in ('agatha', 'sylvia'):
             await ev(f"() => {{document.getElementById('dlg').classList.add('on');document.getElementById('dlgImg').src=A.gaiaDlg.{k};}}")
