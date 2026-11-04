@@ -66,7 +66,7 @@ def main() -> None:
         "vfx.js", "skill_presentation.js", "skills2.js", "sage.js", "inn.js",
         "chat.js", "telemetry.js", "field_dungeon.js", "companion.js", "gaia_party.js", "gaia_skills.js", "gaia_ultimate.js", "gaia_hud.js",
         "dungeon.js", "sound.js", "bgm.js", "backup.js", "trade.js",
-        "guild.js", "quest.js", "gaia_squat.js", "gaia_guild.js", "gaia_comic.js", "gaia_rent.js", "gaia_jiggle.js",
+        "guild.js", "quest.js", "gaia_squat.js", "gaia_guild.js", "gaia_comic.js", "gaia_rent.js", "gaia_gargoyle.js", "gaia_jiggle.js",
     ]
     js = read("tier_match.js") + "\n" + read("town.js").replace(
         "/*FIELD_DUNGEON*/", "\n".join(read(name) for name in modules)

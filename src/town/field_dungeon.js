@@ -848,6 +848,7 @@ function killMonster(m){
   if(window.GAME&&GAME.gainExp)GAME.gainExp(monsterExp(m));
   if(window.GUILD)GUILD.onKill(m);
   if(window.QUEST)QUEST.onKill(m);
+  if(window.GAIA_GARGOYLE)GAIA_GARGOYLE.onKill(m);
   if(m&&m.boss&&window.PAD)PAD.rumble(1,1,500);   // 보스 처치 진동
 }
 function appendEncounterSprites(list,camX,camY,vw,vh){
