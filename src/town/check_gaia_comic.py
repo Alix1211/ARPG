@@ -28,10 +28,10 @@ async def main():
         # 마을: 처음 세워질 때부터 장식 인물이 있어야 한다
         assert await ev("() => GAIA_COMIC.count()") == 3, '마을 장식 인물 수'
         if SHOT:
-            await ev(f"() => {{GAME.P.x=24*{TS};GAME.P.y=22.4*{TS};}}")
+            await ev(f"() => {{GAME.P.x=26*{TS};GAME.P.y=19.6*{TS};}}")
             await pg.wait_for_timeout(700)
             await pg.screenshot(path=SHOT + '/town_comic_plaza.png')
-            await ev(f"() => {{GAME.P.x=17.5*{TS};GAME.P.y=21.4*{TS};}}")
+            await ev(f"() => {{GAME.P.x=26*{TS};GAME.P.y=14.8*{TS};}}")
             await pg.wait_for_timeout(700)
             await pg.screenshot(path=SHOT + '/town_comic_left.png')
         # 길드

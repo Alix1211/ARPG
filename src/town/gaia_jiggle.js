@@ -11,12 +11,12 @@ const JG_REGIONS={
     {n:'머리카락 오른쪽',cx:.93,cy:.66,rx:.07,ry:.2,amp:.016,breath:0,hz:1.7,sway:1}
   ],
   agatha:[
-    {n:'가슴',cx:.73,cy:.385,rx:.14,ry:.07,amp:.02,breath:1,hz:3.0},
-    {n:'엉덩이',cx:.64,cy:.66,rx:.17,ry:.07,amp:.016,breath:0,hz:2.7},
-    {n:'머리카락',cx:.52,cy:.36,rx:.11,ry:.2,amp:.014,breath:0,hz:1.6,sway:1}
+    {n:'가슴',cx:.77,cy:.44,rx:.12,ry:.07,amp:.02,breath:1,hz:3.0},
+    {n:'엉덩이',cx:.66,cy:.65,rx:.17,ry:.07,amp:.016,breath:0,hz:2.7},
+    {n:'머리카락',cx:.45,cy:.5,rx:.1,ry:.25,amp:.014,breath:0,hz:1.6,sway:1}
   ],
   sylvia:[
-    {n:'가슴',cx:.52,cy:.43,rx:.17,ry:.07,amp:.02,breath:1,hz:3.0},
+    {n:'가슴',cx:.55,cy:.47,rx:.15,ry:.07,amp:.02,breath:1,hz:3.0},
     {n:'엉덩이',cx:.52,cy:.70,rx:.2,ry:.07,amp:.016,breath:0,hz:2.7},
     {n:'머리카락',cx:.26,cy:.55,rx:.13,ry:.28,amp:.016,breath:0,hz:1.5,sway:1}
   ]

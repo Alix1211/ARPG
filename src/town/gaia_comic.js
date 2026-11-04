@@ -9,13 +9,13 @@ const COMIC_GUILD=[
   {i:1,x:3.3,y:4.05,fx:{breath:.04,sway:.026,swayHz:1.6}},            // 팔을 든 채 꿇어앉은 아가씨: 버티느라 흔들
   {i:2,x:10.3,y:3.25,fx:{breath:.032}},                               // 학자 + 서가 밑 아가씨
   {i:3,x:3.4,y:5.75,fx:{breath:.03,nod:2.2,nodHz:3.7}},               // 드워프(호루라기) + 기는 아가씨: 탁자 뒤
-  {i:4,x:9.0,y:5.55,fx:{breath:.03,sway:.01,swayHz:.9}},              // 엘프 서기
+  {i:4,x:5.15,y:5.35,fx:{breath:.03,sway:.01,swayHz:.9}},              // 엘프 서기
   {i:5,x:9.4,y:8.55,fx:{breath:.04,sway:.034,swayHz:2.1}}             // 짐을 든 아가씨: 휘청
 ];
 const COMIC_TOWN=[
-  {i:2,x:20.9,y:20.8,fx:{breath:.036,sway:.012,swayHz:1.0}},          // 분수 곁 금발 아가씨
-  {i:1,x:31.9,y:19.9,fx:{breath:.04,sway:.016,swayHz:1.2}},           // 서 있는 흰 머리 아가씨
-  {i:0,x:15.6,y:19.9,fx:{breath:.04,sway:.02,swayHz:1.4}}             // 기는 갈색 머리 아가씨
+  {i:2,x:26.6,y:18.9,fx:{breath:.036,sway:.012,swayHz:1.0}},          // 분수 곁 금발 아가씨
+  {i:1,x:23.0,y:14.8,fx:{breath:.04,sway:.016,swayHz:1.2}},           // 서 있는 흰 머리 아가씨
+  {i:0,x:30.6,y:20.5,fx:{breath:.04,sway:.02,swayHz:1.4}}             // 기는 갈색 머리 아가씨
 ];
 function comicOnWorld(id,spriteList,solidList){
   const meta=A.gaiaComic;if(!meta)return;
