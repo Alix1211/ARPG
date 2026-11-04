@@ -1700,3 +1700,11 @@
 - **가이아 앱(APK)**: 골든퀘스트 앱과 따로 설치되는 별도 앱. 이 브랜치(`gaia-continent-three-party`)에서만 바꿨고 메인은 그대로. 앱 고유번호 `com.alix.gaiaquest`, 앱 이름 "가이아 퀘스트", 서명 열쇠는 기존 것 그대로. 인터넷 판은 쓰지 않고 앱 안의 가이아 판만 씀(`MainActivity.java`가 `loadLocal()`만 호출). 앱에 넣는 파일은 `android/gaia_web/`(가이아 판 `town.html`+`art_*`, 약 64MB, **직접 커밋해 둔 것**).
 - **서버 빌드**: `.github/workflows/gaia-apk.yml` — 이 브랜치에 `android/**`가 올라가면 자동 실행(2분 2초), 결과는 릴리스 `gaia-app-latest`의 `gaia-quest.apk`(기존 `app-latest`는 건드리지 않음). 새 판을 앱에 넣으려면 위 순서로 만든 `town.html`+`art_*`를 `android/gaia_web/`에 복사해 올리면 된다. 이 환경에서 받기: `gh api -H "Accept: application/octet-stream" repos/Alix1211/ARPG/releases/assets/<id>` (`gh release download`는 막혀 있음).
 - **확인한 것 / 못 한 것**: 시작 화면·가이아 HUD·야영 그림은 playwright로 확인(오류 없음). `check_gaia_hearts/gargoyle/rent` 통과. `check_camp.py`(몬스터 1마리 때리면 수가 줄어야 함: 카일이 약해 안 줄어듦)와 `check_gaia_hud.py`(동료 줄이 가방 오른쪽에 붙어야 함)는 실패 — 검사 기대치가 바뀐 설계와 안 맞는 것으로 보이나 **이전에도 실패했는지는 확인 못 함**. 폰에 설치해서 실행해 본 적 없음. 새 앱에서 구글 드라이브 저장 백업이 되는지 미확인. 앱 아이콘은 아직 골든퀘스트 것.
+
+## 2026-11-04 각색 대사(카일) 게임 연결 (Claude)
+- `docs/gaia_quest_adapted_kyle.md`의 각색 대사를 `src/story/quests.json`에 넣었다. 도구: `python3 tools/apply_gaia_quest_text.py [--write]`(검증 후 저장). 바꾼 것은 의뢰 대사(intro) 115개와 단계 대사(steps[].lines) 310개뿐, 대사 외 구조는 전부 동일함을 도구가 검사한다. 문서의 `[※]` 표시는 뗐다.
+- 문서에만 있고 게임에 넣지 못한 한 줄 5개: MAIN_050 단계3(event), MAIN_052 단계3(boss), MAIN_058 단계2(boss), SIDE_002 단계2(collect), SIDE_020 단계3(kill). 처치·수집·보스·거래 단계에는 대사 칸이 없어 흐름을 바꾸지 않으려고 뺐다(필요하면 다음 단계 대사로 옮길지 케인과 정할 것).
+- `src/town/quest.js` `questSpeaker`: 화자 이름 '카일'도 카일 초상으로 보낸다(예전엔 '루크레아'만).
+- 확인: 가이아 판에서 MAIN_001 의뢰 대사를 직접 열어 카일·실비아·아가사·조 대사와 초상이 순서대로 뜨는 것을 확인.
+- **`check_quest.py`·`check_quest_full.py`는 실패한다. 원래 대사로 되돌려도 똑같이 실패**(MAIN_002 대화창 안 열림 / 퀘스트 추적 칸 수) — 이번 작업 때문이 아니라 원래부터 있던 실패. `check_quest_items.py`는 통과.
+- **`android/gaia_web/`(앱에 든 가이아 판)은 이번 대사가 들어가기 전 것이다.** 케인이 앱 만들기를 말하면 새 판(위의 가이아 판 만드는 순서)을 복사해 올릴 것. 올리면 서버가 자동으로 앱을 만든다.
