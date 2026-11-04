@@ -16,7 +16,10 @@ function leaveInn(){
 }
 function enterInn2(){
   if(MAP!=='inn'||!MAPS.inn2)return false;
-  return travel('inn2',MAPS.inn2.spawn,'back');
+  if(window.GAIA_RENT&&!GAIA_RENT.canEnter())return false;   // 방값 미납 벌: 2층 사용 금지
+  const r=travel('inn2',MAPS.inn2.spawn,'back');
+  if(r&&window.GAIA_RENT)GAIA_RENT.onEnterRoom();            // 방에서 쉬면 체력·마나가 찬다(1층 유료 휴식은 없어짐)
+  return r;
 }
 function leaveInn2(){
   if(MAP!=='inn2')return false;
@@ -28,7 +31,8 @@ function openInnDlg(n){
   $('dlgImg').src=A.port[n.k];$('dlgName').textContent=n.name;$('dlgTitle').textContent=n.title;
   $('dlgLine').textContent=n.line||'왔네요. 앉아 있어요. 방 정리는 제가 마저 할게요.';
   $('dlgMainRow').hidden=true;$('dlgInnRow').hidden=false;
-  $('dlgRest').textContent='푹 쉬기 ('+innCost()+'G)';
+  $('dlgRest').textContent='푹 쉬기 ('+innCost()+'G)';$('dlgRest').disabled=false;
+  if(window.GAIA_RENT)GAIA_RENT.dlg(n);   // 가이아: '푹 쉬기' 자리를 방값 갚기/월세 내기로 바꿔 쓴다
   show('dlg');return true;
 }
 function identifyInn(){
@@ -37,6 +41,7 @@ function identifyInn(){
 }
 function restInn(){
   if(MAP!=='inn')return false;
+  if(window.GAIA_RENT)return GAIA_RENT.pay();
   if(P.hp>=P.maxHp&&P.mp>=P.maxMp){$('dlgLine').textContent='토비가 루크레아를 위아래로 훑어봤다. “멀쩡한데요? 침대가 그립다는 이유면 말리진 않겠지만.”';return false;}
   const cost=innCost();
   if(P.gold<cost){$('dlgLine').textContent='토비가 금액을 다시 세어보다가 슬쩍 장부를 덮었다. “오늘은 그냥 앉았다 가요. 방값 얘긴… 다음에 합시다.”';return false;}

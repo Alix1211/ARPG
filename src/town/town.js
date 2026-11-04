@@ -1314,7 +1314,7 @@ function frame(now){
   drawFx(sdt);skillShowTop();sageDraw(); if (typeof drawEncounterFx === 'function') drawEncounterFx(sdt);
   if(typeof drawCompanionFx==='function')drawCompanionFx(sdt);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  DAY.t = (DAY.t + sdt / DAYLEN) % 1;
+  { const t0 = DAY.t; DAY.t = (DAY.t + sdt / DAYLEN) % 1; if (DAY.t < t0 && window.GAIA_RENT) GAIA_RENT.onDay(); }   // 낮밤 한 바퀴 = 하루(날짜는 gaia_rent.js가 셈)
   if(!DUN&&!INDOOR)drawDay(camX,camY);else if($('place').textContent!==CUR.name)$('place').textContent=CUR.name;
   if (typeof drawDungeonShade === 'function') drawDungeonShade(camX, camY);
   if(!DUN&&!INDOOR)drawRain(VW,VH);
