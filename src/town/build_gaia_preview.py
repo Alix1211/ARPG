@@ -34,6 +34,15 @@ def only_match(pattern: str, source: str, label: str) -> str:
     return found.group(1)
 
 
+def gaia_audio_suffix() -> str:
+    """Add the three-party sound files to the cached Golden Quest asset manifest."""
+    clips = {}
+    for name in ("gaia_whip", "gaia_sylvia", "gaia_agatha_1", "gaia_agatha_2"):
+        path = ROOT / "assets" / "sfx" / f"{name}.mp3"
+        clips[name] = "data:audio/mpeg;base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    return "Object.assign(A.sfx||(A.sfx={})," + json.dumps(clips) + ");"
+
+
 def main() -> None:
     original = (GAME / "town.html").read_text(encoding="utf-8")
     if '<script type="text/plain" id="gameMain">' not in original:
@@ -48,7 +57,7 @@ def main() -> None:
     gaia_pre, gaia_suf = gaia_sheets.prelude_and_suffix()
     import gaia_ui_art
     import gaia_squat_assets
-    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix() + gaia_squat_assets.suffix()   # 새 UI 키트 그림 덮어쓰기 + 여관 2층·스쿼트 자료
+    manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix() + gaia_squat_assets.suffix() + gaia_audio_suffix()   # UI·여관 자료와 가이아 전투 음원
     art_list = json.loads(only_match(r"var files=(\[.*?\]),left=files\.length", original, "그림 파일"))
     title = only_match(r"(art_title_[0-9a-f]{10}\.webp)", original, "시작 화면")
 

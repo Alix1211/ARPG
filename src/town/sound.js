@@ -93,11 +93,11 @@ const SFX = (() => {
       if(out)out.gain.value=.55*volume;
       // 파일 효과음도 같은 WebAudio gain을 통과하므로 별도 HTML 오디오 볼륨 동기화가 필요 없다.
     },
-    play(name){
+    play(name,volume=1){
       if (!this.on || document.hidden) return; init(); if (!ac || ac.state !== 'running') return;
       const now = ac.currentTime; if (last[name] && now - last[name] < 0.035) return; last[name] = now;   // 같은 소리 겹침 방지
       if (this.files[name]){
-        const fire=buf=>{if(!buf||!out)return;const src=ac.createBufferSource();src.buffer=buf;src.connect(out);src.start();};
+        const fire=buf=>{if(!buf||!out)return;const src=ac.createBufferSource(),g=ac.createGain();src.buffer=buf;g.gain.value=Math.max(0,Math.min(1,volume));src.connect(g);g.connect(out);src.start();};
         if(fileBuffers[name]){fire(fileBuffers[name]);return;}
         if(!fileLoading[name])fileLoading[name]=fetch(this.files[name]).then(r=>r.arrayBuffer()).then(b=>ac.decodeAudioData(b)).then(b=>{fileBuffers[name]=b;return b;}).catch(()=>null);
         fileLoading[name].then(fire);return;
@@ -141,7 +141,7 @@ addEventListener('visibilitychange',()=>{if(document.hidden)HAP(0);});
     if(window.GAME && GAME[name]===f)GAME[name]=g;
   };
   const originalAttack=attack;
-  attack=function(...args){const previous=P.atk,r=originalAttack.apply(this,args);if(P.atk&&P.atk!==previous){const w=P.atk.wt;SFX.play(w==='bow'?'bow':w==='staff'?'staff':w==='spear'?'thrust':w==='gauntlet'?'punch':'swing');}return r;};
+  attack=function(...args){const previous=P.atk,r=originalAttack.apply(this,args);if(P.atk&&P.atk!==previous){const w=P.atk.wt;if(!(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&w==='bow'))SFX.play(w==='bow'?'bow':w==='staff'?'staff':w==='spear'?'thrust':w==='gauntlet'?'punch':'swing');}return r;};
   wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 40 : 22); });   // 허수아비·몬스터 공통 타격
   if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(28); });
   if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(65,3); } });

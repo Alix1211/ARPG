@@ -20,6 +20,19 @@ window.GAIA_TUNE=GAIA_TUNE;
 const gaiaMembers=[];
 const gaiaTargets=[null,null],gaiaAttacks=[null,null];
 let gaiaHudWait=0;
+// 전투 중 타격이 연달아 들어와도 피격 음성이 겹쳐 쌓이지 않게 한다.
+let gaiaVoiceLast=-Infinity;
+const gaiaMemberVoiceLast=[-Infinity,-Infinity];
+let gaiaAgathaVoiceVariant=0;
+function gaiaPainVoice(c){
+  const i=gaiaMembers.indexOf(c);
+  if(i<0||typeof SFX==='undefined')return;
+  const now=performance.now();
+  if(now-gaiaVoiceLast<650||now-gaiaMemberVoiceLast[i]<1200)return;
+  gaiaVoiceLast=now;gaiaMemberVoiceLast[i]=now;
+  const name=i===0?'gaia_agatha_'+(gaiaAgathaVoiceVariant++%2+1):'gaia_sylvia';
+  SFX.play(name,i===0?.42:.52);
+}
 const gaiaUpdateOriginal=updateCompanion;
 const gaiaDrawOriginal=drawCompanion;
 
@@ -179,7 +192,10 @@ function gaiaFriendlySwing(dir,weapon){
     const dmg=Math.max(1,Math.round(c.maxHp*.012));
     c.hp=Math.max(1,c.hp-dmg);c.m=Math.min(GAIA_M_MAX,c.m+GAIA_CLUB_M);
     heartPop(c.x,c.y-95,GAIA_CLUB_M);
+    gaiaPainVoice(c);
   }
+  // 기존 합성 '퍽' 소리를 재사용. 같은 순간 몬스터 타격음과는 SFX 쪽에서 중복 제거.
+  if(hit.length&&typeof SFX!=='undefined')SFX.play('hit');
 }
 // 채찍: 멀리서 M이 가장 낮은 동료를 자동으로 겨냥한다. 몹에게는 데미지가 없다.
 function gaiaWhip(){
@@ -200,6 +216,8 @@ function gaiaWhip(){
   best.m=Math.min(GAIA_M_MAX,best.m+GAIA_WHIP_M);
   heartPop(best.x,best.y-95,GAIA_WHIP_M);
   gaiaFx.push({kind:'whip',c:best,t:0,life:.24,fx:P.x,fy:P.y-50});
+  if(typeof SFX!=='undefined')SFX.play('gaia_whip',.64);
+  gaiaPainVoice(best);
   return true;
 }
 function gaiaDrawWhip(dt){
@@ -261,6 +279,7 @@ function gaiaHit(c,dmg){
   if(c.shield>0){const ab=Math.min(c.shield,dmg);c.shield-=ab;dmg-=ab;if(c.shield<=0)c.shield=0;if(dmg<=0)return true;}
   c.hp=Math.max(0,c.hp-dmg);
   pops.push({x:c.x,y:c.y-92,t:0,txt:'-'+dmg,enemy:true});
+  gaiaPainVoice(c);
   if(c.hp<=0)gaiaKO(c);
   return true;
 }
