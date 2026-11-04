@@ -193,6 +193,11 @@ def data():
         if recep:
             _CACHE["dlg"]["receptionist"] = recep.pop("port")
         _CACHE.update(guild=gmap, gguild=dict(recep=recep, room=room))
+        # 가이아(케인 2026-11-04): 길드 홀·마을에 세우는 코믹 장식 인물
+        import gaia_comic_assets
+        cb, cm = gaia_comic_assets.build()
+        b.update(cb)
+        _CACHE["gcomic"] = cm
     return _CACHE
 
 
@@ -212,13 +217,14 @@ def apply(A):
     A["gaiaDlg"] = d["dlg"]
     A["guild"] = d["guild"]
     A["gaiaGuild"] = d["gguild"]
+    A["gaiaComic"] = d["gcomic"]
 
 
 def suffix():
     """미리보기용: 그림 목록 뒤에 붙는 JS."""
     d = data()
     return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"],
-                                                   guild=d["guild"], gguild=d["gguild"])) + ";"
+                                                   guild=d["guild"], gguild=d["gguild"], gcomic=d["gcomic"])) + ";"
             "Object.assign(A.b,D.b);A.inn2=D.inn2;"
             "if(!A.inn.props.some(p=>p.k==='inn_stairs'))A.inn.props.push(D.stairs1);"
-            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;A.guild=D.guild;A.gaiaGuild=D.gguild;})();")
+            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;A.guild=D.guild;A.gaiaGuild=D.gguild;A.gaiaComic=D.gcomic;})();")

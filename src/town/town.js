@@ -139,6 +139,7 @@ for (const n of npcs){
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
   if(id==='inn'&&MAPS.inn2)spots.push({name:'2층 숙소 계단',x:5.9*TS,y:2.95*TS,r:54,kind:'inn_stairs_up'});
   if(id==='guild'&&window.GAIA_GUILD)GAIA_GUILD.onWorld(npcs,spots,solids,sprites);
+  if((id==='guild'||id==='town')&&window.GAIA_COMIC)GAIA_COMIC.onWorld(id,sprites,solids);   // 가이아: 코믹 장식 인물(길드 홀·마을)
   if(id==='inn2'){spots.push({name:'아래층 계단',x:6.0*TS,y:2.95*TS,r:54,kind:'inn_stairs_down'});if(window.GAIA_SQUAT)GAIA_SQUAT.onWorld(npcs,spots,solids,sprites);}
   if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
@@ -1274,9 +1275,16 @@ function frame(now){
     }
     if (s.title){ // 사람: 그림자 + 숨쉬기
       ctx.fillStyle = 'rgba(0,0,0,.26)'; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.w * 0.28, 6, 0, 0, 7); ctx.fill();
-      const br = 1 + Math.sin(T * 2.2 + s.ph) * 0.014;
+      // 숨쉬기(케인 2026-11-04: 티가 안 난다 → 진폭 .014→.034, 숨을 들이쉬면 위로 늘고 폭은 살짝 줄어든다)
+      // s.fx(선택): {breath 진폭, sway 좌우 흔들림(라디안), swayHz, nod 까딱임(px), nodHz} — 장식 인물이 인물별로 다르게 움직이게 한다.
+      const fx=s.fx||null,ba=fx&&fx.breath!=null?fx.breath:.034;
+      const br = 1 + Math.sin(T * 2.1 + s.ph) * ba, bw = 1 - (br - 1) * .5;
+      const swy=fx&&fx.sway?Math.sin(T*(fx.swayHz||1.3)+s.ph*1.7)*fx.sway:0;
+      const nod=fx&&fx.nod?Math.abs(Math.sin(T*(fx.nodHz||2.6)+s.ph))*fx.nod:0;
       const npcImage=s.idle?BI[s.idle[Math.floor(T*5)%s.idle.length]]:s.img;
-      ctx.drawImage(npcImage, s.x - s.w / 2, s.y - s.h * br, s.w, s.h * br);
+      ctx.save();ctx.translate(s.x,s.y);if(swy)ctx.rotate(swy);
+      ctx.drawImage(npcImage, -s.w*bw / 2, -s.h * br - nod, s.w*bw, s.h * br);
+      ctx.restore();
       if(s.companion){
         ctx.save();ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(20,14,8,.9)';ctx.fillStyle='#ffe58a';
         const tt='TEST · '+s.name;ctx.strokeText(tt,s.x,s.y-s.h-10);ctx.fillText(tt,s.x,s.y-s.h-10);ctx.restore();
