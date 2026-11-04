@@ -484,7 +484,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1104-1324</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1104-1340</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -8785,7 +8785,7 @@ function guildHallOnWorld(npcList,spotList,solidList,spriteList){
   const hb=(A.npcs||[]).find(v=>v.shop==='guild'&&v.name==='하르트');
   if(hb){
     const x=GUILD_HART_POS[0]*TS,y=GUILD_HART_POS[1]*TS;
-    const n={...hb,x,y,at:null,img:BI[hb.k],ph:Math.random()*7,key:y};
+    const n={...hb,x,y,at:null,img:BI[hb.k],ph:Math.random()*7,key:y,questStartAlias:'town'};   // 하르트가 여는 퀘스트는 '마을'에서 수락하도록 적혀 있다 → 길드 홀 안에서도 수락되게 별칭
     npcList.push(n);spriteList.push(n);
     solidList.push({x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1});
     spotList.push({name:n.name,x:n.x,y:n.y+6,r:50,kind:'npc',npc:n});
