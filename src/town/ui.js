@@ -901,14 +901,16 @@ window.UI = {
 };
 // ---- 저장 (이 기기의 브라우저에 자동 저장: 금화·체력·레벨·가방·장비·물약·퀵슬롯) ----
 // 별도 실험판은 골든 퀘스트의 원본 저장/드라이브 동기화 데이터를 덮어쓰지 않는다.
-const SKEY='gaia_continent_save_v1';
+// 케인 2026-11-04: 앱의 드라이브 연동(ArpgBridge)은 'arpg_' 로 시작하는 키 중 arpg_save_v3 만 동기화한다. 예전 'gaia_continent_save_v1' 은 연동이 못 봐서
+// 드라이브 파일이 0바이트로 남았다 → 저장 키를 arpg_save_v3 로 맞추고, 옛 키의 진행은 처음 한 번 읽어 옮긴다. game:'gaia' 표식은 골든퀘스트 저장이 섞이는 것을 막는다.
+const SKEY='arpg_save_v3',OLD_SKEY='gaia_continent_save_v1';
 let RESETTING=false;
 function saveGame(){
   if(RESETTING||window.ARPG_BACKUP_RESTORING)return;
   if(window.ARPG_SYNC_CHECKING){window.ARPG_SYNC_DIRTY=true;return;}
   try{
     const P=G.P;
-    localStorage.setItem(SKEY,JSON.stringify({v:3,release:1,gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
+    localStorage.setItem(SKEY,JSON.stringify({v:3,release:1,game:'gaia',gearSchema:TIER_MATCH.schema,t:Date.now(),name:P.name,stats:P.stats,mastery:P.mastery,skillLv:P.skillLv,passives:P.passives,lifeSkills:P.lifeSkills,
       statPts:P.statPts,skillPts:P.skillPts,lifePts:P.lifePts,portalReadyAt:P.portalReadyAt,reviveReadyAt:P.reviveReadyAt,reviveArmed:!!P.reviveArmed,reviveRank:P.reviveRank,gold:P.gold,hp:P.hp,mp:P.mp,lv:P.lv,exp:P.exp,bag,bagPages,bagPage,stash,eq:gearOf('kyle'),cur:curOf('kyle'),gear:{agatha:gearOf('agatha'),sylvia:gearOf('sylvia')},qsw:(qsSaveCur(),QSW),pot:POT,scr:SCR,qs:QS,
       location:G.locationState?G.locationState():null,lastVisitedTown:G.lastVisitedTown?G.lastVisitedTown():null,
       minigames:window.MINIGAMES?MINIGAMES.saveData():null,
@@ -919,10 +921,16 @@ function saveGame(){
   }catch(e){}
 }
 function loadGame(){
-  let d=null;try{d=JSON.parse(localStorage.getItem(SKEY)||'null');}catch(e){}
+  let d=null,fromOld=false;
+  try{
+    let a=JSON.parse(localStorage.getItem(SKEY)||'null');if(a&&a.game!=='gaia')a=null;
+    const o=JSON.parse(localStorage.getItem(OLD_SKEY)||'null');
+    if(a&&(!o||(a.t||0)>=(o.t||0)))d=a;else if(o){d=o;fromOld=true;}
+  }catch(e){}
   if(!d||d.v!==3||d.release!==1)return null;
   // 초기화 직후: 앱이 드라이브에서 되살려 온 '초기화 전' 저장은 무시하고 새로 시작한다.
   {const rp=+(localStorage.getItem('gaia_continent_reset_pending')||0);if(rp&&(d.t||0)<rp)return null;}
+  if(fromOld)setTimeout(()=>{try{saveGame();}catch(e){}},4000);   // 옛 키에서 옮겨 온 진행을 새 키(드라이브 연동 대상)로 한 번 저장
   if(window.MINIGAMES)MINIGAMES.loadData(d.minigames);
   bagPages=Math.max(1,Math.min(BAG_MAX_PAGES,d.bagPages|0||1));bagPage=Math.max(0,Math.min(bagPages-1,d.bagPage|0));
   for(let i=0;i<BAG;i++)bag[i]=d.bag&&d.bag[i]||null;
@@ -980,7 +988,7 @@ if(saved){
   });
 }
 setInterval(saveGame,4000);addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
-window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.setItem('gaia_continent_reset_pending',String(Date.now()));localStorage.removeItem(SKEY);}catch(e){}location.reload();};
+window.UI.save=saveGame;window.UI.reset=()=>{if(window.TELEMETRY&&TELEMETRY.archive)TELEMETRY.archive('reset');RESETTING=true;try{localStorage.setItem('gaia_continent_reset_pending',String(Date.now()));localStorage.removeItem(SKEY);localStorage.removeItem(OLD_SKEY);}catch(e){}location.reload();};
 // 설정창 '새로 시작(초기화)': 두 번 눌러야 지워진다. 지난 회차 플레이 기록은 arpg_playlog에 보관된다.
 {const b=document.getElementById('newGame');
  if(b){let armed=false,tm=0;

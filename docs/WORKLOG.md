@@ -1733,3 +1733,12 @@
 - 표정 초상: `assets/gaia_cast/{kyle,agatha,sylvia}/*.webp`(인물당 8장, 전신)를 기본 대화 초상과 같은 방식(키의 60%까지 자르고 아래 페더)으로 잘라 `A.gaiaDlgX[인물][파일이름]`에 넣음(gaia_squat_assets.py `_dlg_expressions`). 대사 `이름(표정): 말` 의 표정 태그를 `GAIA_FACE_MAP`(quest.js)이 파일 이름으로 바꿈. 표 — 카일: 밝음laugh 놀람pain 곤란sad 못마땅·따짐angry 능청talk 뾰로통sad / 아가사: 밝음laugh 부끄shy 애원·곤란smile_plead 겁·놀람scared 아픔pain 화남·따짐·못마땅angry 지침tired_torn 능청talk / 실비아: 아가사와 같되 애원·곤란plead, 능청talk_staff. 태그 없거나 표에 없으면 기본 초상(출렁임 있음).
 - 아가사·실비아 대사 194줄 중 91줄에 표정 태그를 붙임(글자는 그대로, 앞의 `(표정)`만 추가). 나머지는 기본 초상(출렁임 유지). 표정 초상은 출렁임 영역이 없어 정지 그림이다(필요하면 포즈별 영역을 gaia_jiggle.js JG_REGIONS 에 추가).
 - 검증: 24장 로드, 표정별 초상 교체, 야영 후 시간표시 낮→저녁·밤→낮·오후→아침·낮→밤, 오류 0건, 대화창 위치 정상. 사용하지 못한 포즈: kyle club·whip(태그 없음).
+
+## 2026-11-04 (밤 2) 세이브 연동 수리 · 여관 속옷 초상 · 출렁임 조정 — Claude
+- 세이브 연동이 안 된 원인(드라이브에서 직접 확인): `gaiarpg_save.json` 이 만들어진 뒤 0바이트. 가이아 게임이 저장을 `gaia_continent_save_v1` 키로 했는데, 앱 연동(MainActivity ArpgBridge·save_sync.js·backup.js)은 `arpg_` 로 시작하는 키 중 `arpg_save_v3` 만 동기화/검증한다 → 한 번도 못 봄. (오프라인 예비판의 다른 출처 저장소 보존도 같은 이유로 안 됐음)
+- 수정(ui.js, 앱 재설치 불필요 — 인터넷 판만 갱신): SKEY 를 `arpg_save_v3` 로, 저장에 `game:'gaia'` 표식 추가, 로드 때 옛 키(`gaia_continent_save_v1`)의 진행을 읽어 오고(새 키가 더 최신이면 새 키) 4초 뒤 새 키로 한 번 저장, 새 키에 표식 없는 저장(골든퀘스트)은 무시, 초기화 때 두 키 모두 삭제. 앱 연동 코드(Java)는 그대로.
+- 검증(앱 연결부 흉내 mock + MainActivity.validBackup 와 같은 검사): 저장 → arpg_save_v3 가 앱으로 넘어가고 검사 통과(5.7KB), 옛 키만 있는 기기(레벨17·금화7777) → 불러오고 새 키로 옮겨 저장, 골든퀘스트 저장은 섞이지 않음. 실제 기기·드라이브 쓰기는 케인 폰에서 확인 필요.
+- 케인이 해야 할 일: 폰에서 앱을 껐다 켜서 새 판을 받은 뒤 플레이/저장 → 설정의 드라이브 백업에서 '마지막 백업' 시각이 찍히는지 확인(파일이 비어 있으면 이 기기 저장으로 채워짐). 패드는 새 판을 받은 뒤 '기존 파일 연결'로 gaiarpg_save.json 을 고르고, 선택창이 뜨면 '드라이브 진행으로 이어서 하기'.
+- 여관 속옷 초상: `assets_private/gaia_cast_under`(공개 저장소 금지, 로컬 빌드 때만 포함)의 아가사·실비아 표정 8장씩을 `A.gaiaDlgU` 로 묶고(gaia_squat_assets.py `_dlg_underwear`, bust_* 는 자르지 않고 페더만), 대화 때 MAP 이 `inn`/`inn2` 이면 속옷 초상을 쓴다(quest.js gaiaFacePort, gaia_squat.js squatTalk). 표정 태그가 없거나 속옷 그림에 없으면 속옷 기본(talk). 카일은 해당 없음. 속옷 초상은 출렁임 영역이 없어 정지 그림. 여관 안의 월드 스프라이트(치비)는 그대로.
+- 시작 화면 출렁임: 폭을 약 1.35배로(`bootJig` 키프레임). 범위(8%x8.8%)는 그대로.
+- 주의: 이 저장소는 현재 공개(private=false)이고 gaia/ 폴더(Pages)에 속옷 그림이 base64 로 들어간다(기존 단련 그림 포함). 케인이 비공개 전환을 원하면 Pages 설정 확인 필요.

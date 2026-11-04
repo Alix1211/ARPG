@@ -128,9 +128,15 @@ const GAIA_FACE_MAP={
   sylvia:{밝음:'laugh',부끄:'shy',애원:'plead',곤란:'plead',겁:'scared',놀람:'scared',아픔:'pain',화남:'angry',따짐:'angry',못마땅:'angry',지침:'tired_torn',능청:'talk_staff'}
 };
 function gaiaFacePort(name,face){
-  if(!face||typeof GAIA_PARTY_MODE==='undefined'||!GAIA_PARTY_MODE||!A.gaiaDlgX)return null;
-  const ck=name==='카일'?'kyle':name==='아가사'?'agatha':name==='실비아'?'sylvia':null,fk=ck&&GAIA_FACE_MAP[ck][face];
-  return (fk&&A.gaiaDlgX[ck]&&A.gaiaDlgX[ck][fk])||null;
+  if(typeof GAIA_PARTY_MODE==='undefined'||!GAIA_PARTY_MODE)return null;
+  const ck=name==='카일'?'kyle':name==='아가사'?'agatha':name==='실비아'?'sylvia':null;if(!ck)return null;
+  const fk=face&&GAIA_FACE_MAP[ck][face];
+  // 케인 2026-11-04: 여관(1층·2층 숙소)에서 아가사·실비아는 속옷 차림. 표정이 없거나 속옷 그림에 없는 표정이면 속옷 기본 초상.
+  if(typeof MAP!=='undefined'&&(MAP==='inn'||MAP==='inn2')&&A.gaiaDlgU&&A.gaiaDlgU[ck]){
+    const u=A.gaiaDlgU[ck];return u[fk]||u[ck==='sylvia'?'talk_staff':'talk']||null;
+  }
+  if(!fk||!A.gaiaDlgX)return null;
+  return (A.gaiaDlgX[ck]&&A.gaiaDlgX[ck][fk])||null;
 }
 function questSpeaker(name){
   if(name==='루크레아'||name==='카일'){const kp=GAIA_KYLE_PORT();if(kp)return {name:'카일',title:'',port:kp};return {name,title:'',port:A.lucrea||A.face,luc:true};}

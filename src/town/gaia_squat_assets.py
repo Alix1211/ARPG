@@ -143,9 +143,9 @@ DLG_CROP = .60      # 키의 몇 %까지 남길지(허벅지 높이)
 DLG_FEATHER = .24   # 남긴 부분의 아래 몇 %를 서서히 지울지
 
 
-def _dlg_portrait(name, src=None):
+def _dlg_portrait(name, src=None, crop=True):
     im = Image.open(src or (R / f"gaia_full/{name}_full.png")).convert("RGBA")
-    h = int(im.height * DLG_CROP)
+    h = int(im.height * DLG_CROP) if crop else im.height   # crop=False: 이미 가슴 위 컷(bust_*)이라 자르지 않고 아래만 페더
     a = np.array(im.crop((0, 0, im.width, h))).astype(float)
     f0 = int(h * (1 - DLG_FEATHER))
     t = (np.arange(h)[f0:] - f0) / (h - f0)
@@ -161,6 +161,29 @@ def _dlg_expressions():
     for who in ("kyle", "agatha", "sylvia"):
         d = R / "gaia_cast" / who
         out[who] = {f.stem: _dlg_portrait(who, f) for f in sorted(d.glob("*.webp"))} if d.is_dir() else {}
+    return out
+
+
+# 케인 2026-11-04: 여관(inn·inn2)에서는 아가사·실비아가 속옷 차림이다. 속옷 입상은 공개 저장소 금지라 assets_private 에 있고, 없으면 비워 둔다(일상복으로 나옴).
+UNDER = ROOT / "assets_private" / "gaia_cast_under"
+UNDER_FILES = {   # 일상복 표정 파일 이름(게임 쪽 GAIA_FACE_MAP 이 쓰는 이름) → 속옷 입상 파일
+    "agatha": {"talk": "A_1_talk", "angry": "A_2_angry", "shy": "A_3_shy", "scared": "A_4_scared",
+               "smile_plead": "bust_1_plead", "laugh": "bust_2_wave", "tired_torn": "bust_3_sad", "pain": "bust_4_pain"},
+    "sylvia": {"talk_staff": "A_1_talk", "angry": "A_2_angry", "shy": "A_3_shy", "scared": "A_4_scared",
+               "plead": "B_1_plead", "laugh": "B_2_laugh", "tired_torn": "B_3_tired", "pain": "B_4_pain"},
+}
+
+
+def _dlg_underwear():
+    out = {}
+    for who, table in UNDER_FILES.items():
+        out[who] = {}
+        for key, stem in table.items():
+            f = UNDER / who / f"{stem}.png"
+            if f.is_file():
+                out[who][key] = _dlg_portrait(who, f, crop=not stem.startswith("bust_"))
+    if not any(out.values()):
+        print("[경고] assets_private/gaia_cast_under 이 없어 여관 속옷 대화 초상을 뺍니다(일상복으로 나옴).")
     return out
 
 
@@ -195,7 +218,7 @@ def data():
         k, uri, p = _stairs_prop("inn_stairs", 5.9, 2.62, 1.5)
         b[k] = uri
         _CACHE.update(inn2=inn2, b=b, stairs1=p, sq=_sq(), dlg={n: _dlg_portrait(n) for n in ("kyle", "agatha", "sylvia")},
-                      dlgx=_dlg_expressions())
+                      dlgx=_dlg_expressions(), dlgu=_dlg_underwear())
         # 가이아(케인 2026-11-04): 모험가 길드 실내 + 접수원
         import gaia_guild_assets
         gmap, gb, recep, room = gaia_guild_assets.build()
@@ -226,6 +249,7 @@ def apply(A):
     A["gaiaSq"] = d["sq"]
     A["gaiaDlg"] = d["dlg"]
     A["gaiaDlgX"] = d["dlgx"]
+    A["gaiaDlgU"] = d["dlgu"]
     A["guild"] = d["guild"]
     A["gaiaGuild"] = d["gguild"]
     A["gaiaComic"] = d["gcomic"]
@@ -234,8 +258,8 @@ def apply(A):
 def suffix():
     """미리보기용: 그림 목록 뒤에 붙는 JS."""
     d = data()
-    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"], dlgx=d["dlgx"],
+    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"], dlgx=d["dlgx"], dlgu=d["dlgu"],
                                                    guild=d["guild"], gguild=d["gguild"], gcomic=d["gcomic"])) + ";"
             "Object.assign(A.b,D.b);A.inn2=D.inn2;"
             "if(!A.inn.props.some(p=>p.k==='inn_stairs'))A.inn.props.push(D.stairs1);"
-            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;A.gaiaDlgX=D.dlgx;A.guild=D.guild;A.gaiaGuild=D.gguild;A.gaiaComic=D.gcomic;})();")
+            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;A.gaiaDlgX=D.dlgx;A.gaiaDlgU=D.dlgu;A.guild=D.guild;A.gaiaGuild=D.gguild;A.gaiaComic=D.gcomic;})();")

@@ -107,7 +107,7 @@ function squatLine(){
 function squatTalk(n){
   talking=n;openDlg(n);
   const done=squatDoneToday(),morning=squatMorning();
-  const dp=(A.gaiaDlg&&A.gaiaDlg.agatha)||(A.gaiaKit&&A.gaiaKit.port_agatha);if(dp)$('dlgImg').src=dp;
+  const dp=(A.gaiaDlgU&&A.gaiaDlgU.agatha&&A.gaiaDlgU.agatha.talk)||(A.gaiaDlg&&A.gaiaDlg.agatha)||(A.gaiaKit&&A.gaiaKit.port_agatha);if(dp)$('dlgImg').src=dp;   // 여관 2층 = 속옷 차림(없으면 일상복)
   squatRoomBackdrop(true);
   $('dlgName').textContent='아가사';$('dlgTitle').textContent='여관 2층 · 일일 단련';
   $('dlgLine').textContent=squatLine();
