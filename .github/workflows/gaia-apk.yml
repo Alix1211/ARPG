@@ -1,0 +1,28 @@
+name: 가이아 퀘스트 앱 만들기 (APK)
+on:
+  push:
+    branches: [gaia-continent-three-party]
+    paths:
+      - 'android/**'
+      - '.github/workflows/gaia-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: gaia-apk, cancel-in-progress: true }
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - name: 앱 만들기
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: 받기 페이지에 올리기
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: gaia-app-latest
+          name: 가이아 퀘스트 앱 (최신)
+          body: 이 페이지의 gaia-quest.apk 를 폰에서 눌러 받아 설치하세요. 골든퀘스트 앱과는 따로 설치됩니다.
+          make_latest: false
+          files: android/app/build/outputs/apk/debug/gaia-quest.apk
