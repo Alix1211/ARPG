@@ -47,7 +47,7 @@ async def main():
         assert not await ev("() => __INN.rest()"), '두 번 낼 수 없음'
 
         # 2) 2층에 들어가면 체력·마나가 찬다
-        await ev("() => { GAME.P.hp=1; GAME.P.mp=1; document.getElementById('dlg').classList.remove('on'); GAME.P.x=5.9*48; GAME.P.y=2.95*48+20; }")
+        await ev("() => { GAME.act(); GAME.P.hp=1; GAME.P.mp=1; GAME.P.x=5.9*48; GAME.P.y=2.95*48+20; }")
         await pg.wait_for_timeout(300)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(1200)
@@ -70,7 +70,7 @@ async def main():
         assert bt[1] is True and '상대 안 해줌' in bt[0], bt
         assert not await ev("() => __INN.rest()")
         assert await ev("() => !document.getElementById('dlgIdentify').disabled"), '감정은 계속 쓸 수 있어야 함'
-        await ev("() => { document.getElementById('dlg').classList.remove('on'); GAME.P.x=5.9*48; GAME.P.y=2.95*48+20; }")
+        await ev("() => { GAME.act(); GAME.P.x=5.9*48; GAME.P.y=2.95*48+20; }")
         await pg.wait_for_timeout(300)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(1000)
