@@ -13,20 +13,20 @@ const JG_HIP={w:22,dec:4.6,word:'찰싹!',vib:110};
 const JG_HAIR={w:10,dec:2.4,sway:1,vib:0,amp:.012};
 const JG_REGIONS={
   receptionist:[
-    {n:'가슴 왼쪽',cx:.34,cy:.405,rx:.22,ry:.105,amp:.027,...JG_BUST},
-    {n:'가슴 오른쪽',cx:.66,cy:.405,rx:.22,ry:.105,amp:.027,...JG_BUST},
-    {n:'엉덩이 왼쪽',cx:.36,cy:.745,rx:.22,ry:.09,amp:.023,...JG_HIP},
-    {n:'엉덩이 오른쪽',cx:.64,cy:.745,rx:.22,ry:.09,amp:.023,...JG_HIP},
+    {n:'가슴 왼쪽',cx:.34,cy:.415,rx:.2,ry:.085,amp:.027,...JG_BUST},
+    {n:'가슴 오른쪽',cx:.66,cy:.415,rx:.2,ry:.085,amp:.027,...JG_BUST},
+    {n:'엉덩이 왼쪽',cx:.36,cy:.745,rx:.2,ry:.08,amp:.023,...JG_HIP},
+    {n:'엉덩이 오른쪽',cx:.64,cy:.745,rx:.2,ry:.08,amp:.023,...JG_HIP},
     {n:'머리카락 왼쪽',cx:.07,cy:.64,rx:.09,ry:.22,...JG_HAIR},
     {n:'머리카락 오른쪽',cx:.93,cy:.64,rx:.09,ry:.22,...JG_HAIR}
   ],
   agatha:[
-    {n:'가슴',cx:.77,cy:.44,rx:.14,ry:.08,amp:.024,...JG_BUST},
+    {n:'가슴',cx:.77,cy:.44,rx:.13,ry:.07,amp:.024,...JG_BUST},
     {n:'엉덩이',cx:.66,cy:.65,rx:.18,ry:.08,amp:.02,...JG_HIP},
     {n:'머리카락',cx:.45,cy:.5,rx:.11,ry:.25,...JG_HAIR}
   ],
   sylvia:[
-    {n:'가슴',cx:.55,cy:.47,rx:.17,ry:.08,amp:.024,...JG_BUST},
+    {n:'가슴',cx:.55,cy:.47,rx:.16,ry:.07,amp:.024,...JG_BUST},
     {n:'엉덩이',cx:.52,cy:.71,rx:.2,ry:.085,amp:.02,...JG_HIP},
     {n:'머리카락',cx:.26,cy:.55,rx:.14,ry:.28,...JG_HAIR}
   ]
@@ -46,7 +46,7 @@ function jgInitGl(cv){
       'uniform vec4 u_reg['+JG_MAX+'];uniform vec2 u_wv['+JG_MAX+'];'+
       'void main(){vec2 p=v_pos;float sw=0.0;'+
       'for(int i=0;i<'+JG_MAX+';i++){'+
-        'vec2 d=(v_pos-u_reg[i].xy)/u_reg[i].zw;float g=exp(-2.4*dot(d,d));'+
+        'vec2 d=(v_pos-u_reg[i].xy)/u_reg[i].zw;float g=exp(-3.2*dot(d,d));'+
         'p.y-=u_wv[i].x*g;'+                                             // 위아래 출렁임
         'p.x-=u_wv[i].y*g+0.20*u_wv[i].x*g*(v_pos.x-u_reg[i].x);'+      // 좌우 흔들림 + 부풀어 오르는 효과(참고 파일과 같은 계수)
         'sw+=u_wv[i].x+u_wv[i].y;}'+

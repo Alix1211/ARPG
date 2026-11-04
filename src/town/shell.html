@@ -20,14 +20,15 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 .btn{border:2px solid #b07a35;background:linear-gradient(#7a4422,#552c12);color:#f8ebcf;border-radius:9px;padding:7px 20px;font-weight:800;font-size:15px;font-family:inherit;box-shadow:0 2px 0 #2c160a}
 .btn:disabled{opacity:.45}
 .btn.ghost{background:#efe0bd;color:var(--ink)}
-#dlg{left:50%;bottom:10px;transform:translateX(-50%);width:min(760px,92vw);display:none}
+#dlg{left:50%;bottom:10px;transform:translateX(-50%);width:min(1040px,96vw);display:none}
 #dlg.on{display:flex;align-items:flex-end;gap:0}
-#dlgImg{height:min(330px,62vh);-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent);margin-right:-18px;position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0007)}
+#dlgImg{height:min(640px,86vh);-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent);margin-right:-18px;position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0007)}
 #dlg .frame{flex:1;min-height:120px;position:relative}
-#dlgFx{display:none;height:min(330px,62vh);width:auto;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent);margin-right:-18px;position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0007);touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#dlgFx{display:none;height:min(640px,86vh);width:auto;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent);margin-right:-18px;position:relative;z-index:2;filter:drop-shadow(0 4px 6px #0007);touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #dlg.jg #dlgImg{display:none}
 #dlgFx.jerk{animation:gjJerk .55s cubic-bezier(.2,.64,.38,1)}@keyframes gjJerk{0%,100%{transform:translate3d(0,0,0)}18%{transform:translate3d(3px,-3px,0)}50%{transform:translate3d(-2px,2px,0)}72%{transform:translate3d(1px,-1px,0)}}
 #dlg.jg #dlgFx{display:block}
+@media(max-height:480px){#dlgImg,#dlgFx{height:92vh}}   /* 케인 2026-11-04: 폰에서 초상이 너무 작다 → 가로 폰은 화면 높이의 92%까지 키운다 */
 #dlgCloseX{display:none}
 #dlgName{position:absolute;left:-6px;top:-58px;min-width:120px;height:44px;padding:0 24px;background:var(--banner) center/100% 100% no-repeat;color:#fff4d8;font-weight:900;font-size:17px;line-height:42px;text-align:center;text-shadow:0 1px 2px #000}
 #dlgTitle{font-size:12px;color:#8a5a2a;font-weight:800}

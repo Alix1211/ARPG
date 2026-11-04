@@ -129,7 +129,9 @@ def build():
     full_p, hires_p = GP / "receptionist_full.png", GP / "receptionist_hires.png"
     if full_p.is_file():
         # 접수원은 게임 세계(전부 SD 비율)에 세우지 않고, 접수대에서 말을 걸 때 대화창 초상으로만 나온다(케인 2026-11-04).
-        recep = dict(has=True, port=_recep_portrait(Image.open(full_p).convert("RGBA")))
+        # 초상이 커졌으므로(케인: 폰에서 너무 작다) 고해상도 원본(hires)이 있으면 그것으로 만든다(자르기·페더 비율은 같아 부위 좌표도 그대로).
+        port_src = hires_p if hires_p.is_file() and abs(Image.open(hires_p).width / Image.open(hires_p).height - Image.open(full_p).width / Image.open(full_p).height) < .01 else full_p
+        recep = dict(has=True, port=_recep_portrait(Image.open(port_src).convert("RGBA")))
         sd_p = GP / "receptionist_sd.png"   # 세계에 서는 SD 그림(make_guild_sprite.py 로 게임 톤에 맞춘 것)
         if sd_p.is_file():
             sd = Image.open(sd_p).convert("RGBA")
