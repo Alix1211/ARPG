@@ -389,10 +389,10 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 #bootScene{position:absolute;left:50%;top:50%;width:max(100vw,calc(100vh*1672/941));aspect-ratio:1672/941;transform:translate(-50%,-50%)}
 #bootImg{position:absolute;inset:0;background:var(--bg) center/100% 100% no-repeat}
 /* 케인 2026-11-04: 시작 그림 속 두 여성의 가슴만 같은 그림을 오려 얹어 출렁이게 한다(그림 크기에 상관없이 %로 맞춤) */
-.jg{position:absolute;display:block;background:var(--bg) no-repeat;-webkit-mask-image:radial-gradient(ellipse at 50% 50%,#000 50%,transparent 76%);mask-image:radial-gradient(ellipse at 50% 50%,#000 50%,transparent 76%);transform-origin:50% 6%;animation:bootJig 2.4s ease-in-out infinite;will-change:transform}
-#jgL{left:19.44%;top:36.66%;width:11.06%;height:12.22%;background-size:904.1% 818.3%;background-position:21.86% 41.76%}
-#jgR{left:85.53%;top:35.60%;width:11.06%;height:12.22%;background-size:904.1% 818.3%;background-position:96.17% 40.56%;animation-delay:-1.15s}
-@keyframes bootJig{0%,100%{transform:translateY(0) scaleY(1)}8%{transform:translateY(7%) scaleY(1.09)}18%{transform:translateY(-5%) scaleY(.95)}29%{transform:translateY(4%) scaleY(1.05)}41%{transform:translateY(-2.2%) scaleY(.98)}53%{transform:translateY(1.1%) scaleY(1.01)}66%{transform:translateY(0) scaleY(1)}}
+.bjg{position:absolute;display:block;background:var(--bg) no-repeat;-webkit-mask-image:radial-gradient(ellipse at 50% 50%,#000 50%,transparent 76%);mask-image:radial-gradient(ellipse at 50% 50%,#000 50%,transparent 76%);transform-origin:50% 6%;animation:bootJig 2.4s ease-in-out infinite;will-change:transform}
+#jgL{left:20.97%;top:38.37%;width:8%;height:8.8%;background-size:1250% 1136.4%;background-position:22.79% 42.07%}
+#jgR{left:87.06%;top:37.31%;width:8%;height:8.8%;background-size:1250% 1136.4%;background-position:94.63% 40.91%;animation-delay:-1.15s}
+@keyframes bootJig{0%,100%{transform:translateY(0) scaleY(1)}8%{transform:translateY(2.6%) scaleY(1.035)}18%{transform:translateY(-1.9%) scaleY(.983)}29%{transform:translateY(1.5%) scaleY(1.018)}41%{transform:translateY(-.8%) scaleY(.993)}53%{transform:translateY(.4%) scaleY(1.004)}66%{transform:translateY(0) scaleY(1)}}
 #boot::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 62%,#000a);pointer-events:none}
 #bootMid{position:absolute;z-index:1;left:50%;top:47%;transform:translate(-50%,-50%);width:min(40vh,44vw);text-align:center}
 #bootLogo{width:100%;aspect-ratio:1122/1402;background:center/contain no-repeat;filter:drop-shadow(0 8px 16px #000b);animation:bootFloat 3.4s ease-in-out infinite;will-change:transform}
@@ -407,7 +407,7 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 </style>
 </head>
 <body>
-<div id="boot" style="--bg:url('art_title_6ad5ad16ee.webp')"><div id="bootScene"><div id="bootImg"></div><i class="jg" id="jgL"></i><i class="jg" id="jgR"></i></div><div id="bootMid"><div id="bootLogo" style="background-image:url('art_titlelogo_b911f770e8.webp')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div></div>
+<div id="boot" style="--bg:url('art_title_6ad5ad16ee.webp')"><div id="bootScene"><div id="bootImg"></div><i class="bjg" id="jgL"></i><i class="bjg" id="jgR"></i></div><div id="bootMid"><div id="bootLogo" style="background-image:url('art_titlelogo_b911f770e8.webp')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div></div>
 <script>
 // 시작·로딩 화면: 그림 묶음을 받는 동안 막대를 채우고, 다 받으면 눌러서 시작. 떠 있는 동안 게임 시간은 멈춘다.
 (function(){var got=0,total=43237;window.ARPG_TITLE_OPEN=true;
@@ -484,7 +484,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1104-1142</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1104-1209</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
