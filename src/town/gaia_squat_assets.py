@@ -186,6 +186,13 @@ def data():
         k, uri, p = _stairs_prop("inn_stairs", 5.9, 2.62, 1.5)
         b[k] = uri
         _CACHE.update(inn2=inn2, b=b, stairs1=p, sq=_sq(), dlg={n: _dlg_portrait(n) for n in ("kyle", "agatha", "sylvia")})
+        # 가이아(케인 2026-11-04): 모험가 길드 실내 + 접수원
+        import gaia_guild_assets
+        gmap, gb, recep, room = gaia_guild_assets.build()
+        b.update(gb)
+        if recep:
+            _CACHE["dlg"]["receptionist"] = recep.pop("port")
+        _CACHE.update(guild=gmap, gguild=dict(recep=recep, room=room))
     return _CACHE
 
 
@@ -203,12 +210,15 @@ def apply(A):
         A["inn"]["props"].append(d["stairs1"])
     A["gaiaSq"] = d["sq"]
     A["gaiaDlg"] = d["dlg"]
+    A["guild"] = d["guild"]
+    A["gaiaGuild"] = d["gguild"]
 
 
 def suffix():
     """미리보기용: 그림 목록 뒤에 붙는 JS."""
     d = data()
-    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"])) + ";"
+    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"],
+                                                   guild=d["guild"], gguild=d["gguild"])) + ";"
             "Object.assign(A.b,D.b);A.inn2=D.inn2;"
             "if(!A.inn.props.some(p=>p.k==='inn_stairs'))A.inn.props.push(D.stairs1);"
-            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;})();")
+            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;A.guild=D.guild;A.gaiaGuild=D.gguild;})();")

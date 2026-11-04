@@ -99,11 +99,13 @@ function companionMarketNpc(id,x,y,roam=false){
     mercT:0,mercDir:'front',mercFlip:false,img:im,ph:Math.random()*7,key:y};
 }
 function companionEnsureMarket(mapId=MAP){
-  if(!companionMercReady()||!['town','inn','fieldvillage'].includes(mapId))return false;
+  if(!companionMercReady()||!['town','inn','guild','fieldvillage'].includes(mapId))return false;
   const key=companionSettlementKey(mapId),market=companionMarketSet(key,true);
   if(!market.roster||market.roster.length!==5)companionRotateMarket(true,key,false);
-  const want=(mapId==='inn'?market.inn:market.town).filter(id=>id!==companionState.active);
-  const positions=mapId==='inn'
+  const want=(mapId==='inn'||mapId==='guild'?market.inn:market.town).filter(id=>id!==companionState.active);
+  const positions=mapId==='guild'   // 가이아: 길드 홀(용병 셋이 오간다)
+    ? [[4.4*TS,8.3*TS],[8.0*TS,6.6*TS],[5.6*TS,5.2*TS]]
+    : mapId==='inn'
     ? [[2.9*TS,7.05*TS],[7.0*TS,7.45*TS],[11.45*TS,7.15*TS]]
     : mapId==='fieldvillage'
       ? [[11.6*TS,17.2*TS],[20.4*TS,17.2*TS]]
@@ -117,18 +119,18 @@ function companionEnsureMarket(mapId=MAP){
   return true;
 }
 function companionUpdateMarket(dt){
-  if(['town','inn','fieldvillage'].includes(MAP)&&companionMercReady()&&!npcs.some(n=>n.mercenaryMarket))companionEnsureMarket(MAP);
+  if(['town','inn','guild','fieldvillage'].includes(MAP)&&companionMercReady()&&!npcs.some(n=>n.mercenaryMarket))companionEnsureMarket(MAP);
   if(companionMercReady()&&typeof DAY!=='undefined'){
     const prev=mercMarket.lastDayT;
     if(prev!=null&&prev>.82&&DAY.t<.18){
       const keys=Object.keys(mercMarket.sets||{});if(!keys.length)keys.push(companionSettlementKey());
       for(const key of keys)companionRotateMarket(true,key,false);
       if(window.UI&&UI.save)UI.save();
-      if(['town','inn','fieldvillage'].includes(MAP)){buildWorld(MAP);return;}
+      if(['town','inn','guild','fieldvillage'].includes(MAP)){buildWorld(MAP);return;}
     }
     mercMarket.lastDayT=DAY.t;
   }
-  if(!(GAIA_PARTY_MODE?['town','fieldvillage','inn']:['town','fieldvillage']).includes(MAP))return;
+  if(!(GAIA_PARTY_MODE?['town','fieldvillage','inn','guild']:['town','fieldvillage']).includes(MAP))return;
   for(const n of npcs){
     if(!n.mercenaryMarket||!n.mercRoam||n.hide)continue;
     n.mercMoving=false;n.mercWait-=dt;n.mercT+=dt;
@@ -281,7 +283,7 @@ function companionLoad(d){
 function companionReturn(reason,silent=false){
   const id=companionState.active;if(!id)return false;
   companionTarget=null;companionParkedHire=null;companionState=companionEmpty();companionFx.length=0;companionAtk=null;
-  if(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')buildWorld(MAP);
+  if(MAP==='town'||MAP==='inn'||MAP==='guild'||MAP==='fieldvillage')buildWorld(MAP);
   if(!silent){const nm=COMPANION_DEF[id]&&COMPANION_DEF[id].name||'용병';say(reason==='defeat'?'용병 계약이 끝났습니다. 대여료는 돌아오지 않습니다.':'오늘 몫은 여기까지. '+nm+'이(가) 여관으로 돌아갔습니다.');}
   if(window.UI&&UI.save)UI.save();return true;
 }
@@ -541,7 +543,7 @@ function updateCompanion(dt){
       }
     }
   }
-  if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='inn'||MAP==='fieldvillage')){companionReturn('expired');return;}
+  if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='inn'||MAP==='guild'||MAP==='fieldvillage')){companionReturn('expired');return;}
   c.cd=Math.max(0,c.cd-dt);if(COMPANION_DEF[c.active].kind==='gun')c.atkT=Math.max(0,c.atkT-dt);companionUpdateAttack(dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;

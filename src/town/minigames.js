@@ -98,7 +98,7 @@
     if(typeof kind!=='string')kind=null;
     if(active||blocked())return false;
     const map=GAME.locationState().map;
-    if(!['town','inn','fieldvillage'].includes(map)){GAME.say('마을에서 돈 벌 궁리를 해 봅시다.');return false;}
+    if(!['town','inn','guild','fieldvillage'].includes(map)){GAME.say('마을에서 돈 벌 궁리를 해 봅시다.');return false;}
     GAME.closeAll();GAME.releaseInput();GAME.setHold(false);GAME.setOpen('minigames');root.hidden=false;supply.hidden=true;lobby.hidden=false;frame.hidden=true;lobbyMode(kind);money();
     if(kind==='tavern'||kind==='bubble-pang')return enter(kind);
     return true;

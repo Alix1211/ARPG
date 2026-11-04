@@ -11,7 +11,7 @@ const BGM = (() => {
   }
   function target(){
     if(eventOverride||(window.QUEST&&QUEST.isDialog()))return 'event';
-    if(MAP!=='dungeon'&&MAP!=='field'){activeBoss=null;return MAP==='town'||MAP==='inn'||MAP==='inn2'?'town':'field';}
+    if(MAP!=='dungeon'&&MAP!=='field'){activeBoss=null;return MAP==='town'||MAP==='inn'||MAP==='inn2'||MAP==='guild'?'town':'field';}
     if(activeBoss&&(!monsters.includes(activeBoss)||activeBoss.dead))activeBoss=null;
     if(!activeBoss)activeBoss=monsters.find(m=>m.boss&&!m.dead&&(m.state==='chase'||Math.hypot(m.x-P.x,m.y-P.y)<360))||null;
     return activeBoss?'boss':MAP;

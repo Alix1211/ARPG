@@ -10,6 +10,7 @@ const MAPS = {
   sage: { ...A.sage },
   inn: { ...A.inn },
   ...(A.inn2?{inn2:{...A.inn2}}:{}),   // 가이아: 여관 2층 '이들 숙소'
+  ...(A.guild?{guild:{...A.guild}}:{}),   // 가이아: 모험가 길드 실내(gaia_guild.js)
 };
 let G = null, MINI = null, MAP = 'town', CUR = MAPS.town;
 for (const id in MAPS){ MAPS[id].G = load(MAPS[id].ground); MAPS[id].MINI = load(MAPS[id].mini); }
@@ -31,7 +32,7 @@ for (const wt in (A.elfSkins || {})){
   ELSKIN[wt] = {};
   for (const d in A.elfSkins[wt]) ELSKIN[wt][d] = A.elfSkins[wt][d].map(load);
 }
-function combatOutfitMap(){ return !['town','inn','inn2','fieldvillage'].includes(MAP); }
+function combatOutfitMap(){ return !['town','inn','inn2','guild','fieldvillage'].includes(MAP); }
 function playerFrames(dir){
   if(GAIA_PARTY_MODE&&GAIA_HERO_FR[dir]?.length)return GAIA_HERO_FR[dir];
   const wt = (typeof WPN !== 'undefined' && WPN && WPN.wt) || null;
@@ -86,6 +87,7 @@ for (const b of CUR.blds){
   } else solids.push({ x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - b.h * 0.36, y1: b.y - b.h * 0.1 });
   sprites.push({ img: BI[b.k], x: b.x, y: b.y, w: b.w, h: b.h, key: b.y - b.h * 0.1 });
   if((id==='town'&&b.k==='house_blue')||(id==='fieldvillage'&&b.kind==='field_inn'))spots.push({name:(id==='fieldvillage'?'지역 여관':'여관 입구'),x:b.x+b.door*b.w,y:b.y-b.h*.06,r:48,kind:'inn_door'});
+  if(id==='town'&&b.k==='guild_hall'&&MAPS.guild)spots.push({name:'모험가 길드 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:52,kind:'guild_door'});   // 가이아: 길드 홀은 걸어 들어간다
   if(id==='town'&&(b.kind==='minigame_tavern'||b.k==='player_tavern'))spots.push({name:'DUSK POB · 주점 입구',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_tavern'});
   if(id==='town'&&(b.kind==='minigame_arena'||b.k==='arena_entry'))spots.push({name:'격투장 입장·배팅소',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_arena'});
   if(id==='town'&&(b.kind==='minigame_bubble'||b.k==='bubble_house'))spots.push({name:'버블 슈터 하우스',x:b.x+b.door*b.w,y:b.y-b.h*.06,r:58,kind:'minigame_bubble'});
@@ -108,6 +110,7 @@ for (const p of CUR.props){
 }
 for (const n of CUR.npcs){
   if(GAIA_PARTY_MODE&&n.shop==='trade')continue;   // 가이아: 교역 NPC 잠금
+  if(GAIA_PARTY_MODE&&id==='town'&&n.shop==='guild'&&MAPS.guild)continue;   // 가이아: 길드장 하르트는 길드 홀 안쪽에 있다(gaia_guild.js)
   if(n.companionTest&&(!window.COMPANION||!COMPANION.townTestsEnabled()))continue;
   if(n.companionResident){
     const qs=window.QUEST&&QUEST.state?QUEST.state():null;
@@ -135,6 +138,7 @@ for (const n of npcs){
   if (CUR.solids) solids.push(...CUR.solids);
   if(id==='inn')spots.push({name:'출입문',x:7*TS,y:9.0*TS,r:58,kind:'inn_exit'});
   if(id==='inn'&&MAPS.inn2)spots.push({name:'2층 숙소 계단',x:5.9*TS,y:2.95*TS,r:54,kind:'inn_stairs_up'});
+  if(id==='guild'&&window.GAIA_GUILD)GAIA_GUILD.onWorld(npcs,spots,solids,sprites);
   if(id==='inn2'){spots.push({name:'아래층 계단',x:6.0*TS,y:2.95*TS,r:54,kind:'inn_stairs_down'});if(window.GAIA_SQUAT)GAIA_SQUAT.onWorld(npcs,spots,solids,sprites);}
   if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
@@ -300,7 +304,7 @@ function portalTransition(id,pos,dir,onArrive,prepare){
 let portalScrollConfirm=0;
 function useTownPortal(){
   const r=lifeRank('townPortal'),sc=window.UI&&UI.scrolls?UI.scrolls().portal:0;
-  if(MAP==='town'||MAP==='inn'||MAP==='inn2'||MAP==='fieldvillage'){say('이미 마을에 있습니다.');return false;}
+  if(MAP==='town'||MAP==='inn'||MAP==='inn2'||MAP==='guild'||MAP==='fieldvillage'){say('이미 마을에 있습니다.');return false;}
   const now=Date.now(),cd=[0,15,8,3][r||0]*60000;
   let byScroll=false;
   if(!r||(P.portalReadyAt||0)>now){
@@ -455,6 +459,9 @@ function act(){
   if (panel) return;
   if (!near) return;
   if(near.kind==='stash'&&window.UI)return UI.openStash();
+  if(near.kind==='guild_door'&&window.GAIA_GUILD)return GAIA_GUILD.enter();
+  if(near.kind==='guild_exit'&&window.GAIA_GUILD)return GAIA_GUILD.leave();
+  if(near.kind==='npc'&&near.npc.guildHost&&window.GAIA_GUILD)return GAIA_GUILD.talk(near.npc);
   if(near.kind==='inn_door'&&typeof enterInn==='function')return enterInn();
   if(near.kind==='inn_exit'&&typeof leaveInn==='function')return leaveInn();
   if(near.kind==='inn_stairs_up'&&typeof enterInn2==='function')return enterInn2();
@@ -503,6 +510,7 @@ function travel(id,pos,dir){
   return true;
 }
 function locationState(){
+  if(MAP==='guild'&&window.GAIA_GUILD)return GAIA_GUILD.returnState();   // 저장·텔레메트리에는 길드 밖(마을) 위치를 쓴다
   if((MAP==='inn'||MAP==='inn2')&&window.__INN&&__INN.returnState){const r=__INN.returnState();if(r)return {...r};}
   if((MAP==='inn'||MAP==='inn2')&&MAPS.inn&&MAPS.inn.back)return {map:'town',x:MAPS.inn.back[0],y:MAPS.inn.back[1],dir:'front'};
   const st={map:MAP,x:P.x,y:P.y,dir:P.dir||'front'};
@@ -1220,7 +1228,7 @@ function frame(now){
   const vw = VW / Z, vh = VH / Z;
   let camX = P.x - vw / 2, camY = P.y - 30 - vh / 2;
   camX = MWp < vw ? (MWp - vw) / 2 : Math.max(0, Math.min(MWp - vw, camX)); camY = MHp < vh ? (MHp - vh) / 2 : Math.max(0, Math.min(MHp - vh, camY));
-  const DUN=MAP==='dungeon', INDOOR=MAP==='inn'||MAP==='inn2';
+  const DUN=MAP==='dungeon', INDOOR=MAP==='inn'||MAP==='inn2'||MAP==='guild';
   if(!simPaused&&!impactPause){
     if(!DUN&&!INDOOR)weather(dt,camX,camY,vw,vh);
     updAtk(dt);updSkills(dt);if(typeof updEncounters==='function')updEncounters(dt);
