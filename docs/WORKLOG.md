@@ -1726,3 +1726,10 @@
 - 원인: 시작 화면 출렁임용 CSS 클래스 `.jg` 가 대화창의 기존 출렁임 모드 클래스 `#dlg.jg`(gaia_jiggle.js 가 붙임)와 이름이 같아, 대화창에 시작 화면 애니메이션(bootJig)이 덮여 위치가 오른쪽으로 밀리고 늘어남 → 시작 화면 쪽을 `.bjg` 로 개명(shell.html). 앞으로 대화창 관련 클래스(`pan`,`on`,`jg`)와 겹치는 전역 클래스 이름을 쓰지 말 것.
 - 시작 화면 출렁임 범위를 11%x12% → 8%x8.8% 로 줄이고 움직임 폭을 약 40% 로 줄임(`bootJig` 키프레임, #jgL/#jgR).
 - 검증: 1000x640·1200x750 에서 대화창 위치(중앙, 좌우 여백 20px)와 대사 전체 표시 확인. 이전 검증은 오류 유무만 봐서 이 문제를 놓쳤음 → 화면 모양까지 캡처해서 볼 것.
+
+## 2026-11-04 (밤) 단련 하루 1회 · 야영 반나절 · 표정 초상 연결 — Claude
+- 아가사 단련(gaia_squat.js): 아침 제한 삭제, 하루 1회(guildDayKey). `squatMorning()`은 항상 true 로 남김(옛 호출 안전). 문구 '아침 단련' → '일일 단련'(gaia_squat.js, guild.js 게시판 안내).
+- 야영(field_dungeon.js restAtCamp): `DAY.t += .5`(반나절, 오전↔오후). 자정을 넘기면 `GAIA_RENT.onDay()` 호출(날짜·월세 진행). 야영 그림은 쉬기 시작할 때의 낮/밤으로 고름. 몬스터 재생성 꼼수 방지용.
+- 표정 초상: `assets/gaia_cast/{kyle,agatha,sylvia}/*.webp`(인물당 8장, 전신)를 기본 대화 초상과 같은 방식(키의 60%까지 자르고 아래 페더)으로 잘라 `A.gaiaDlgX[인물][파일이름]`에 넣음(gaia_squat_assets.py `_dlg_expressions`). 대사 `이름(표정): 말` 의 표정 태그를 `GAIA_FACE_MAP`(quest.js)이 파일 이름으로 바꿈. 표 — 카일: 밝음laugh 놀람pain 곤란sad 못마땅·따짐angry 능청talk 뾰로통sad / 아가사: 밝음laugh 부끄shy 애원·곤란smile_plead 겁·놀람scared 아픔pain 화남·따짐·못마땅angry 지침tired_torn 능청talk / 실비아: 아가사와 같되 애원·곤란plead, 능청talk_staff. 태그 없거나 표에 없으면 기본 초상(출렁임 있음).
+- 아가사·실비아 대사 194줄 중 91줄에 표정 태그를 붙임(글자는 그대로, 앞의 `(표정)`만 추가). 나머지는 기본 초상(출렁임 유지). 표정 초상은 출렁임 영역이 없어 정지 그림이다(필요하면 포즈별 영역을 gaia_jiggle.js JG_REGIONS 에 추가).
+- 검증: 24장 로드, 표정별 초상 교체, 야영 후 시간표시 낮→저녁·밤→낮·오후→아침·낮→밤, 오류 0건, 대화창 위치 정상. 사용하지 못한 포즈: kyle club·whip(태그 없음).

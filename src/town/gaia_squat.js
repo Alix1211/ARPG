@@ -12,8 +12,8 @@ const SQUAT_NPC=[6.0,5.9];                      // 2층에서 아가사가 서 �
 const SQUAT_TIER_NAME=['','쉬움','보통','어려움'];
 let squatRoot=null,squatFrame=null,squatCur=null,squatNpcRef=null;
 
-// 아침 = 새벽~낮 초반(하루 8분 중 약 2분 24초). 하단 시간 표시를 눌러 시간을 넘길 수도 있다.
-function squatMorning(){return DAY.t>=.95||DAY.t<.25;}
+// 케인 2026-11-04: 단련은 아침 제한 없이 하루 1회(날짜는 guildDayKey 가 셈). 옛 이름 squatMorning 은 늘 참을 돌려준다(다른 코드가 불러도 안전).
+function squatMorning(){return true;}
 function squatTier(){return SQUAT_TIER_BY_RANK[guildRank()]||1;}
 function squatMax(){return SQUAT_MAX_BY_RANK[guildRank()]||3;}
 function squatCount(ratio){
@@ -89,7 +89,7 @@ function squatRoomBackdrop(on){
 }
 function squatOnWorld(npcList,spotList,solidList,spriteList){
   const n=companionMarketNpc('merc_f_sword',SQUAT_NPC[0]*TS,SQUAT_NPC[1]*TS,false);if(!n)return;
-  Object.assign(n,{name:'아가사',title:'여관 2층 · 아침 단련',squatHost:true,mercRoam:false,key:n.y});
+  Object.assign(n,{name:'아가사',title:'여관 2층 · 일일 단련',squatHost:true,mercRoam:false,key:n.y});
   npcList.push(n);spriteList.push(n);squatNpcRef=n;
   solidList.push({x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1});
   spotList.push({name:n.name,x:n.x,y:n.y+6,r:56,kind:'npc',npc:n});
@@ -98,11 +98,10 @@ function squatLine(){
   const rk=guildRankName(),tier=squatTier();
   if(squatDoneToday()){
     const n=guildState.squatGot|0;
-    if(n<=0)return '…죄송해요, 오늘은 박자가 영 안 맞았어요. 접수원이 의뢰서를 한 장도 안 내줬어요. 내일 아침에 다시 해 봐요.';
+    if(n<=0)return '…죄송해요, 오늘은 박자가 영 안 맞았어요. 접수원이 의뢰서를 한 장도 안 내줬어요. 내일 다시 해 봐요.';
     if(n>=squatMax())return '어때요, 완벽했죠? 길드에서 의뢰서를 '+n+'장이나 받아 왔어요! 게시판에서 골라 가요.';
     return '길드에서 의뢰서를 '+n+'장 받아 왔어요. 게시판에서 골라 가요. 오늘 단련은 여기까지예요.';
   }
-  if(!squatMorning())return '아직 몸이 덜 풀렸어요. 단련은 아침(새벽~낮 초반)에 해야 길드에서 의뢰서를 받아 올 수 있어요.';
   return '단련 시간이에요! 박자에 맞춰 스쿼트를 하면, 점수만큼 길드에서 의뢰서를 받아 올게요. 지금 길드가 '+rk+'이라 박자는 「'+SQUAT_TIER_NAME[tier]+'」, 많으면 '+squatMax()+'장까지예요.';
 }
 function squatTalk(n){
@@ -110,10 +109,10 @@ function squatTalk(n){
   const done=squatDoneToday(),morning=squatMorning();
   const dp=(A.gaiaDlg&&A.gaiaDlg.agatha)||(A.gaiaKit&&A.gaiaKit.port_agatha);if(dp)$('dlgImg').src=dp;
   squatRoomBackdrop(true);
-  $('dlgName').textContent='아가사';$('dlgTitle').textContent='여관 2층 · 아침 단련';
+  $('dlgName').textContent='아가사';$('dlgTitle').textContent='여관 2층 · 일일 단련';
   $('dlgLine').textContent=squatLine();
   const b=$('dlgTrade');b.hidden=false;
-  b.textContent=!A.gaiaSq?'단련 자료 없음':done?'오늘 단련은 끝':morning?'단련 시작':'단련은 아침에만';
+  b.textContent=!A.gaiaSq?'단련 자료 없음':done?'오늘 단련은 끝':'단련 시작';
   b.disabled=!A.gaiaSq||done||!morning;
   return true;
 }

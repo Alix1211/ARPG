@@ -300,10 +300,10 @@ function guildRender(){
   for(const q of guildState.active)a.append(guildCard(q,true));
   for(const q of guildState.board)b.append(guildCard(q,false));
   if(GAIA_PARTY_MODE){
-    const head=b.previousElementSibling;if(head)head.textContent='아가사가 가져온 의뢰 · 아침 단련 후에만 올라옵니다';
+    const head=b.previousElementSibling;if(head)head.textContent='아가사가 가져온 의뢰 · 하루 한 번 단련 후에만 올라옵니다';
     if(!guildState.board.length)b.innerHTML='<div class="gq"><small>'+(guildState.squatDay===guildState.dayKey
-      ?(guildState.squatGot>0?'오늘 가져온 의뢰는 모두 받았습니다. 내일 아침 단련 뒤에 새 의뢰가 올라옵니다.':'오늘은 아가사가 의뢰를 받아 오지 못했습니다. 내일 아침 다시 도전하세요.')
-      :'직접 받을 수 있는 의뢰가 없습니다. 아침에 여관 2층 숙소에서 아가사와 단련을 하면, 아가사가 길드에서 의뢰를 받아 옵니다.')+'</small></div>';
+      ?(guildState.squatGot>0?'오늘 가져온 의뢰는 모두 받았습니다. 내일 단련 뒤에 새 의뢰가 올라옵니다.':'오늘은 아가사가 의뢰를 받아 오지 못했습니다. 내일 다시 도전하세요.')
+      :'직접 받을 수 있는 의뢰가 없습니다. 여관 2층 숙소에서 아가사와 하루 한 번 단련을 하면, 아가사가 길드에서 의뢰를 받아 옵니다.')+'</small></div>';
   }
   guildRenderBribe();guildRenderExam();
 }

@@ -467,15 +467,18 @@ function restAtCamp(){
     if(window.TELEMETRY)TELEMETRY.camp();
     P.hp=P.maxHp;P.mp=P.maxMp;P.mpAcc=0;
     for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
+    // 케인 2026-11-04: 야영하면 반나절(오전↔오후)이 흐른다 → 몬스터를 다시 불러 레벨업하는 꼼수를 막는다. 자정을 넘기면 날짜·월세도 함께 넘어간다.
+    const campNight=dayLook(DAY.t).lamp>.5;
+    {const t0=DAY.t;DAY.t=(DAY.t+.5)%1;if(DAY.t<t0&&window.GAIA_RENT)GAIA_RENT.onDay();}
     spawnFieldMonsters(fieldTheme);syncBars();
     if(typeof SFX!=='undefined')SFX.play('heal');
-    const pic=A.camp&&A.camp[dayLook(DAY.t).lamp>.5?'night':'day'];
+    const pic=A.camp&&A.camp[campNight?'night':'day'];
     if(art&&pic){art.style.backgroundImage='url('+pic+')';requestAnimationFrame(()=>art.classList.add('on'));}
     setTimeout(()=>{
       if(art)art.classList.remove('on');
       setTimeout(()=>{
         f.classList.remove('on');
-        setTimeout(()=>{f.classList.remove('slow');traveling=false;say('푹 쉬었습니다. 주변의 기척이 다시 느껴집니다.');},560);
+        setTimeout(()=>{f.classList.remove('slow');traveling=false;say('푹 쉬었습니다. 반나절이 흘렀고, 주변의 기척이 다시 느껴집니다.');},560);
       },pic?720:0);
     },pic?2600:220);
   },560);

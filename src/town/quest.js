@@ -121,6 +121,17 @@ function questComplete(q){
 const LUC_FACE_KEYS=['밝음','놀람','따짐','흐뭇','능청','뾰로통','격분','신남','못마땅','곤란','상처지침','상처담담','상처울적','상처아픔','상처미소'];
 // 가이아: 말하는 사람 표시는 루크레아 → 카일(초상은 카일 한 장). 각색 대사는 처음부터 '카일:'로 적혀 있어 둘 다 카일 초상으로 보낸다.
 const GAIA_KYLE_PORT=()=>(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE)?((A.gaiaDlg&&A.gaiaDlg.kyle)||(A.gaiaKyle&&A.gaiaKyle.port)||(A.gaiaKit&&A.gaiaKit.port_kyle)||null):null;
+// 케인 2026-11-04: 표정 태그 → 표정 초상(assets/gaia_cast 파일 이름). 없는 태그는 기본 초상(출렁임 있음)으로 나온다.
+const GAIA_FACE_MAP={
+  kyle:{밝음:'laugh',놀람:'pain',곤란:'sad',못마땅:'angry',따짐:'angry',능청:'talk',뾰로통:'sad',화남:'angry',지침:'tired_torn',아픔:'pain',슬픔:'sad'},
+  agatha:{밝음:'laugh',부끄:'shy',애원:'smile_plead',곤란:'smile_plead',겁:'scared',놀람:'scared',아픔:'pain',화남:'angry',따짐:'angry',못마땅:'angry',지침:'tired_torn',능청:'talk'},
+  sylvia:{밝음:'laugh',부끄:'shy',애원:'plead',곤란:'plead',겁:'scared',놀람:'scared',아픔:'pain',화남:'angry',따짐:'angry',못마땅:'angry',지침:'tired_torn',능청:'talk_staff'}
+};
+function gaiaFacePort(name,face){
+  if(!face||typeof GAIA_PARTY_MODE==='undefined'||!GAIA_PARTY_MODE||!A.gaiaDlgX)return null;
+  const ck=name==='카일'?'kyle':name==='아가사'?'agatha':name==='실비아'?'sylvia':null,fk=ck&&GAIA_FACE_MAP[ck][face];
+  return (fk&&A.gaiaDlgX[ck]&&A.gaiaDlgX[ck][fk])||null;
+}
 function questSpeaker(name){
   if(name==='루크레아'||name==='카일'){const kp=GAIA_KYLE_PORT();if(kp)return {name:'카일',title:'',port:kp};return {name,title:'',port:A.lucrea||A.face,luc:true};}
   if(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&A.gaiaDlg&&(name==='아가사'||name==='실비아'))return {name,title:'',port:A.gaiaDlg[name==='아가사'?'agatha':'sylvia']};   // 케인 2026-11-04: 대화 초상은 전신 그림을 허벅지 높이로 자른 것
@@ -139,6 +150,7 @@ function questShowLine(line){
   $('dlgName').textContent=(sp&&sp.name)||who;
   if(sp){
     let port=sp.port;if(sp.luc&&face&&A.lucreaFace&&A.lucreaFace[face])port=A.lucreaFace[face];
+    port=gaiaFacePort(sp.name,face)||port;
     if(port)$('dlgImg').src=port;$('dlgTitle').textContent=sp.title;
   }else $('dlgTitle').textContent='';
 }
