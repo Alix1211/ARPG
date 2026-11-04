@@ -1742,3 +1742,10 @@
 - 여관 속옷 초상: `assets_private/gaia_cast_under`(공개 저장소 금지, 로컬 빌드 때만 포함)의 아가사·실비아 표정 8장씩을 `A.gaiaDlgU` 로 묶고(gaia_squat_assets.py `_dlg_underwear`, bust_* 는 자르지 않고 페더만), 대화 때 MAP 이 `inn`/`inn2` 이면 속옷 초상을 쓴다(quest.js gaiaFacePort, gaia_squat.js squatTalk). 표정 태그가 없거나 속옷 그림에 없으면 속옷 기본(talk). 카일은 해당 없음. 속옷 초상은 출렁임 영역이 없어 정지 그림. 여관 안의 월드 스프라이트(치비)는 그대로.
 - 시작 화면 출렁임: 폭을 약 1.35배로(`bootJig` 키프레임). 범위(8%x8.8%)는 그대로.
 - 주의: 이 저장소는 현재 공개(private=false)이고 gaia/ 폴더(Pages)에 속옷 그림이 base64 로 들어간다(기존 단련 그림 포함). 케인이 비공개 전환을 원하면 Pages 설정 확인 필요.
+
+### 2026-11-04 · 퀘스트 시뮬 1단계 (본편 1~10화, 가이아 빌드)
+- `src/town/check_quest_full_gaia.py` 추가(check_quest_full.py 복사본): 가이아 빌드 주소(`gaia_preview/gaia-town.html`, 또는 `QUEST_URL`), `--allow-file-access-from-files`, 첫 로딩 90초 허용, 하르트(길드장)는 길드 홀 안쪽이라 `GAIA_GUILD.enter()` 후 (9.2,4.2)칸에서 말을 건다. 게임 코드는 건드리지 않음.
+- 실행: `QUEST_MAIN_FROM=1 QUEST_MAIN_TO=10 QUEST_SIDE_FROM=0 python3 src/town/check_quest_full_gaia.py` — 약 1분.
+- 결과: 본편 1~9화 수락→현장→완료 통과. **10화 '첫 장거리 거래'는 시작 NPC 핀(교역소 직원)이 가이아 모드에서 잠겨 있어(town.js `GAIA_PARTY_MODE&&n.shop==='trade'` skip) 말을 걸 수 없어 진행 불가.**
+- 같은 이유로 막힐 퀘스트(핀 시작/대화 또는 무역 이벤트 요구) 16개: 본편 10·11·19·20·21·31·32·45·50·51·60·61·68, 서브 15·17·45. 무역 잠금 방침(케인 2026-11-03)과 퀘스트 본문이 충돌 → 케인 결정 필요(해당 퀘스트를 가이아용으로 고치거나 건너뛰기 처리).
+- 전투·난이도는 시뮬 대상이 아님(킬/보스는 이벤트 주입).
