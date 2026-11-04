@@ -66,7 +66,7 @@ function guildHallOnWorld(npcList,spotList,solidList,spriteList){
   const hb=(A.npcs||[]).find(v=>v.shop==='guild'&&v.name==='하르트');
   if(hb){
     const x=GUILD_HART_POS[0]*TS,y=GUILD_HART_POS[1]*TS;
-    const n={...hb,x,y,at:null,img:BI[hb.k],ph:Math.random()*7,key:y};
+    const n={...hb,x,y,at:null,img:BI[hb.k],ph:Math.random()*7,key:y,questStartAlias:'town'};   // 하르트가 여는 퀘스트는 '마을'에서 수락하도록 적혀 있다 → 길드 홀 안에서도 수락되게 별칭
     npcList.push(n);spriteList.push(n);
     solidList.push({x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1});
     spotList.push({name:n.name,x:n.x,y:n.y+6,r:50,kind:'npc',npc:n});
