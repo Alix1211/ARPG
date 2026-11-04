@@ -51,7 +51,7 @@ import org.json.JSONObject;
 // 켤 때마다 깃허브 페이지의 최신 게임을 불러오고, 인터넷이 안 되면 앱 안에 든 예비 판으로 실행한다.
 // 저장은 게임 쪽(localStorage)과 앱 쪽(SharedPreferences "store")에 같이 적어, 두 판이 같은 저장을 쓴다.
 public final class MainActivity extends Activity {
-    private static final String REMOTE = "https://alix1211.github.io/ARPG/game/town.html";
+    private static final String REMOTE = "https://alix1211.github.io/ARPG/gaia/town.html";   // 가이아 퀘스트 인터넷 판(메인 저장소의 gaia/ 폴더)
     private static final String LOCAL = "https://appassets.androidplatform.net/assets/game/town.html";
     private WebView game;
     private final Object hapticLock = new Object();
@@ -192,7 +192,7 @@ public final class MainActivity extends Activity {
         setContentView(game);
         requestHighestRefreshRate();
         // 주소 끝에 시각을 붙여 게임 코드(town.html)는 늘 최신으로, 그림 파일(art_*.js)은 이름이 같으면 저장해 둔 것을 씀
-        loadLocal();   // 가이아 퀘스트 앱: 인터넷의 골든퀘스트 판은 쓰지 않고, 앱 안에 든 가이아 판만 쓴다
+        if (isOnline()) game.loadUrl(REMOTE + "?t=" + System.currentTimeMillis()); else loadLocal();   // 가이아 퀘스트: 인터넷의 gaia/ 판을 먼저, 안 되면 앱 안의 판
         ui.postDelayed(() -> { if (!remoteOk) loadLocal(); }, 40000);   // 40초 안에 못 받으면 앱 안의 예비 판으로
     }
 
