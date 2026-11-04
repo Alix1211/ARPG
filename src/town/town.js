@@ -1423,7 +1423,7 @@ const pops = [];
 // 케인 2026-11-04: 전투 중 'M +22' 글씨가 화면을 가려서, M이 오르면 반투명 핑크 하트가 폭폭 떠오르게 바꿈(글씨 없음).
 function heartPop(x, y, v){
   const n = Math.max(3, Math.min(7, 2 + Math.round(v / 15))), hs = [];
-  for (let i = 0; i < n; i++) hs.push({ dx: (Math.random() * 2 - 1) * 20, dl: Math.random() * .22, sz: 6 + Math.random() * 6, sw: Math.random() * 6.28, rise: 46 + Math.random() * 30 });
+  for (let i = 0; i < n; i++) hs.push({ dx: (Math.random() * 2 - 1) * 20, dl: Math.random() * .22, sz: 9 + Math.random() * 7, sw: Math.random() * 6.28, rise: 46 + Math.random() * 30 });
   pops.push({ x, y: y + 30, t: 0, hearts: hs, life: 1.15 });
 }
 function drawHeart(x, y, s){
@@ -1439,7 +1439,7 @@ function drawPops(dt){
       ctx.save(); ctx.lineWidth = 1.5;
       for (const h of p.hearts){
         const u = (p.t - h.dl) / (p.life - .25); if (u <= 0 || u >= 1) continue;
-        const pop = Math.min(1, u * 6), a = (u < .6 ? 1 : 1 - (u - .6) / .4) * .62;
+        const pop = Math.min(1, u * 6), a = (u < .6 ? 1 : 1 - (u - .6) / .4) * .72;
         ctx.globalAlpha = a; ctx.fillStyle = 'rgba(255,120,175,1)'; ctx.strokeStyle = 'rgba(255,215,235,1)';
         drawHeart(p.x + h.dx + Math.sin(h.sw + u * 5) * 6, p.y - u * h.rise, h.sz * (.5 + .5 * pop));
       }
