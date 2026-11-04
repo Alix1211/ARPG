@@ -49,6 +49,7 @@ const SFX = (() => {
   const vary = (v, k = 0.08) => v * (1 + (Math.random() * 2 - 1) * k);
   const S = {
     swing(t){ noise(t, 0.16, vary(900), vary(2600), 1.4, 0.32); },
+    club_swing(t){ noise(t, 0.12, vary(620), 190, 0.8, 0.22, 0, 'lowpass'); tone(t, 0.08, vary(120), 67, 0.08, 0, 'triangle'); }, // 몽둥이: 칼날처럼 날카로운 금속성 없이 낮고 둔탁한 바람 소리
     thrust(t){ noise(t, 0.12, vary(1500), vary(3200), 2.2, 0.28); },
     punch(t){ noise(t, 0.07, vary(700), 300, 1.2, 0.3); },
     bow(t){ tone(t, 0.09, vary(330), 150, 0.16, 0, 'triangle'); noise(t + 0.01, 0.14, 2600, 5200, 3, 0.18); },
@@ -141,7 +142,7 @@ addEventListener('visibilitychange',()=>{if(document.hidden)HAP(0);});
     if(window.GAME && GAME[name]===f)GAME[name]=g;
   };
   const originalAttack=attack;
-  attack=function(...args){const previous=P.atk,r=originalAttack.apply(this,args);if(P.atk&&P.atk!==previous){const w=P.atk.wt;if(!(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&w==='bow'))SFX.play(w==='bow'?'bow':w==='staff'?'staff':w==='spear'?'thrust':w==='gauntlet'?'punch':'swing');}return r;};
+  attack=function(...args){const previous=P.atk,r=originalAttack.apply(this,args);if(P.atk&&P.atk!==previous){const w=P.atk.wt;if(!(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&w==='bow'))SFX.play(typeof GAIA_PARTY_MODE!=='undefined'&&GAIA_PARTY_MODE&&w==='sword'?'club_swing':w==='bow'?'bow':w==='staff'?'staff':w==='spear'?'thrust':w==='gauntlet'?'punch':'swing');}return r;};
   wrap('hitTarget', null, () => { const p = pops[pops.length - 1]; SFX.play(p && p.crit ? 'crit' : 'hit'); HAP(p && p.crit ? 40 : 22); });   // 허수아비·몬스터 공통 타격
   if (typeof killMonster === 'function') wrap('killMonster', null, () => { SFX.play('kill'); HAP(28); });
   if (typeof hurtPlayer === 'function') wrap('hurtPlayer', (v) => { if (playerInv <= 0 && !traveling){ SFX.play('hurt'); HAP(65,3); } });
