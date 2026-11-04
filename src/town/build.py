@@ -980,7 +980,7 @@ if not os.path.exists(os.path.join(GAME_DIR, TITLE_FILE)):
     with open(os.path.join(GAME_DIR, TITLE_FILE), 'wb') as f: f.write(_tb)
 # 케인 2026-11-04: 가이아 퀘스트 로고(투명 PNG)를 시작 화면 중앙에 얹는다.
 _logo = Image.open(os.path.join(ROOT, 'source_sheets', 'ui', 'title_logo.png')).convert('RGBA')
-_logo.thumbnail((1200, 600), Image.LANCZOS)
+_logo.thumbnail((900, 1100), Image.LANCZOS)
 _lb = io.BytesIO(); _logo.save(_lb, 'WEBP', quality=88, method=6); _lb = _lb.getvalue()
 LOGO_FILE = 'art_titlelogo_' + hashlib.sha1(_lb).hexdigest()[:10] + '.webp'
 if not os.path.exists(os.path.join(GAME_DIR, LOGO_FILE)):

@@ -61,6 +61,7 @@ def main() -> None:
     manifest = gaia_pre + gaia_ui_art.prelude() + manifest + gaia_suf + gaia_ui_art.suffix() + gaia_squat_assets.suffix() + gaia_audio_suffix() + gaia_cutin_assets.preview_suffix()   # UI·여관·전투 음원·컷인
     art_list = json.loads(only_match(r"var files=(\[.*?\]),left=files\.length", original, "그림 파일"))
     title = only_match(r"(art_title_[0-9a-f]{10}\.webp)", original, "시작 화면")
+    logo = only_match(r"(art_titlelogo_[0-9a-f]{10}\.webp)", original, "시작 로고")
 
     modules = [
         "vfx.js", "skill_presentation.js", "skills2.js", "sage.js", "inn.js",
@@ -78,6 +79,7 @@ def main() -> None:
         "/*SAVE_SYNC*/": read("save_sync.js"),
         "/*VER*/": "GAIA 3P " + dt.datetime.now(dt.timezone.utc).strftime("%m%d-%H%M"),
         "/*TITLE*/": title,
+        "/*TITLE_LOGO*/": logo,
         "/*BOOT_TOTAL*/1": str(sum(int(item[1]) for item in art_list)),
         "/*ART_LIST*/[]": json.dumps(art_list, ensure_ascii=False),
         "/*ASSETS*/": manifest,
@@ -98,7 +100,7 @@ def main() -> None:
     # 분할형: 장치 메모리를 아끼는 원래 로딩 방식을 유지하는 ZIP.
     art_names = [entry[0].split("?", 1)[0] for entry in art_list]
     music_names = [path.name for path in sorted(GAME.glob("art_bgm_*.js"))]
-    needed_files = [title, *art_names, *music_names]
+    needed_files = [title, logo, *art_names, *music_names]
     for name in needed_files:
         if not (GAME / name).is_file():
             raise FileNotFoundError(GAME / name)
