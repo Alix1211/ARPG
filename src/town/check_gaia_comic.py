@@ -71,7 +71,9 @@ async def main():
         x, y = box[0] + box[2] * .34, box[1] + box[3] * .405
         await pg.mouse.move(x, y)
         await pg.mouse.down()
-        await pg.wait_for_timeout(70)
+        await pg.wait_for_timeout(40)
+        st = await ev("() => GAIA_JIGGLE.state()")   # 파동은 약 0.8초 안에 사라지므로 화면을 찍기 전에 먼저 읽는다
+        assert st['regs'][0]['hits'] >= 1 and st['regs'][1]['hits'] >= 1, st   # 반대쪽도 따라 움직임
         shot = Image.open(io.BytesIO(await pg.screenshot(clip=clip))).convert('RGB')
         if SHOT:
             await pg.screenshot(path=SHOT + '/dlg_receptionist_jiggle.png')
@@ -79,8 +81,6 @@ async def main():
         diff = ImageChops.difference(base, shot).convert('L')
         changed = sum(1 for v in diff.getdata() if v > 24)
         assert changed > 300, ('가슴을 눌러도 그림이 휘지 않음', changed)
-        st = await ev("() => GAIA_JIGGLE.state()")
-        assert st['regs'][0]['hits'] >= 1 and st['regs'][1]['hits'] >= 1, st   # 반대쪽도 따라 움직임
         await pg.wait_for_timeout(1500)
         # 다른 초상(아가사·실비아)
         for k in ('agatha', 'sylvia'):
