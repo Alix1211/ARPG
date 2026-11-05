@@ -160,7 +160,7 @@ function gaiaAppend(list){
   gaiaEnsure();
   for(const c of gaiaMembers){
     if(c.ko)continue;
-    if(MAP==='inn2'&&gaiaMembers.indexOf(c)===0)continue;   // 2층 숙소에서는 아가사가 NPC로 서 있으므로 동행 아가사는 그리지 않는다
+    if(MAP==='inn2')continue;   // 케인 2026-11-05: 2층 숙소에서는 아가사·실비아가 각자 NPC로 천천히 돌아다니므로 따라다니는 동행은 그리지 않는다(실비아가 둘로 보이던 것)
     list.push({companion:c,key:c.y});
   }
 }

@@ -133,18 +133,18 @@ function companionUpdateMarket(dt){
     }
     mercMarket.lastDayT=DAY.t;
   }
-  if(!(GAIA_PARTY_MODE?['town','fieldvillage','inn','guild']:['town','fieldvillage']).includes(MAP))return;
+  if(!(GAIA_PARTY_MODE?['town','fieldvillage','inn','guild','inn2']:['town','fieldvillage']).includes(MAP))return;
   for(const n of npcs){
     if(!n.mercenaryMarket||!n.mercRoam||n.hide)continue;
     n.mercMoving=false;n.mercWait-=dt;n.mercT+=dt;
     const dx=n.mercTx-n.x,dy=n.mercTy-n.y,dd=Math.hypot(dx,dy);
     if(n.mercWait<=0||dd<8){
-      n.mercWait=n.mercRare?9+Math.random()*9:2+Math.random()*4;   // 가이아 길드: 가끔만 걷는 용병은 오래 서 있다가 짧게 움직인다
+      n.mercWait=n.mercWaitMin!=null?n.mercWaitMin+Math.random()*(n.mercWaitMax-n.mercWaitMin):n.mercRare?9+Math.random()*9:2+Math.random()*4;   // 가이아 길드: 가끔만 걷는 용병은 오래 서 있다가 짧게 움직인다
       n.mercTx=n.mercHomeX+(Math.random()*2-1)*(n.mercRange||115);
       n.mercTy=n.mercHomeY+(Math.random()*2-1)*(n.mercRangeY||75);
       continue;
     }
-    const step=Math.min(dd,42*dt),nx=n.x+dx/dd*step,ny=n.y+dy/dd*step;
+    const step=Math.min(dd,(n.mercSpeed||42)*dt),nx=n.x+dx/dd*step,ny=n.y+dy/dd*step;
     if(!blocked(nx,ny)){n.x=nx;n.y=ny;n.key=ny;n.mercMoving=true;if(Math.abs(dx)>Math.abs(dy)*.8){n.mercDir='side';n.mercFlip=dx<0;}else n.mercDir=dy<0?'back':'front';}
     else n.mercWait=0;
     const sp=spots.find(s=>s.kind==='npc'&&s.npc===n);if(sp){sp.x=n.x;sp.y=n.y+6;}
@@ -419,6 +419,12 @@ function companionMoveTo(tx,ty,speed,dt){
   }
   return companionStepTo(tx,ty,speed,dt);
 }
+// 케인 2026-11-05: 동료가 보는 방향은 한 번 바꾸면 0.3초 동안 다시 바꾸지 않는다(걸리거나 목표가 흔들릴 때 좌우로 깜박이던 것). 시간은 companionFaceTick 이 줄인다.
+function companionFace(c,dir,flip){
+  if(c.dir===dir&&(dir!=='side'||c.flip===flip))return false;
+  if((c.fHold||0)>0)return false;
+  c.dir=dir;c.flip=flip;c.fHold=.3;return true;
+}
 function companionStepTo(tx,ty,speed,dt){
   const c=companionState,dx=tx-c.x,dy=ty-c.y,dd=Math.hypot(dx,dy);if(dd<2)return false;
   const travel=Math.min(dd,speed*dt),sx=dx/dd*travel,sy=dy/dd*travel,ox=c.x,oy=c.y;
@@ -430,12 +436,10 @@ function companionStepTo(tx,ty,speed,dt){
   const mx=c.x-ox,my=c.y-oy,moved=Math.hypot(mx,my)>.08;
   // 가이아(케인 2026-11-05): 어디 걸려 앞뒤·좌우로 조금씩 밀릴 때 보는 방향이 빠르게 뒤집히던 것을 막는다.
   //  움직임을 조금씩 모아(감쇠 합) 충분히 한쪽으로 가야 방향을 바꾸고, 바꾼 뒤 0.3초는 다시 바꾸지 않는다. 걸려서 왔다 갔다 하면 합이 상쇄돼 그대로 있다.
-  c.fvx=(c.fvx||0)*.8+mx;c.fvy=(c.fvy||0)*.8+my;c.fHold=Math.max(0,(c.fHold||0)-dt);
+  c.fvx=(c.fvx||0)*.8+mx;c.fvy=(c.fvy||0)*.8+my;
   {const ax=Math.abs(c.fvx),ay=Math.abs(c.fvy);
-   if(ax+ay>5&&c.fHold<=0){
-     let nd,nf=c.flip;
-     if(ax>ay*.8){nd='side';nf=c.fvx<0;}else nd=c.fvy<0?'back':'front';
-     if(nd!==c.dir||(nd==='side'&&nf!==c.flip)){c.dir=nd;c.flip=nf;c.fHold=.3;}
+   if(ax+ay>5){
+     if(ax>ay*.8)companionFace(c,'side',c.fvx<0);else companionFace(c,c.fvy<0?'back':'front',false);
    }}
   if(moved){c.t+=dt;c.moving=true;}
   return moved;
@@ -492,7 +496,7 @@ function companionAttack(m){
   c.cd=d.attackCd;c.skillCount=(c.skillCount||0)+1;
   const tier=Math.max(1,Math.min(7,c.tier||1)),skill1=tier>=2&&c.skillCount%5===0,skill2=tier>=4&&c.skillCount%7===0,skill3=tier>=6&&c.skillCount%9===0;
   let mul=skill1?1.25:1;if(skill2)mul*=1.15;if(skill3)mul*=1.45;
-  if(Math.abs(dx)>Math.abs(dy)*.8){c.dir='side';c.flip=dx<0;}else{c.dir=dy<0?'back':'front';c.flip=false;}
+  if(Math.abs(dx)>Math.abs(dy)*.8)companionFace(c,'side',dx<0);else companionFace(c,dy<0?'back':'front',false);
   if(d.kind==='gun'){
     c.atkT=.22;
     const mx=c.x+Math.cos(a)*29,my=c.y-54+Math.sin(a)*10;
@@ -555,6 +559,7 @@ function updateCompanion(dt){
     }
   }
   if(c.mode==='hire'&&c.expired&&(MAP==='town'||MAP==='inn'||MAP==='guild'||MAP==='fieldvillage')){companionReturn('expired');return;}
+  c.fHold=Math.max(0,(c.fHold||0)-dt);   // 방향 유지 시간(companionFace)
   c.cd=Math.max(0,c.cd-dt);if(COMPANION_DEF[c.active].kind==='gun')c.atkT=Math.max(0,c.atkT-dt);companionUpdateAttack(dt);
   const target=companionPickTarget(),distP=Math.hypot(c.x-P.x,c.y-P.y);
   let moved=false,attemptedMove=false;
@@ -575,7 +580,7 @@ function updateCompanion(dt){
     if(distP>d.warpIdle){companionWarp();return;}
     const want=companionMelee(d)?companionDesiredFront():companionDesired(),dd=Math.hypot(c.x-want[0],c.y-want[1]);
     if(dd>28){attemptedMove=true;moved=companionMoveTo(want[0],want[1],d.speed,dt);}
-    else{c.t=0;c.dir=P.dir||c.dir;c.flip=!!P.flip;}
+    else{c.t=0;companionFace(c,P.dir||c.dir,!!P.flip);}
   }
   // 공격 중에는 끼임으로 보지 않는다. 실제 이동을 시도했는데 제자리인 시간만 센다.
   if(attemptedMove&&companionMelee(d)){

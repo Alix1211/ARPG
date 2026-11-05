@@ -32,7 +32,7 @@ async def main():
         assert await ev("() => GAME.masteryBonus('sword').dmg") == 0
 
         # 2) 낮: 실비아 치유는 닫혀 있다
-        await ev("() => { GAME.P.hp=1; GAME.P.mp=1; GAME.P.x=9.0*48; GAME.P.y=5.5*48+20; }")
+        await ev("() => { GAME.P.hp=1; GAME.P.mp=1; {const q=GAIA_HEART.npcPos(); GAME.P.x=q.x; GAME.P.y=q.y+20;} }")
         await pg.wait_for_timeout(200)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(300)
@@ -43,7 +43,7 @@ async def main():
         # 3) 밤으로 넘기면 열린다
         for _ in range(3):
             await ev("() => document.getElementById('place').click()")
-        await ev("() => { GAME.P.x=9.0*48; GAME.P.y=5.5*48+20; }")
+        await ev("() => { {const q=GAIA_HEART.npcPos(); GAME.P.x=q.x; GAME.P.y=q.y+20;} }")
         await pg.wait_for_timeout(200)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(300)
@@ -70,7 +70,7 @@ async def main():
         # 못 터뜨려도 최소 20%
         await ev("() => GAIA_RENT.debugDays(1)")
         assert not (await ev("() => GAIA_HEART.state()"))['done'], '다음 날 밤에도 못 함'
-        await ev("() => { GAME.P.hp=1; GAME.P.x=9.0*48; GAME.P.y=5.5*48+20; }")
+        await ev("() => { GAME.P.hp=1; {const q=GAIA_HEART.npcPos(); GAME.P.x=q.x; GAME.P.y=q.y+20;} }")
         await pg.wait_for_timeout(200)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(300)
@@ -83,7 +83,7 @@ async def main():
 
         # 5) 아가사 스쿼트: 게임 속 하루에 1회
         await ev("() => GAIA_RENT.debugDays(1)")
-        await ev("() => { GAME.P.x=6.0*48; GAME.P.y=5.9*48+20; }")
+        await ev("() => { {const q=GAIA_SQUAT.npcPos(); GAME.P.x=q.x; GAME.P.y=q.y+20;} }")
         await pg.wait_for_timeout(200)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(300)

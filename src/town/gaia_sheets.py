@@ -35,11 +35,36 @@ def _body(cell):
     return cell.crop(Image.fromarray(mask.astype("uint8") * 255).getbbox())
 
 
+def _defringe(img, white_min=232):
+    """케인 2026-11-05: 시트 바탕의 흰 잔여(흰 테두리)를 걷는다. 바깥 투명에서 이어진 흰색만 지운다.
+    머리가 흰·은색인 인물(실비아)은 머리까지 깎이므로 쓰지 않는다(아가사만)."""
+    from scipy import ndimage
+    a = np.array(img.convert("RGBA")).astype(float)
+    al = a[..., 3]
+    T = al < 30
+    mn = a[..., :3].min(axis=2)
+    white = (~T) & (mn >= white_min)
+    prop = ndimage.binary_propagation(T, mask=T | white, structure=np.ones((3, 3)))
+    kill = prop & white
+    kill = ndimage.binary_dilation(kill, structure=np.ones((3, 3)), iterations=1) & ((mn >= white_min - 25) | (al < 250))
+    al = np.where(kill, 0, al)
+    solid = al >= 240
+    core = ndimage.binary_erosion(solid, structure=np.ones((3, 3)), iterations=2)
+    idx = ndimage.distance_transform_edt(~core, return_indices=True)[1]
+    ring = (al > 0) & ~core
+    for c in range(3):
+        a[..., c][ring] = a[..., c][idx[0][ring], idx[1][ring]]
+    a[..., 3] = np.where(ring, np.clip((al - 70) * 1.6, 0, 255), al)
+    return Image.fromarray(a.astype("uint8"), "RGBA")
+
+
 BODY_H, BODY_CAP = 162, 164  # build.py 의 GAIA_BODY_H/GAIA_BODY_CAP 와 같게 유지
 
 
 def frames(path):
     sheet = Image.open(path).convert("RGBA")
+    if Path(path).name == "agatha.png":
+        sheet = _defringe(sheet)
     cells = []
     for row in range(3):
         for col in range(5):

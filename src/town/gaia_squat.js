@@ -89,9 +89,8 @@ function squatRoomBackdrop(on){
 }
 function squatOnWorld(npcList,spotList,solidList,spriteList){
   const n=companionMarketNpc('merc_f_sword',SQUAT_NPC[0]*TS,SQUAT_NPC[1]*TS,false);if(!n)return;
-  Object.assign(n,{name:'아가사',title:'여관 2층 · 일일 단련',squatHost:true,mercRoam:false,key:n.y});
+  Object.assign(n,{name:'아가사',title:'여관 2층 · 일일 단련',squatHost:true,mercRoam:true,mercSpeed:16,mercRange:62,mercRangeY:40,mercWaitMin:2.5,mercWaitMax:6,key:n.y});   // 케인 2026-11-05: 서 있지 않고 천천히·좁게 돌아다닌다(너무 돌아다니면 말을 걸기 어렵다)
   npcList.push(n);spriteList.push(n);squatNpcRef=n;
-  solidList.push({x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1});
   spotList.push({name:n.name,x:n.x,y:n.y+6,r:56,kind:'npc',npc:n});
 }
 function squatLine(){
@@ -122,6 +121,7 @@ function squatStart(){
 }
 window.GAIA_SQUAT={
   talk:squatTalk,start:squatStart,roomBackdrop:squatRoomBackdrop,onWorld:squatOnWorld,morning:squatMorning,doneToday:squatDoneToday,
+  npcPos:()=>squatNpcRef?{x:squatNpcRef.x,y:squatNpcRef.y}:null,   // 시험용: 돌아다니는 NPC의 지금 자리
   count:squatCount,tier:squatTier,max:squatMax,
   state:()=>({open:!!squatCur,day:guildState.squatDay,got:guildState.squatGot,ratio:guildState.squatRatio,tier:squatTier(),max:squatMax()}),
   debugResult(ratio){if(!squatCur)return false;squatResult({ratio,score:Math.round(ratio*1000)});return squatCur.result;}   // 시험용: 게임을 치르지 않고 결과만 넣는다

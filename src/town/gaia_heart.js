@@ -74,9 +74,8 @@ function heartClose(){
 
 function heartOnWorld(npcList,spotList,solidList,spriteList){
   const n=companionMarketNpc('merc_f_mage',HEART_NPC[0]*TS,HEART_NPC[1]*TS,false);if(!n)return;
-  Object.assign(n,{name:'실비아',title:'여관 2층 · 저녁 치유',heartHost:true,mercRoam:false,key:n.y});
+  Object.assign(n,{name:'실비아',title:'여관 2층 · 저녁 치유',heartHost:true,mercRoam:true,mercSpeed:16,mercRange:62,mercRangeY:40,mercWaitMin:2.5,mercWaitMax:6,key:n.y});   // 케인 2026-11-05: 서 있지 않고 천천히·좁게 돌아다닌다(너무 돌아다니면 말을 걸기 어렵다)
   npcList.push(n);spriteList.push(n);heartNpcRef=n;
-  solidList.push({x0:n.x-13,x1:n.x+13,y0:n.y-12,y1:n.y-1});
   spotList.push({name:n.name,x:n.x,y:n.y+6,r:56,kind:'npc',npc:n});
 }
 function heartLine(){
@@ -105,6 +104,7 @@ function heartStart(){
   return heartLaunch();
 }
 window.GAIA_HEART={
+  npcPos:()=>heartNpcRef?{x:heartNpcRef.x,y:heartNpcRef.y}:null,   // 시험용: 돌아다니는 NPC의 지금 자리
   talk:heartTalk,start:heartStart,onWorld:heartOnWorld,isNight:heartIsNight,doneToday:heartDoneToday,min:HEART_MIN,
   state:()=>({open:!!heartCur,key:heartKey(),done:heartDoneToday(),night:heartIsNight(),day:guildState.heartDay,ratio:guildState.heartRatio}),
   debugResult(ratio){if(!heartCur)return false;heartResult({ratio});return heartCur.result;}   // 시험용: 게임을 치르지 않고 결과만 넣는다
