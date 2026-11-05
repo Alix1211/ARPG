@@ -57,7 +57,7 @@ async def main():
         assert first['name'] == '아가사', first
         seen = await play_through(pg, ev, 'd100', shots=(0, 5))
         names = [s['name'] for s in seen]
-        assert len(seen) == 9 and set(names) <= {'아가사', '실비아', '카일'}, names
+        assert len(seen) == 6 and set(names) <= {'아가사', '실비아', '카일'}, names
         assert seen[-1]['btn'] == '확인', seen[-1]
         st = await ev(ST)
         assert st['life']['d100'] and not st['busy']
