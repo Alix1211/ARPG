@@ -22,7 +22,7 @@ const GAIA_PARTY_MODE=true;
 // 가이아: 격투(건틀릿)는 숨긴다. 방망이=sword(카일), 채찍=bow(카일), '창' 칸=아가사의 검, 지팡이=실비아.
 const WT_LIST=GAIA_PARTY_MODE?['sword','spear','bow','staff']:['sword','spear','gauntlet','bow','staff'];
 // 케인 2026-11-03: 세 명이 작아 보여 그리는 크기만 키운다(발 위치 기준, 무기 모션도 함께 커짐). 판정 범위는 그대로.
-const GAIA_DRAW_SCALE=1.12;
+const GAIA_DRAW_SCALE=1.20;   // 케인 2026-11-05: 1.12→1.20(주인공 셋만 120%). 원래 크기=1.0. 채찍 줄 시작점(gaia_party.js)도 이 값을 따라감
 const GAIA_KYLE_MELEE=0.45;   // 카일 몽둥이가 몹에게 주는 데미지 배율(잡몹 하나 상대하는 정도, 케인 2026-11-03)
 function gaiaScaleAround(x,y){if(!GAIA_PARTY_MODE)return;ctx.translate(x,y);ctx.scale(GAIA_DRAW_SCALE,GAIA_DRAW_SCALE);ctx.translate(-x,-y);}
 const GAIA_HERO_FR={};
