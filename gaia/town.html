@@ -484,7 +484,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1105-1013</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1105-1121</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -704,6 +704,7 @@ for (const p of CUR.props){
 for (const n of CUR.npcs){
   if(GAIA_PARTY_MODE&&n.shop==='trade')continue;   // 가이아: 교역 NPC 잠금
   if(GAIA_PARTY_MODE&&id==='town'&&n.shop==='guild'&&MAPS.guild)continue;   // 가이아: 길드장 하르트는 길드 홀 안쪽에 있다(gaia_guild.js)
+  if(id==='inn'&&n.shop==='inn'&&innReturn&&innReturn.map==='fieldvillage')continue;   // 케인 2026-11-05: 지역 마을 여관엔 토비를 두지 않는다
   if(n.companionTest&&(!window.COMPANION||!COMPANION.townTestsEnabled()))continue;
   if(n.companionResident){
     const qs=window.QUEST&&QUEST.state?QUEST.state():null;
@@ -1811,7 +1812,7 @@ function frame(now){
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += sdt;
   } else P.t = 0;
-  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
+  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } if(MAP==='inn'&&e.to==='town'&&typeof leaveInn==='function'){ leaveInn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
   if(!simPaused&&window.QUEST)QUEST.tick();
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }
@@ -8536,10 +8537,19 @@ function questObjective(q){
   if(s.type==='event')return s.objective||('조건 진행 '+(mainQuestState.active[q.id].progress||0)+' / '+(s.need||1));
   return s.objective||'방문하기';
 }
+// 케인 2026-11-05: 퀘스트 이름 앞에 시작 레벨, 목표 앞에 지금 가야 할 장소의 티어를 붙인다(어디로 가야 하는지 헤매지 않게).
+function questLvTag(q){const l=q&&q.start&&q.start.level;return l?'[Lv'+l+'] ':'';}
+function questLocTag(q){
+  const s=questStep(q);if(!s)return '';
+  const p=s.point||{},mp=s.map||p.map,mk=s.market||p.market,fl=s.floor||p.floor;
+  if(mp==='field'&&mk&&typeof FIELD_TIER!=='undefined'&&FIELD_TIER[mk])return '[T'+FIELD_TIER[mk]+' '+((typeof FIELD_INFO!=='undefined'&&FIELD_INFO[mk]&&FIELD_INFO[mk][1])||mk)+'] ';
+  if(mp==='dungeon'&&fl&&typeof dungeonTier==='function')return '[T'+dungeonTier(fl)+' 던전 '+fl+'층] ';
+  return '';
+}
 function questCard(q,done){
   const d=document.createElement('div');d.className='gq '+(questKind(q)==='main'?'mainQuestCard':'sideQuestCard');
-  const b=document.createElement('b');b.textContent=(questKind(q)==='main'?'★ ':'◇ ')+q.title;d.append(b);
-  const line=document.createElement('small');line.textContent=done?'완료':questObjective(q);d.append(line);
+  const b=document.createElement('b');b.textContent=(questKind(q)==='main'?'★ ':'◇ ')+questLvTag(q)+q.title;d.append(b);
+  const line=document.createElement('small');line.textContent=done?'완료':questLocTag(q)+questObjective(q);d.append(line);
   const s=!done&&questStep(q);
   if(s&&s.item&&['collect','deliver'].includes(s.type)){
     const count=mainQuestState.items[s.item]||0,need=s.need||1;
@@ -8556,7 +8566,7 @@ function questRender(){
   if(sideList)sideList.replaceChildren();if(sideDone)sideDone.replaceChildren();
   for(const q of MAIN_QUESTS){
     if(mainQuestState.active[q.id]){
-      list.append(questCard(q,false));const row=document.createElement('div');row.className='mainQtrack';row.textContent='★ '+q.title+' · '+questObjective(q);host.append(row);
+      list.append(questCard(q,false));const row=document.createElement('div');row.className='mainQtrack';row.textContent='★ '+questLvTag(q)+q.title+' · '+questLocTag(q)+questObjective(q);host.append(row);
     }else if(mainQuestState.completed.includes(q.id))done.append(questCard(q,true));
   }
   for(const q of SIDE_QUESTS){
@@ -9860,6 +9870,8 @@ const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '�
 // ---- 아이템 파밍 ----
 let seq = 1;
 const GRADE_MUL = [1.00,1.35,1.75,2.25,2.90,3.70,4.70,6.00,7.60,9.60];
+// 케인 2026-11-05: 같은 등급이라도 티어가 높으면 조금 더 세다(티어마다 +4%). 높은 티어 장비가 항상 낮은 티어보다 강하게.
+const tierPow = t => 1 + 0.04 * (Math.max(1, t || 1) - 1);
 const ALL_GEAR = ['weapon','head','body','hands','feet','ring','neck'];
 const UNID_MIN_AFFIXES = 3;
 // 일부러 무기/직업별로 과하게 제한하지 않는다.
@@ -9916,7 +9928,7 @@ function make(spec){
   const base=gearBase(spec),tier=base.tier,g=base.powerGrade,roll=!!spec.roll;
   const it={id:seq++,baseId:base.id,kind:base.kind,icon:base.icon,requiredLevel:base.requiredLevel,
     rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier,spec.rank,spec.magicBoost||1):0),tier,g,st:{},aff:[]};
-  const mul=GRADE_MUL[g-1];
+  const mul=GRADE_MUL[g-1]*tierPow(tier);
   if(base.kind==='weapon'){
     it.wt=base.wt;const key=base.wt==='staff'?'matk':'atk';
     it.st[key]=Math.max(1,Math.round(10*WMULT[base.wt]*mul*NUM));
@@ -10057,7 +10069,7 @@ function derived(w='kyle'){
   if(wt&&wt!=='staff'){
     // 마법 공용: 같은 단계·지능·숙련의 일반 지팡이 기준 70% 보장.
     // 물리 공격 옵션은 변환하지 않는다. 직접 얻은 matk가 더 높으면 그대로 사용한다.
-    const staffBase=10*WMULT.staff*GRADE_MUL[E[c].g-1]*NUM;
+    const staffBase=10*WMULT.staff*GRADE_MUL[E[c].g-1]*tierPow(E[c].tier)*NUM;
     magicBase=Math.max(magicBase,(staffBase+b.int*.85*NUM)*(1+mb.dmg/100)*.7);
   }
   const magic=Math.max(1,Math.round(magicBase*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
