@@ -4,7 +4,7 @@
 //  - 30일(낮밤 한 바퀴=하루=8분) 안에 내야 한다. 갚으면 그 달이 정식 계약, 다음 30일은 월세(1,000G)를 또 내야 한다.
 //  - 못 내고 기한이 지나면 여관 2층 사용 금지 7일. 그동안 토비는 상대해 주지 않는다(1층 감정사는 계속 쓴다).
 //    금지가 끝나면 외상은 그대로 남고 새 30일이 시작된다. 게임 오버·저장 삭제 없음.
-//  - 2층 방에 들어가면 체력·마나가 찬다. 새 버튼·안내창은 만들지 않고 토비 대화창의 '푹 쉬기' 자리를 바꿔 쓴다.
+//  - (2026-11-05) 방에 들어서도 체력·마나는 차지 않는다. 치유는 밤에 실비아와 하는 저녁 치유(gaia_heart.js). 새 버튼·안내창은 만들지 않고 토비 대화창의 '푹 쉬기' 자리를 바꿔 쓴다.
 // ※ 토비 대사는 모두 [임시] — 케인이 고친다. 금액·기간은 아래 상수만 바꾸면 된다.
 const RENT_FEE=1000,RENT_DAYS=30,RENT_BAN_DAYS=7;
 function rentS(){if(!guildState.rent)guildState.rent={end:RENT_DAYS,paid:false,n:0,banEnd:0};return guildState.rent;}
@@ -18,6 +18,7 @@ function rentSetLine(t){if($('dlgLine'))$('dlgLine').textContent=t;}
 // 낮밤이 한 바퀴 돌 때마다(town.js) 호출
 function rentOnDay(){
   guildState.gday=(guildState.gday|0)+1;
+  guildSyncDay(false);   // 길드 하루(스쿼트·치유 1회, 게시판)도 같이 바뀐다
   const r=rentS(),d=rentDay();
   if(r.banEnd){
     if(d>=r.banEnd){r.banEnd=0;r.end=d+RENT_DAYS;r.paid=false;say('토비가 다시 상대해 줄 모양입니다.');}   // [임시]
@@ -34,12 +35,7 @@ function rentCanEnter(){
   if(rentBanLeft()>0){say('토비가 계단 앞을 막아섰습니다. 방값부터 해결해야 합니다.');return false;}   // [임시]
   return true;
 }
-function rentOnEnterRoom(){
-  if(P.hp>=P.maxHp&&P.mp>=P.maxMp)return;
-  P.hp=P.maxHp;P.mp=P.maxMp;P.mpAcc=0;
-  if(typeof PLAYER_STATUS!=='undefined')for(const k in PLAYER_STATUS)PLAYER_STATUS[k]=0;
-  syncBars();setTimeout(()=>say('방에서 한숨 돌리니 몸이 개운합니다.'),700);   // [임시] 방 그림이 바뀐 뒤에 말풍선
-}
+function rentOnEnterRoom(){}   // 케인 2026-11-05: 방에 들어서면 차던 체력·마나는 없앴다. 여관 치유는 밤에 실비아와 하는 저녁 치유(gaia_heart.js)가 맡는다.
 // 토비 대화창: '푹 쉬기' 자리를 상태에 맞춰 바꾼다(없는 버튼을 새로 만들지 않음)
 function rentDlg(n){
   const r=rentS(),btn=$('dlgRest');if(!btn)return;

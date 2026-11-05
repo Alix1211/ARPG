@@ -140,7 +140,7 @@ for (const n of npcs){
   if(id==='inn'&&MAPS.inn2)spots.push({name:'2층 숙소 계단',x:5.9*TS,y:2.95*TS,r:54,kind:'inn_stairs_up'});
   if(id==='guild'&&window.GAIA_GUILD)GAIA_GUILD.onWorld(npcs,spots,solids,sprites);
   if((id==='guild'||id==='town')&&window.GAIA_COMIC)GAIA_COMIC.onWorld(id,sprites,solids);   // 가이아: 코믹 장식 인물(길드 홀·마을)
-  if(id==='inn2'){spots.push({name:'아래층 계단',x:6.0*TS,y:2.95*TS,r:54,kind:'inn_stairs_down'});if(window.GAIA_SQUAT)GAIA_SQUAT.onWorld(npcs,spots,solids,sprites);}
+  if(id==='inn2'){spots.push({name:'아래층 계단',x:6.0*TS,y:2.95*TS,r:54,kind:'inn_stairs_down'});if(window.GAIA_SQUAT)GAIA_SQUAT.onWorld(npcs,spots,solids,sprites);if(window.GAIA_HEART)GAIA_HEART.onWorld(npcs,spots,solids,sprites);}
   if(id==='fieldvillage'&&typeof resetFieldVils==='function')resetFieldVils();
   lamps = CUR.props.filter(p => p.k.startsWith('lamp') || p.kind === 'fire').map(p => p.kind === 'fire' ? { x: p.x, y: p.y - p.h * 0.45, r: 150 } : { x: p.x + (p.k === 'lamp_iron' ? p.w * 0.28 : p.w * 0.3), y: p.y - p.h * 0.8, r: 120 });
   $('place').dataset.map = CUR.name || '마을';
@@ -245,18 +245,8 @@ function masteryNeed(lv){
   lv=Math.max(0,Math.min(49,lv||0));
   return Math.round(25+12*lv+1.2*lv*lv);
 }
-function masteryBonus(wt){
-  const lv=(P.mastery&&P.mastery[wt]?P.mastery[wt].lv:0)||0;
-  return {lv,dmg:lv*.5,as:lv*.15};
-}
-function gainMastery(wt,amount=1){
-  const m=P.mastery&&P.mastery[wt];if(!m)return false;
-  m.xp=(m.xp||0)+Math.max(0,amount);let up=0;
-  while(m.lv<50&&m.xp>=masteryNeed(m.lv)){m.xp-=masteryNeed(m.lv);m.lv++;up++;}
-  if(up){say((typeof WN!=='undefined'&&WN[wt]?WN[wt]:wt)+' 숙련 '+m.lv+'!');if(window.UI&&UI.refresh)UI.refresh();}
-  if(window.UI&&UI.save)UI.save();
-  return true;
-}
+function masteryBonus(wt){return {lv:0,dmg:0,as:0};}   // 가이아(케인 2026-11-05): 무기 숙련도 폐지(동료는 무기 고정, 주인공도 없앰). 저장 호환을 위해 자료만 남긴다.
+function gainMastery(wt,amount=1){return false;}   // 숙련도 폐지: 오르지 않는다
 function investStat(key){
   if(!['str','vit','int','mag','dex'].includes(key)||P.statPts<1)return false;
   P.stats[key]=(P.stats[key]||0)+1;P.statPts--;if(window.UI&&UI.refresh)UI.refresh();if(window.UI&&UI.save)UI.save();return true;
@@ -468,6 +458,7 @@ function act(){
   if(near.kind==='inn_stairs_up'&&typeof enterInn2==='function')return enterInn2();
   if(near.kind==='inn_stairs_down'&&typeof leaveInn2==='function')return leaveInn2();
   if(near.kind==='npc'&&near.npc.squatHost&&window.GAIA_SQUAT)return GAIA_SQUAT.talk(near.npc);
+  if(near.kind==='npc'&&near.npc.heartHost&&window.GAIA_HEART)return GAIA_HEART.talk(near.npc);
   if(near.kind==='minigame_tavern'&&window.MINIGAMES)return MINIGAMES.open('tavern');
   if(near.kind==='minigame_bubble'&&window.MINIGAMES)return MINIGAMES.open('bubble-pang');
   if(near.kind==='minigame_arena'&&window.MINIGAMES)return MINIGAMES.open('arena');
@@ -580,6 +571,7 @@ for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('c
 const guildExamBtn=$('dlgGuildExam');if(guildExamBtn)guildExamBtn.addEventListener('click',()=>{if(talking&&talking.shop==='guild'&&window.GUILD)GUILD.openExam();});
 $('dlgTrade').addEventListener('click', () => {
   if(talking&&talking.squatHost&&window.GAIA_SQUAT){GAIA_SQUAT.start();return;}
+  if(talking&&talking.heartHost&&window.GAIA_HEART){GAIA_HEART.start();return;}
   if(talking&&talking.shop==='sage'){SAGE.open();return;}
   if(talking&&talking.companion&&window.COMPANION){COMPANION.hireFromDialog(talking);return;}
   if (talking.shop==='inn'){ closeAll(); if(typeof enterInn==='function')enterInn(); return; }

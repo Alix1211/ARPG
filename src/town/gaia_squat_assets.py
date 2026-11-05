@@ -209,6 +209,21 @@ def _sq():
     )
 
 
+HT = ROOT / "assets_private" / "gaia_heart"   # 실비아 저녁 치유(정면·후면 그림). 속옷 차림이라 공개 저장소에 올리지 않는다.
+
+
+def _heart():
+    """실비아 저녁 치유 하트 미니게임 자료. 배경·박자·효과음은 스쿼트 자료(A.gaiaSq)를 그대로 쓰므로 여기엔 그림 두 장과 실비아 피격음만 있다."""
+    if not (HT / "front.webp").is_file() or not (HT / "back.webp").is_file():
+        print("[경고] assets_private/gaia_heart 가 없어 실비아 저녁 치유를 빼고 빌드합니다.")
+        return None
+    return dict(
+        doc=(HERE / "gaia_heart_doc.html").read_text(encoding="utf-8"),
+        front=_file_uri(HT / "front.webp", "image/webp"), back=_file_uri(HT / "back.webp", "image/webp"),
+        hit=_file_uri(R / "sfx" / "gaia_sylvia.mp3", "audio/mpeg"),   # 전투 피격음 = 후면 '아얏'
+    )
+
+
 _CACHE = {}
 
 
@@ -217,7 +232,7 @@ def data():
         inn2, b = _inn2()
         k, uri, p = _stairs_prop("inn_stairs", 5.9, 2.62, 1.5)
         b[k] = uri
-        _CACHE.update(inn2=inn2, b=b, stairs1=p, sq=_sq(), dlg={n: _dlg_portrait(n) for n in ("kyle", "agatha", "sylvia")},
+        _CACHE.update(inn2=inn2, b=b, stairs1=p, sq=_sq(), ht=_heart(), dlg={n: _dlg_portrait(n) for n in ("kyle", "agatha", "sylvia")},
                       dlgx=_dlg_expressions(), dlgu=_dlg_underwear())
         # 가이아(케인 2026-11-04): 모험가 길드 실내 + 접수원
         import gaia_guild_assets
@@ -247,6 +262,7 @@ def apply(A):
     if not any(p.get("k") == "inn_stairs" for p in A["inn"]["props"]):
         A["inn"]["props"].append(d["stairs1"])
     A["gaiaSq"] = d["sq"]
+    A["gaiaHeart"] = d["ht"]
     A["gaiaDlg"] = d["dlg"]
     A["gaiaDlgX"] = d["dlgx"]
     A["gaiaDlgU"] = d["dlgu"]
@@ -258,8 +274,8 @@ def apply(A):
 def suffix():
     """미리보기용: 그림 목록 뒤에 붙는 JS."""
     d = data()
-    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], dlg=d["dlg"], dlgx=d["dlgx"], dlgu=d["dlgu"],
+    return ("(function(){const D=" + _js_safe(dict(inn2=d["inn2"], b=d["b"], stairs1=d["stairs1"], sq=d["sq"], ht=d["ht"], dlg=d["dlg"], dlgx=d["dlgx"], dlgu=d["dlgu"],
                                                    guild=d["guild"], gguild=d["gguild"], gcomic=d["gcomic"])) + ";"
             "Object.assign(A.b,D.b);A.inn2=D.inn2;"
             "if(!A.inn.props.some(p=>p.k==='inn_stairs'))A.inn.props.push(D.stairs1);"
-            "A.gaiaSq=D.sq;A.gaiaDlg=D.dlg;A.gaiaDlgX=D.dlgx;A.gaiaDlgU=D.dlgu;A.guild=D.guild;A.gaiaGuild=D.gguild;A.gaiaComic=D.gcomic;})();")
+            "A.gaiaSq=D.sq;A.gaiaHeart=D.ht;A.gaiaDlg=D.dlg;A.gaiaDlgX=D.dlgx;A.gaiaDlgU=D.dlgu;A.guild=D.guild;A.gaiaGuild=D.gguild;A.gaiaComic=D.gcomic;})();")

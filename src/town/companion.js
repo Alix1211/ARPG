@@ -428,7 +428,15 @@ function companionStepTo(tx,ty,speed,dt){
     if(companionClearStep(c.x,c.y,c.x,c.y+sy))c.y+=sy;
   }
   const mx=c.x-ox,my=c.y-oy,moved=Math.hypot(mx,my)>.08;
-  if(Math.abs(mx)>Math.abs(my)*.8){c.dir='side';c.flip=mx<0;}else if(Math.abs(my)>.05)c.dir=my<0?'back':'front';
+  // 가이아(케인 2026-11-05): 어디 걸려 앞뒤·좌우로 조금씩 밀릴 때 보는 방향이 빠르게 뒤집히던 것을 막는다.
+  //  움직임을 조금씩 모아(감쇠 합) 충분히 한쪽으로 가야 방향을 바꾸고, 바꾼 뒤 0.3초는 다시 바꾸지 않는다. 걸려서 왔다 갔다 하면 합이 상쇄돼 그대로 있다.
+  c.fvx=(c.fvx||0)*.8+mx;c.fvy=(c.fvy||0)*.8+my;c.fHold=Math.max(0,(c.fHold||0)-dt);
+  {const ax=Math.abs(c.fvx),ay=Math.abs(c.fvy);
+   if(ax+ay>5&&c.fHold<=0){
+     let nd,nf=c.flip;
+     if(ax>ay*.8){nd='side';nf=c.fvx<0;}else nd=c.fvy<0?'back':'front';
+     if(nd!==c.dir||(nd==='side'&&nf!==c.flip)){c.dir=nd;c.flip=nf;c.fHold=.3;}
+   }}
   if(moved){c.t+=dt;c.moving=true;}
   return moved;
 }

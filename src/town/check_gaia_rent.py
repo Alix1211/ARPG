@@ -46,14 +46,14 @@ async def main():
         assert await ev(BTN) == ['방값 납부 완료', True]
         assert not await ev("() => __INN.rest()"), '두 번 낼 수 없음'
 
-        # 2) 2층에 들어가면 체력·마나가 찬다
+        # 2) 2층에 들어가도 체력·마나는 차지 않는다(케인 2026-11-05: 치유는 밤 실비아 저녁 치유가 맡음)
         await ev("() => { GAME.act(); GAME.P.hp=1; GAME.P.mp=1; GAME.P.x=5.9*48; GAME.P.y=2.95*48+20; }")
         await pg.wait_for_timeout(300)
         await ev("() => GAME.act()")
         await pg.wait_for_timeout(1200)
         assert await ev("() => __INN.state().map") == 'inn2', '2층에 못 올라감'
         hp = await ev("() => [GAME.P.hp===GAME.P.maxHp, GAME.P.mp===GAME.P.maxMp]")
-        assert hp == [True, True], hp
+        assert hp == [False, False], hp
 
         # 3) 30일이 지나면 새 달: 안 냈으면 벌 없이 다시 납부 대기(낸 달), 그다음 달도 안 내면 2층 금지 7일
         s = await ev("() => GAIA_RENT.debugDays(30)")

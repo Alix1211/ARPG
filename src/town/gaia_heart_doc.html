@@ -1,0 +1,220 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>저녁 치유</title><style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1d1424;font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud{position:fixed;left:0;right:0;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;color:#fff;text-shadow:0 2px 6px #3b2a3fcc}
+#tier{font-size:12px;letter-spacing:.08em;opacity:.85}
+#gauges{display:flex;gap:14px;width:min(92vw,520px)}
+.g{flex:1;display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:800}
+.g b{display:flex;justify-content:space-between;font-weight:800}
+.bar{height:14px;border-radius:9px;background:#0007;border:1px solid #fff4;overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:9px;transition:width .12s}
+#gp i{background:linear-gradient(90deg,#ff8fbd,#ff4f9a)}
+#gm i{background:linear-gradient(90deg,#c58cff,#8a4dff)}
+#count{position:fixed;left:0;right:0;top:34%;text-align:center;font-size:84px;font-weight:900;color:#fff;text-shadow:0 4px 18px #7a3a62cc;pointer-events:none;opacity:0}
+#veil{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#2a223099;backdrop-filter:blur(3px)}
+#veil[hidden]{display:none}
+.card{width:min(84vw,340px);padding:26px 20px 20px;border-radius:26px;background:#fff8f2;color:#4a3a45;text-align:center;box-shadow:0 12px 40px #1a102066;display:flex;flex-direction:column;gap:12px;align-items:center}
+.card h1{margin:0;font-size:26px}
+.card p{margin:0;font-size:15px;opacity:.85;line-height:1.45}
+.stats{display:flex;gap:16px;justify-content:center;font-size:14px;font-weight:700}
+.row{display:flex;gap:10px;width:100%}
+.btn{flex:1;min-height:48px;border:0;border-radius:15px;font:inherit;font-weight:800;font-size:16px;color:#fff;background:#548b7a;cursor:pointer}
+.btn:disabled{background:#9a8f98;color:#e8e2e6;opacity:.6;cursor:default}
+</style></head><body>
+<canvas id="cv"></canvas>
+<div id="hud"><div id="tier"></div><div id="gauges"><div class="g" id="gp"><b><span>♥ 핑크</span><span id="pp">0%</span></b><div class="bar"><i></i></div></div><div class="g" id="gm"><b><span>M</span><span id="pm">0%</span></b><div class="bar"><i></i></div></div></div></div>
+<div id="count"></div>
+<div id="veil"><div class="card" id="card"></div></div>
+<script>
+'use strict';
+/* 가이아(케인 2026-11-05): 실비아 저녁 치유 — 정면 두 곳·후면 두 곳에서 하트가 떠오르고, 터치로 터뜨린다.
+   정면 하트는 핑크 게이지, 후면 하트는 M 게이지. 두 게이지의 평균만큼 치유된다(부모 gaia_heart.js 가 계산).
+   배경음·박자(난이도별 90/120/150 BPM)·효과음은 스쿼트와 같은 자료를 쓴다. 출렁임은 캔버스 격자 변형. */
+const CFG=/*HEART_CONFIG*/;
+const TIER=Math.max(1,Math.min(3,+CFG.tier||1));
+const MINR=+CFG.minRatio||.2;
+const RULE={1:{bpm:90,off:.19,key:'squat90_bed',bgm:'squat90_bgm',bgmg:1.1,beats:28,lead:4,dbl:0,life:3.2,name:'쉬움'},2:{bpm:120,off:.09,key:'squat120_bed',bgm:'squat120_bgm',beats:36,lead:4,dbl:.25,life:2.7,name:'보통'},3:{bpm:150,off:.17,key:'squat150_bed',bgm:'squat150_bgm',beats:44,lead:4,dbl:.4,life:2.5,name:'어려움'}}[TIER];
+const PER=60/RULE.bpm;
+const $=s=>document.querySelector(s),cv=$('#cv'),g=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function resize(){DPR=Math.min(1.75,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);g.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);resize();
+const img={bg:null,f:null,b:null};
+function loadImg(src){return new Promise(ok=>{if(!src)return ok(null);const i=new Image();i.onload=()=>{(i.decode?i.decode():Promise.resolve()).catch(()=>{}).then(()=>ok(i));};i.onerror=()=>ok(null);i.src=src;});}
+const ready=Promise.all([loadImg(CFG.bg),loadImg(CFG.front),loadImg(CFG.back)]).then(([a,b,c])=>{img.bg=a;img.f=b;img.b=c;});
+/* 부위(그림 크기에 대한 비율): cx,cy 중심, rx,ry 반지름, amp 진폭(그림 높이 대비), w 진동수, dec 감쇠 */
+const FIG=[
+ {side:0,key:'f',zones:[{cx:.24,cy:.535,rx:.11,ry:.085,amp:.034,w:26,dec:5.2},{cx:.385,cy:.50,rx:.10,ry:.08,amp:.03,w:26,dec:5.2}]},
+ {side:1,key:'b',zones:[{cx:.595,cy:.575,rx:.11,ry:.085,amp:.03,w:22,dec:4.6},{cx:.76,cy:.555,rx:.11,ry:.085,amp:.03,w:22,dec:4.6}]}
+];
+if(CFG.zones){for(const f of FIG){const z=CFG.zones[f.key];if(z)f.zones.forEach((o,i)=>Object.assign(o,z[i]||{}));}}
+for(const f of FIG)for(const z of f.zones)z.hits=[];
+/* ---------- audio ---------- */
+const SRC=window.GAIA_SOUND_SOURCES||{};
+const PERFECTS=['perfect_01','perfect_02','perfect_03','perfect_04','perfect_05','perfect_06','perfect_07'];let lastPerfect=-1;
+let ac=null,master=null,bufs={},decoded={},bed=null,bgmSrc=null,sched=[],t0=0;
+function ensureAC(){if(ac)return ac;const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C({latencyHint:'interactive'});const comp=ac.createDynamicsCompressor();comp.threshold.value=-10;comp.knee.value=12;comp.ratio.value=4;master=ac.createGain();master.gain.value=.8;master.connect(comp);comp.connect(ac.destination);return ac;}
+async function buf(name){if(!SRC[name]||!ac)return null;if(!bufs[name]){bufs[name]=Promise.resolve().then(()=>{const v=SRC[name];if(v.slice(0,5)!=='data:')return fetch(v).then(r=>r.arrayBuffer());const raw=atob(v.split(',')[1]);return Uint8Array.from(raw,c=>c.charCodeAt(0)).buffer;}).then(a=>ac.decodeAudioData(a)).catch(()=>null);}return bufs[name];}
+async function prep(names){await Promise.all(names.map(async n=>{decoded[n]=await buf(n);}));}
+function shot(name,vol,when){const b=decoded[name];if(!b||!ac)return null;try{const s=ac.createBufferSource(),gn=ac.createGain();s.buffer=b;gn.gain.value=vol*(window.GAIA_HT_SFX??1);s.connect(gn).connect(master);s.start(Math.max(when||0,ac.currentTime));sched.push(s);s.onended=()=>{const i=sched.indexOf(s);if(i>=0)sched.splice(i,1);try{s.disconnect();gn.disconnect();}catch{}};return s;}catch{return null;}}
+function stopAll(){for(const s of sched.splice(0)){try{s.onended=null;s.stop();}catch{}}for(const k of ['bed','bgmSrc']){const s=k==='bed'?bed:bgmSrc;if(s){try{s.stop();}catch{}}}bed=null;bgmSrc=null;}
+let lastUp=-9,lastLow=-9,lastAy=-9;
+function soundUpper(){const n=performance.now();if(n-lastUp<70)return;lastUp=n;let i;do{i=Math.floor(Math.random()*PERFECTS.length);}while(i===lastPerfect&&PERFECTS.length>1);lastPerfect=i;shot(PERFECTS[i],.55);}
+function soundLower(){const n=performance.now();if(n-lastLow<70)return;lastLow=n;shot('hit_punch',.7);if(n-lastAy>320){lastAy=n;shot('sylvia_hit',.55,ac?ac.currentTime+.03:0);}}
+const latency=()=>(ac?(ac.outputLatency||ac.baseLatency||0):0)+.02;
+const gt=()=>ac?ac.currentTime-latency():0;
+function buzz(ms){try{if(parent.GAIA_HAPTICS&&parent.GAIA_HAPTICS.fx&&parent.GAIA_HAPTICS.fx.miniPerfect)parent.GAIA_HAPTICS.fx.miniPerfect();else if(navigator.vibrate)navigator.vibrate(ms);}catch{}}
+/* ---------- plan ---------- */
+function rngMaker(seed){let x=seed>>>0||1;return()=>{x=(x*1664525+1013904223)>>>0;return x/4294967296;};}
+function makePlan(){
+ const r=rngMaker((Date.now()&0xffff)+TIER*977),out=[];let lastSide=-1,run=0;const lastAt=[[-9,-9],[-9,-9]];
+ const pickZone=(side,t)=>{let z=r()<.5?0:1;if(t-lastAt[side][z]<RULE.life*.55)z=1-z;lastAt[side][z]=t;return z;};
+ for(let b=0;b<RULE.beats;b++){
+  const t=RULE.lead+b,two=b>=3&&r()<RULE.dbl;
+  if(two){for(const side of [0,1])out.push({side,zone:pickZone(side,t),beat:t,val:1});lastSide=-1;run=0;continue;}
+  let side=r()<.5?0:1;if(side===lastSide&&run>=2)side=1-side;run=side===lastSide?run+1:1;lastSide=side;
+  out.push({side,zone:pickZone(side,t),beat:t,val:b>=4&&r()<.14?2:1});
+ }
+ let nf=0,nb=0;for(const h of out)(h.side?nb++:nf++);
+ if(!nf)out[0].side=0;if(!nb)out[out.length-1].side=1;
+ return out;
+}
+/* ---------- state ---------- */
+let state='ready',hearts=[],popped=[0,0],total=[1,1],missN=0,parts=[],pops=[],reported=false,paused=false;
+let L=[null,null];
+function layout(){
+ const top=Math.max(64,Math.round(H*.1)),pad=6,availH=H-top-pad,land=W>H*1.1;
+ const cells=land?[{x:0,y:top,w:W/2,h:availH},{x:W/2,y:top,w:W/2,h:availH}]:[{x:0,y:top,w:W,h:availH/2},{x:0,y:top+availH/2,w:W,h:availH/2}];
+ FIG.forEach((f,i)=>{const im=img[f.key];if(!im){L[i]=null;return;}const c=cells[i],s=Math.min(c.w*.94/im.width,c.h*.96/im.height),w=im.width*s,h=im.height*s;L[i]={x:c.x+(c.w-w)/2,y:c.y+(c.h-h)/2,w,h,s};});
+}
+function zonePos(side,zone){const l=L[side],z=FIG[side].zones[zone];return l?{x:l.x+z.cx*l.w,y:l.y+z.cy*l.h}:{x:W/2,y:H/2};}
+/* ---------- start ---------- */
+async function begin(){
+ hearts=makePlan().map(h=>({...h,res:0}));
+ total=[0,0];for(const h of hearts)total[h.side]+=h.val;
+ popped=[0,0];missN=0;parts=[];pops=[];reported=false;
+ for(const f of FIG)for(const z of f.zones)z.hits=[];
+ setGauge();
+ ensureAC();await ac.resume().catch(()=>{});
+ await Promise.all([ready,prep([RULE.key,RULE.bgm,...PERFECTS,'hit_punch','sylvia_hit'])]);
+ stopAll();
+ t0=ac.currentTime+.25;
+ if(decoded[RULE.bgm]){try{const s=ac.createBufferSource(),gn=ac.createGain();s.buffer=decoded[RULE.bgm];s.loop=true;gn.gain.value=(RULE.bgmg||1)*3.4*(window.GAIA_HT_BGM??1);s.connect(gn).connect(master);s.start(t0);bgmSrc=s;}catch{}}
+ if(decoded[RULE.key]){try{const s=ac.createBufferSource(),gn=ac.createGain();s.buffer=decoded[RULE.key];s.loop=true;gn.gain.value=.62*(window.GAIA_HT_SFX??1);s.connect(gn).connect(master);s.start(t0);bed=s;}catch{}}
+ for(const h of hearts)h.time=t0+RULE.off+PER*(h.beat+1);
+ state='play';paused=false;$('#veil').hidden=true;$('#tier').textContent='저녁 치유 · '+RULE.name;
+}
+function setGauge(){
+ const a=total[0]?popped[0]/total[0]:0,b=total[1]?popped[1]/total[1]:0;
+ $('#gp i').style.width=Math.round(a*100)+'%';$('#gm i').style.width=Math.round(b*100)+'%';
+ $('#pp').textContent=Math.round(a*100)+'%';$('#pm').textContent=Math.round(b*100)+'%';
+}
+function ratios(){return [total[0]?popped[0]/total[0]:0,total[1]?popped[1]/total[1]:0];}
+/* ---------- input ---------- */
+function heartPos(h,t){
+ const p=zonePos(h.side,h.zone),life=RULE.life*PER,age=Math.max(0,Math.min(1,(t-h.time)/life)),l=L[h.side],rise=(l?l.h:200)*.30;
+ return {x:p.x+Math.sin(age*7+h.beat*1.7)*8,y:p.y-8-rise*age,age};
+}
+function pop(h,t){
+ h.res=1;popped[h.side]+=h.val;setGauge();
+ const z=FIG[h.side].zones[h.zone],now=performance.now(),pw=1+(h.val>1?.35:0);
+ z.hits.push({t0:now,pw});if(z.hits.length>4)z.hits.shift();
+ const o=FIG[h.side].zones[1-h.zone];o.hits.push({t0:now+40,pw:pw*.4});if(o.hits.length>4)o.hits.shift();
+ const p=heartPos(h,t);
+ for(let i=0;i<(h.val>1?14:8);i++)parts.push({x:p.x,y:p.y,vx:(Math.random()-.5)*260,vy:-60-Math.random()*200,life:0,ttl:.55+Math.random()*.3,side:h.side});
+ if(h.side===0){soundUpper();buzz(80);}
+ else{soundLower();buzz(110);if(Math.random()<.7)pops.push({x:p.x,y:p.y-28,t:now,text:Math.random()<.5?'아얏!':'찰싹!',col:'#ffd0e6'});}
+ shakeAt=now;
+}
+let shakeAt=-9;
+function tapAt(px,py){
+ if(state!=='play'||paused)return;
+ const t=gt();let best=null,bd=1e9;
+ for(const h of hearts){if(h.res||t<h.time||t>h.time+RULE.life*PER)continue;const p=heartPos(h,t),R=h.val>1?52:42,d=Math.hypot(px-p.x,py-p.y);if(d<R&&d<bd){bd=d;best=h;}}
+ if(best)pop(best,t);
+}
+cv.addEventListener('pointerdown',e=>{e.preventDefault();const r=cv.getBoundingClientRect();tapAt(e.clientX-r.left,e.clientY-r.top);});
+/* ---------- drawing ---------- */
+function waveOf(z,now){
+ let w=0;z.hits=z.hits.filter(h=>(now-h.t0)/1000<4/z.dec);
+ for(const h of z.hits){const t=(now-h.t0)/1000;if(t<0)continue;w+=Math.sin(t*z.w)*Math.exp(-t*z.dec)*h.pw*z.amp;}
+ return w;
+}
+const TILE=8,OV=3;   // 격자 한 칸 8px, 칸 사이는 3px 겹쳐 그려 틈(가는 줄)이 안 보이게 한다
+function drawFigure(i,now){
+ const f=FIG[i],l=L[i],im=img[f.key];if(!l||!im)return;
+ const ws=f.zones.map(z=>waveOf(z,now)),act=ws.some(w=>Math.abs(w)>.0008);
+ if(!act){g.drawImage(im,l.x,l.y,l.w,l.h);return;}
+ const s=l.s,iw=im.width,ih=im.height;
+ for(let ty=0;ty<ih;ty+=TILE){
+  const th=Math.min(TILE,ih-ty);let runX=-1;
+  const hh=th+Math.min(OV,ih-ty-th);
+  const flush=(x1)=>{if(runX<0)return;g.drawImage(im,runX,ty,x1-runX,hh,l.x+runX*s,l.y+ty*s,(x1-runX)*s,hh*s);runX=-1;};
+  for(let tx=0;tx<iw;tx+=TILE){
+   const tw=Math.min(TILE,iw-tx),cx=(tx+tw/2)/iw,cy=(ty+th/2)/ih;let dx=0,dy=0;
+   for(let k=0;k<f.zones.length;k++){const z=f.zones[k],w=ws[k];if(Math.abs(w)<.0008)continue;const nx=(cx-z.cx)/z.rx,ny=(cy-z.cy)/z.ry,ga=Math.exp(-(nx*nx+ny*ny)*1.5);if(ga<.02)continue;dy+=w*ih*ga;dx+=w*iw*.35*nx*ga;}
+   if(Math.abs(dx)<.15&&Math.abs(dy)<.15){if(runX<0)runX=tx;continue;}
+   flush(tx);
+   const ww=tw+Math.min(OV,iw-tx-tw);g.drawImage(im,tx,ty,ww,hh,l.x+(tx+dx)*s,l.y+(ty+dy)*s,ww*s,hh*s);
+  }
+  flush(iw);
+ }
+}
+function drawHeart(x,y,sz,col,al,big){
+ g.save();g.globalAlpha=al;g.translate(x,y);g.font='800 '+Math.round(sz)+'px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';
+ g.lineWidth=big?7:5;g.strokeStyle=big?'#fff3b0':'#fff';g.strokeText('♥',0,0);g.fillStyle=col;g.fillText('♥',0,0);
+ if(big){g.lineWidth=2;g.strokeStyle='#ffd24a';g.strokeText('♥',0,0);}
+ g.restore();
+}
+function drawBg(){
+ if(img.bg){const B=img.bg,s=Math.max(W/B.width,H/B.height);g.drawImage(B,(W-B.width*s)/2,(H-B.height*s)/2,B.width*s,B.height*s);g.fillStyle='rgba(20,10,28,.38)';g.fillRect(0,0,W,H);}
+ else{const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#3a2c40');gr.addColorStop(1,'#1d1424');g.fillStyle=gr;g.fillRect(0,0,W,H);}
+}
+function draw(){
+ const now=performance.now(),t=state==='play'?gt():(ac?gt():0);
+ g.clearRect(0,0,W,H);layout();drawBg();
+ if(state==='play'){
+  const bi=(t-t0-RULE.off)/PER-1,cn=$('#count');
+  if(bi>=0&&bi<RULE.lead+.9){const k=Math.floor(bi),ph=bi-k;let txt='';if(bi>=RULE.lead)txt='GO';else if(k>=1)txt=String(RULE.lead-k);cn.textContent=txt;cn.style.opacity=txt?String(Math.max(0,1-ph*.9)):'0';}else cn.style.opacity='0';
+  for(const h of hearts){if(!h.res&&t>h.time+RULE.life*PER){h.res=2;missN++;}}
+  if(!reported&&hearts.length&&hearts.every(h=>h.res)&&t>hearts[hearts.length-1].time+RULE.life*PER+.6)finish();
+ }
+ const sh=Math.max(0,1-(now-shakeAt)/220);
+ g.save();g.translate(Math.sin(now/18)*sh*3,0);
+ for(let i=0;i<2;i++)drawFigure(i,now);
+ g.restore();
+ if(state==='play'){
+  for(const h of hearts){
+   if(h.res||t<h.time)continue;
+   const life=RULE.life*PER,p=heartPos(h,t),a=p.age,pin=Math.min(1,(t-h.time)/.14),sc=pin<1?.4+.6*pin:1+Math.sin(t*9+h.beat)*.04,al=a>.78?Math.max(0,1-(a-.78)/.22):1;
+   const col=h.side?'#b46bff':'#ff5fa3',base=(h.val>1?70:56);
+   drawHeart(p.x,p.y,base*sc,col,al,h.val>1);
+  }
+ }
+ parts=parts.filter(p=>p.life<p.ttl);
+ for(const p of parts){p.life+=.016;p.vy+=520*.016;p.x+=p.vx*.016;p.y+=p.vy*.016;g.globalAlpha=Math.max(0,1-p.life/p.ttl);g.fillStyle=p.side?'#c58cff':'#ff6fa8';g.font='20px system-ui,sans-serif';g.textAlign='center';g.fillText('♥',p.x,p.y);g.globalAlpha=1;}
+ pops=pops.filter(p=>now-p.t<700);
+ for(const p of pops){const a=(now-p.t)/700;g.globalAlpha=1-a*a;g.font='800 '+Math.round(24+(1-a)*8)+'px system-ui,sans-serif';g.textAlign='center';g.lineWidth=5;g.strokeStyle='#3b2a3f';g.strokeText(p.text,p.x,p.y-a*34);g.fillStyle=p.col;g.fillText(p.text,p.x,p.y-a*34);g.globalAlpha=1;}
+ requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+/* ---------- flow ---------- */
+function showReady(){
+ const c=$('#card');
+ c.innerHTML='<h1>저녁 치유</h1><p>떠오르는 하트를 터치해요.<br>앞모습은 핑크, 뒷모습은 M 게이지가 차고<br>두 게이지의 평균만큼 회복해요.</p><div class="stats"><span>'+RULE.name+'</span><span>'+RULE.bpm+' BPM</span></div><div class="row"><button class="btn" id="go">시작</button></div>';
+ $('#veil').hidden=false;$('#go').onclick=()=>{$('#go').disabled=true;begin();};
+}
+function finish(){
+ reported=true;state='result';stopAll();
+ const [a,b]=ratios(),avg=(a+b)/2,heal=Math.max(MINR,avg);
+ try{parent.postMessage({type:'gaia-heart-result',pink:a,m:b,ratio:avg,heal,miss:missN,tier:TIER},'*');}catch{}
+ const c=$('#card');
+ c.innerHTML='<h1>'+(avg>=.5?'개운해요':'조금 모자라요')+'</h1><div class="stats"><span>핑크 '+Math.round(a*100)+'%</span><span>M '+Math.round(b*100)+'%</span></div><p>평균 '+Math.round(avg*100)+'% → 체력·마나 '+Math.round(heal*100)+'% 회복</p><div class="row"><button class="btn" id="close">닫기</button></div>';
+ $('#veil').hidden=false;$('#close').onclick=()=>{try{parent.postMessage({type:'gaia-heart-close'},'*');}catch{}};
+}
+document.addEventListener('visibilitychange',()=>{try{if(ac){document.hidden?ac.suspend():ac.resume();}}catch(e){}});
+window.LifeMini={get started(){return state==='play';},get paused(){return paused;},sound:{enabled:true},pause(v){paused=!!v;try{if(ac){if(v)ac.suspend();else ac.resume();}}catch{}}};
+window.HeartGame={get hearts(){return hearts;},gt,tapAt,get state(){return state;},ratios,pos:(h)=>heartPos(h,gt()),get layout(){return L;},rule:RULE};
+showReady();
+</script>
+</html>

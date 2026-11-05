@@ -616,12 +616,6 @@ function render(){
       const plus=el('button','growplus stplus','+');plus.type='button';plus.disabled=locked||rank<1||rank>=dv.max||Pp.lifePts<1;plus.onclick=e=>{e.stopPropagation();G.investLife(key);};
       tile.append(ic,el('b','stname',dv.name),el('small','stdesc',desc),plus,el('span','strank',locked?`Lv${dv.unlock}`:`Lv${rank}/${dv.max}`));lg.append(tile);
     }
-    pane.append(el('div','sectionhead','무기 숙련도 · 적중할 때 자동 상승'));
-    for(const wt of (GSK?['sword','staff']:['sword','spear','gauntlet','bow','staff'])){
-      const m=Pp.mastery[wt],need=G.masteryNeed(m.lv),row=el('div','masterrow');
-      row.append(el('b','',WN[wt]),el('span','',`Lv${m.lv}/50`),el('small','',`${m.xp}/${need} · 피해 +${(m.lv*.5).toFixed(1)}% · 공속 +${(m.lv*.15).toFixed(1)}%`),el('span','',''));
-      pane.append(row);
-    }
   } else if (tab === 'trade' && window.TRADE){
     TRADE.renderSummary(L);
   } else {

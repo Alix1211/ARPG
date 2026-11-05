@@ -6,7 +6,7 @@ const GUILD_DAILY_BASE=10;
 const GUILD_EXTRA_BATCH=3;
 const GUILD_BRIBE_RATES=[.30,.45,.60];
 const GUILD_RANK_REWARD=[1,1.10,1.20,1.30,1.40,1.50,1.60];
-const GUILD_RANK_DONE_NEED=20;
+const GUILD_RANK_DONE_NEED=10;   // 케인 2026-11-05: 승급 조건 의뢰 20건→10건(스쿼트가 현실 날짜에서 게임 속 하루로 바뀌어 속도를 맞춤)
 const GUILD_EXAM_DAYS=3.5;
 const GUILD_EXAMS=[
   {to:1,floor:3,bossId:'slime_king'},
@@ -52,16 +52,14 @@ const GUILD_EXAM_SCENE=[
 let guildNowOverride=null;
 let guildExamPanelOpen=false;
 let guildAbandonArmed=0;
-let guildState={seq:1,board:[],active:[],completed:0,rank:0,rankDone:0,dayKey:'',todayAccepted:0,bribeCount:0,exam:null,squatDay:'',squatGot:0,squatRatio:0,gday:0,rent:null};
+let guildState={seq:1,board:[],active:[],completed:0,rank:0,rankDone:0,dayKey:'',todayAccepted:0,bribeCount:0,exam:null,squatDay:'',squatGot:0,squatRatio:0,heartDay:'',heartRatio:0,gday:0,rent:null};
 // 가이아(케인 2026-11-04): 길드에서 의뢰를 직접 받지 못한다. 아침에 여관 2층에서 아가사가 스쿼트 단련을 하고,
 // 그 점수만큼 길드에서 의뢰를 받아 온다(gaia_squat.js). 게시판에는 아가사가 가져온 것만 올라오고, 교역이 잠겨 있어 납품 의뢰는 만들지 않는다.
 const GUILD_CARRY_TYPES=['kill_any','kill_type','floor','kill_type','kill_any','kill_type'];
 
 function guildNow(){return guildNowOverride==null?Date.now():guildNowOverride;}
-function guildDayKey(ms=guildNow()){
-  const d=new Date(ms-4*60*60*1000);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
+// 케인 2026-11-05: 하루의 기준을 현실 날짜(새벽 4시)에서 게임 속 하루(낮밤 한 바퀴 8분 = guildState.gday)로 바꿨다.
+function guildDayKey(ms){return 'g'+(guildState.gday|0);}
 function guildRank(){return Math.max(0,Math.min(6,guildState.rank|0));}
 function guildRankTier(){return guildRank()+1;}
 function guildQuestTier(){return Math.min(window.GAME&&GAME.levelTier?GAME.levelTier(P.lv):1,guildRankTier());}
@@ -318,9 +316,10 @@ function guildLoadData(d){
   const migratedRank=Number.isFinite(+d.rank)?Math.max(0,Math.min(6,+d.rank|0)):Math.max(0,Math.min(6,(window.GAME&&GAME.levelTier?GAME.levelTier(P.lv):1)-1));
   guildState={
     seq:+d.seq||1,board:Array.isArray(d.board)?d.board:[],active:Array.isArray(d.active)?d.active:[],completed:d.completed|0,
-    rank:migratedRank,rankDone:Number.isFinite(+d.rankDone)?Math.max(0,+d.rankDone|0):0,dayKey:d.dayKey||guildDayKey(),
+    rank:migratedRank,rankDone:Number.isFinite(+d.rankDone)?Math.max(0,+d.rankDone|0):0,dayKey:typeof d.dayKey==='string'?d.dayKey:'',
     todayAccepted:Math.max(0,+d.todayAccepted|0),bribeCount:Math.max(0,Math.min(3,+d.bribeCount|0)),exam:d.exam&&typeof d.exam==='object'?d.exam:null,
     squatDay:typeof d.squatDay==='string'?d.squatDay:'',squatGot:Math.max(0,Math.min(6,+d.squatGot|0)),squatRatio:Math.max(0,Math.min(1,+d.squatRatio||0)),
+    heartDay:typeof d.heartDay==='string'?d.heartDay:'',heartRatio:Math.max(0,Math.min(1,+d.heartRatio||0)),
     gday:Math.max(0,+d.gday|0),rent:d.rent&&typeof d.rent==='object'?{end:Math.max(1,+d.rent.end|0),paid:!!d.rent.paid,n:Math.max(0,+d.rent.n|0),banEnd:Math.max(0,+d.rent.banEnd|0)}:null   // 가이아 여관 방값(gaia_rent.js)
   };
   if(GAIA_PARTY_MODE&&guildState.squatDay!==guildState.dayKey)guildState.board=[];   // 옛 저장의 직접 수락용 게시판은 비운다

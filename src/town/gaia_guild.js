@@ -40,8 +40,8 @@ function guildRecepLine(){
   guildSyncDay(false);
   const done=guildState.squatDay===guildDayKey(),n=guildState.squatGot|0;
   if(done&&n>0)return '아가사 님이 의뢰서를 '+n+'장 받아 가셨어요. 게시판에서 골라 가세요.';
-  if(done)return '오늘은 아가사 님 박자가 조금 어긋나서 의뢰서를 못 드렸어요. 내일 아침에 다시 오세요.';
-  return '아직 오늘 의뢰서는 안 나갔어요. 아침에 아가사 님이 단련을 마치시면 점수만큼 내어 드릴게요.';
+  if(done)return '오늘은 아가사 님 박자가 조금 어긋나서 의뢰서를 못 드렸어요. 날이 바뀐 뒤에 다시 오세요.';
+  return '아직 오늘 의뢰서는 안 나갔어요. 아가사 님이 단련을 마치시면 점수만큼 내어 드릴게요.';
 }
 function guildRecepTalk(n){
   openDlg(n);   // 이름·말풍선 틀은 기본 대화창을 쓰고 아래에서 접수원 것으로 덮는다
