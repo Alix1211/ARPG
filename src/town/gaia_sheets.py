@@ -6,6 +6,7 @@ build.py 의 _sheet_frames()와 같은 규칙(시트당 배율 하나, 170x172 �
 import base64
 import io
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +14,10 @@ from PIL import Image
 from scipy.ndimage import label
 
 SHEETS = Path(__file__).resolve().parents[2] / "source_sheets" / "gaia"
+# 케인 2026-11-05: 새 모션(카일·아가사·실비아의 새 걷기 + 공격 그림). 맘에 안 들면 아래를 False 로 바꿔 다시 빌드하면
+# 예전 걷기 시트(source_sheets/gaia/*.png)와 예전 공격 방식(걷기 그림 위에 무기를 덧그림)으로 돌아간다. 환경변수 GAIA_MOTION_PACK=0 도 같다.
+USE_MOTION_PACK = True
+MOTION = Path(__file__).resolve().parents[2] / "source_sheets" / "gaia_motion"
 DIRS = ["front", "back", "side"]
 
 
@@ -86,12 +91,47 @@ def frames(path):
     return out, cells
 
 
+def _motion_on(name):
+    return USE_MOTION_PACK and os.environ.get("GAIA_MOTION_PACK", "1") != "0" and (MOTION / name / "meta.json").exists()
+
+
+def _motion_walk(name):
+    """새 모션 묶음의 걷기: {'front':[webp...], ...}. 이미 170x172 칸(발 바닥 166)이다."""
+    base = MOTION / name
+    return {d: [_enc(Image.open(base / f"walk_{d}_{i}.png").convert("RGBA")) for i in range(5)] for d in DIRS}
+
+
+def _motion_attack(name, art, ident):
+    """새 모션 묶음의 공격 그림을 art 에 넣고 A.gaiaAtk 항목(JSON 조각)을 돌려준다."""
+    base = MOTION / name
+    meta = json.loads((base / "meta.json").read_text(encoding="utf-8"))
+    sets = {}
+    for st in meta["atk_sets"]:
+        sets[st] = {}
+        for d in DIRS:
+            keys = []
+            for i in range(5):
+                k = f"gaiaatk/{ident}/{st}/{d}/{i}"
+                art[k] = _enc(Image.open(base / f"atk_{st}_{d}_{i}.png").convert("RGBA"))
+                keys.append(k)
+            sets[st][d] = keys
+    return {"foot": meta["atk_foot"], "cell": meta["atk_cell"], "hand": meta.get("whip_hand"), "sets": sets}
+
+
 def prelude_and_suffix():
     """(그림 덮어쓰기 JS, 카일 정보 JS). 시트가 하나도 없으면 ('','')."""
     art = {}
+    atk_info = {}
     for sid, name in (("merc_f_sword", "agatha.png"), ("merc_f_mage", "sylvia.png")):
         p = SHEETS / name
-        if p.exists():
+        mname = name[:-4]
+        if _motion_on(mname):
+            fr = _motion_walk(mname)
+            atk_info[sid] = _motion_attack(mname, art, sid)
+            for d in DIRS:
+                for i, uri in enumerate(fr[d]):
+                    art[f"companions/{sid}/fr/{d}/{i}"] = uri
+        elif p.exists():
             fr, _ = frames(p)
             for d in DIRS:
                 for i, uri in enumerate(fr[d]):
@@ -105,6 +145,9 @@ def prelude_and_suffix():
         sq = Image.new("RGBA", (max(head.width, head.height),) * 2)
         sq.alpha_composite(head, ((sq.width - head.width) // 2, 0))
         art["gaiakyle/port"] = _enc(sq.resize((128, 128), Image.LANCZOS), 90)
+        if _motion_on("kyle"):
+            fr = _motion_walk("kyle")
+            atk_info["kyle"] = _motion_attack("kyle", art, "kyle")
         keys = {}
         for d in DIRS:
             keys[d] = []
@@ -114,6 +157,10 @@ def prelude_and_suffix():
                 keys[d].append(k)
         suffix = ("A.gaiaKyle={fr:" + json.dumps({d: [f"window.ART['{k}']" for k in v] for d, v in keys.items()}).replace('"window', 'window').replace(']"', ']')
                   + ",port:window.ART['gaiakyle/port']};")
+    if atk_info:
+        suffix += ("A.gaiaAtk=(function(m){const R=k=>window.ART[k],o={};for(const id in m){const e=m[id],s={};"
+                   "for(const st in e.sets){s[st]={};for(const d in e.sets[st])s[st][d]=e.sets[st][d].map(R);}"
+                   "o[id]={foot:e.foot,cell:e.cell,hand:e.hand||null,sets:s};}return o;})(" + json.dumps(atk_info) + ");")
     wimgs = weapon_images()
     for icon, im in wimgs.items():
         art["gaiawpn/" + icon] = _enc(im)

@@ -619,10 +619,14 @@ function drawCompanion(c,dt){
   if(COMPANION_DEF[c.active]&&COMPANION_DEF[c.active].kind==='gun'){
     ctx.save();if(c.flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}ctx.drawImage(im,c.x-w/2,c.y-h+4,w,h);ctx.restore();return;
   }
-  const weapon=a?(a.weapon||companionWeaponFor(c)):null,L=a&&weapon?weaponLayersFor(c,weapon,a,true):{back:null,front:null,lunge:[0,0]};
+  const weapon=a?(a.weapon||companionWeaponFor(c)):null;let L=a&&weapon?weaponLayersFor(c,weapon,a,true):{back:null,front:null,lunge:[0,0]};
+  // 새 공격 그림(아가사 칼·실비아 지팡이, 케인 2026-11-05): 있으면 걷기 그림 대신 공격 5칸을 그린다. 없으면(스위치 끔·시험 환경) 예전 방식.
+  const gA=(a&&typeof gaiaAtkRect==='function'&&a.dur>0&&(c.active==='merc_f_sword'||c.active==='merc_f_mage'))?gaiaAtkRect(c.active,'main',d,a.t/a.dur,c.x,c.y):null;
+  if(gA)L={back:null,front:null,lunge:[0,0]};
   ctx.save();if(typeof GAIA_PARTY_IDS!=='undefined'&&GAIA_PARTY_IDS.includes(c.active))gaiaScaleAround(c.x,c.y);const flip=a?a.flip:c.flip;if(flip&&d==='side'){ctx.translate(c.x,0);ctx.scale(-1,1);ctx.translate(-c.x,0);}
   if(L.back)L.back();
-  ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+98*(11/344)+L.lunge[1],w,h);
+  if(gA)ctx.drawImage(gA.im,gA.x,gA.y,gA.w,gA.h);
+  else ctx.drawImage(im,c.x-w/2+L.lunge[0],c.y-h+98*(11/344)+L.lunge[1],w,h);
   if(L.front)L.front();
   ctx.restore();
 }

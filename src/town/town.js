@@ -27,6 +27,23 @@ const GAIA_KYLE_MELEE=0.45;   // 카일 몽둥이가 몹에게 주는 데미지 
 function gaiaScaleAround(x,y){if(!GAIA_PARTY_MODE)return;ctx.translate(x,y);ctx.scale(GAIA_DRAW_SCALE,GAIA_DRAW_SCALE);ctx.translate(-x,-y);}
 const GAIA_HERO_FR={};
 for(const d of ['front','back','side'])GAIA_HERO_FR[d]=((A.gaiaKyle&&A.gaiaKyle.fr?.[d])||(A.companions||{}).hero?.fr?.[d]||[]).map(load);
+// 케인 2026-11-05: 새 모션 묶음(source_sheets/gaia_motion)의 공격 그림 5칸. 없으면(스위치 끔) 비어 있고 예전 방식(걷기 그림 위 무기 덧그림)으로 그린다.
+// 되돌리는 법: tools/… 가 아니라 src/town/gaia_sheets.py 의 USE_MOTION_PACK=False 후 다시 빌드. docs/WORKLOG.md 참고.
+const GAIA_ATK={};
+if(A.gaiaAtk)for(const id in A.gaiaAtk){
+  const e=A.gaiaAtk[id],s={};
+  for(const st in e.sets){s[st]={};for(const d in e.sets[st])s[st][d]=e.sets[st][d].map(load);}
+  GAIA_ATK[id]={foot:e.foot,cell:e.cell,hand:e.hand,sets:s};
+}
+// 공격 진행도 k(0~1.2)를 5칸으로: 준비 0~.14, .14~.30, 타격 직전 .30~.44, 타격 .44~.70(몹 판정은 k>.45), 회수 .70~
+const GAIA_ATK_CUT=[.14,.30,.44,.70];
+function gaiaAtkRect(id,set,dir,k,x,y){
+  const e=GAIA_ATK[id],arr=e&&e.sets[set]&&e.sets[set][dir];if(!arr||!arr.length)return null;
+  let i=0;while(i<GAIA_ATK_CUT.length&&k>=GAIA_ATK_CUT[i])i++;
+  const im=arr[Math.min(i,arr.length-1)];if(!im||!im.complete||!im.naturalWidth)return null;
+  const sc=98/172;   // 걷기 칸(170x172)을 키 98로 그리는 것과 같은 배율, 발 위치는 걷기 발(바닥 166)과 같은 y-0.29
+  return {im,x:x-e.foot[0]*sc,y:(y-0.29)-e.foot[1]*sc,w:e.cell[0]*sc,h:e.cell[1]*sc};
+}
 const ELSKIN = {};
 for (const wt in (A.elfSkins || {})){
   ELSKIN[wt] = {};
@@ -1828,6 +1845,10 @@ function drawMe(){
   const fr = frames[pose.frame!=null?pose.frame:P.moving ? 1 + (Math.floor(P.t * (P.run ? 14 : 9)) % 4) : 0];
   const h = 98, w = h * 170 / 172, by = P.y + h * (11 / 344);
   const L = weaponLayers();
+  // 새 공격 그림(카일): 방망이=club, 채찍=whip. 그림이 없거나 스킬 연출 중이면 예전 방식.
+  const gA = (GAIA_PARTY_MODE && busy && !pose.dir) ? gaiaAtkRect('kyle', P.atk.wt==='sword'?'club':P.atk.wt==='bow'?'whip':'', dir, P.atk.t/(P.atk.dur||DUR[P.atk.wt]), P.x, P.y) : null;
+  if (gA){ L.back = null; L.front = null; L.lunge = [0, 0]; }
+  const im = gA ? gA.im : fr, dx0 = gA ? gA.x : P.x - w / 2 + L.lunge[0], dy0 = gA ? gA.y : by - h + L.lunge[1], dw0 = gA ? gA.w : w, dh0 = gA ? gA.h : h;
   ctx.save();
   ctx.translate(P.x+pose.x,P.y+pose.y);ctx.rotate(pose.rot);ctx.scale(pose.sx,pose.sy);ctx.translate(-P.x,-P.y);
   gaiaScaleAround(P.x,P.y);
@@ -1837,8 +1858,8 @@ function drawMe(){
   if (P.shield > 0){
     let al = .55 + .45 * Math.max(0, Math.min(1, P.shield / (P.shieldMax || 1))); if (P.shieldT < 2) al *= .45 + .55 * Math.abs(Math.sin(T * 8));
     ctx.save(); ctx.shadowColor = P.shieldKind === 'holy' ? `rgba(255,215,90,${al})` : `rgba(120,215,255,${al})`; ctx.shadowBlur = 14;
-    ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h); ctx.shadowBlur = 7; ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h); ctx.restore();
-  } else ctx.drawImage(fr, P.x - w / 2 + L.lunge[0], by - h + L.lunge[1], w, h);
+    ctx.drawImage(im, dx0, dy0, dw0, dh0); ctx.shadowBlur = 7; ctx.drawImage(im, dx0, dy0, dw0, dh0); ctx.restore();
+  } else ctx.drawImage(im, dx0, dy0, dw0, dh0);
   if (L.front) L.front();
   if(SKILL_SHOW.pose)skillShowWeapon(SKILL_SHOW.pose);
   ctx.restore();

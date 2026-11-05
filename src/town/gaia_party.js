@@ -215,7 +215,7 @@ function gaiaWhip(){
   best.hp=Math.max(1,best.hp-Math.max(1,Math.round(best.maxHp*.005)));
   best.m=Math.min(GAIA_M_MAX,best.m+GAIA_WHIP_M);
   heartPop(best.x,best.y-95,GAIA_WHIP_M);
-  gaiaFx.push({kind:'whip',c:best,t:0,life:.24,fx:P.x,fy:P.y-50});
+  gaiaFx.push({kind:'whip',c:best,t:0,life:.24,fx:P.x,fy:P.y-50,hd:P.dir,hf:P.flip});
   if(typeof SFX!=='undefined')SFX.play('gaia_whip',.64);
   gaiaPainVoice(best);
   return true;
@@ -223,7 +223,9 @@ function gaiaWhip(){
 function gaiaDrawWhip(dt){
   for(let k=gaiaFx.length-1;k>=0;k--){
     const f=gaiaFx[k];f.t+=dt;if(f.t>=f.life){gaiaFx.splice(k,1);continue;}
-    const u=f.t/f.life,x1=P.x,y1=P.y-50,x2=f.c.x,y2=f.c.y-52;
+    // 새 공격 그림이 있으면 채찍은 카일의 손잡이 위치에서 시작한다(손잡이 그림은 공격 5칸 중 타격 칸 기준). 없으면 예전 위치.
+    const hn=(typeof GAIA_ATK!=='undefined'&&GAIA_ATK.kyle&&GAIA_ATK.kyle.hand)?GAIA_ATK.kyle.hand[f.hd]:null,sc=98/172,S=typeof GAIA_DRAW_SCALE!=='undefined'?GAIA_DRAW_SCALE:1;
+    const u=f.t/f.life,x1=hn?P.x+(f.hd==='side'&&f.hf?-hn[0]:hn[0])*sc*S:P.x,y1=hn?P.y+(-.29+hn[1]*sc)*S:P.y-50,x2=f.c.x,y2=f.c.y-52;
     const mx=(x1+x2)/2,my=(y1+y2)/2-26*Math.sin(u*Math.PI)+Math.sin(u*40)*5*(1-u);
     ctx.save();ctx.globalAlpha=Math.max(0,1-u*u);ctx.lineCap='round';
     ctx.strokeStyle='#3a2210';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,my,x2,y2);ctx.stroke();

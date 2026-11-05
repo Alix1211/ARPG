@@ -1,0 +1,28 @@
+{
+ "name": "sylvia",
+ "walk_cell": [
+  170,
+  172
+ ],
+ "walk_foot": [
+  85,
+  166
+ ],
+ "atk_cell": [
+  156,
+  168
+ ],
+ "atk_foot": [
+  78,
+  162
+ ],
+ "atk_sets": [
+  "main"
+ ],
+ "walk_scale_2x": 0.5377,
+ "back_walk_scale_2x": 0.5377,
+ "atk_scale_2x": 1.0782,
+ "atk_scale_head_only": 1.0298,
+ "atk_scale_height_only": 1.1289,
+ "note": "걷기=기존 게임 시트(발 위치만 정렬). 공격=지팡이"
+}

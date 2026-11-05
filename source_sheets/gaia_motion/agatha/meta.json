@@ -1,0 +1,28 @@
+{
+ "name": "agatha",
+ "walk_cell": [
+  170,
+  172
+ ],
+ "walk_foot": [
+  85,
+  166
+ ],
+ "atk_cell": [
+  176,
+  194
+ ],
+ "atk_foot": [
+  88,
+  188
+ ],
+ "atk_sets": [
+  "main"
+ ],
+ "walk_scale_2x": 1.0554,
+ "back_walk_scale_2x": 0.4865,
+ "atk_scale_2x": 1.1516,
+ "atk_scale_head_only": 1.1583,
+ "atk_scale_height_only": 1.1449,
+ "note": "걷기=새 3방향(뒤는 2차). 공격=칼"
+}
