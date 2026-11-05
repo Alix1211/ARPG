@@ -107,8 +107,9 @@ async def main():
         assert got, '던전 2층에서 보물 장면이 안 뜸'
         seen = await play_through(pg, ev, 'treasure', shots=(2,))
         assert (await ev(ST))['life']['treasure']
-        dump = await ev("() => JSON.stringify(UI.saveData ? UI.saveData() : {})")
-        assert '실비아의 보물' in dump, '보물이 가방에 없음'
+        items = await ev("() => UI.bagItems().map(w => w.it).map(i => ({name:i.name, price:i.price, qty:i.qty, kind:i.kind}))")
+        t = [i for i in items if i['name'] == '실비아의 보물']
+        assert t and t[0]['price'] == 0, ('보물이 가방에 없거나 값이 0이 아님', items)
         print('보물 OK', flush=True)
 
         assert not errs, errs
