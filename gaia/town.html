@@ -410,7 +410,7 @@ body.padmode #atk,body.padmode .sk,body.padmode #stick{visibility:hidden!importa
 <div id="boot" style="--bg:url('art_title_6ad5ad16ee.webp')"><div id="bootScene"><div id="bootImg"></div><i class="bjg" id="jgL"></i><i class="bjg" id="jgR"></i></div><div id="bootMid"><div id="bootLogo" style="background-image:url('art_titlelogo_b911f770e8.webp')"></div><div id="bootUi"><div id="bootBar"><i></i></div><div id="bootTxt">불러오는 중…</div></div></div></div>
 <script>
 // 시작·로딩 화면: 그림 묶음을 받는 동안 막대를 채우고, 다 받으면 눌러서 시작. 떠 있는 동안 게임 시간은 멈춘다.
-(function(){var got=0,total=45314;window.ARPG_TITLE_OPEN=true;
+(function(){var got=0,total=45313;window.ARPG_TITLE_OPEN=true;
 window.__bootStep=function(n){got+=n;var i=document.querySelector('#bootBar i');if(i)i.style.width=Math.min(100,got/total*100).toFixed(1)+'%';};
 window.__bootClose=function(){var b=document.getElementById('boot');window.ARPG_TITLE_OPEN=false;if(!b)return;b.classList.add('out');setTimeout(function(){b.remove();},460);};
 window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return;
@@ -484,7 +484,7 @@ window.__bootReady=function(){var b=document.getElementById('boot');if(!b)return
 <div id="fade"></div>
 <div id="campArt"><span>모닥불 곁에서 푹 쉬는 중…</span></div>
 <div id="rot">가로로 돌려 주세요</div>
-<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1105-0846</div>
+<div id="ver" style="position:fixed;left:8px;bottom:4px;font:700 11px sans-serif;color:#fff8;pointer-events:none;z-index:30">판 GAIA 3P 1105-0939</div>
 <div id="err" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);max-width:80vw;display:none;background:#9e2a22;color:#fff;font:700 13px sans-serif;padding:6px 12px;border-radius:8px;z-index:40;white-space:pre-wrap"></div>
 <script>
 // 안드로이드 앱 안에서 실행될 때: 저장(arpg_로 시작하는 것)을 앱 쪽에도 같이 적어 둔다.
@@ -598,7 +598,7 @@ const GAIA_PARTY_MODE=true;
 // 가이아: 격투(건틀릿)는 숨긴다. 방망이=sword(카일), 채찍=bow(카일), '창' 칸=아가사의 검, 지팡이=실비아.
 const WT_LIST=GAIA_PARTY_MODE?['sword','spear','bow','staff']:['sword','spear','gauntlet','bow','staff'];
 // 케인 2026-11-03: 세 명이 작아 보여 그리는 크기만 키운다(발 위치 기준, 무기 모션도 함께 커짐). 판정 범위는 그대로.
-const GAIA_DRAW_SCALE=1.12;
+const GAIA_DRAW_SCALE=1.20;   // 케인 2026-11-05: 1.12→1.20(주인공 셋만 120%). 원래 크기=1.0. 채찍 줄 시작점(gaia_party.js)도 이 값을 따라감
 const GAIA_KYLE_MELEE=0.45;   // 카일 몽둥이가 몹에게 주는 데미지 배율(잡몹 하나 상대하는 정도, 케인 2026-11-03)
 function gaiaScaleAround(x,y){if(!GAIA_PARTY_MODE)return;ctx.translate(x,y);ctx.scale(GAIA_DRAW_SCALE,GAIA_DRAW_SCALE);ctx.translate(-x,-y);}
 const GAIA_HERO_FR={};
@@ -11017,7 +11017,7 @@ window.UI.pad={
 // 케인 2026-10-15: 그림 묶음을 받다 끊기면(휴대폰 인터넷 흔들림) 예전엔 그림이 빠진 채 시작해 화면이 깨지거나 멈췄다.
 // 묶음마다 최대 4번 다시 받고, 모두 받은 뒤에만 게임을 시작한다. 끝내 못 받으면 '다시 시도' 버튼을 보여 준다.
 (function(){
-  var files=[["art_b_f23e917da8.js?v=2", 8019], ["art_camp_3dd817da2c.js?v=2", 485], ["art_companions_be05152f39.js?v=2", 3253], ["art_elfSkins_e10dbed3ed.js?v=2", 1539], ["art_ground_c77d3a6e80.js?v=2", 1581], ["art_icons_4f160e9bca.js?v=2", 1429], ["art_kit_fdcccb1f2b.js?v=2", 677], ["art_misc_fc5b1c8a02.js?v=2", 15540], ["art_monsters3_ae52735f4b.js?v=2", 6558], ["art_out_7f455a0c84.js?v=2", 629], ["art_port_cd228b4dd1.js?v=2", 1855], ["art_vfx_62a631b2b0.js?v=2", 2295], ["art_vils_dc98808dd4.js?v=2", 854], ["art_wpn_9285992181.js?v=2", 600]],left=files.length,failed=false;
+  var files=[["art_b_a42159506d.js?v=2", 8018], ["art_camp_3dd817da2c.js?v=2", 485], ["art_companions_be05152f39.js?v=2", 3253], ["art_elfSkins_e10dbed3ed.js?v=2", 1539], ["art_ground_c77d3a6e80.js?v=2", 1581], ["art_icons_4f160e9bca.js?v=2", 1429], ["art_kit_fdcccb1f2b.js?v=2", 677], ["art_misc_fc5b1c8a02.js?v=2", 15540], ["art_monsters3_ae52735f4b.js?v=2", 6558], ["art_out_7f455a0c84.js?v=2", 629], ["art_port_cd228b4dd1.js?v=2", 1855], ["art_vfx_62a631b2b0.js?v=2", 2295], ["art_vils_dc98808dd4.js?v=2", 854], ["art_wpn_9285992181.js?v=2", 600]],left=files.length,failed=false;
   function start(){var g=document.getElementById('gameMain');var s=document.createElement('script');s.text=g.textContent;g.remove();document.body.appendChild(s);}
   function fail(){if(failed)return;failed=true;var t=document.getElementById('bootTxt');if(t)t.textContent='그림 파일을 받지 못했습니다. 인터넷을 확인해 주세요.';
     var ui=document.getElementById('bootUi');if(ui&&!document.getElementById('bootRetry')){var b=document.createElement('button');b.id='bootRetry';b.type='button';b.textContent='다시 시도';
