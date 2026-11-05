@@ -1188,10 +1188,14 @@ function drawPortalArrivalAura(){
   ctx.strokeStyle='rgba(188,120,255,.72)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,18,r*.72,26,0,-T*1.7,-T*1.7+Math.PI*1.45);ctx.stroke();
   ctx.restore();ctx.globalCompositeOperation='source-over';
 }
+const FPS_CAP_MS=1000/60;let fpsCapDue=0;   // 60프레임 상한(90·120Hz 화면 발열 억제)
 function frame(now){
   if(document.hidden){last=now;requestAnimationFrame(frame);return;}
   // 미니게임(주점·격투장·버블)이 화면을 덮는 동안은 마을을 다시 그리지 않는다(마지막 장면이 그대로 남고, 닫으면 바로 이어 그린다).
   if(panel==='minigames'){last=now;requestAnimationFrame(frame);return;}
+  // 60프레임 상한: 그릴 차례가 아니면 건너뜀. last는 그린 프레임에서만 갱신되므로 dt(경과 시간)가 정확해 게임 속도는 그대로다.
+  if(now<fpsCapDue-1.5){requestAnimationFrame(frame);return;}
+  fpsCapDue=(now-fpsCapDue>FPS_CAP_MS)?now+FPS_CAP_MS:fpsCapDue+FPS_CAP_MS;
   const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt;
   const simPaused=panel==='char'||panel==='settings'||panel==='minigames'||!!window.ARPG_BACKUP_RESTORING||!!window.ARPG_TITLE_OPEN||!!window.GAIA_EVENT_PAUSE;
   if(window.GAIA_GARGOYLE)GAIA_GARGOYLE.tick(simPaused);   // 가고일 1회성 이벤트(gaia_gargoyle.js)
