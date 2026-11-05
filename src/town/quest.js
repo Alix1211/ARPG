@@ -332,10 +332,19 @@ function questObjective(q){
   if(s.type==='event')return s.objective||('조건 진행 '+(mainQuestState.active[q.id].progress||0)+' / '+(s.need||1));
   return s.objective||'방문하기';
 }
+// 케인 2026-11-05: 퀘스트 이름 앞에 시작 레벨, 목표 앞에 지금 가야 할 장소의 티어를 붙인다(어디로 가야 하는지 헤매지 않게).
+function questLvTag(q){const l=q&&q.start&&q.start.level;return l?'[Lv'+l+'] ':'';}
+function questLocTag(q){
+  const s=questStep(q);if(!s)return '';
+  const p=s.point||{},mp=s.map||p.map,mk=s.market||p.market,fl=s.floor||p.floor;
+  if(mp==='field'&&mk&&typeof FIELD_TIER!=='undefined'&&FIELD_TIER[mk])return '[T'+FIELD_TIER[mk]+' '+((typeof FIELD_INFO!=='undefined'&&FIELD_INFO[mk]&&FIELD_INFO[mk][1])||mk)+'] ';
+  if(mp==='dungeon'&&fl&&typeof dungeonTier==='function')return '[T'+dungeonTier(fl)+' 던전 '+fl+'층] ';
+  return '';
+}
 function questCard(q,done){
   const d=document.createElement('div');d.className='gq '+(questKind(q)==='main'?'mainQuestCard':'sideQuestCard');
-  const b=document.createElement('b');b.textContent=(questKind(q)==='main'?'★ ':'◇ ')+q.title;d.append(b);
-  const line=document.createElement('small');line.textContent=done?'완료':questObjective(q);d.append(line);
+  const b=document.createElement('b');b.textContent=(questKind(q)==='main'?'★ ':'◇ ')+questLvTag(q)+q.title;d.append(b);
+  const line=document.createElement('small');line.textContent=done?'완료':questLocTag(q)+questObjective(q);d.append(line);
   const s=!done&&questStep(q);
   if(s&&s.item&&['collect','deliver'].includes(s.type)){
     const count=mainQuestState.items[s.item]||0,need=s.need||1;
@@ -352,7 +361,7 @@ function questRender(){
   if(sideList)sideList.replaceChildren();if(sideDone)sideDone.replaceChildren();
   for(const q of MAIN_QUESTS){
     if(mainQuestState.active[q.id]){
-      list.append(questCard(q,false));const row=document.createElement('div');row.className='mainQtrack';row.textContent='★ '+q.title+' · '+questObjective(q);host.append(row);
+      list.append(questCard(q,false));const row=document.createElement('div');row.className='mainQtrack';row.textContent='★ '+questLvTag(q)+q.title+' · '+questLocTag(q)+questObjective(q);host.append(row);
     }else if(mainQuestState.completed.includes(q.id))done.append(questCard(q,true));
   }
   for(const q of SIDE_QUESTS){

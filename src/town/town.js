@@ -128,6 +128,7 @@ for (const p of CUR.props){
 for (const n of CUR.npcs){
   if(GAIA_PARTY_MODE&&n.shop==='trade')continue;   // 가이아: 교역 NPC 잠금
   if(GAIA_PARTY_MODE&&id==='town'&&n.shop==='guild'&&MAPS.guild)continue;   // 가이아: 길드장 하르트는 길드 홀 안쪽에 있다(gaia_guild.js)
+  if(id==='inn'&&n.shop==='inn'&&innReturn&&innReturn.map==='fieldvillage')continue;   // 케인 2026-11-05: 지역 마을 여관엔 토비를 두지 않는다
   if(n.companionTest&&(!window.COMPANION||!COMPANION.townTestsEnabled()))continue;
   if(n.companionResident){
     const qs=window.QUEST&&QUEST.state?QUEST.state():null;
@@ -1235,7 +1236,7 @@ function frame(now){
     if (Math.abs(dx) > Math.abs(dy)){ P.dir = 'side'; P.flip = dx < 0; } else P.dir = dy < 0 ? 'back' : 'front';
     P.t += sdt;
   } else P.t = 0;
-  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
+  if (!panel && !traveling) for (const e of exits) if (P.x > e.x0 && P.x < e.x1 && P.y > e.y0 && P.y < e.y1){ if (e.fn){ e.fn(); break; } if(MAP==='inn'&&e.to==='town'&&typeof leaveInn==='function'){ leaveInn(); break; } const tm = MAPS[e.to]; const pos = e.pos || (tm && tm.spawn) || (e.to === 'town' ? MAPS.out.back : [2 * TS, 2 * TS]); travel(e.to, pos, e.dir || (e.to === 'out' ? 'front' : 'back')); break; }
   if(!simPaused&&window.QUEST)QUEST.tick();
   near = null; let bd = 1e9;
   for (const s of spots){ const d = Math.hypot(P.x - s.x, P.y - s.y); if (d < s.r && d < bd){ bd = d; near = s; } }

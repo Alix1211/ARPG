@@ -18,6 +18,8 @@ const WINFO = { sword: '보통 0.4초 · 짧음 · 넓은 부채꼴', spear: '�
 // ---- 아이템 파밍 ----
 let seq = 1;
 const GRADE_MUL = [1.00,1.35,1.75,2.25,2.90,3.70,4.70,6.00,7.60,9.60];
+// 케인 2026-11-05: 같은 등급이라도 티어가 높으면 조금 더 세다(티어마다 +4%). 높은 티어 장비가 항상 낮은 티어보다 강하게.
+const tierPow = t => 1 + 0.04 * (Math.max(1, t || 1) - 1);
 const ALL_GEAR = ['weapon','head','body','hands','feet','ring','neck'];
 const UNID_MIN_AFFIXES = 3;
 // 일부러 무기/직업별로 과하게 제한하지 않는다.
@@ -74,7 +76,7 @@ function make(spec){
   const base=gearBase(spec),tier=base.tier,g=base.powerGrade,roll=!!spec.roll;
   const it={id:seq++,baseId:base.id,kind:base.kind,icon:base.icon,requiredLevel:base.requiredLevel,
     rar:spec.rar!=null?spec.rar:(roll?rarityForTier(tier,spec.rank,spec.magicBoost||1):0),tier,g,st:{},aff:[]};
-  const mul=GRADE_MUL[g-1];
+  const mul=GRADE_MUL[g-1]*tierPow(tier);
   if(base.kind==='weapon'){
     it.wt=base.wt;const key=base.wt==='staff'?'matk':'atk';
     it.st[key]=Math.max(1,Math.round(10*WMULT[base.wt]*mul*NUM));
@@ -215,7 +217,7 @@ function derived(w='kyle'){
   if(wt&&wt!=='staff'){
     // 마법 공용: 같은 단계·지능·숙련의 일반 지팡이 기준 70% 보장.
     // 물리 공격 옵션은 변환하지 않는다. 직접 얻은 matk가 더 높으면 그대로 사용한다.
-    const staffBase=10*WMULT.staff*GRADE_MUL[E[c].g-1]*NUM;
+    const staffBase=10*WMULT.staff*GRADE_MUL[E[c].g-1]*tierPow(E[c].tier)*NUM;
     magicBase=Math.max(magicBase,(staffBase+b.int*.85*NUM)*(1+mb.dmg/100)*.7);
   }
   const magic=Math.max(1,Math.round(magicBase*(1+t.matkPct/100)*(1+(wt==='staff'?mb.dmg:0)/100)));
