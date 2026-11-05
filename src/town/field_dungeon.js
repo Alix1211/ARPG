@@ -836,6 +836,7 @@ function killMonster(m){
   }
   m.dead=true;m.death=0;m.hp=0;m.fallDir=m.hitDx!=null?(m.hitDx>=0?1:-1):(Math.random()<.5?1:-1);
   if(window.TELEMETRY)TELEMETRY.kill(m);
+  if(window.GAIA_LIFE)GAIA_LIFE.onKill(m);   // 가이아 살아있는 세계: 처치 수를 세어 잡담을 연다(gaia_life.js)
   sfx.push({type:'kill',t:0,x:m.x,y:m.y,r:44});
   const tier=monsterTier(m),coinBonus=(window.UI&&UI.coinBonus)?UI.coinBonus():0,rewardMul=m.coinMul||TIER_MATCH.scales.coin[tier-1];
   const coin=Math.round((2+Math.floor(Math.random()*8))*(1+coinBonus/100)*rewardMul);
