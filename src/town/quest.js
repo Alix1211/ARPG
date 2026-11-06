@@ -55,8 +55,12 @@ function questNpcAction(n){
     const s=questStep(q);
     if(s&&['talk','deliver'].includes(s.type)&&n.no===s.npc&&questMapMatches(s))return {q,step:s,start:false};
   }
+  // 케인 2026-11-06: 같은 NPC가 '진행 중(대기)' 퀘스트와 '새로 시작할' 퀘스트를 함께 맡으면, 대기 쪽이 시작을 가려 메인퀘가 막혔다(고르던: 서브 SIDE_021 대기 vs 메인 MAIN_027 시작).
+  // 새로 시작할 수 있는 퀘스트를 먼저(메인 우선) 보여 주고, 시작할 게 없을 때만 '진행 확인'을 보여 준다.
+  const startable=ALL_QUESTS.filter(q=>questAvailable(q)&&q.start.npc===n.no&&(questMapMatches(q.start)||n.questStartAlias===q.start.map));
+  const st=startable.find(q=>questKind(q)==='main')||startable[0];
+  if(st)return {q:st,start:true};
   for(const q of ALL_QUESTS)if(mainQuestState.active[q.id]&&q.start.npc===n.no)return {q,step:questStep(q),start:false,waiting:true};
-  for(const q of ALL_QUESTS)if(questAvailable(q)&&q.start.npc===n.no&&(questMapMatches(q.start)||n.questStartAlias===q.start.map))return {q,start:true};
   return null;
 }
 function questMarker(n){const a=questNpcAction(n);return a?(a.start?'!':'?'):'';}
